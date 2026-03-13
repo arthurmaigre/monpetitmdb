@@ -1,11 +1,29 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import { theme } from '@/lib/theme'
 
 interface Props {
   children: React.ReactNode
-  bienCount?: number
 }
 
-export default function Layout({ children, bienCount }: Props) {
+export default function Layout({ children }: Props) {
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
+
   return (
     <>
       <style>{`
@@ -38,7 +56,29 @@ export default function Layout({ children, bienCount }: Props) {
           transition: color 0.15s;
         }
         .mdb-nav a:hover { color: ${theme.colors.ink}; }
-        .mdb-nav a.active { color: ${theme.colors.ink}; font-weight: 600; }
+
+        .mdb-nav-sep { width: 1px; height: 20px; background: #e8e2d8; }
+
+        .btn-login {
+          padding: 8px 18px; border-radius: 8px; border: 1.5px solid #e8e2d8;
+          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+          color: #1a1210; background: transparent; cursor: pointer;
+          text-decoration: none; transition: all 0.15s;
+        }
+        .btn-login:hover { border-color: #1a1210; }
+
+        .btn-logout {
+          padding: 8px 18px; border-radius: 8px; border: none;
+          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+          color: #9a8a80; background: transparent; cursor: pointer;
+          transition: color 0.15s;
+        }
+        .btn-logout:hover { color: #c0392b; }
+
+        .user-email {
+          font-size: 13px; color: #9a8a80; max-width: 180px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
 
         .mdb-footer {
           margin-top: 80px;
@@ -58,9 +98,23 @@ export default function Layout({ children, bienCount }: Props) {
       <div style={{ fontFamily: theme.fonts.body, background: theme.colors.bg, minHeight: '100vh' }}>
         <header className="mdb-header">
           <a href="/" className="mdb-logo">Mon Petit <span>MDB</span></a>
+
           <nav className="mdb-nav">
             <a href="/biens">Biens disponibles</a>
             <a href="/comment-ca-marche">Comment ça marche</a>
+
+            <div className="mdb-nav-sep" />
+
+            {user ? (
+              <>
+                <span className="user-email">👤 {user.email}</span>
+                <button className="btn-logout" onClick={handleLogout}>Déconnexion</button>
+              </>
+            ) : (
+              <>
+                <a href="/login" className="btn-login">Se connecter</a>
+              </>
+            )}
           </nav>
         </header>
 
