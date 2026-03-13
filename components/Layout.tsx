@@ -107,7 +107,7 @@ export default function Layout({ children }: Props) {
 
             {user ? (
               <>
-                <span className="user-email">👤 {user.email}</span>
+                <a href="/mon-profil" className="user-email" style={{ textDecoration: 'none' }}>👤 {user.email}</a>
                 <button className="btn-logout" onClick={handleLogout}>Déconnexion</button>
               </>
             ) : (

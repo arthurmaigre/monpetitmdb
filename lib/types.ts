@@ -13,6 +13,7 @@ export interface Bien {
   rendement_brut: number
   statut: string
   strategie_mdb: string
+  url: string
   photo_url: string
   photo_storage_path: string
   profil_locataire: string
