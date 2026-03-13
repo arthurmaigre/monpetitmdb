@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
 import MetroBadge from '@/components/MetroBadge'
@@ -9,7 +10,7 @@ import { Bien } from '@/lib/types'
 import { TYPES_BIEN, TRIS } from '@/lib/constants'
 
 function formatPrix(n: number) {
-  return n ? n.toLocaleString('fr-FR') + ' €' : '—'
+  return n ? n.toLocaleString('fr-FR') + ' euros' : '-'
 }
 
 export default function BiensPage() {
@@ -25,17 +26,39 @@ export default function BiensPage() {
   const [prixMax, setPrixMax] = useState('')
   const [rendMin, setRendMin] = useState('')
   const [tri, setTri] = useState('recent')
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userToken, setUserToken] = useState<string | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/biens').then(r => r.json()),
       fetch('/api/metropoles').then(r => r.json()),
-    ]).then(([biensData, metroData]) => {
+      supabase.auth.getSession(),
+    ]).then(([biensData, metroData, sessionData]) => {
       setAllBiens(biensData.biens || [])
       setMetropoles(metroData.metropoles || [])
+      const session = sessionData.data.session
+      if (session) { setUserId(session.user.id); setUserToken(session.access_token) }
       setLoading(false)
     })
   }, [])
+
+  async function updateBien(bien: any, champ: string, valeur: any) {
+    if (!userToken) return
+    if ((bien as any)[champ] !== null && (bien as any)[champ] !== undefined) return
+    setSaving(bien.id + champ)
+    const res = await fetch('/api/biens/' + bien.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ [champ]: valeur })
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, ...data.bien } : b))
+    }
+    setSaving(null)
+  }
 
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
@@ -61,32 +84,55 @@ export default function BiensPage() {
     return 0
   })
 
+  function CellEditable({ bien, champ }: { bien: any, champ: string }) {
+    const valeur = bien[champ]
+    const estSaving = saving === bien.id + champ
+    if (valeur !== null && valeur !== undefined) {
+      return <span style={{ color: '#555' }}>{valeur}</span>
+    }
+    if (!userId) {
+      return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
+    }
+    return (
+      <input type="number" defaultValue="" placeholder="NC" disabled={!!estSaving}
+        style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: estSaving ? '#f0ede8' : '#faf8f5', outline: 'none' }}
+        onBlur={e => { if (e.target.value) updateBien(bien, champ, Number(e.target.value)) }}
+        onFocus={e => e.target.style.borderColor = '#c0392b'} />
+    )
+  }
+
+  function CellTypeLoyer({ bien }: { bien: any }) {
+    const valeur = (bien as any).type_loyer
+    if (valeur !== null && valeur !== undefined) {
+      return <span style={{ color: '#555' }}>{valeur}</span>
+    }
+    if (!userId) {
+      return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
+    }
+    return (
+      <select defaultValue="" onChange={e => { if (e.target.value) updateBien(bien, 'type_loyer', e.target.value) }}
+        style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: '#faf8f5', outline: 'none' }}>
+        <option value="">NC</option>
+        <option value="HC">HC</option>
+        <option value="CC">CC</option>
+      </select>
+    )
+  }
+
   return (
     <Layout>
       <style>{`
-        .main { max-width: 1320px; margin: 0 auto; padding: 32px 48px; }
-        .filter-bar {
-          background: #fff; border-radius: 16px; padding: 20px 24px;
-          margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
-        }
+        .main { max-width: 1400px; margin: 0 auto; padding: 32px 48px; }
+        .filter-bar { background: #fff; border-radius: 16px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
         .filter-label { font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; }
-        .filter-bar select, .filter-bar input {
-          padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8;
-          font-family: 'DM Sans', sans-serif; font-size: 13px;
-          background: #faf8f5; color: #1a1210; outline: none; transition: border-color 0.15s;
-        }
+        .filter-bar select, .filter-bar input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; color: #1a1210; outline: none; transition: border-color 0.15s; }
         .filter-bar select:focus, .filter-bar input:focus { border-color: #c0392b; }
         .filter-bar select.required { border-color: #c0392b; background: #fff8f7; }
         .filter-bar input { width: 140px; }
         .filter-sep { width: 1px; height: 44px; background: #e8e2d8; align-self: flex-end; margin: 0 4px; }
         .view-toggle { margin-left: auto; display: flex; gap: 4px; align-self: flex-end; }
-        .view-btn {
-          padding: 9px 16px; border-radius: 9px; border: 1.5px solid #e8e2d8;
-          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
-          cursor: pointer; transition: all 0.15s; background: transparent; color: #888;
-        }
+        .view-btn { padding: 9px 16px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; background: transparent; color: #888; }
         .view-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
         .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .results-count { font-size: 14px; color: #9a8a80; }
@@ -96,34 +142,29 @@ export default function BiensPage() {
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
         .list-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .list-table thead tr { background: #f7f4f0; border-bottom: 2px solid #ede8e0; }
-        .list-table thead th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+        .list-table thead th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; }
+        .list-table thead th span { display: block; font-size: 10px; font-weight: 400; color: #b0a898; letter-spacing: 0; text-transform: none; margin-top: 2px; height: 14px; }
         .list-table tbody tr { border-bottom: 1px solid #f0ede8; transition: background 0.12s; }
         .list-table tbody tr:last-child { border-bottom: none; }
         .list-table tbody tr:hover { background: #faf8f5; }
-        .list-table td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
+        .list-table td { padding: 10px 16px; font-size: 13px; vertical-align: middle; }
         .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; }
         .list-thumb-empty { width: 72px; height: 52px; border-radius: 8px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
         .td-bien-title { font-weight: 600; color: #1a1210; display: block; margin-bottom: 2px; }
         .td-bien-quartier { font-size: 11px; color: #b0a898; display: block; }
         .td-prix { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; }
-        .td-loyer { color: #555; white-space: nowrap; }
-        .td-loyer.nc { color: #c0b0a0; font-style: italic; }
         .td-strat { display: inline-block; font-size: 11px; font-weight: 600; color: #2a4a8a; background: #d4ddf5; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
         .td-btn { display: inline-block; padding: 7px 16px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 0.15s; }
         .td-btn:hover { opacity: 0.75; }
+        .edit-hint { font-size: 11px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
       `}</style>
 
       <div className="main">
         <div className="filter-bar">
-
           <div className="filter-group">
-            <label className="filter-label">Stratégie MDB ✦</label>
-            <select
-              value={strategie}
-              onChange={e => setStrategie(e.target.value)}
-              className={!strategie ? 'required' : ''}
-            >
-              <option value="">-- Choisir une stratégie --</option>
+            <label className="filter-label">Strategie MDB</label>
+            <select value={strategie} onChange={e => setStrategie(e.target.value)} className={!strategie ? 'required' : ''}>
+              <option value="">-- Choisir une strategie --</option>
               {strategies.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
@@ -131,7 +172,7 @@ export default function BiensPage() {
           <div className="filter-sep" />
 
           <div className="filter-group">
-            <label className="filter-label">Métropole</label>
+            <label className="filter-label">Metropole</label>
             <select value={metropole} onChange={e => { setMetropole(e.target.value); setVille('Toutes') }}>
               <option>Toutes</option>
               {metropoles.map(m => <option key={m}>{m}</option>)}
@@ -182,85 +223,84 @@ export default function BiensPage() {
           </div>
 
           <div className="view-toggle">
-            <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>⊞ Grille</button>
-            <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>☰ Liste</button>
+            <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
+            <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
           </div>
         </div>
 
-        {/* Compteur ou message vide */}
         {!strategie ? (
           <div className="empty-state">
-            <h3>Choisissez une stratégie pour commencer</h3>
-            <p>Sélectionnez une stratégie MDB dans le filtre ci-dessus pour afficher les biens correspondants.</p>
+            <h3>Choisissez une strategie pour commencer</h3>
+            <p>Selectionnez une strategie MDB dans le filtre ci-dessus pour afficher les biens correspondants.</p>
           </div>
         ) : (
           <>
             <div className="results-bar">
               <p className="results-count">
-                <strong>{filtered.length}</strong> bien{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
-                {strategie && <> · {strategie}</>}
-                {metropole !== 'Toutes' && <> · {metropole}</>}
-                {ville !== 'Toutes' && <> · {ville}</>}
-                {typeBien !== 'Tous' && <> · {typeBien}</>}
+                <strong>{filtered.length}</strong> bien{filtered.length > 1 ? 's' : ''} trouve{filtered.length > 1 ? 's' : ''}
+                {strategie && <> - {strategie}</>}
+                {metropole !== 'Toutes' && <> - {metropole}</>}
+                {ville !== 'Toutes' && <> - {ville}</>}
+                {typeBien !== 'Tous' && <> - {typeBien}</>}
               </p>
             </div>
 
             {loading ? (
               <p style={{ color: '#9a8a80', textAlign: 'center', padding: '80px' }}>Chargement...</p>
             ) : view === 'grid' ? (
-
               <div className="grid">
                 {filtered.map(bien => <BienCard key={bien.id} bien={bien} />)}
               </div>
-
             ) : (
-
-              <table className="list-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '80px' }}></th>
-                    <th>Bien</th>
-                    <th>Commune</th>
-                    <th>Métropole</th>
-                    <th>Stratégie</th>
-                    <th>Prix FAI</th>
-                    <th>Loyer</th>
-                    <th>Rendement</th>
-                    <th>Prix/m²</th>
-                    <th>Locataire</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(bien => (
-                    <tr key={bien.id}>
-                      <td>
-                        {bien.photo_url
-                          ? <img src={bien.photo_url} alt="" className="list-thumb" />
-                          : <div className="list-thumb-empty">—</div>
-                        }
-                      </td>
-                      <td>
-                        <span className="td-bien-title">{bien.type_bien} {bien.nb_pieces} · {bien.surface} m²</span>
-                        {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
-                      </td>
-                      <td style={{ fontWeight: 500 }}>{bien.ville}</td>
-                      <td><MetroBadge metropole={bien.metropole} /></td>
-                      <td>
-                        {bien.strategie_mdb && <span className="td-strat">{bien.strategie_mdb}</span>}
-                      </td>
-                      <td className="td-prix">{formatPrix(bien.prix_fai)}</td>
-                      <td className={`td-loyer ${!bien.loyer ? 'nc' : ''}`}>
-                        {bien.loyer ? `${bien.loyer} €/mois` : 'NC'}
-                      </td>
-                      <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
-                      <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2} €/m²` : '—'}</td>
-                      <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire || '—'}</td>
-                      <td><a href={`/biens/${bien.id}`} className="td-btn">Analyse →</a></td>
+              <>
+                {userId && <p className="edit-hint">Les champs NC sont editables — vos modifications enrichissent la base de donnees.</p>}
+                {!userId && <p className="edit-hint">Connectez-vous pour enrichir les donnees manquantes.</p>}
+                <table className="list-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '80px' }}><span></span></th>
+                      <th>Bien<span></span></th>
+                      <th>Commune<span></span></th>
+                      <th>Metropole<span></span></th>
+                      <th>Strategie<span></span></th>
+                      <th>Prix FAI<span></span></th>
+                      <th>Prix/m2<span></span></th>
+                      <th>Loyer<span>/mois</span></th>
+                      <th>Type loyer<span></span></th>
+                      <th>Charges rec.<span>/mois</span></th>
+                      <th>Charges copro<span>/mois</span></th>
+                      <th>Taxe fonciere<span>/an</span></th>
+                      <th>Rendement brut<span></span></th>
+                      <th>Locataire<span></span></th>
+                      <th><span></span></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map(bien => (
+                      <tr key={bien.id}>
+                        <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
+                        <td>
+                          <span className="td-bien-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</span>
+                          {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
+                        </td>
+                        <td style={{ fontWeight: 500 }}>{bien.ville}</td>
+                        <td><MetroBadge metropole={bien.metropole} /></td>
+                        <td>{bien.strategie_mdb && <span className="td-strat">{bien.strategie_mdb}</span>}</td>
+                        <td className="td-prix">{formatPrix(bien.prix_fai)}</td>
+                        <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? bien.prix_m2.toLocaleString('fr-FR') : '-'}</td>
+                        <td><CellEditable bien={bien} champ="loyer" /></td>
+                        <td><CellTypeLoyer bien={bien} /></td>
+                        <td><CellEditable bien={bien} champ="charges_rec" /></td>
+                        <td><CellEditable bien={bien} champ="charges_copro" /></td>
+                        <td><CellEditable bien={bien} champ="taxe_fonc_ann" /></td>
+                        <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
+                        <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire || '-'}</td>
+                        <td><a href={`/biens/${bien.id}`} className="td-btn">Analyse</a></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )}
           </>
         )}
