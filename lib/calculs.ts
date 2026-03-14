@@ -1,18 +1,22 @@
 export interface ParamsFinancement {
-  apport: number        // € ex: 50000
-  tauxCredit: number    // % ex: 3.5
-  dureeAns: number      // ex: 20
-  fraisNotaire: number  // % ex: 8
+  apport: number
+  tauxCredit: number
+  tauxAssurance: number
+  dureeAns: number
+  fraisNotaire: number
+  objectifCashflow: number
 }
 
 export interface ParamsFiscal {
-  tmi: number           // % ex: 30
+  tmi: number
   regime: 'micro_foncier' | 'reel' | 'lmnp' | 'sci_is'
 }
 
 export interface Bien {
   prix_fai: number
   loyer: number
+  type_loyer?: string
+  charges_rec?: number
   charges_copro: number
   taxe_fonc_ann: number
   surface: number
@@ -20,6 +24,8 @@ export interface Bien {
 
 export interface ResultatCalcul {
   mensualite: number
+  mensualite_assurance: number
+  mensualite_totale: number
   cashflow_brut: number
   cashflow_net_ir: number
   cashflow_net_sci_is: number
@@ -46,53 +52,60 @@ export function calculerCashflow(
   financement: ParamsFinancement,
   fiscal: ParamsFiscal
 ): ResultatCalcul {
-  const { prix_fai, loyer, charges_copro, taxe_fonc_ann } = bien
-  const { apport, tauxCredit, dureeAns, fraisNotaire } = financement
+  const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
+  const { apport, tauxCredit, tauxAssurance, dureeAns, fraisNotaire, objectifCashflow } = financement
   const { tmi, regime } = fiscal
 
   // Financement
   const fraisNotaireMontant = prix_fai * fraisNotaire / 100
   const montantEmprunte = prix_fai + fraisNotaireMontant - apport
   const mensualite = calculerMensualite(montantEmprunte, tauxCredit, dureeAns)
+  const mensualite_assurance = montantEmprunte * (tauxAssurance / 100) / 12
+  const mensualite_totale = mensualite + mensualite_assurance
 
-  // Charges mensuelles
-  const chargesMensuelles = (charges_copro || 0) / 12 + (taxe_fonc_ann || 0) / 12
+  // Loyer net mensuel selon type HC/CC (formule Excel)
+  const chargesRec = charges_rec || 0
+  const chargesCoproMensuel = (charges_copro || 0) / 12
+  const taxeFoncMensuel = (taxe_fonc_ann || 0) / 12
+
+  const loyerNetMensuel = type_loyer === 'CC'
+  ? loyer - chargesRec - chargesCoproMensuel - taxeFoncMensuel
+  : loyer + chargesRec - chargesCoproMensuel - taxeFoncMensuel
 
   // Cashflow brut
-  const cashflow_brut = loyer - mensualite - chargesMensuelles
+  const cashflow_brut = loyerNetMensuel - mensualite_totale
 
   // Revenus annuels
   const loyerAnnuel = loyer * 12
-  const interetsAnnuels = montantEmprunte * tauxCredit / 100 // approximation année 1
+  const interetsAnnuels = montantEmprunte * tauxCredit / 100
 
-  // ── Régime IR réel ──
+  // Regime IR
   let impots_ir = 0
   if (regime === 'micro_foncier') {
-    const revenuImposable = loyerAnnuel * 0.7  // abattement 30%
-    impots_ir = revenuImposable * (tmi / 100 + 0.172) // IR + PS 17.2%
+    const revenuImposable = loyerAnnuel * 0.7
+    impots_ir = revenuImposable * (tmi / 100 + 0.172)
   } else if (regime === 'reel') {
     const chargesDeductibles = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels
     const revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impots_ir = revenuImposable * (tmi / 100 + 0.172)
   } else if (regime === 'lmnp') {
-    // Amortissement immo : prix / 30 ans, mobilier : 10% prix / 10 ans
     const amortImmo = prix_fai * 0.85 / 30
     const amortMobilier = prix_fai * 0.10 / 10
     const chargesDeductibles = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + amortImmo + amortMobilier
     const revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
-    impots_ir = revenuImposable * (tmi / 100)  // pas de PS en LMNP
+    impots_ir = revenuImposable * (tmi / 100)
   }
 
   const cashflow_net_ir = cashflow_brut - impots_ir / 12
 
-  // ── SCI IS ──
+  // SCI IS
   const amortSCI = prix_fai * 0.85 / 30
   const chargesSCI = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + amortSCI
   const beneficeSCI = Math.max(0, loyerAnnuel - chargesSCI)
   const is = beneficeSCI <= 42500 ? beneficeSCI * 0.15 : 42500 * 0.15 + (beneficeSCI - 42500) * 0.25
   const cashflow_net_sci_is = cashflow_brut - is / 12
 
-  // ── LMNP ──
+  // LMNP
   const amortLMNP = prix_fai * 0.85 / 30 + prix_fai * 0.10 / 10
   const chargesLMNP = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + amortLMNP
   const beneficeLMNP = Math.max(0, loyerAnnuel - chargesLMNP)
@@ -104,14 +117,19 @@ export function calculerCashflow(
   const chargesAnnuellesTotal = (charges_copro || 0) + (taxe_fonc_ann || 0)
   const rendement_net = (loyerAnnuel - chargesAnnuellesTotal) / prix_fai
 
-  // Prix cible (cashflow brut = 0)
-  const loyerAnnuelNet = loyerAnnuel - (charges_copro || 0) - (taxe_fonc_ann || 0)
-  const prix_cible = apport > 0
-    ? (loyerAnnuelNet / 12 / (tauxCredit / 100 / 12)) * (1 - Math.pow(1 + tauxCredit / 100 / 12, -dureeAns * 12))
-    : prix_fai
+  // Prix cible (formule Excel)
+  // loyer_net / ((1 + frais_notaire) * taux_mensuel_total)  * (1 - objectif_CF)
+  const tauxMensuel = tauxCredit / 100 / 12
+  const n = dureeAns * 12
+  const tauxMensuelCredit = tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -n))
+  const tauxMensuelTotal = tauxMensuelCredit + (tauxAssurance / 100) / 12
+  const objectifDecimal = objectifCashflow / 100
+  const prix_cible = loyerNetMensuel * (1 - objectifDecimal) / ((1 + fraisNotaire / 100) * tauxMensuelTotal)
 
   return {
     mensualite: Math.round(mensualite),
+    mensualite_assurance: Math.round(mensualite_assurance),
+    mensualite_totale: Math.round(mensualite_totale),
     cashflow_brut: Math.round(cashflow_brut),
     cashflow_net_ir: Math.round(cashflow_net_ir),
     cashflow_net_sci_is: Math.round(cashflow_net_sci_is),

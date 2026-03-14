@@ -4,16 +4,18 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+
   const { data, error } = await supabaseAdmin
     .from('biens')
     .select('*')
-    .eq('id', params.id)
-    .single()
+    .eq('id', id)
+    .maybeSingle()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 404 })
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || 'Bien introuvable' }, { status: 404 })
   }
 
   let photoUrl = null
@@ -30,8 +32,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
 
@@ -48,30 +52,60 @@ export async function PATCH(
 
   const { data: bien } = await supabaseAdmin
     .from('biens')
-    .select('loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann')
-    .eq('id', params.id)
-    .single()
+    .select('loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, prix_fai')
+    .eq('id', id)
+    .maybeSingle()
 
   if (!bien) return NextResponse.json({ error: 'Bien introuvable' }, { status: 404 })
 
+  const { data: userEdits } = await supabaseAdmin
+    .from('biens_user_edits')
+    .select('champ')
+    .eq('bien_id', id)
+
+  const champsUserEdits = new Set(userEdits?.map((e: any) => e.champ) || [])
+
   const champsAutorises = ['loyer', 'type_loyer', 'charges_rec', 'charges_copro', 'taxe_fonc_ann']
   const updates: any = {}
+  const audits: any[] = []
+
   for (const champ of champsAutorises) {
-    if (body[champ] !== undefined && (bien as any)[champ] === null) {
+    if (body[champ] === undefined) continue
+    const valeurActuelle = (bien as any)[champ]
+    if (valeurActuelle === null || champsUserEdits.has(champ)) {
       updates[champ] = body[champ]
+      audits.push({
+        bien_id: id,
+        user_id: user.id,
+        champ,
+        ancienne_valeur: valeurActuelle !== null ? String(valeurActuelle) : null,
+        nouvelle_valeur: String(body[champ])
+      })
     }
   }
 
-  if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'Aucun champ modifiable' }, { status: 400 })
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'Aucun champ modifiable' }, { status: 400 })
+  }
+
+  // Recalculer le rendement brut si le loyer est mis à jour
+  const nouveauLoyer = updates.loyer ?? bien.loyer
+  if (nouveauLoyer && bien.prix_fai) {
+    updates.rendement_brut = (nouveauLoyer * 12) / bien.prix_fai
+  }
 
   const { data, error } = await supabaseAdmin
     .from('biens')
     .update(updates)
-    .eq('id', params.id)
+    .eq('id', id)
     .select()
-    .single()
+    .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (audits.length > 0) {
+    await supabaseAdmin.from('biens_user_edits').insert(audits)
+  }
 
   return NextResponse.json({ bien: data })
 }

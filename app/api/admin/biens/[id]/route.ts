@@ -21,12 +21,13 @@ async function checkAdmin(req: NextRequest) {
   return user
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const user = await checkAdmin(req)
-  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
+  if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 403 })
 
   const body = await req.json()
-  const allowed = ['loyer', 'type_loyer','charges_rec', 'charges_copro', 'taxe_fonc_ann', 'statut', 'strategie_mdb', 'rendement_brut']
+  const allowed = ['loyer', 'type_loyer', 'charges_rec', 'charges_copro', 'taxe_fonc_ann', 'statut', 'strategie_mdb', 'rendement_brut']
   const updates: any = {}
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key]
@@ -35,9 +36,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const { data, error } = await supabaseAdmin
     .from('biens')
     .update(updates)
-    .eq('id', params.id)
+    .eq('id', id)
     .select()
-    .single()
+    .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ bien: data })

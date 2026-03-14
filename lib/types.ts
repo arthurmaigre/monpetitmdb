@@ -10,6 +10,7 @@ export interface Bien {
   prix_m2: number
   loyer: number
   type_loyer: string
+  charges_rec: number
   rendement_brut: number
   statut: string
   strategie_mdb: string
@@ -27,8 +28,10 @@ export interface Bien {
 export interface ParamsFinancement {
   apport: number
   tauxCredit: number
+  tauxAssurance: number
   dureeAns: number
   fraisNotaire: number
+  objectifCashflow: number
 }
 
 export interface ParamsFiscal {
@@ -38,6 +41,8 @@ export interface ParamsFiscal {
 
 export interface ResultatCalcul {
   mensualite: number
+  mensualite_assurance: number
+  mensualite_totale: number
   cashflow_brut: number
   cashflow_net_ir: number
   cashflow_net_sci_is: number
