@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
@@ -13,32 +13,132 @@ const REGIMES = [
   { value: 'sci_is', label: 'SCI IS' },
 ]
 
-function CellEditable({ bien, champ, suffix = '', userToken, userEditedFields, onUpdate }: any) {
+function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate }: any) {
   const valeur = bien[champ]
-  const editable = valeur === null || valeur === undefined || userEditedFields.has(champ)
-  if (!editable) return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}{suffix}</span>
-  if (!userToken) return <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-  return (
-    <input type="number" defaultValue={valeur || ''} placeholder="NC"
-      style={{ width: '90px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: '#faf8f5', outline: 'none' }}
-      onBlur={e => { if (e.target.value) onUpdate(champ, Number(e.target.value)) }}
-      onFocus={e => e.target.style.borderColor = '#c0392b'} />
-  )
+  const statut = champsStatut[champ]
+  const [forceEdit, setForceEdit] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick() { setShowMenu(false) }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
+
+  // Pas de donnée
+  if (valeur === null || valeur === undefined) {
+    if (!userToken) return <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
+    return (
+      <input type="number" defaultValue="" placeholder="NC"
+        style={{ width: '90px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: '#faf8f5', outline: 'none' }}
+        onBlur={e => { if (e.target.value) onUpdate(champ, Number(e.target.value)) }}
+        onFocus={e => e.target.style.borderColor = '#c0392b'} />
+    )
+  }
+
+  // Donnée verte (validée) — non éditable sauf clic droit
+  if (statut?.statut === 'vert' && !forceEdit) {
+    return (
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <span
+          onContextMenu={e => { e.preventDefault(); setMenuPos({ x: e.clientX, y: e.clientY }); setShowMenu(true) }}
+          style={{ fontWeight: 600, color: '#1a7a40', cursor: 'context-menu', borderBottom: '2px solid #1a7a40', paddingBottom: '1px' }}
+          title="Clic droit pour modifier">
+          {valeur}{suffix}
+        </span>
+        {showMenu && (
+          <div ref={menuRef} style={{ position: 'fixed', top: menuPos.y, left: menuPos.x, background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '8px', zIndex: 1000, minWidth: '220px' }}>
+            <div style={{ fontSize: '12px', color: '#9a8a80', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>
+              Valide par 2+ utilisateurs
+            </div>
+            <button
+              onClick={() => { setShowMenu(false); if (window.confirm('Cette donnee a ete validee par plusieurs utilisateurs. Etes-vous sur de vouloir la modifier ?')) setForceEdit(true) }}
+              style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#c0392b', textAlign: 'left', borderRadius: '6px', fontFamily: 'DM Sans, sans-serif' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#fff8f7')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+              Modifier quand meme
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Donnée jaune (1 user) ou force edit — éditable
+  if (statut?.statut === 'jaune' || forceEdit) {
+    return (
+      <input type="number" defaultValue={valeur || ''} placeholder="NC"
+        style={{ width: '90px', padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${forceEdit ? '#c0392b' : '#f0c040'}`, fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: forceEdit ? '#fff8f7' : '#fffdf0', outline: 'none' }}
+        onBlur={e => { if (e.target.value && e.target.value !== String(valeur)) { onUpdate(champ, Number(e.target.value)); setForceEdit(false) } }}
+        onFocus={e => e.target.style.borderColor = '#c0392b'} />
+    )
+  }
+
+  // Donnée scrapée — lecture seule
+  return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}{suffix}</span>
 }
 
-function CellTypeLoyer({ bien, userToken, userEditedFields, onUpdate }: any) {
+function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
   const valeur = bien.type_loyer
-  const editable = valeur === null || valeur === undefined || userEditedFields.has('type_loyer')
-  if (!editable) return <span style={{ fontWeight: 600 }}>{valeur}</span>
-  if (!userToken) return <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-  return (
-    <select defaultValue={valeur || ''} onChange={e => { if (e.target.value) onUpdate('type_loyer', e.target.value) }}
-      style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: '#faf8f5', outline: 'none' }}>
-      <option value="">NC</option>
-      <option value="HC">HC</option>
-      <option value="CC">CC</option>
-    </select>
-  )
+  const statut = champsStatut['type_loyer']
+  const [forceEdit, setForceEdit] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    function handleClick() { setShowMenu(false) }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
+
+  if (valeur === null || valeur === undefined) {
+    if (!userToken) return <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
+    return (
+      <select defaultValue="" onChange={e => { if (e.target.value) onUpdate('type_loyer', e.target.value) }}
+        style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: '#faf8f5', outline: 'none' }}>
+        <option value="">NC</option>
+        <option value="HC">HC</option>
+        <option value="CC">CC</option>
+      </select>
+    )
+  }
+
+  if (statut?.statut === 'vert' && !forceEdit) {
+    return (
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <span
+          onContextMenu={e => { e.preventDefault(); setMenuPos({ x: e.clientX, y: e.clientY }); setShowMenu(true) }}
+          style={{ fontWeight: 600, color: '#1a7a40', cursor: 'context-menu', borderBottom: '2px solid #1a7a40', paddingBottom: '1px' }}
+          title="Clic droit pour modifier">
+          {valeur}
+        </span>
+        {showMenu && (
+          <div style={{ position: 'fixed', top: menuPos.y, left: menuPos.x, background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '8px', zIndex: 1000, minWidth: '220px' }}>
+            <div style={{ fontSize: '12px', color: '#9a8a80', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>Valide par 2+ utilisateurs</div>
+            <button onClick={() => { setShowMenu(false); if (window.confirm('Cette donnee a ete validee par plusieurs utilisateurs. Etes-vous sur de vouloir la modifier ?')) setForceEdit(true) }}
+              style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#c0392b', textAlign: 'left', borderRadius: '6px', fontFamily: 'DM Sans, sans-serif' }}>
+              Modifier quand meme
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (statut?.statut === 'jaune' || forceEdit) {
+    return (
+      <select defaultValue={valeur || ''} onChange={e => { if (e.target.value) { onUpdate('type_loyer', e.target.value); setForceEdit(false) } }}
+        style={{ padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${forceEdit ? '#c0392b' : '#f0c040'}`, fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: forceEdit ? '#fff8f7' : '#fffdf0', outline: 'none' }}>
+        <option value="">NC</option>
+        <option value="HC">HC</option>
+        <option value="CC">CC</option>
+      </select>
+    )
+  }
+
+  return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}</span>
 }
 
 function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false }: any) {
@@ -58,24 +158,22 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false }
   const hasAmort = regime === 'lmnp' || regime === 'sci_is'
   const amort = regime === 'lmnp' ? amortLMNP : regime === 'sci_is' ? amortSCI : 0
 
-  let chargesDeductibles = 0
   let revenuImposable = 0
   let impot = 0
 
   if (regime === 'micro_foncier') {
     revenuImposable = loyerAnnuel * 0.70
     impot = revenuImposable * (tmi / 100 + 0.172)
-    chargesDeductibles = loyerAnnuel * 0.30
   } else if (regime === 'reel') {
-    chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable * (tmi / 100 + 0.172)
   } else if (regime === 'lmnp') {
-    chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable * (tmi / 100)
   } else if (regime === 'sci_is') {
-    chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable <= 42500 ? revenuImposable * 0.15 : 42500 * 0.15 + (revenuImposable - 42500) * 0.25
   }
@@ -93,14 +191,14 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false }
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
 
-  function Row({ label, value, rouge = false, vert = false, bold = false, tiret = false, info = '' }: any) {
+  function Row({ label, value, rouge = false, bold = false, tiret = false, info = '' }: any) {
     return (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
         <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
           {label}
           {info && <span title={info} style={{ cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>}
         </span>
-        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : vert ? '#1a7a40' : '#1a1210' }}>
+        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : '#1a1210' }}>
           {tiret ? '-' : value}
         </span>
       </div>
@@ -141,7 +239,7 @@ export default function FicheBienPage() {
   const [loading, setLoading] = useState(true)
   const [profil, setProfil] = useState<any>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
-  const [userEditedFields, setUserEditedFields] = useState<Set<string>>(new Set())
+  const [champsStatut, setChampsStatut] = useState<Record<string, { valeur: string, statut: 'jaune' | 'vert' }>>({})
 
   const [baseCalc, setBaseCalc] = useState<'fai' | 'cible'>('fai')
   const [apport, setApport] = useState(20000)
@@ -156,16 +254,15 @@ export default function FicheBienPage() {
 
   useEffect(() => {
     async function load() {
-      const [bienRes, sessionRes] = await Promise.all([
+      const [bienRes, editsRes, sessionRes] = await Promise.all([
         fetch(`/api/biens/${id}`),
+        fetch(`/api/biens/${id}/edits`),
         supabase.auth.getSession()
       ])
       const bienData = await bienRes.json()
-      setBien(bienData.bien)
-
-      const editsRes = await fetch(`/api/biens/${id}/edits`)
       const editsData = await editsRes.json()
-      setUserEditedFields(new Set(editsData.champs || []))
+      setBien(bienData.bien)
+      setChampsStatut(editsData.champs || {})
 
       const session = sessionRes.data.session
       if (session) {
@@ -200,7 +297,10 @@ export default function FicheBienPage() {
     if (res.ok) {
       const data = await res.json()
       setBien((prev: any) => ({ ...prev, ...data.bien }))
-      setUserEditedFields(prev => new Set([...prev, champ]))
+      // Recharger les statuts
+      const editsRes = await fetch(`/api/biens/${id}/edits`)
+      const editsData = await editsRes.json()
+      setChampsStatut(editsData.champs || {})
     }
   }
 
@@ -235,7 +335,6 @@ export default function FicheBienPage() {
   const cashflowBrut = loyerNet - mensualiteTotale
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
-
   const financement = { montantEmprunte, tauxCredit: taux, tauxAssurance, dureeAns: duree }
 
   return (
@@ -258,10 +357,10 @@ export default function FicheBienPage() {
         .prix-label { font-size: 11px; font-weight: 600; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; }
         .prix-fai { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 800; color: #c0392b; }
         .prix-cible-val { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: #1a1210; }
-        .ecart-badge { display: inline-block; margin-top: 2px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; align-self: flex-start; }
+        .ecart-badge { display: inline-block; margin-top: 2px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
         .ecart-neg { background: #d4f5e0; color: #1a7a40; }
         .ecart-pos { background: #fde8e8; color: #a33; }
-        .lbc-btn { display: inline-block; padding: 9px 18px; border: 2px solid #e8e2d8; border-radius: 10px; font-size: 13px; font-weight: 600; color: #1a1210; text-decoration: none; transition: all 0.15s; align-self: flex-start; }
+        .lbc-btn { display: inline-block; padding: 9px 18px; border: 2px solid #e8e2d8; border-radius: 10px; font-size: 13px; font-weight: 600; color: #1a1210; text-decoration: none; transition: all 0.15s; }
         .lbc-btn:hover { border-color: #c0392b; color: #c0392b; }
         .section { background: #fff; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 24px; }
         .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #1a1210; }
@@ -293,6 +392,9 @@ export default function FicheBienPage() {
         .pnl-grid { display: flex; gap: 20px; }
         .nc-warning { background: #fff8f0; border: 1.5px solid #f0d090; border-radius: 12px; padding: 16px 20px; color: #a06010; font-size: 13px; }
         .profil-bar { background: #f7f4f0; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #9a8a80; margin-top: 16px; }
+        .legende { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+        .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9a8a80; }
+        .legende-dot { width: 10px; height: 10px; border-radius: 50%; }
       `}</style>
 
       <div className="fiche-wrap">
@@ -332,23 +434,23 @@ export default function FicheBienPage() {
           <div className="data-grid">
             <div className="data-item">
               <span className="data-label">Loyer</span>
-              <CellEditable bien={bien} champ="loyer" suffix=" €/mois" userToken={userToken} userEditedFields={userEditedFields} onUpdate={handleUpdate} />
+              <CellEditable bien={bien} champ="loyer" suffix=" €/mois" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
             </div>
             <div className="data-item">
               <span className="data-label">Type loyer</span>
-              <CellTypeLoyer bien={bien} userToken={userToken} userEditedFields={userEditedFields} onUpdate={handleUpdate} />
+              <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
             </div>
             <div className="data-item">
               <span className="data-label">Charges rec.</span>
-              <CellEditable bien={bien} champ="charges_rec" suffix=" €/mois" userToken={userToken} userEditedFields={userEditedFields} onUpdate={handleUpdate} />
+              <CellEditable bien={bien} champ="charges_rec" suffix=" €/mois" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
             </div>
             <div className="data-item">
               <span className="data-label">Charges copro</span>
-              <CellEditable bien={bien} champ="charges_copro" suffix=" €/mois" userToken={userToken} userEditedFields={userEditedFields} onUpdate={handleUpdate} />
+              <CellEditable bien={bien} champ="charges_copro" suffix=" €/mois" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
             </div>
             <div className="data-item">
               <span className="data-label">Taxe fonciere</span>
-              <CellEditable bien={bien} champ="taxe_fonc_ann" suffix=" €/an" userToken={userToken} userEditedFields={userEditedFields} onUpdate={handleUpdate} />
+              <CellEditable bien={bien} champ="taxe_fonc_ann" suffix=" €/an" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
             </div>
             <div className="data-item">
               <span className="data-label">Profil locataire</span>
@@ -362,6 +464,10 @@ export default function FicheBienPage() {
               <span className="data-label">Rendement brut</span>
               <span className="data-value" style={{ color: '#c0392b' }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : 'NC'}</span>
             </div>
+          </div>
+          <div className="legende">
+            <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>Renseigné par 1 utilisateur — modifiable</div>
+            <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>Valide par 2+ utilisateurs — clic droit pour modifier</div>
           </div>
           {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>Connectez-vous pour completer les donnees manquantes</p>}
         </div>
@@ -412,7 +518,6 @@ export default function FicheBienPage() {
                     </div>
                   </div>
                 </div>
-
                 <div>
                   <table className="results-table">
                     <thead>
