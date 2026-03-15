@@ -10,7 +10,7 @@ import { Bien } from '@/lib/types'
 import { TYPES_BIEN, TRIS } from '@/lib/constants'
 
 function formatPrix(n: number) {
-  return n ? n.toLocaleString('fr-FR') + ' euros' : '-'
+  return n ? n.toLocaleString('fr-FR') + ' €' : '-'
 }
 
 export default function BiensPage() {
@@ -29,19 +29,29 @@ export default function BiensPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
+  const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/biens').then(r => r.json()),
-      fetch('/api/metropoles').then(r => r.json()),
-      supabase.auth.getSession(),
-    ]).then(([biensData, metroData, sessionData]) => {
+    async function load() {
+      const [biensData, metroData, sessionData] = await Promise.all([
+        fetch('/api/biens').then(r => r.json()),
+        fetch('/api/metropoles').then(r => r.json()),
+        supabase.auth.getSession(),
+      ])
       setAllBiens(biensData.biens || [])
       setMetropoles(metroData.metropoles || [])
+
       const session = sessionData.data.session
-      if (session) { setUserId(session.user.id); setUserToken(session.access_token) }
+      if (session) {
+        setUserId(session.user.id)
+        setUserToken(session.access_token)
+        const wRes = await fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        const wData = await wRes.json()
+        setWatchlistIds(new Set((wData.watchlist || []).map((w: any) => w.bien_id)))
+      }
       setLoading(false)
-    })
+    }
+    load()
   }, [])
 
   async function updateBien(bien: any, champ: string, valeur: any) {
@@ -87,12 +97,8 @@ export default function BiensPage() {
   function CellEditable({ bien, champ }: { bien: any, champ: string }) {
     const valeur = bien[champ]
     const estSaving = saving === bien.id + champ
-    if (valeur !== null && valeur !== undefined) {
-      return <span style={{ color: '#555' }}>{valeur}</span>
-    }
-    if (!userId) {
-      return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
-    }
+    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}</span>
+    if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
     return (
       <input type="number" defaultValue="" placeholder="NC" disabled={!!estSaving}
         style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: estSaving ? '#f0ede8' : '#faf8f5', outline: 'none' }}
@@ -103,12 +109,8 @@ export default function BiensPage() {
 
   function CellTypeLoyer({ bien }: { bien: any }) {
     const valeur = (bien as any).type_loyer
-    if (valeur !== null && valeur !== undefined) {
-      return <span style={{ color: '#555' }}>{valeur}</span>
-    }
-    if (!userId) {
-      return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
-    }
+    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}</span>
+    if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
     return (
       <select defaultValue="" onChange={e => { if (e.target.value) updateBien(bien, 'type_loyer', e.target.value) }}
         style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: '#faf8f5', outline: 'none' }}>
@@ -156,6 +158,8 @@ export default function BiensPage() {
         .td-strat { display: inline-block; font-size: 11px; font-weight: 600; color: #2a4a8a; background: #d4ddf5; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
         .td-btn { display: inline-block; padding: 7px 16px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 0.15s; }
         .td-btn:hover { opacity: 0.75; }
+        .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 0.15s; }
+        .td-heart:hover { transform: scale(1.2); }
         .edit-hint { font-size: 11px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
       `}</style>
 
@@ -168,9 +172,7 @@ export default function BiensPage() {
               {strategies.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-
           <div className="filter-sep" />
-
           <div className="filter-group">
             <label className="filter-label">Metropole</label>
             <select value={metropole} onChange={e => { setMetropole(e.target.value); setVille('Toutes') }}>
@@ -178,7 +180,6 @@ export default function BiensPage() {
               {metropoles.map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
-
           {villes.length > 0 && (
             <div className="filter-group">
               <label className="filter-label">Ville</label>
@@ -188,40 +189,32 @@ export default function BiensPage() {
               </select>
             </div>
           )}
-
           <div className="filter-group">
             <label className="filter-label">Type de bien</label>
             <select value={typeBien} onChange={e => setTypeBien(e.target.value)}>
               {TYPES_BIEN.map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
-
           <div className="filter-sep" />
-
           <div className="filter-group">
             <label className="filter-label">Prix minimum</label>
             <input type="number" placeholder="ex: 80000" value={prixMin} onChange={e => setPrixMin(e.target.value)} />
           </div>
-
           <div className="filter-group">
             <label className="filter-label">Prix maximum</label>
             <input type="number" placeholder="ex: 200000" value={prixMax} onChange={e => setPrixMax(e.target.value)} />
           </div>
-
           <div className="filter-group">
             <label className="filter-label">Rendement minimum</label>
             <input type="number" placeholder="ex: 5" value={rendMin} onChange={e => setRendMin(e.target.value)} />
           </div>
-
           <div className="filter-sep" />
-
           <div className="filter-group">
             <label className="filter-label">Trier par</label>
             <select value={tri} onChange={e => setTri(e.target.value)}>
               {TRIS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
-
           <div className="view-toggle">
             <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
             <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
@@ -249,7 +242,21 @@ export default function BiensPage() {
               <p style={{ color: '#9a8a80', textAlign: 'center', padding: '80px' }}>Chargement...</p>
             ) : view === 'grid' ? (
               <div className="grid">
-                {filtered.map(bien => <BienCard key={bien.id} bien={bien} />)}
+                {filtered.map(bien => (
+                  <BienCard
+                    key={bien.id}
+                    bien={bien}
+                    inWatchlist={watchlistIds.has(bien.id)}
+                    userToken={userToken}
+                    onWatchlistChange={(bienId, added) => {
+                      setWatchlistIds(prev => {
+                        const next = new Set(prev)
+                        added ? next.add(bienId) : next.delete(bienId)
+                        return next
+                      })
+                    }}
+                  />
+                ))}
               </div>
             ) : (
               <>
@@ -258,6 +265,7 @@ export default function BiensPage() {
                 <table className="list-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}><span></span></th>
                       <th style={{ width: '80px' }}><span></span></th>
                       <th>Bien<span></span></th>
                       <th>Commune<span></span></th>
@@ -278,6 +286,31 @@ export default function BiensPage() {
                   <tbody>
                     {filtered.map(bien => (
                       <tr key={bien.id}>
+                        <td>
+                          <button
+                            className="td-heart"
+                            onClick={async () => {
+                              if (!userToken) { window.location.href = '/login'; return }
+                              const isIn = watchlistIds.has(bien.id)
+                              const method = isIn ? 'DELETE' : 'POST'
+                              const res = await fetch('/api/watchlist', {
+                                method,
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+                                body: JSON.stringify({ bien_id: bien.id })
+                              })
+                              if (res.ok) {
+                                setWatchlistIds(prev => {
+                                  const next = new Set(prev)
+                                  isIn ? next.delete(bien.id) : next.add(bien.id)
+                                  return next
+                                })
+                              }
+                            }}
+                            style={{ color: watchlistIds.has(bien.id) ? '#c0392b' : '#c0b0a0' }}
+                            title={watchlistIds.has(bien.id) ? 'Retirer' : 'Ajouter a la watchlist'}>
+                            {watchlistIds.has(bien.id) ? '♥' : '♡'}
+                          </button>
+                        </td>
                         <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
                         <td>
                           <span className="td-bien-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</span>
