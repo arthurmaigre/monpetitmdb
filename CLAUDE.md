@@ -4,7 +4,7 @@
 SaaS de sourcing immobilier pour investisseurs particuliers (methodologie marchand de biens).
 Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Decoupe**.
 Territoire : France entiere.
-Modele freemium : Free / Pro ~19 euros / Expert ~49 euros.
+Modele freemium : Free / Pro ~19€ / Expert ~49€.
 
 ## Stack
 - **Frontend** : Next.js App Router, TypeScript, Tailwind — Vercel
@@ -202,7 +202,7 @@ Note : Supabase a migre vers les nouvelles cles (sb_publishable_ / sb_secret_). 
 - **Tous les calculs financiers dans `calculs.ts`** — jamais en DB sauf `rendement_brut`
 - **Loyer toujours stocke HC** (converti depuis CC si charges connues)
 - **Deduplication par `url`** — id assigne par Supabase
-- **Encoding JSX** : pas de `euro` -> ecrire `euros` ou `{'\u20AC'}` ; `{'heart'}` pour les icones
+- **Encoding JSX** : pas de `€` direct dans le JSX -> utiliser `{'\u20AC'}` ; `{'♥'}` pour les icones
 - **Next.js App Router** : toujours `await params` dans les route handlers (bug Next.js 16)
 - **Estimation DVF = prix marche "en bon etat"** : pas de decote travaux, c'est le prix de revente apres travaux
 - **MdB toujours a l'IS** : pas de regime IR pour marchand de biens
