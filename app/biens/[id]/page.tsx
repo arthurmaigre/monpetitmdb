@@ -282,6 +282,12 @@ function genererMessageContact(bien: any): { message: string, champsManquants: s
   return { message: msg, champsManquants: manquants }
 }
 
+function getReplyUrl(url: string): string {
+  if (!url) return ''
+  const match = url.match(/\/(\d+)\/?$/)
+  return match ? `https://www.leboncoin.fr/reply/${match[1]}` : url
+}
+
 function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userToken: string | null, onStatusUpdate: (statut: string, message: string) => void }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -294,6 +300,15 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
       setMessage(messageGenere)
     }
   }, [bien.loyer, bien.charges_copro, bien.taxe_fonc_ann, bien.charges_rec, bien.adresse])
+
+  useEffect(() => {
+    if (window.location.hash === '#contact') {
+      setOpen(true)
+      setTimeout(() => {
+        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    }
+  }, [])
 
   async function handleCopyAndOpen() {
     try {
@@ -308,7 +323,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
     }
 
     if (bien.url) {
-      window.open(bien.url, '_blank')
+      window.open(getReplyUrl(bien.url), '_blank')
     }
   }
 
@@ -385,7 +400,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
         }}
           onMouseEnter={e => e.currentTarget.style.background = '#a5311f'}
           onMouseLeave={e => e.currentTarget.style.background = '#c0392b'}>
-          {copied ? 'Copi\u00e9 !' : 'Copier et ouvrir Leboncoin'}
+          {copied ? 'Message copi\u00e9 ! Collez-le dans Leboncoin' : 'Copier et contacter sur Leboncoin'}
         </button>
 
         {userToken && (
@@ -418,7 +433,10 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
         )}
       </div>
 
-      {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '10px', fontStyle: 'italic' }}>Connectez-vous pour sauvegarder le message et suivre son statut</p>}
+      <p style={{ fontSize: '11px', color: '#b0a898', marginTop: '10px' }}>
+        {"Le bouton copie le message et ouvre directement la page de contact Leboncoin. Il ne reste plus qu'\u00e0 coller le message et envoyer."}
+      </p>
+      {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '6px', fontStyle: 'italic' }}>Connectez-vous pour sauvegarder le message et suivre son statut</p>}
     </div>
   )
 }
@@ -786,7 +804,7 @@ export default function FicheBienPage() {
         )}
 
         <div id="contact" className="section">
-          <h2 className="section-title">Contacter le vendeur</h2>
+          <h2 className="section-title">{"R\u00e9cup\u00e9rer les donn\u00e9es manquantes"}</h2>
           <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />
         </div>
 

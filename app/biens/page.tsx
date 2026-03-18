@@ -22,6 +22,11 @@ export default function BiensPage() {
   const [strategie, setStrategie] = useState('')
   const [metropole, setMetropole] = useState('Toutes')
   const [ville, setVille] = useState('Toutes')
+  const [communeSearch, setCommuneSearch] = useState('')
+  const [communeSuggestions, setCommuneSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string } | null>(null)
+  const communeTimeout = useRef<any>(null)
   const [typeBien, setTypeBien] = useState('Tous')
   const [prixMin, setPrixMin] = useState('')
   const [prixMax, setPrixMax] = useState('')
@@ -71,6 +76,32 @@ export default function BiensPage() {
     load()
   }, [])
 
+  function handleCommuneSearch(value: string) {
+    setCommuneSearch(value)
+    if (communeTimeout.current) clearTimeout(communeTimeout.current)
+    if (value.length < 2) { setCommuneSuggestions([]); setShowSuggestions(false); return }
+    communeTimeout.current = setTimeout(async () => {
+      const params = new URLSearchParams({ q: value })
+      if (metropole !== 'Toutes') params.set('metropole', metropole)
+      const res = await fetch(`/api/communes?${params}`)
+      const data = await res.json()
+      setCommuneSuggestions(data.communes || [])
+      setShowSuggestions(true)
+    }, 200)
+  }
+
+  function selectCommune(commune: any) {
+    setSelectedCommune(commune)
+    setCommuneSearch(`${commune.nom_commune} (${commune.code_postal})`)
+    setShowSuggestions(false)
+  }
+
+  function clearCommune() {
+    setSelectedCommune(null)
+    setCommuneSearch('')
+    setCommuneSuggestions([])
+  }
+
   async function updateBien(bien: any, champ: string, valeur: any) {
     if (!userToken) return
     if ((bien as any)[champ] !== null && (bien as any)[champ] !== undefined) return
@@ -96,6 +127,11 @@ export default function BiensPage() {
     if (strategie && b.strategie_mdb !== strategie) return false
     if (metropole !== 'Toutes' && b.metropole !== metropole) return false
     if (ville !== 'Toutes' && b.ville !== ville) return false
+    if (selectedCommune) {
+      const matchVille = b.ville && b.ville.toUpperCase() === selectedCommune.nom_commune.toUpperCase()
+      const matchCP = (b as any).code_postal === selectedCommune.code_postal
+      if (!matchVille && !matchCP) return false
+    }
     if (typeBien !== 'Tous' && b.type_bien !== typeBien) return false
     if (prixMin && b.prix_fai < Number(prixMin)) return false
     if (prixMax && b.prix_fai > Number(prixMax)) return false
@@ -200,6 +236,18 @@ export default function BiensPage() {
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 0.15s; }
         .td-heart:hover { transform: scale(1.2); }
         .edit-hint { font-size: 11px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
+        .commune-wrap { position: relative; }
+        .commune-input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; color: #1a1210; outline: none; transition: border-color 0.15s; width: 220px; }
+        .commune-input:focus { border-color: #c0392b; }
+        .commune-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: #9a8a80; padding: 2px 6px; }
+        .commune-clear:hover { color: #c0392b; }
+        .commune-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #e8e2d8; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 20; max-height: 240px; overflow-y: auto; margin-top: 4px; }
+        .commune-item { padding: 10px 14px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ede8; }
+        .commune-item:last-child { border-bottom: none; }
+        .commune-item:hover { background: #faf8f5; }
+        .commune-item-name { font-weight: 500; color: #1a1210; }
+        .commune-item-cp { font-size: 12px; color: #9a8a80; font-weight: 600; }
+        .commune-item-metro { font-size: 11px; color: #b0a898; }
       `}</style>
 
       <div className="main">
@@ -219,15 +267,34 @@ export default function BiensPage() {
               {metropoles.map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
-          {villes.length > 0 && (
-            <div className="filter-group">
-              <label className="filter-label">Ville</label>
-              <select value={ville} onChange={e => setVille(e.target.value)}>
-                <option>Toutes</option>
-                {villes.map(v => <option key={v}>{v}</option>)}
-              </select>
+          <div className="filter-group">
+            <label className="filter-label">Ville / Code postal</label>
+            <div className="commune-wrap">
+              <input
+                className="commune-input"
+                type="text"
+                placeholder="ex: 44000 ou Nantes"
+                value={communeSearch}
+                onChange={e => handleCommuneSearch(e.target.value)}
+                onFocus={() => { if (communeSuggestions.length > 0) setShowSuggestions(true) }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              />
+              {selectedCommune && <button className="commune-clear" onClick={clearCommune}>x</button>}
+              {showSuggestions && communeSuggestions.length > 0 && (
+                <div className="commune-dropdown">
+                  {communeSuggestions.map((c, i) => (
+                    <div key={`${c.code_postal}-${c.nom_commune}-${i}`} className="commune-item" onMouseDown={() => selectCommune(c)}>
+                      <div>
+                        <span className="commune-item-name">{c.nom_commune}</span>
+                        {c.metropole && <span className="commune-item-metro">{` \u2014 ${c.metropole}`}</span>}
+                      </div>
+                      <span className="commune-item-cp">{c.code_postal}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
           <div className="filter-group">
             <label className="filter-label">Type de bien</label>
             <select value={typeBien} onChange={e => setTypeBien(e.target.value)}>
