@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('biens')
       .select(`
-  id, url, metropole, ville, quartier,
+  id, url, metropole, ville, quartier, code_postal,
   type_bien, nb_pieces, surface, etage,
   prix_fai, prix_m2, loyer, type_loyer,
   charges_rec, charges_copro, taxe_fonc_ann,
@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   profil_locataire, fin_bail, score_travaux,
   dpe, annee_construction,
   photo_storage_path, photo_url,
+  estimation_prix_total,
   created_at, updated_at
 `)
       .in('id', idList)
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
   let query = supabaseAdmin
     .from('biens')
     .select(`
-  id, url, metropole, ville, quartier,
+  id, url, metropole, ville, quartier, code_postal,
   type_bien, nb_pieces, surface, etage,
   prix_fai, prix_m2, loyer, type_loyer,
   charges_rec, charges_copro, taxe_fonc_ann,
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
   profil_locataire, fin_bail, score_travaux,
   dpe, annee_construction,
   photo_storage_path, photo_url,
+  estimation_prix_total,
   created_at, updated_at
 `)
     .eq('statut', statut)

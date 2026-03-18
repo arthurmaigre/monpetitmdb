@@ -227,7 +227,7 @@ export default function AdminEstimationPage() {
           <div className="method-block">
             <div className="method-title">{"Comment fonctionnent les p\u00e9riodes"}</div>
             <div className="method-text">
-              {"Le moteur analyse les transactions DVF sur deux p\u00e9riodes compl\u00e9mentaires. La p\u00e9riode principale capture le march\u00e9 actuel. La p\u00e9riode de r\u00e9f\u00e9rence (2018-2020) sert de point de comparaison car les prix actuels sont revenus au niveau d'avant COVID, apr\u00e8s la correction de 2023-2025."}
+              {"Le moteur analyse les transactions DVF sur deux p\u00e9riodes compl\u00e9mentaires avec le m\u00eame poids. La p\u00e9riode principale capture le march\u00e9 actuel. La p\u00e9riode de r\u00e9f\u00e9rence (2018-2020) \u00e9quilibre les prix gonfl\u00e9s post-COVID (2021-2023), les prix actuels \u00e9tant revenus au niveau d'avant COVID."}
             </div>
           </div>
           <div className="method-block">
@@ -273,7 +273,7 @@ export default function AdminEstimationPage() {
         </Section>
 
         {/* ════════ RAYON DE RECHERCHE ════════ */}
-        <Section title={"Rayon de recherche adaptatif"} description={"Le moteur commence par chercher les transactions DVF dans un petit rayon autour du bien, puis \u00e9largit progressivement jusqu'\u00e0 trouver suffisamment de comparables."}>
+        <Section title={"Rayon de recherche adaptatif"} description={"Le moteur commence par un rayon tr\u00e8s serr\u00e9 (~50m, id\u00e9al en ville) puis \u00e9largit progressivement jusqu'\u00e0 trouver suffisamment de comparables. En zone rurale, le rayon s'\u00e9largit automatiquement."}>
           <ParamRow
             label={"Seuil minimum de transactions"}
             description={"Nombre minimum de transactions comparables avant d'arr\u00eater l'\u00e9largissement"}
@@ -284,7 +284,7 @@ export default function AdminEstimationPage() {
           <div style={{ marginTop: '12px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#9a8a80', marginBottom: '8px' }}>{"ÉTAPES DU RAYON"}</div>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {(config?.rayons_recherche?.etapes_metres_approx || [330, 550, 770, 1100]).map((m: number, i: number) => (
+              {(config?.rayons_recherche?.etapes_metres_approx || [55, 110, 220, 330, 550, 770, 1100]).map((m: number, i: number) => (
                 <div key={i} style={{ background: '#faf8f5', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>
                   {`\u00c9tape ${i + 1} : ~${m}m`}
                 </div>
@@ -313,6 +313,16 @@ export default function AdminEstimationPage() {
             onChange={(v: number) => updateConfig(['filtres_surface', 'studio', 'tolerance_pct'], v)}
             step="5"
           />
+        </Section>
+
+        {/* ════════ FILTRE NOMBRE DE PIECES ════════ */}
+        <Section title={"Filtre par nombre de pi\u00e8ces"} description={"Les transactions DVF sont filtr\u00e9es par nombre de pi\u00e8ces identique au bien analys\u00e9. Un T3 est compar\u00e9 uniquement \u00e0 des T3, un studio \u00e0 des studios, etc. Cela \u00e9vite que les petites surfaces (studios \u00e0 prix/m\u00b2 \u00e9lev\u00e9) ne gonflent la m\u00e9diane des grands appartements."}>
+          <div className="method-block">
+            <div className="method-title">{"Fonctionnement"}</div>
+            <div className="method-text">
+              {"Le filtre utilise le param\u00e8tre nbpiecespp de l'API DVF (nombre de pi\u00e8ces principales). Si le nombre de pi\u00e8ces n'est pas connu ou si le filtre retourne moins de 5 comparables, le moteur refait une recherche sans filtre (fallback)."}
+            </div>
+          </div>
         </Section>
 
         {/* ════════ CORRECTEURS COMMUNS ════════ */}
@@ -474,7 +484,7 @@ export default function AdminEstimationPage() {
         {/* ════════ BARRE DE SAUVEGARDE ════════ */}
         <div className="save-bar">
           <span style={{ fontSize: '12px', color: '#b0a898', marginRight: 'auto' }}>
-            {"Les modifications s'appliquent aux prochaines estimations. Les estimations en cache (< 30j) ne sont pas recalcul\u00e9es."}
+            {"Les modifications s'appliquent aux prochaines estimations. Les estimations en cache (< 30j) peuvent \u00eatre forc\u00e9es via le bouton Recalculer sur la fiche bien."}
           </span>
           <button className="save-btn" onClick={handleSave} disabled={saving}>
             {saving ? 'Sauvegarde...' : 'Sauvegarder la configuration'}

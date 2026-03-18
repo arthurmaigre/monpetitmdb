@@ -4,13 +4,14 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
-import { calculerCashflow, calculerMensualite } from '@/lib/calculs'
+import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu } from '@/lib/calculs'
 
 const REGIMES = [
   { value: 'micro_foncier', label: 'Micro-foncier' },
   { value: 'reel', label: 'Reel' },
   { value: 'lmnp', label: 'LMNP' },
   { value: 'sci_is', label: 'SCI IS' },
+  { value: 'marchand_de_biens', label: 'Marchand de biens' },
 ]
 
 function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate }: any) {
@@ -128,9 +129,11 @@ function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
   return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}</span>
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5 }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { montantEmprunte, tauxCredit, tauxAssurance, dureeAns } = financement
+  const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
+  const hasLoyer = loyer && loyer > 0
 
   const loyerAnnuel = (loyer || 0) * 12
   const chargesRecAnn = (charges_rec || 0) * 12
@@ -159,8 +162,10 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false }
     const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable * (tmi / 100)
-  } else if (regime === 'sci_is') {
-    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort
+  } else if (regime === 'sci_is' || regime === 'marchand_de_biens') {
+    // SCI IS et MdB : IS 15% / 25%, charges deductibles + amortissement (SCI IS seulement)
+    const amortRegime = regime === 'sci_is' ? amort : 0
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amortRegime
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable <= 42500 ? revenuImposable * 0.15 : 42500 * 0.15 + (revenuImposable - 42500) * 0.25
   }
@@ -176,45 +181,169 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false }
   const cashflowNetMensuel = cashflowBrut - impot / 12
   const cashflowNetAnnuel = cashflowNetMensuel * 12
 
+  // --- Revente ---
+  const dur = dureeRevente || 5
+  const prixReventeBrut = estimation?.prix_total || 0
+  const fraisAgenceMontant = Math.round(prixReventeBrut * fraisAgenceRevente / 100)
+  const prixRevente = prixReventeBrut - fraisAgenceMontant
+  const scoreUtilise = scorePerso || bien.score_travaux
+  const budgetTravaux = isTravauxLourds && scoreUtilise && bien.surface
+    ? (budgetTravauxM2?.[String(scoreUtilise)] || 0) * bien.surface : 0
+  const fraisNotairePct = regime === 'marchand_de_biens' ? 2.5 : (fraisNotaire || 7.5)
+  const fraisNotaireMontant = Math.round(prix_fai * fraisNotairePct / 100)
+
+  // PV brute = revente - achat - notaire - travaux
+  const pvBrute = Math.max(0, prixRevente - prix_fai - fraisNotaireMontant - budgetTravaux)
+
+  // Fiscalite PV selon regime
+  let irPV = 0, psPV = 0, tvaMarge = 0, chargesSocMdb = 0, isPV = 0, pfuPV = 0
+  if (regime === 'micro_foncier' || regime === 'reel') {
+    irPV = pvBrute * 0.19
+    psPV = pvBrute * 0.172
+  } else if (regime === 'lmnp') {
+    const amortsCumules = ((prix_fai * 0.85 / 30) + (prix_fai * 0.10 / 10)) * dur
+    const pvReintegree = Math.max(0, pvBrute + amortsCumules)
+    irPV = pvReintegree * 0.19
+    psPV = pvReintegree * 0.172
+  } else if (regime === 'sci_is') {
+    const amortCumule = (prix_fai * 0.85 / 30) * dur
+    const vnc = prix_fai - amortCumule
+    const pvSCI = Math.max(0, prixRevente - vnc - budgetTravaux)
+    isPV = pvSCI <= 42500 ? pvSCI * 0.15 : 42500 * 0.15 + (pvSCI - 42500) * 0.25
+  } else if (regime === 'marchand_de_biens') {
+    // MdB toujours a l'IS : TVA sur marge + IS sur benefice
+    const marge = Math.max(0, prixReventeBrut - prix_fai)
+    tvaMarge = marge * 0.20
+    const benefice = Math.max(0, prixRevente - prix_fai - budgetTravaux - fraisNotaireMontant - tvaMarge)
+    isPV = benefice <= 42500 ? benefice * 0.15 : 42500 * 0.15 + (benefice - 42500) * 0.25
+  }
+  const totalFiscPV = Math.round(irPV + psPV + tvaMarge + isPV)
+  const pvNette = Math.round(pvBrute - totalFiscPV)
+
+  // Cashflow locatif net cumule
+  const cashflowCumule = hasLoyer && !isTravauxLourds ? Math.round(cashflowNetAnnuel * dur) : 0
+
+  // Capital restant du
+  const crd = calculerCapitalRestantDu(montantEmprunte, tauxCredit, dureeAns, dur)
+
+  // Bilan = produit revente - CRD - fiscalite PV + cashflow cumule - apport - frais notaire - travaux
+  const produitRevente = prixRevente - crd
+  const capitalInvesti = (apport || 0) + fraisNotaireMontant + budgetTravaux
+  const profitNet = Math.round(produitRevente - capitalInvesti - totalFiscPV + cashflowCumule)
+  const rendementTotal = capitalInvesti > 0 ? Math.round(profitNet / capitalInvesti * 1000) / 10 : 0
+  const rendementAnnualise = capitalInvesti > 0 && dur > 0 ? Math.round((Math.pow(1 + profitNet / capitalInvesti, 1 / dur) - 1) * 1000) / 10 : 0
+
+  const hasRevente = prixReventeBrut > 0
+
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
 
-  function Row({ label, value, rouge = false, bold = false, tiret = false, info = '' }: any) {
+  function Row({ label, value, rouge = false, bold = false, tiret = false, info = '', vert = false }: any) {
     return (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
         <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
           {label}
           {info && <span title={info} style={{ cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>}
         </span>
-        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : '#1a1210' }}>
+        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : vert ? '#1a7a40' : '#1a1210' }}>
           {tiret ? '-' : value}
         </span>
       </div>
     )
   }
 
+  function SectionLabel({ label }: { label: string }) {
+    return <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '20px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #f0ede8' }}>{label}</div>
+  }
+
   return (
-    <div style={{ background: highlight ? '#fff8f0' : '#fff', border: highlight ? '2px solid #f0d090' : '1.5px solid #ede8e0', borderRadius: '14px', padding: '20px 24px', flex: 1, minWidth: 0 }}>
+    <div style={{ background: highlight ? '#fff8f0' : '#fff', border: highlight ? '2px solid #f0d090' : '1.5px solid #ede8e0', borderRadius: '14px', padding: '20px 24px', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
       <div style={{ fontFamily: "'Fraunces', serif", fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: '#1a1210' }}>{titre}</div>
-      <Row label="Loyer brut annuel" value={`${fmt(loyerAnnuel)} €`} />
-      <Row label="Charges recup. annuelles" value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} €` : `+${fmt(chargesRecAnn)} €`} />
-      <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} €`} rouge />
-      <Row label="Taxe fonciere" value={`-${fmt(taxeFoncAnn)} €`} rouge />
-      <Row label="Interets emprunt" value={`-${fmt(interetsAnn)} €`} rouge />
-      <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} €`} rouge />
-      <Row label="Amortissement" value={`-${fmt(amort)} €`} rouge tiret={!hasAmort} info="L'amortissement fiscal est possible uniquement en LMNP et SCI IS" />
-      <Row label="Resultat imposable" value={`${fmt(revenuImposable)} €`} bold />
-      <Row label="Impot" value={`-${fmt(impot)} €`} rouge bold />
-      <div style={{ marginTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
-        <div style={{ fontSize: '11px', color: '#9a8a80', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cashflow net</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowNetMensuel >= 0 ? '#1a7a40' : '#c0392b' }}>
-            {cashflowNetMensuel >= 0 ? '+' : ''}{fmt(cashflowNetMensuel)} €/mois
-          </span>
-          <span style={{ fontSize: '13px', color: cashflowNetAnnuel >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }}>
-            {cashflowNetAnnuel >= 0 ? '+' : ''}{fmt(cashflowNetAnnuel)} €/an
-          </span>
-        </div>
-      </div>
+
+      {/* === PARTIE LOCATIVE (annuelle) === */}
+      {hasLoyer && !isTravauxLourds && (
+        <>
+          <SectionLabel label="Revenus locatifs (annuel)" />
+          <Row label="Loyer brut annuel" value={`${fmt(loyerAnnuel)} \u20AC`} />
+          <Row label="Charges recup. annuelles" value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} \u20AC` : `+${fmt(chargesRecAnn)} \u20AC`} />
+          <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} \u20AC`} rouge />
+          <Row label="Taxe fonciere" value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge />
+          <Row label="Interets emprunt" value={`-${fmt(interetsAnn)} \u20AC`} rouge />
+          <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge />
+          <Row label="Amortissement" value={`-${fmt(amort)} \u20AC`} rouge tiret={!hasAmort} info={regime === 'marchand_de_biens' ? "Pas d'amortissement en MdB : les biens sont du stock (actif circulant), pas des immobilisations" : "Amortissement fiscal uniquement en LMNP et SCI IS"} />
+          <Row label="Resultat imposable" value={`${fmt(revenuImposable)} \u20AC`} bold />
+          <Row label="Impot" value={`-${fmt(impot)} \u20AC`} rouge bold />
+          <div style={{ marginTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+            <div style={{ fontSize: '11px', color: '#9a8a80', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cashflow net</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowNetMensuel >= 0 ? '#1a7a40' : '#c0392b' }}>
+                {cashflowNetMensuel >= 0 ? '+' : ''}{fmt(cashflowNetMensuel)} {'\u20AC'}/mois
+              </span>
+              <span style={{ fontSize: '13px', color: cashflowNetAnnuel >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }}>
+                {cashflowNetAnnuel >= 0 ? '+' : ''}{fmt(cashflowNetAnnuel)} {'\u20AC'}/an
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* === SCENARIO REVENTE === */}
+      {hasRevente && (
+        <>
+          <SectionLabel label={`Sc\u00e9nario revente \u00e0 ${dur} an${dur > 1 ? 's' : ''}`} />
+          <Row label="Prix de revente (DVF)" value={`${fmt(prixReventeBrut)} \u20AC`} />
+          <Row label={`Frais d'agence (${fraisAgenceRevente}%)`} value={`-${fmt(fraisAgenceMontant)} \u20AC`} rouge />
+          <Row label="Net vendeur" value={`${fmt(prixRevente)} \u20AC`} bold />
+          <Row label="Prix d'achat (FAI)" value={`-${fmt(prix_fai)} \u20AC`} rouge />
+          <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge />
+          <Row label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})` : 'Travaux'} value={budgetTravaux > 0 ? `-${fmt(budgetTravaux)} \u20AC` : `0 \u20AC`} rouge={budgetTravaux > 0} />
+          <Row label="Plus-value brute" value={`${pvBrute > 0 ? '+' : ''}${fmt(pvBrute)} \u20AC`} bold vert={pvBrute > 0} rouge={pvBrute <= 0} />
+
+          {/* Fiscalite PV */}
+          {(regime === 'micro_foncier' || regime === 'reel' || regime === 'lmnp') && (
+            <>
+              <Row label="IR sur PV (19%)" value={`-${fmt(Math.round(irPV))} \u20AC`} rouge />
+              <Row label={`Pr\u00e9l. sociaux (17.2%)`} value={`-${fmt(Math.round(psPV))} \u20AC`} rouge />
+              {regime === 'lmnp' && <Row label={`R\u00e9int\u00e9gration amortissements`} value="" info="Amortissements d\u00e9duits r\u00e9int\u00e9gr\u00e9s dans la base imposable (r\u00e9forme 2025)" tiret />}
+            </>
+          )}
+          {regime === 'sci_is' && (
+            <Row label="IS sur PV (15% / 25%)" value={`-${fmt(Math.round(isPV))} \u20AC`} rouge info="PV reste dans la SCI, pas de flat tax sur dividendes" />
+          )}
+          {regime === 'marchand_de_biens' && (
+            <>
+              <Row label="TVA sur marge (20%)" value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge />
+              <Row label="IS sur b{'\u00e9'}n{'\u00e9'}fice (15% / 25%)" value={`-${fmt(Math.round(isPV))} \u20AC`} rouge />
+            </>
+          )}
+          <Row label="Plus-value nette" value={`${pvNette >= 0 ? '+' : ''}${fmt(pvNette)} \u20AC`} bold vert={pvNette >= 0} rouge={pvNette < 0} />
+
+          {/* BILAN FINAL */}
+          <div style={{ marginTop: 'auto', paddingTop: '16px', background: profitNet >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '16px' }}>
+            <div style={{ fontSize: '11px', color: '#9a8a80', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}
+            </div>
+            {cashflowCumule !== 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                <span style={{ color: '#555' }}>Cashflow locatif net cumul{'\u00e9'}</span>
+                <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
+              <span style={{ color: '#555' }}>Plus-value nette</span>
+              <span style={{ fontWeight: 600, color: pvNette >= 0 ? '#1a7a40' : '#c0392b' }}>{pvNette >= 0 ? '+' : ''}{fmt(pvNette)} {'\u20AC'}</span>
+            </div>
+            <div style={{ borderTop: '2px solid rgba(0,0,0,0.1)', paddingTop: '8px' }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: profitNet >= 0 ? '#1a7a40' : '#c0392b', marginBottom: '4px' }}>
+                {profitNet >= 0 ? '+' : ''}{fmt(profitNet)} {'\u20AC'}
+              </div>
+              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: profitNet >= 0 ? '#1a7a40' : '#c0392b' }}>
+                <span>Rdt total : {rendementTotal > 0 ? '+' : ''}{rendementTotal}%</span>
+                <span>Rdt annualis{'\u00e9'} : {rendementAnnualise > 0 ? '+' : ''}{rendementAnnualise}%/an</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -441,22 +570,28 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai }: { bienId: string, prixFai: number }) {
+function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: string, prixFai: number, onEstimationLoaded?: (est: any) => void }) {
   const [estimation, setEstimation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const loadEstimation = async (force = false) => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/estimation/${bienId}${force ? '?force=true' : ''}`)
+      const data = await res.json()
+      if (data.estimation) {
+        setEstimation(data.estimation)
+        onEstimationLoaded?.(data.estimation)
+      }
+      else if (data.error) setError(data.error)
+    } catch { setError('Erreur de connexion') }
+    setLoading(false)
+  }
+
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`/api/estimation/${bienId}`)
-        const data = await res.json()
-        if (data.estimation) setEstimation(data.estimation)
-        else if (data.error) setError(data.error)
-      } catch { setError('Erreur de connexion') }
-      setLoading(false)
-    }
-    load()
+    loadEstimation()
   }, [bienId])
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
@@ -589,6 +724,13 @@ function EstimationSection({ bienId, prixFai }: { bienId: string, prixFai: numbe
           <div>{estimation.nb_comparables} transactions comparables</div>
           <div>Rayon : {estimation.rayon_m}m</div>
           <div style={{ marginTop: '4px', fontStyle: 'italic' }}>Source : DVF (donn{'\u00E9'}es notariales)</div>
+          <button
+            onClick={() => loadEstimation(true)}
+            disabled={loading}
+            style={{ marginTop: '8px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', background: '#f5f2ed', border: '1px solid #e8e2d8', borderRadius: '6px', cursor: 'pointer' }}
+          >
+            {loading ? 'Recalcul...' : 'Recalculer'}
+          </button>
         </div>
       </div>
     </div>
@@ -616,6 +758,9 @@ export default function FicheBienPage() {
   const [objectifCashflow, setObjectifCashflow] = useState(0)
   const [regime2, setRegime2] = useState('reel')
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
+  const [estimationData, setEstimationData] = useState<any>(null)
+  const [dureeRevente, setDureeRevente] = useState<number>(5)
+  const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number>(5)
 
   useEffect(() => {
     async function load() {
@@ -699,6 +844,7 @@ export default function FicheBienPage() {
   if (!bien) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#9a8a80' }}>Bien introuvable</p></Layout>
 
   const peutCalculer = bien.loyer && bien.prix_fai
+  const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
 
   const resultatFAI = peutCalculer ? calculerCashflow(
     { prix_fai: bien.prix_fai, loyer: bien.loyer, type_loyer: bien.type_loyer, charges_rec: bien.charges_rec || 0, charges_copro: bien.charges_copro || 0, taxe_fonc_ann: bien.taxe_fonc_ann || 0, surface: bien.surface },
@@ -780,7 +926,7 @@ export default function FicheBienPage() {
         .results-table tbody td:first-child { text-align: left; color: #555; font-size: 13px; }
         .results-total td { font-weight: 700; background: #f7f4f0; }
         .cashflow-row td:not(:first-child) { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; }
-        .pnl-grid { display: flex; gap: 20px; }
+        .pnl-grid { display: flex; gap: 20px; align-items: stretch; }
         .nc-warning { background: #fff8f0; border: 1.5px solid #f0d090; border-radius: 12px; padding: 16px 20px; color: #a06010; font-size: 13px; }
         .profil-bar { background: #f7f4f0; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #9a8a80; margin-top: 16px; }
         .legende { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
@@ -877,7 +1023,7 @@ export default function FicheBienPage() {
           </div>
         </div>
 
-        <EstimationSection bienId={id} prixFai={bien.prix_fai} />
+        <EstimationSection bienId={id} prixFai={bien.prix_fai} onEstimationLoaded={setEstimationData} />
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">
@@ -1028,9 +1174,10 @@ export default function FicheBienPage() {
           <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />
         </div>
 
-        {!peutCalculer ? (
+        {!peutCalculer && !isTravauxLourds && (
           <div className="section"><div className="nc-warning">Le loyer ou le prix est manquant — impossible de calculer.</div></div>
-        ) : (
+        )}
+        {peutCalculer && (
           <>
             <div className="section">
               <h2 className="section-title">Simulateur de financement</h2>
@@ -1112,21 +1259,47 @@ export default function FicheBienPage() {
               </div>
             </div>
 
-            <div className="section">
-              <h2 className="section-title">Analyse fiscale</h2>
-              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          </>
+        )}
+
+        {bien.prix_fai && (
+          <div className="section">
+            <h2 className="section-title">{`Analyse fiscale & sc\u00e9nario revente`}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#9a8a80' }}>Comparer avec :</span>
                 <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
                   {REGIMES.filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
-              <div className="pnl-grid">
-                <PnlColonne titre={`${REGIMES.find(r => r.value === regime)?.label} (votre regime)`} bien={bien} financement={financement} tmi={tmi} regime={regime} highlight />
-                <PnlColonne titre={REGIMES.find(r => r.value === regime2)?.label} bien={bien} financement={financement} tmi={tmi} regime={regime2} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', color: '#9a8a80' }}>{`D\u00e9tention :`}</span>
+                {[1, 2, 3, 4, 5].map(d => (
+                  <button key={d} onClick={() => setDureeRevente(d)} style={{
+                    padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                    border: dureeRevente === d ? '2px solid #c0392b' : '1.5px solid #e8e2d8',
+                    background: dureeRevente === d ? '#fde8e8' : '#faf8f5',
+                    color: dureeRevente === d ? '#c0392b' : '#9a8a80',
+                  }}>
+                    {d} an{d > 1 ? 's' : ''}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '13px', color: '#9a8a80' }}>Frais agence revente :</span>
+                <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
+                  onChange={e => setFraisAgenceRevente(Number(e.target.value))}
+                  className="param-input" style={{ width: '60px', textAlign: 'right' }} />
+                <span style={{ fontSize: '12px', color: '#9a8a80' }}>%</span>
               </div>
             </div>
-          </>
+            <div className="pnl-grid">
+              <PnlColonne titre={`${REGIMES.find(r => r.value === regime)?.label} (votre regime)`} bien={bien} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} />
+              <PnlColonne titre={REGIMES.find(r => r.value === regime2)?.label} bien={bien} financement={financement} tmi={tmi} regime={regime2} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} />
+            </div>
+          </div>
         )}
+
       </div>
     </Layout>
   )

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Bien } from '@/lib/types'
 import MetroBadge from './MetroBadge'
 import RendementBadge from './RendementBadge'
+import PlusValueBadge from './PlusValueBadge'
 
 interface Props {
   bien: Bien
@@ -55,11 +56,10 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
         <span style={{ position: 'absolute', top: '12px', left: '12px' }}>
           <MetroBadge metropole={bien.metropole} />
         </span>
-        {!isTravaux && (
-          <span style={{ position: 'absolute', top: '12px', right: '12px' }}>
-            <RendementBadge rendement={bien.rendement_brut} />
-          </span>
-        )}
+        <span style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+          {!isTravaux && <RendementBadge rendement={bien.rendement_brut} />}
+          <PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={scoreTravaux} surface={bien.surface} />
+        </span>
         <button
           onClick={toggleWatchlist}
           disabled={loading}

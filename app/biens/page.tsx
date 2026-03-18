@@ -6,6 +6,7 @@ import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
 import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
+import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien } from '@/lib/types'
 import { TYPES_BIEN, TRIS } from '@/lib/constants'
 import { calculerCashflow } from '@/lib/calculs'
@@ -25,12 +26,13 @@ export default function BiensPage() {
   const [communeSearch, setCommuneSearch] = useState('')
   const [communeSuggestions, setCommuneSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string } | null>(null)
+  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(null)
   const communeTimeout = useRef<any>(null)
   const [typeBien, setTypeBien] = useState('Tous')
   const [prixMin, setPrixMin] = useState('')
   const [prixMax, setPrixMax] = useState('')
   const [rendMin, setRendMin] = useState('')
+  const [scoreTravauxMin, setScoreTravauxMin] = useState('')
   const [tri, setTri] = useState('recent')
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
@@ -98,7 +100,7 @@ export default function BiensPage() {
 
   function selectCommune(commune: any) {
     setSelectedCommune(commune)
-    setCommuneSearch(`${commune.nom_commune} (${commune.code_postal})`)
+    setCommuneSearch(commune.label || commune.nom_commune)
     setShowSuggestions(false)
   }
 
@@ -134,14 +136,44 @@ export default function BiensPage() {
     if (metropole !== 'Toutes' && b.metropole !== metropole) return false
     if (ville !== 'Toutes' && b.ville !== ville) return false
     if (selectedCommune) {
-      const matchVille = b.ville && b.ville.toUpperCase() === selectedCommune.nom_commune.toUpperCase()
-      const matchCP = (b as any).code_postal === selectedCommune.code_postal
-      if (!matchVille && !matchCP) return false
+      if (selectedCommune.type === 'metropole') {
+        if (b.metropole !== selectedCommune.nom_commune) return false
+      } else if (selectedCommune.type === 'region') {
+        // Filtre par region : match les 2 premiers chiffres du CP contre les departements de la region
+        const deptRegionMap: Record<string, string> = {
+          '01':'Auvergne-Rhone-Alpes','03':'Auvergne-Rhone-Alpes','07':'Auvergne-Rhone-Alpes','15':'Auvergne-Rhone-Alpes','26':'Auvergne-Rhone-Alpes','38':'Auvergne-Rhone-Alpes','42':'Auvergne-Rhone-Alpes','43':'Auvergne-Rhone-Alpes','63':'Auvergne-Rhone-Alpes','69':'Auvergne-Rhone-Alpes','73':'Auvergne-Rhone-Alpes','74':'Auvergne-Rhone-Alpes',
+          '21':'Bourgogne-Franche-Comte','25':'Bourgogne-Franche-Comte','39':'Bourgogne-Franche-Comte','58':'Bourgogne-Franche-Comte','70':'Bourgogne-Franche-Comte','71':'Bourgogne-Franche-Comte','89':'Bourgogne-Franche-Comte','90':'Bourgogne-Franche-Comte',
+          '22':'Bretagne','29':'Bretagne','35':'Bretagne','56':'Bretagne',
+          '18':'Centre-Val de Loire','28':'Centre-Val de Loire','36':'Centre-Val de Loire','37':'Centre-Val de Loire','41':'Centre-Val de Loire','45':'Centre-Val de Loire',
+          '08':'Grand Est','10':'Grand Est','51':'Grand Est','52':'Grand Est','54':'Grand Est','55':'Grand Est','57':'Grand Est','67':'Grand Est','68':'Grand Est','88':'Grand Est',
+          '02':'Hauts-de-France','59':'Hauts-de-France','60':'Hauts-de-France','62':'Hauts-de-France','80':'Hauts-de-France',
+          '75':'Ile-de-France','77':'Ile-de-France','78':'Ile-de-France','91':'Ile-de-France','92':'Ile-de-France','93':'Ile-de-France','94':'Ile-de-France','95':'Ile-de-France',
+          '14':'Normandie','27':'Normandie','50':'Normandie','61':'Normandie','76':'Normandie',
+          '16':'Nouvelle-Aquitaine','17':'Nouvelle-Aquitaine','19':'Nouvelle-Aquitaine','23':'Nouvelle-Aquitaine','24':'Nouvelle-Aquitaine','33':'Nouvelle-Aquitaine','40':'Nouvelle-Aquitaine','47':'Nouvelle-Aquitaine','64':'Nouvelle-Aquitaine','79':'Nouvelle-Aquitaine','86':'Nouvelle-Aquitaine','87':'Nouvelle-Aquitaine',
+          '09':'Occitanie','11':'Occitanie','12':'Occitanie','30':'Occitanie','31':'Occitanie','32':'Occitanie','34':'Occitanie','46':'Occitanie','48':'Occitanie','65':'Occitanie','66':'Occitanie','81':'Occitanie','82':'Occitanie',
+          '44':'Pays de la Loire','49':'Pays de la Loire','53':'Pays de la Loire','72':'Pays de la Loire','85':'Pays de la Loire',
+          '04':"Provence-Alpes-Cote d'Azur",'05':"Provence-Alpes-Cote d'Azur",'06':"Provence-Alpes-Cote d'Azur",'13':"Provence-Alpes-Cote d'Azur",'83':"Provence-Alpes-Cote d'Azur",'84':"Provence-Alpes-Cote d'Azur",
+        }
+        const cp = (b as any).code_postal || ''
+        const dept = cp.substring(0, 2)
+        if (deptRegionMap[dept] !== selectedCommune.nom_commune) return false
+      } else if (selectedCommune.type === 'departement') {
+        const cp = (b as any).code_postal || ''
+        if (!cp.startsWith(selectedCommune.code_postal)) return false
+      } else if (selectedCommune.code_postal === 'tous') {
+        const matchVille = b.ville && b.ville.toUpperCase() === selectedCommune.nom_commune.toUpperCase()
+        if (!matchVille) return false
+      } else {
+        const matchVille = b.ville && b.ville.toUpperCase() === selectedCommune.nom_commune.toUpperCase()
+        const matchCP = (b as any).code_postal === selectedCommune.code_postal
+        if (!matchVille && !matchCP) return false
+      }
     }
     if (typeBien !== 'Tous' && b.type_bien !== typeBien) return false
     if (prixMin && b.prix_fai < Number(prixMin)) return false
     if (prixMax && b.prix_fai > Number(prixMax)) return false
     if (rendMin && (!b.rendement_brut || b.rendement_brut * 100 < Number(rendMin))) return false
+    if (scoreTravauxMin && (!b.score_travaux || b.score_travaux < Number(scoreTravauxMin))) return false
     return true
   })
 
@@ -243,11 +275,11 @@ export default function BiensPage() {
         .td-heart:hover { transform: scale(1.2); }
         .edit-hint { font-size: 11px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
         .commune-wrap { position: relative; }
-        .commune-input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; color: #1a1210; outline: none; transition: border-color 0.15s; width: 220px; }
+        .commune-input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; color: #1a1210; outline: none; transition: border-color 0.15s; width: 320px; }
         .commune-input:focus { border-color: #c0392b; }
         .commune-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: #9a8a80; padding: 2px 6px; }
         .commune-clear:hover { color: #c0392b; }
-        .commune-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #e8e2d8; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 20; max-height: 240px; overflow-y: auto; margin-top: 4px; }
+        .commune-dropdown { position: absolute; top: 100%; left: 0; min-width: 100%; width: max-content; max-width: 450px; background: #fff; border: 1.5px solid #e8e2d8; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 20; max-height: 240px; overflow-y: auto; margin-top: 4px; }
         .commune-item { padding: 10px 14px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ede8; }
         .commune-item:last-child { border-bottom: none; }
         .commune-item:hover { background: #faf8f5; }
@@ -267,19 +299,12 @@ export default function BiensPage() {
           </div>
           <div className="filter-sep" />
           <div className="filter-group">
-            <label className="filter-label">Metropole</label>
-            <select value={metropole} onChange={e => { setMetropole(e.target.value); setVille('Toutes') }}>
-              <option>Toutes</option>
-              {metropoles.map(m => <option key={m}>{m}</option>)}
-            </select>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Ville / Code postal</label>
+            <label className="filter-label">Localisation</label>
             <div className="commune-wrap">
               <input
                 className="commune-input"
                 type="text"
-                placeholder="ex: 44000 ou Nantes"
+                placeholder="Ville, code postal, d\u00e9partement, r\u00e9gion..."
                 value={communeSearch}
                 onChange={e => handleCommuneSearch(e.target.value)}
                 onFocus={() => { if (communeSuggestions.length > 0) setShowSuggestions(true) }}
@@ -290,11 +315,8 @@ export default function BiensPage() {
                 <div className="commune-dropdown">
                   {communeSuggestions.map((c, i) => (
                     <div key={`${c.code_postal}-${c.nom_commune}-${i}`} className="commune-item" onMouseDown={() => selectCommune(c)}>
-                      <div>
-                        <span className="commune-item-name">{c.nom_commune}</span>
-                        {c.metropole && <span className="commune-item-metro">{` \u2014 ${c.metropole}`}</span>}
-                      </div>
-                      <span className="commune-item-cp">{c.code_postal}</span>
+                      <span className="commune-item-name">{c.label || c.nom_commune}</span>
+                      {c.type && c.type !== 'commune' && <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: c.type === 'metropole' ? '#d4ddf5' : c.type === 'region' ? '#d4f5e0' : '#fff8f0', color: c.type === 'metropole' ? '#2a4a8a' : c.type === 'region' ? '#1a7a40' : '#a06010', fontWeight: 600 }}>{c.type}</span>}
                     </div>
                   ))}
                 </div>
@@ -316,10 +338,25 @@ export default function BiensPage() {
             <label className="filter-label">Prix maximum</label>
             <input type="number" placeholder="ex: 200000" value={prixMax} onChange={e => setPrixMax(e.target.value)} />
           </div>
-          <div className="filter-group">
-            <label className="filter-label">Rendement minimum</label>
-            <input type="number" placeholder="ex: 5" value={rendMin} onChange={e => setRendMin(e.target.value)} />
-          </div>
+          {strategie !== 'Travaux lourds' && (
+            <div className="filter-group">
+              <label className="filter-label">Rendement minimum</label>
+              <input type="number" placeholder="ex: 5" value={rendMin} onChange={e => setRendMin(e.target.value)} />
+            </div>
+          )}
+          {strategie === 'Travaux lourds' && (
+            <div className="filter-group">
+              <label className="filter-label">Score travaux min</label>
+              <select value={scoreTravauxMin} onChange={e => setScoreTravauxMin(e.target.value)}>
+                <option value="">Tous</option>
+                <option value="1">1 - Rafra{'\u00ee'}chissement</option>
+                <option value="2">2 - Travaux l{'\u00e9'}gers</option>
+                <option value="3">3 - R{'\u00e9'}novation moyenne</option>
+                <option value="4">4 - Gros travaux</option>
+                <option value="5">5 - R{'\u00e9'}habilitation</option>
+              </select>
+            </div>
+          )}
           <div className="filter-sep" />
           <div className="filter-group">
             <label className="filter-label">Trier par</label>
@@ -392,6 +429,7 @@ export default function BiensPage() {
                           <th>{"Estimation travaux"}<span></span></th>
                           <th>DPE<span></span></th>
                           <th>{`Ann\u00e9e`}<span></span></th>
+                          <th>+/- Value<span></span></th>
                         </>
                       ) : (
                         <>
@@ -401,6 +439,7 @@ export default function BiensPage() {
                           <th>Charges copro<span>/mois</span></th>
                           <th>{`Taxe fonci\u00e8re`}<span>/an</span></th>
                           <th>Rendement brut<span></span></th>
+                          <th>+/- Value<span></span></th>
                           <th>Cashflow brut<span>/mois</span></th>
                           <th>Locataire<span></span></th>
                         </>
@@ -501,6 +540,7 @@ export default function BiensPage() {
                                   ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}
                                 </td>
                                 <td style={{ color: '#9a8a80' }}>{(bien as any).annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                                <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                               </>
                             ) : (
                               <>
@@ -510,6 +550,7 @@ export default function BiensPage() {
                                 <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
                                 <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
+                                <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
                                   {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>

@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  const force = request.nextUrl.searchParams.get('force') === 'true'
 
   // Recuperer le bien
   const { data: bien, error } = await supabaseAdmin
@@ -19,8 +20,8 @@ export async function GET(
     return NextResponse.json({ error: 'Bien introuvable' }, { status: 404 })
   }
 
-  // Verifier le cache (< 30 jours)
-  if (bien.estimation_date && bien.estimation_details) {
+  // Verifier le cache (< 30 jours) sauf si force=true
+  if (!force && bien.estimation_date && bien.estimation_details) {
     const age = Date.now() - new Date(bien.estimation_date).getTime()
     const joursDiff = age / (24 * 3600 * 1000)
     if (joursDiff < 30) {

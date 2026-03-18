@@ -163,13 +163,24 @@ function mapTypeBienToDVF(typeBien: string): string {
   return 'Appartement'
 }
 
+function parseNbPieces(nbPieces: string | undefined): number | null {
+  if (!nbPieces) return null
+  const match = nbPieces.match(/(\d+)/)
+  return match ? parseInt(match[1]) : null
+}
+
 async function fetchDVFForPeriod(
   center: GeoPoint, bbox: string, dvfType: string,
   surfaceMin: number, surfaceMax: number,
-  anneeMin: number, anneeMax?: number | null
+  anneeMin: number, anneeMax?: number | null,
+  nbPieces?: number | null
 ): Promise<DVFTransaction[]> {
   let url = `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&nature_mutation=Vente&type_local=${dvfType}&anneemut_min=${anneeMin}&page_size=100`
   if (anneeMax) url += `&anneemut_max=${anneeMax}`
+  // Filtre par nombre de pieces exact pour comparer des biens similaires
+  if (nbPieces && nbPieces >= 1) {
+    url += `&nbpiecespp_min=${nbPieces}&nbpiecespp_max=${nbPieces}`
+  }
 
   const transactions: DVFTransaction[] = []
   let pages = 0
@@ -192,6 +203,8 @@ async function fetchDVFForPeriod(
         if (prixM2 < 500 || prixM2 > 15000) continue
 
         const geom = feature.geometry
+        if (!geom || !geom.coordinates) continue
+
         let txCenter: GeoPoint
         if (geom.type === 'Point') {
           txCenter = { lat: geom.coordinates[1], lng: geom.coordinates[0] }
@@ -200,13 +213,17 @@ async function fetchDVFForPeriod(
         }
 
         const dist = haversineDistance(center, txCenter)
+        if (!isFinite(dist)) continue
+
         const tw = temporalWeight(p.datemut)
         const distWeight = Math.max(0.1, 1 - dist / 2000)
+        const weight = tw * distWeight
+        if (!isFinite(weight) || weight <= 0) continue
 
         transactions.push({
           prix, surface: s, prix_m2: Math.round(prixM2),
           date: p.datemut, type: p.libtypbien,
-          distance_m: Math.round(dist), weight: tw * distWeight
+          distance_m: Math.round(dist), weight
         })
       }
 
@@ -221,14 +238,16 @@ async function fetchDVFForPeriod(
 export async function fetchDVFTransactions(
   center: GeoPoint,
   typeBien: string,
-  surface: number
+  surface: number,
+  nbPiecesStr?: string
 ): Promise<{ transactions: DVFTransaction[], rayon_m: number }> {
   const dvfType = mapTypeBienToDVF(typeBien)
   const surfaceMin = dvfType === 'Maison' ? surface * 0.6 : surface * 0.7
   const surfaceMax = dvfType === 'Maison' ? surface * 1.4 : surface * 1.3
+  const nbPieces = parseNbPieces(nbPiecesStr)
 
-  // Rayon adaptatif : 0.003 (~300m) -> 0.006 -> 0.009 -> 0.01 max
-  const rayons = [0.003, 0.005, 0.007, 0.01]
+  // Rayon adaptatif : ~50m en ville suffit, s'elargit si pas assez de comparables
+  const rayons = [0.0005, 0.001, 0.002, 0.003, 0.005, 0.007, 0.01]
   let allTransactions: DVFTransaction[] = []
   let rayonUtilise = 0
 
@@ -236,14 +255,14 @@ export async function fetchDVFTransactions(
     const bbox = `${center.lng - rayon},${center.lat - rayon},${center.lng + rayon},${center.lat + rayon}`
 
     try {
-      // Requete sur les deux periodes en parallele et fusion
+      // Requete sur les deux periodes en parallele avec filtre nb pieces
       const [txPrincipale, txReference] = await Promise.all([
-        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2022),
-        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2018, 2020)
+        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2022, null, nbPieces),
+        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2018, 2020, nbPieces)
       ])
 
-      // Appliquer un poids supplementaire de 0.7 aux transactions pre-COVID
-      const txRefPonderees = txReference.map(tx => ({ ...tx, weight: tx.weight * 0.7 }))
+      // Meme poids que la periode principale (marche post-COVID surgonfle)
+      const txRefPonderees = txReference.map(tx => ({ ...tx, weight: tx.weight * 1.0 }))
 
       const transactions = [...txPrincipale, ...txRefPonderees]
 
@@ -255,6 +274,26 @@ export async function fetchDVFTransactions(
       if (allTransactions.length >= 10) break
     } catch {
       continue
+    }
+  }
+
+  // Fallback sans filtre nb pieces si pas assez de comparables
+  if (allTransactions.length < 5 && nbPieces) {
+    for (const rayon of rayons) {
+      const bbox = `${center.lng - rayon},${center.lat - rayon},${center.lng + rayon},${center.lat + rayon}`
+      try {
+        const [txP, txR] = await Promise.all([
+          fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2022),
+          fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2018, 2020)
+        ])
+        const txRefP = txR.map(tx => ({ ...tx, weight: tx.weight * 1.0 }))
+        const transactions = [...txP, ...txRefP]
+        if (transactions.length > allTransactions.length) {
+          allTransactions = transactions
+          rayonUtilise = Math.round(rayon * 111000)
+        }
+        if (allTransactions.length >= 10) break
+      } catch { continue }
     }
   }
 
@@ -361,26 +400,15 @@ export function calculateCorrections(bien: BienForEstimation, prixParkingLocal?:
     }
   }
 
-  // --- Score travaux (strategie travaux lourds) ---
-  if (bien.score_travaux) {
-    const travauxCorrections: Record<number, number> = {
-      1: 1.00, 2: 0.95, 3: 0.85, 4: 0.75, 5: 0.60
-    }
-    const c = travauxCorrections[bien.score_travaux]
-    if (c && c !== 1.0) {
-      corrections.push({
-        facteur: `Score travaux ${bien.score_travaux}/5`,
-        multiplicateur: c,
-        raison: bien.score_travaux >= 4 ? 'Travaux lourds \u00e0 pr\u00e9voir' : 'Travaux de r\u00e9novation \u00e0 pr\u00e9voir'
-      })
-    }
-  }
+  // Score travaux et etat interieur ne sont PAS des correcteurs d'estimation.
+  // L'estimation DVF donne le prix marche "en bon etat" = prix de revente apres travaux.
+  // La decote travaux est geree separement dans le scenario achat-revente.
 
-  // --- Etat interieur (NLP) ---
+  // --- Etat interieur (NLP) — uniquement pour les biens sans travaux ---
   if (bien.etat_interieur && !bien.score_travaux) {
     const etatCorrections: Record<string, number> = {
       neuf: 1.05, refait_recemment: 1.03, bon_etat: 1.00, correct: 1.00,
-      a_rafraichir: 0.93, a_renover: 0.82
+      a_rafraichir: 1.00, a_renover: 1.00
     }
     const c = etatCorrections[bien.etat_interieur]
     if (c && c !== 1.0) {
@@ -635,8 +663,8 @@ export async function estimerBien(
   const geo = existingGeo || await geocodeAddress(bien.adresse, bien.ville, bien.code_postal)
   if (!geo) return null
 
-  // 2. Recuperer les transactions DVF
-  const { transactions, rayon_m } = await fetchDVFTransactions(geo, bien.type_bien, bien.surface)
+  // 2. Recuperer les transactions DVF (filtre par nb pieces si disponible)
+  const { transactions, rayon_m } = await fetchDVFTransactions(geo, bien.type_bien, bien.surface, bien.nb_pieces)
   if (transactions.length === 0) return null
 
   // 3. Mediane ponderee du prix/m2
