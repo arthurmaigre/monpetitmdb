@@ -285,7 +285,7 @@ function parseEtage(etage: string | undefined): number | null {
   return match ? parseInt(match[1]) : null
 }
 
-export function calculateCorrections(bien: BienForEstimation): CorrectionDetail[] {
+export function calculateCorrections(bien: BienForEstimation, prixParkingLocal?: { box: number, parking: number } | null): CorrectionDetail[] {
   const corrections: CorrectionDetail[] = []
   const isMaison = (bien.type_bien || '').toLowerCase().includes('maison')
 
@@ -384,18 +384,23 @@ export function calculateCorrections(bien: BienForEstimation): CorrectionDetail[
 
   // --- Parking (NLP) — valeur absolue convertie en multiplicateur ---
   if (bien.parking_type && bien.surface) {
-    const parkingValues: Record<string, number> = {
+    const defaultValues: Record<string, number> = {
       box_ferme: 18000, parking_ouvert: 10000, garage_attenant: 15000
     }
-    const pVal = parkingValues[bien.parking_type]
+    let pVal: number
+    if (prixParkingLocal) {
+      pVal = bien.parking_type === 'parking_ouvert' ? prixParkingLocal.parking : prixParkingLocal.box
+    } else {
+      pVal = defaultValues[bien.parking_type] || 0
+    }
     if (pVal) {
-      // Convertir en multiplicateur approximatif base sur le prix total estime
-      const prixEstime = bien.surface * 3500 // approximation pour le calcul du ratio
+      const prixEstime = bien.surface * 3500
       const ratio = 1 + pVal / prixEstime
+      const source = prixParkingLocal ? 'DVF local' : 'estimation'
       corrections.push({
         facteur: `Parking (${bien.parking_type.replace(/_/g, ' ')})`,
         multiplicateur: Math.round(ratio * 100) / 100,
-        raison: `Valorisation parking ~${pVal.toLocaleString('fr-FR')} \u20AC`
+        raison: `Valorisation parking ~${pVal.toLocaleString('fr-FR')} \u20AC (${source})`
       })
     }
   }
@@ -525,7 +530,8 @@ export function calculateConfidence(
 
 export async function estimerBien(
   bien: BienForEstimation,
-  existingGeo?: GeoPoint | null
+  existingGeo?: GeoPoint | null,
+  prixParkingLocal?: { box: number, parking: number } | null
 ): Promise<EstimationResult | null> {
   // 1. Geocoding (reutilise les coordonnees existantes si disponibles)
   const geo = existingGeo || await geocodeAddress(bien.adresse, bien.ville, bien.code_postal)
@@ -542,7 +548,7 @@ export async function estimerBien(
   if (prixM2Brut <= 0) return null
 
   // 4. Correcteurs qualitatifs
-  const corrections = calculateCorrections(bien)
+  const corrections = calculateCorrections(bien, prixParkingLocal)
   const multiplicateurTotal = corrections.reduce((acc, c) => acc * c.multiplicateur, 1.0)
   const prixM2Corrige = Math.round(prixM2Brut * multiplicateurTotal)
   const prixTotal = Math.round(prixM2Corrige * bien.surface)

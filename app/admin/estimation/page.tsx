@@ -68,7 +68,7 @@ const LABEL_MAP: Record<string, string> = {
   'a_renover': '\u00c0 r\u00e9nover',
 }
 
-function CorrectionTable({ title, corrections, onChange, description }: { title: string, corrections: Record<string, number>, onChange: (key: string, val: number) => void, description?: string }) {
+function CorrectionTable({ title, corrections, onChange, description, labelMap = true }: { title: string, corrections: Record<string, number>, onChange: (key: string, val: number) => void, description?: string, labelMap?: boolean }) {
   const entries = Object.entries(corrections).filter(([k]) => k !== 'description')
   return (
     <div style={{ marginBottom: '20px' }}>
@@ -77,7 +77,7 @@ function CorrectionTable({ title, corrections, onChange, description }: { title:
       <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px' }}>
         {entries.map(([key, val]) => (
           <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #ede8e0' }}>
-            <span style={{ fontSize: '13px', color: '#1a1210', fontWeight: 500 }}>{LABEL_MAP[key] || key}</span>
+            <span style={{ fontSize: '13px', color: '#1a1210', fontWeight: 500 }}>{labelMap ? (LABEL_MAP[key] || key) : key}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="number"
@@ -317,6 +317,7 @@ export default function AdminEstimationPage() {
             corrections={c.score_travaux || {}}
             description={"1 = \u00e9tat correct (r\u00e9f\u00e9rence). 5 = r\u00e9habilitation compl\u00e8te. D\u00e9cote progressive pour co\u00fbt des travaux."}
             onChange={(k, v) => updateConfig(['correcteurs', 'score_travaux', k], v)}
+            labelMap={false}
           />
           <CorrectionTable
             title={"Vue et exposition"}

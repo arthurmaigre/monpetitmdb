@@ -43,6 +43,19 @@ export async function GET(
   // Reutiliser les coordonnees si deja geocode
   const existingGeo = (bien.latitude && bien.longitude) ? { lat: bien.latitude, lng: bien.longitude } : null
 
+  // Recuperer le prix parking local depuis ref_prix_parking
+  let prixParkingLocal: { box: number, parking: number } | null = null
+  if (bien.ville) {
+    const { data: parkingData } = await supabaseAdmin
+      .from('ref_prix_parking')
+      .select('prix_median_box, prix_median_parking')
+      .ilike('ville', bien.ville)
+      .maybeSingle()
+    if (parkingData) {
+      prixParkingLocal = { box: parkingData.prix_median_box, parking: parkingData.prix_median_parking }
+    }
+  }
+
   // Lancer l'estimation
   const estimation = await estimerBien({
     surface: bien.surface,
@@ -66,7 +79,7 @@ export async function GET(
     jardin_etat: bien.jardin_etat,
     has_cave: bien.has_cave,
     standing_immeuble: bien.standing_immeuble
-  }, existingGeo)
+  }, existingGeo, prixParkingLocal)
 
   if (!estimation) {
     return NextResponse.json({
