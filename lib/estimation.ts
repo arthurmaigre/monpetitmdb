@@ -153,6 +153,61 @@ function mapTypeBienToDVF(typeBien: string): string {
   return 'Appartement'
 }
 
+async function fetchDVFForPeriod(
+  center: GeoPoint, bbox: string, dvfType: string,
+  surfaceMin: number, surfaceMax: number,
+  anneeMin: number, anneeMax?: number | null
+): Promise<DVFTransaction[]> {
+  let url = `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&nature_mutation=Vente&type_local=${dvfType}&anneemut_min=${anneeMin}&page_size=100`
+  if (anneeMax) url += `&anneemut_max=${anneeMax}`
+
+  const transactions: DVFTransaction[] = []
+  let pages = 0
+
+  while (url && pages < 5) {
+    try {
+      const res = await fetch(url)
+      if (!res.ok) break
+      const data = await res.json()
+
+      for (const feature of (data.features || [])) {
+        const p = feature.properties
+        const s = parseFloat(p.sbati)
+        const prix = parseFloat(p.valeurfonc)
+
+        if (!s || !prix || s <= 0 || prix <= 0) continue
+        if (s < surfaceMin || s > surfaceMax) continue
+
+        const prixM2 = prix / s
+        if (prixM2 < 500 || prixM2 > 15000) continue
+
+        const geom = feature.geometry
+        let txCenter: GeoPoint
+        if (geom.type === 'Point') {
+          txCenter = { lat: geom.coordinates[1], lng: geom.coordinates[0] }
+        } else {
+          txCenter = polygonCenter(geom.coordinates)
+        }
+
+        const dist = haversineDistance(center, txCenter)
+        const tw = temporalWeight(p.datemut)
+        const distWeight = Math.max(0.1, 1 - dist / 2000)
+
+        transactions.push({
+          prix, surface: s, prix_m2: Math.round(prixM2),
+          date: p.datemut, type: p.libtypbien,
+          distance_m: Math.round(dist), weight: tw * distWeight
+        })
+      }
+
+      url = data.next || null
+      pages++
+    } catch { break }
+  }
+
+  return transactions
+}
+
 export async function fetchDVFTransactions(
   center: GeoPoint,
   typeBien: string,
@@ -171,54 +226,16 @@ export async function fetchDVFTransactions(
     const bbox = `${center.lng - rayon},${center.lat - rayon},${center.lng + rayon},${center.lat + rayon}`
 
     try {
-      let url = `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&nature_mutation=Vente&type_local=${dvfType}&anneemut_min=2021&page_size=100`
-      const transactions: DVFTransaction[] = []
-      let pages = 0
+      // Requete sur les deux periodes en parallele et fusion
+      const [txPrincipale, txReference] = await Promise.all([
+        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2022),
+        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2018, 2020)
+      ])
 
-      while (url && pages < 5) {
-        const res = await fetch(url)
-        if (!res.ok) break
-        const data = await res.json()
+      // Appliquer un poids supplementaire de 0.7 aux transactions pre-COVID
+      const txRefPonderees = txReference.map(tx => ({ ...tx, weight: tx.weight * 0.7 }))
 
-        for (const feature of (data.features || [])) {
-          const p = feature.properties
-          const s = parseFloat(p.sbati)
-          const prix = parseFloat(p.valeurfonc)
-
-          if (!s || !prix || s <= 0 || prix <= 0) continue
-          if (s < surfaceMin || s > surfaceMax) continue
-
-          // Filtrer les prix aberrants (< 500€/m2 ou > 15000€/m2)
-          const prixM2 = prix / s
-          if (prixM2 < 500 || prixM2 > 15000) continue
-
-          const geom = feature.geometry
-          let txCenter: GeoPoint
-          if (geom.type === 'Point') {
-            txCenter = { lat: geom.coordinates[1], lng: geom.coordinates[0] }
-          } else {
-            txCenter = polygonCenter(geom.coordinates)
-          }
-
-          const dist = haversineDistance(center, txCenter)
-          const tw = temporalWeight(p.datemut)
-          // Ponderation distance : plus proche = plus pertinent
-          const distWeight = Math.max(0.1, 1 - dist / 2000)
-
-          transactions.push({
-            prix,
-            surface: s,
-            prix_m2: Math.round(prixM2),
-            date: p.datemut,
-            type: p.libtypbien,
-            distance_m: Math.round(dist),
-            weight: tw * distWeight
-          })
-        }
-
-        url = data.next || null
-        pages++
-      }
+      const transactions = [...txPrincipale, ...txRefPonderees]
 
       if (transactions.length > allTransactions.length) {
         allTransactions = transactions

@@ -304,63 +304,53 @@ export default function AdminEstimationPage() {
           />
         </Section>
 
-        {/* ════════ CORRECTEURS ════════ */}
-        <Section title={"Correcteurs qualitatifs"} description={"Multiplicateurs appliqu\u00e9s au prix DVF de r\u00e9f\u00e9rence. 1.00 = neutre. > 1 = valorise. < 1 = d\u00e9cote."}>
-
-          <CorrectionTable
-            title={"\u00c9tage — Sans ascenseur"}
-            corrections={c.etage_sans_ascenseur || {}}
-            description={c.etage_sans_ascenseur?.description}
-            onChange={(k, v) => updateConfig(['correcteurs', 'etage_sans_ascenseur', k], v)}
-          />
-
-          <CorrectionTable
-            title={"\u00c9tage — Avec ascenseur"}
-            corrections={c.etage_avec_ascenseur || {}}
-            description={c.etage_avec_ascenseur?.description}
-            onChange={(k, v) => updateConfig(['correcteurs', 'etage_avec_ascenseur', k], v)}
-          />
-
+        {/* ════════ CORRECTEURS COMMUNS ════════ */}
+        <Section title={"Correcteurs communs (tous types)"} description={"Multiplicateurs appliqu\u00e9s au prix DVF de r\u00e9f\u00e9rence. 1.00 = neutre. > 1 = valorise. < 1 = d\u00e9cote."}>
           <CorrectionTable
             title={"DPE (Diagnostic de Performance \u00c9nerg\u00e9tique)"}
             corrections={c.dpe || {}}
             description={c.dpe?.description}
             onChange={(k, v) => updateConfig(['correcteurs', 'dpe', k], v)}
           />
-
-          <CorrectionTable
-            title={"Espaces ext\u00e9rieurs"}
-            corrections={c.exterieur || {}}
-            description={c.exterieur?.description}
-            onChange={(k, v) => updateConfig(['correcteurs', 'exterieur', k], v)}
-          />
-
           <CorrectionTable
             title={"Score travaux"}
             corrections={c.score_travaux || {}}
-            description={c.score_travaux?.description}
+            description={"1 = \u00e9tat correct (r\u00e9f\u00e9rence). 5 = r\u00e9habilitation compl\u00e8te. D\u00e9cote progressive pour co\u00fbt des travaux."}
             onChange={(k, v) => updateConfig(['correcteurs', 'score_travaux', k], v)}
           />
-
-          <CorrectionTable
-            title={"\u00c9tat du jardin (maisons)"}
-            corrections={c.jardin_etat || {}}
-            description={c.jardin_etat?.description}
-            onChange={(k, v) => updateConfig(['correcteurs', 'jardin_etat', k], v)}
-          />
-
           <CorrectionTable
             title={"Vue et exposition"}
             corrections={c.vue_exposition || {}}
             description={c.vue_exposition?.description}
             onChange={(k, v) => updateConfig(['correcteurs', 'vue_exposition', k], v)}
           />
+        </Section>
 
+        {/* ════════ CORRECTEURS APPARTEMENT ════════ */}
+        <Section title={"Correcteurs Appartement"} description={"Correcteurs sp\u00e9cifiques aux appartements et studios."}>
+          <CorrectionTable
+            title={"\u00c9tage sans ascenseur"}
+            corrections={c.etage_sans_ascenseur || {}}
+            description={"1er \u00e9tage = r\u00e9f\u00e9rence. La p\u00e9nibilit\u00e9 augmente avec les \u00e9tages sans ascenseur."}
+            onChange={(k, v) => updateConfig(['correcteurs', 'etage_sans_ascenseur', k], v)}
+          />
+          <CorrectionTable
+            title={"\u00c9tage avec ascenseur"}
+            corrections={c.etage_avec_ascenseur || {}}
+            description={"2-3\u00e8me = r\u00e9f\u00e9rence. Les \u00e9tages \u00e9lev\u00e9s sont valoris\u00e9s (vue, calme, luminosit\u00e9)."}
+            onChange={(k, v) => updateConfig(['correcteurs', 'etage_avec_ascenseur', k], v)}
+          />
+          <CorrectionTable
+            title={"Espaces ext\u00e9rieurs"}
+            corrections={c.exterieur || {}}
+            description={c.exterieur?.description}
+            onChange={(k, v) => updateConfig(['correcteurs', 'exterieur', k], v)}
+          />
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Parking</h3>
-            <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{c.parking?.description}</p>
+            <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{"Valeurs par d\u00e9faut. Les prix r\u00e9els par ville sont calcul\u00e9s automatiquement via DVF (table ref_prix_parking)."}</p>
             <ParamRow
-              label={"Box ferm\u00e9"} description={"Valeur absolue ajout\u00e9e au prix estim\u00e9"} suffix={"\u20AC"}
+              label={"Box ferm\u00e9"} description={"Valeur absolue par d\u00e9faut si pas de donn\u00e9es DVF locales"} suffix={"\u20AC"}
               value={c.parking?.box_ferme?.valeur_defaut || 18000}
               onChange={(v: number) => updateConfig(['correcteurs', 'parking', 'box_ferme', 'valeur_defaut'], v)}
               step="1000"
@@ -372,10 +362,19 @@ export default function AdminEstimationPage() {
               step="1000"
             />
           </div>
+        </Section>
 
+        {/* ════════ CORRECTEURS MAISON ════════ */}
+        <Section title={"Correcteurs Maison"} description={"Correcteurs sp\u00e9cifiques aux maisons individuelles."}>
+          <CorrectionTable
+            title={"\u00c9tat du jardin"}
+            corrections={c.jardin_etat || {}}
+            description={"D\u00e9tect\u00e9 par analyse de la description et des photos. Impact mod\u00e9r\u00e9 sur le prix."}
+            onChange={(k, v) => updateConfig(['correcteurs', 'jardin_etat', k], v)}
+          />
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Piscine</h3>
-            <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{c.piscine?.description}</p>
+            <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{"Valeur absolue ajout\u00e9e. Varie fortement selon la r\u00e9gion. Appliquer 60-70% en cas de doute."}</p>
             <ParamRow
               label={"Grande ville (Paris, Lyon, Marseille...)"} suffix={"\u20AC"}
               value={c.piscine?.grande_ville || 30000}
@@ -394,6 +393,10 @@ export default function AdminEstimationPage() {
               onChange={(v: number) => updateConfig(['correcteurs', 'piscine', 'zone_rurale'], v)}
               step="1000"
             />
+          </div>
+          <div className="method-block">
+            <div className="method-title">{"Terrain"}</div>
+            <div className="method-text">{"La valorisation du terrain est calcul\u00e9e automatiquement via une r\u00e9gression logarithmique sur les transactions DVF de maisons dans la zone. Les premiers m\u00b2 valent plus que les suivants (valeur marginale d\u00e9croissante)."}</div>
           </div>
         </Section>
 
