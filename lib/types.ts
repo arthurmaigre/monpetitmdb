@@ -28,6 +28,14 @@ export interface Bien {
   message_contact: string
   message_statut: 'brouillon' | 'envoye' | 'repondu' | null
   message_date: string
+  latitude: number
+  longitude: number
+  estimation_prix_m2: number
+  estimation_prix_total: number
+  estimation_confiance: 'A' | 'B' | 'C' | 'D'
+  estimation_nb_comparables: number
+  estimation_rayon_m: number
+  estimation_date: string
   created_at: string
   updated_at: string
 }

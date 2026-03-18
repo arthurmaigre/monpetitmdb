@@ -2,7 +2,7 @@
 supabase_client.py — Module d'intégration Supabase pour MDB
 Gère : Storage (photos + fichiers) + Table biens
 """
-import os, json, logging, datetime
+import os, json, logging, datetime, urllib.request, urllib.parse
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -113,6 +113,36 @@ def _mime(p: Path) -> str:
     }.get(ext, "application/octet-stream")
 
 # ══════════════════════════════════════════════════════════════════════════════
+# GEOCODING — API BAN (adresse.data.gouv.fr)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def geocode(adresse: str = "", ville: str = "", code_postal: str = "") -> tuple:
+    """Geocode une adresse via l'API BAN. Retourne (lat, lng) ou (None, None)."""
+    queries = []
+    if adresse and len(adresse) > 5:
+        params = {"q": f"{adresse} {ville}", "limit": "1"}
+        if code_postal:
+            params["postcode"] = code_postal
+        queries.append(urllib.parse.urlencode(params))
+    params2 = {"q": ville, "limit": "1"}
+    if code_postal:
+        params2["postcode"] = code_postal
+    queries.append(urllib.parse.urlencode(params2))
+
+    for qs in queries:
+        try:
+            url = f"https://api-adresse.data.gouv.fr/search/?{qs}"
+            req = urllib.request.Request(url, headers={"User-Agent": "MonPetitMDB/1.0"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read())
+                if data.get("features"):
+                    coords = data["features"][0]["geometry"]["coordinates"]
+                    return (coords[1], coords[0])  # lat, lng
+        except Exception:
+            continue
+    return (None, None)
+
+# ══════════════════════════════════════════════════════════════════════════════
 # TABLE BIENS — Upsert annonces
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -217,6 +247,8 @@ def prop_to_row(prop: dict, params: dict = None) -> dict:
         "quartier":             prop.get("quartier"),
         "adresse":              prop.get("adresse"),
         "code_postal":          prop.get("code_postal"),
+        "latitude":             prop.get("latitude"),
+        "longitude":            prop.get("longitude"),
         # ── Caractéristiques bien ─────────────────────────────────
         "type_bien":            prop.get("type_bien"),
         "nb_pieces":            prop.get("nb_pieces"),       # TEXT ex: "T2"
@@ -251,6 +283,19 @@ def prop_to_row(prop: dict, params: dict = None) -> dict:
         # ── Travaux ───────────────────────────────────────────────
         "score_travaux":        score_travaux,
         "score_commentaire":    prop.get("score_commentaire"),
+        # ── Qualite (NLP) ────────────────────────────────────────
+        "parking_type":         prop.get("parking_type"),
+        "has_piscine":          prop.get("has_piscine"),
+        "exposition":           prop.get("exposition"),
+        "vue":                  prop.get("vue"),
+        "etat_interieur":       prop.get("etat_interieur"),
+        "jardin_etat":          prop.get("jardin_etat"),
+        "has_cave":             prop.get("has_cave"),
+        "has_gardien":          prop.get("has_gardien"),
+        "has_double_vitrage":   prop.get("has_double_vitrage"),
+        "has_cuisine_equipee":  prop.get("has_cuisine_equipee"),
+        "is_plain_pied":        prop.get("is_plain_pied"),
+        "standing_immeuble":    prop.get("standing_immeuble"),
         # ── Photos ────────────────────────────────────────────────
         "photo_url":            prop.get("photo_url"),
         "photo_storage_path":   prop.get("photo_storage_path"),

@@ -532,6 +532,76 @@ def extract_nb_pieces(text):
 # SCORING TRAVAUX — Pré-filtre + IA
 # ─────────────────────────────────────────────
 
+def extract_qualite_nlp(description: str, photo_urls: list = None) -> dict:
+    """
+    Extrait les signaux qualitatifs d'une annonce via Claude Haiku.
+    Utilise pour fiabiliser l'estimation DVF avec des correcteurs.
+    """
+    if not ANTHROPIC_CLIENT or not description or len(description.strip()) < 30:
+        return {}
+
+    prompt = f"""Analyse cette annonce immobiliere et extrait les informations qualitatives.
+Renvoie UNIQUEMENT un objet JSON valide, sans commentaire.
+
+Description : {description[:800]}
+
+JSON attendu :
+{{
+  "parking_type": "box_ferme" | "parking_ouvert" | "garage_attenant" | null,
+  "has_piscine": true | false,
+  "exposition": "sud" | "sud-ouest" | "sud-est" | "est" | "ouest" | "nord" | null,
+  "vue": "degagee" | "mer" | "parc" | "montagne" | "vis_a_vis" | null,
+  "etat_interieur": "neuf" | "refait_recemment" | "bon_etat" | "correct" | "a_rafraichir" | "a_renover",
+  "jardin_etat": "soigne" | "standard" | "a_amenager" | "friche" | null,
+  "has_cave": true | false,
+  "has_gardien": true | false,
+  "has_double_vitrage": true | false,
+  "has_cuisine_equipee": true | false,
+  "is_plain_pied": true | false
+}}
+
+Regles :
+- parking_type : "box_ferme" si box/garage ferme, "parking_ouvert" si place de parking, "garage_attenant" si garage de maison
+- exposition : uniquement si explicitement mentionne
+- vue : "degagee" si mentionne vue degagee/panoramique, "vis_a_vis" si mentionne vis-a-vis
+- etat_interieur : "neuf" si neuf ou livre neuf, "refait_recemment" si renove recemment, "bon_etat" si bien entretenu, "a_rafraichir" si travaux legers, "a_renover" si gros travaux
+- Si une info n'est pas dans la description, mettre null ou false"""
+
+    content = []
+
+    # Ajouter max 2 photos pour le standing
+    if photo_urls:
+        import base64
+        for purl in photo_urls[:2]:
+            img_bytes = supa.fetch_photo_bytes(purl)
+            if img_bytes:
+                b64 = base64.standard_b64encode(img_bytes).decode()
+                content.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}
+                })
+        if content:
+            prompt += "\n\nAnalyse aussi les photos pour evaluer le standing de l'immeuble et l'etat interieur."
+            prompt += '\nAjoute au JSON : "standing_immeuble": <1-5> (1=tres bas standing, 5=haut standing/luxe)'
+
+    content.append({"type": "text", "text": prompt})
+
+    try:
+        message = ANTHROPIC_CLIENT.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            messages=[{"role": "user", "content": content}]
+        )
+        raw = message.content[0].text.strip()
+        raw = re.sub(r"```json|```", "", raw).strip()
+        result = json.loads(raw)
+        log.debug(f"  NLP qualite : {json.dumps(result, ensure_ascii=False)[:120]}")
+        return result
+    except Exception as e:
+        log.debug(f"  NLP qualite erreur : {e}")
+        return {}
+
+
 def prefiltre_travaux(texte: str, dpe: str = None) -> bool:
     """
     Filtre heuristique rapide AVANT d'appeler Claude.
@@ -1402,6 +1472,15 @@ async def scrape_listing_detail(page, url, strategie_active: str = "Locataire en
                         addr = loc.get("address") or loc.get("street", "")
                         if addr:
                             data["adresse"] = str(addr)
+                    # Coordonnees GPS depuis Leboncoin
+                    if not data.get("latitude"):
+                        lat = loc.get("lat") or loc.get("latitude")
+                        lng = loc.get("lng") or loc.get("longitude")
+                        if lat and lng:
+                            try:
+                                data["latitude"] = float(lat)
+                                data["longitude"] = float(lng)
+                            except: pass
                 body_nd = ad_data.get("body", "")
                 if body_nd:
                     data["_description_nd"] = body_nd
@@ -1565,6 +1644,36 @@ async def scrape_listing_detail(page, url, strategie_active: str = "Locataire en
             return "network_crash"
         log.error(f"  Erreur : {url} — {err[:100]}")
         return None
+
+    # Geocoding fallback si pas de coordonnees
+    if not data.get("latitude") and data.get("ville"):
+        lat, lng = supa.geocode(
+            adresse=data.get("adresse", ""),
+            ville=data.get("ville", ""),
+            code_postal=data.get("code_postal", "")
+        )
+        if lat and lng:
+            data["latitude"] = lat
+            data["longitude"] = lng
+
+    # Extraction NLP des signaux qualitatifs pour l'estimation
+    description = data.get("_description", "") or data.get("_description_nd", "")
+    if description and len(description) > 30:
+        photo_urls = data.get("_all_photo_urls", [])
+        qualite = extract_qualite_nlp(description, photo_urls)
+        if qualite:
+            for k in ["parking_type", "exposition", "vue", "etat_interieur", "jardin_etat"]:
+                if qualite.get(k):
+                    data[k] = qualite[k]
+            for k in ["has_piscine", "has_cave", "has_gardien", "has_double_vitrage", "has_cuisine_equipee", "is_plain_pied"]:
+                if qualite.get(k) is True:
+                    data[k] = True
+            if qualite.get("standing_immeuble"):
+                try:
+                    s = int(qualite["standing_immeuble"])
+                    if 1 <= s <= 5:
+                        data["standing_immeuble"] = s
+                except: pass
 
     return data
 

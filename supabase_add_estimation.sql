@@ -1,0 +1,10 @@
+-- Colonnes pour le cache des estimations DVF et le geocoding
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS estimation_prix_m2 DOUBLE PRECISION;
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS estimation_prix_total DOUBLE PRECISION;
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS estimation_confiance VARCHAR(1);
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS estimation_nb_comparables INTEGER;
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS estimation_rayon_m INTEGER;
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS estimation_date TIMESTAMPTZ;
+ALTER TABLE biens ADD COLUMN IF NOT EXISTS estimation_details JSONB;

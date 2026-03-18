@@ -441,6 +441,160 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
+function EstimationSection({ bienId, prixFai }: { bienId: string, prixFai: number }) {
+  const [estimation, setEstimation] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(`/api/estimation/${bienId}`)
+        const data = await res.json()
+        if (data.estimation) setEstimation(data.estimation)
+        else if (data.error) setError(data.error)
+      } catch { setError('Erreur de connexion') }
+      setLoading(false)
+    }
+    load()
+  }, [bienId])
+
+  function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
+
+  const confianceColors: Record<string, { bg: string, color: string }> = {
+    A: { bg: '#d4f5e0', color: '#1a7a40' },
+    B: { bg: '#d4ddf5', color: '#2a4a8a' },
+    C: { bg: '#fff8f0', color: '#a06010' },
+    D: { bg: '#fde8e8', color: '#c0392b' },
+  }
+
+  if (loading) {
+    return (
+      <div className="section">
+        <h2 className="section-title">{"Estimation march\u00e9 DVF"}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#9a8a80', fontSize: '13px' }}>
+          <div style={{ width: '16px', height: '16px', border: '2px solid #e8e2d8', borderTop: '2px solid #c0392b', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          {"Analyse des transactions en cours..."}
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  if (error || !estimation) {
+    return (
+      <div className="section">
+        <h2 className="section-title">{"Estimation march\u00e9 DVF"}</h2>
+        <div className="nc-warning">{error || "Estimation impossible \u2014 donn\u00e9es insuffisantes ou pas de transactions comparables"}</div>
+      </div>
+    )
+  }
+
+  const ecart = estimation.ecart_prix_fai_pct
+  const ecartPositif = ecart > 0
+  const conf = confianceColors[estimation.confiance] || confianceColors.D
+  const prixFaiPos = prixFai ? Math.max(0, Math.min(100, (prixFai - estimation.prix_bas) / (estimation.prix_haut - estimation.prix_bas) * 100)) : 50
+
+  return (
+    <div className="section">
+      <h2 className="section-title">{"Estimation march\u00e9 DVF"}</h2>
+
+      {/* --- Bloc principal : 3 colonnes --- */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0', marginBottom: '24px' }}>
+
+        {/* Colonne gauche : Prix FAI */}
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Prix demand{'\u00E9'}</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210' }}>{fmt(prixFai)} {'\u20AC'}</div>
+        </div>
+
+        {/* Colonne centrale : Ecart */}
+        <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderLeft: '1.5px solid #f0ede8', borderRight: '1.5px solid #f0ede8' }}>
+          <div style={{
+            padding: '10px 20px', borderRadius: '12px',
+            background: ecartPositif ? '#fde8e8' : '#d4f5e0',
+          }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: ecartPositif ? '#c0392b' : '#1a7a40', textAlign: 'center' }}>
+              {ecart > 0 ? '+' : ''}{ecart}%
+            </div>
+          </div>
+          <div style={{ fontSize: '11px', color: '#9a8a80', marginTop: '6px', textAlign: 'center' }}>
+            {ecartPositif ? 'Au-dessus du march\u00e9' : 'En dessous du march\u00e9'}
+          </div>
+        </div>
+
+        {/* Colonne droite : Estimation */}
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            {"Estimation march\u00e9"}
+          </div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210' }}>{fmt(estimation.prix_total)} {'\u20AC'}</div>
+          <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}>{fmt(estimation.prix_m2_corrige)} {'\u20AC'}/m{'\u00B2'}</div>
+        </div>
+      </div>
+
+      {/* --- Fourchette de prix --- */}
+      <div style={{ background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#9a8a80' }}>Fourchette</span>
+          <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: conf.bg, color: conf.color }}>
+            Confiance {estimation.confiance} ({'\u00B1'}{estimation.marge_pct}%)
+          </span>
+        </div>
+        <div style={{ position: 'relative', height: '10px', background: '#e8e2d8', borderRadius: '5px', marginBottom: '4px' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: '5px', background: 'linear-gradient(90deg, #d4f5e0, #fff8f0, #fde8e8)', width: '100%' }} />
+          {/* Marqueur estimation (centre) */}
+          <div style={{
+            position: 'absolute', top: '-3px', left: '50%', transform: 'translateX(-50%)',
+            width: '3px', height: '16px', borderRadius: '2px', background: '#1a1210'
+          }} />
+          {/* Marqueur prix FAI */}
+          <div style={{
+            position: 'absolute', top: '-5px',
+            left: `${prixFaiPos}%`, transform: 'translateX(-50%)',
+            width: '20px', height: '20px', borderRadius: '50%',
+            background: ecartPositif ? '#c0392b' : '#1a7a40',
+            border: '3px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff' }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#b0a898', marginTop: '6px' }}>
+          <span>{fmt(estimation.prix_bas)} {'\u20AC'}</span>
+          <span style={{ color: '#9a8a80', fontWeight: 500 }}>{fmt(estimation.prix_total)} {'\u20AC'}</span>
+          <span>{fmt(estimation.prix_haut)} {'\u20AC'}</span>
+        </div>
+      </div>
+
+      {/* --- Correcteurs + meta --- */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        {estimation.corrections && estimation.corrections.length > 0 && (
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{"Correcteurs appliqu\u00E9s"}</div>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {estimation.corrections.map((c: any, i: number) => (
+                <span key={i} style={{
+                  padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
+                  background: c.multiplicateur >= 1 ? '#d4f5e0' : '#fde8e8',
+                  color: c.multiplicateur >= 1 ? '#1a7a40' : '#c0392b'
+                }} title={c.raison}>
+                  {c.facteur} {c.multiplicateur >= 1 ? '+' : ''}{Math.round((c.multiplicateur - 1) * 100)}%
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        <div style={{ fontSize: '11px', color: '#b0a898', textAlign: 'right' }}>
+          <div>{estimation.nb_comparables} transactions comparables</div>
+          <div>Rayon : {estimation.rayon_m}m</div>
+          <div style={{ marginTop: '4px', fontStyle: 'italic' }}>Source : DVF (donn{'\u00E9'}es notariales)</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function FicheBienPage() {
   const params = useParams()
   const id = params.id as string
@@ -722,6 +876,8 @@ export default function FicheBienPage() {
             </div>
           </div>
         </div>
+
+        <EstimationSection bienId={id} prixFai={bien.prix_fai} />
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">
