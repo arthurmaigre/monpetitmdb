@@ -37,6 +37,37 @@ function ParamRow({ label, description, value, onChange, type = 'number', step =
   )
 }
 
+const LABEL_MAP: Record<string, string> = {
+  '0': 'Rez-de-chauss\u00e9e',
+  '1': '1er \u00e9tage',
+  '2': '2\u00e8me \u00e9tage',
+  '3': '3\u00e8me \u00e9tage',
+  '4': '4\u00e8me \u00e9tage',
+  '5+': '5\u00e8me \u00e9tage et plus',
+  '2-3': '2\u00e8me - 3\u00e8me \u00e9tage',
+  '4-5': '4\u00e8me - 5\u00e8me \u00e9tage',
+  '6+': '6\u00e8me \u00e9tage et plus',
+  'terrasse_grande': 'Terrasse (> 10 m\u00b2)',
+  'balcon': 'Balcon',
+  'jardin_privatif_appartement': 'Jardin privatif (appartement)',
+  'loggia': 'Loggia',
+  'aucun': 'Aucun acc\u00e8s ext\u00e9rieur',
+  'soigne_sud': 'Jardin soign\u00e9 exposé sud',
+  'standard': 'Jardin standard',
+  'a_amenager': 'Jardin \u00e0 am\u00e9nager',
+  'friche': 'Jardin en friche',
+  'soigne': 'Jardin soign\u00e9',
+  'vue_degagee': 'Vue d\u00e9gag\u00e9e',
+  'exposition_sud': 'Exposition sud',
+  'vis_a_vis': 'Vis-\u00e0-vis',
+  'neuf': 'Neuf / Livr\u00e9 neuf',
+  'refait_recemment': 'R\u00e9nov\u00e9 r\u00e9cemment',
+  'bon_etat': 'Bon \u00e9tat',
+  'correct': '\u00c9tat correct',
+  'a_rafraichir': '\u00c0 rafra\u00eechir',
+  'a_renover': '\u00c0 r\u00e9nover',
+}
+
 function CorrectionTable({ title, corrections, onChange, description }: { title: string, corrections: Record<string, number>, onChange: (key: string, val: number) => void, description?: string }) {
   const entries = Object.entries(corrections).filter(([k]) => k !== 'description')
   return (
@@ -46,7 +77,7 @@ function CorrectionTable({ title, corrections, onChange, description }: { title:
       <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px' }}>
         {entries.map(([key, val]) => (
           <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #ede8e0' }}>
-            <span style={{ fontSize: '13px', color: '#1a1210', fontWeight: 500 }}>{key}</span>
+            <span style={{ fontSize: '13px', color: '#1a1210', fontWeight: 500 }}>{LABEL_MAP[key] || key}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="number"
@@ -164,32 +195,66 @@ export default function AdminEstimationPage() {
           </div>
         </Section>
 
+        {/* ════════ GEOLOCALISATION ════════ */}
+        <Section title={"G\u00e9olocalisation du bien"} description={"La pr\u00e9cision de l'estimation d\u00e9pend directement de la pr\u00e9cision de la g\u00e9olocalisation. Plus l'adresse est pr\u00e9cise, plus le rayon de recherche DVF est pertinent."}>
+          <div className="method-block">
+            <div className="method-title">{"Niveau 1 \u2014 Coordonn\u00e9es Leboncoin (le plus pr\u00e9cis)"}</div>
+            <div className="method-text">{"Leboncoin fournit parfois les coordonn\u00e9es GPS directement dans les donn\u00e9es de l'annonce. Ce sont les plus pr\u00e9cises car bas\u00e9es sur l'adresse exacte du bien."}</div>
+          </div>
+          <div className="method-block">
+            <div className="method-title">{"Niveau 2 \u2014 G\u00e9ocodage par adresse (API BAN)"}</div>
+            <div className="method-text">{"Si l'adresse pr\u00e9cise est disponible (rue + num\u00e9ro), elle est g\u00e9ocod\u00e9e via l'API BAN (Base Adresse Nationale). Pr\u00e9cision : \u00e0 l'immeuble pr\u00e8s. C'est le cas id\u00e9al pour une estimation de confiance A."}</div>
+          </div>
+          <div className="method-block">
+            <div className="method-title">{"Niveau 3 \u2014 G\u00e9ocodage par ville + code postal (fallback)"}</div>
+            <div className="method-text">{"Sans adresse pr\u00e9cise, le g\u00e9ocodage se fait au centre de la commune. Le rayon de recherche DVF est \u00e9largi pour compenser. Confiance C ou D maximum."}</div>
+          </div>
+        </Section>
+
         {/* ════════ PERIODES ════════ */}
-        <Section title={"P\u00e9riodes d'analyse"} description={config?.periodes?.description}>
+        <Section title={"P\u00e9riodes d'analyse"}>
+          <div className="method-block">
+            <div className="method-title">{"Comment fonctionnent les p\u00e9riodes"}</div>
+            <div className="method-text">
+              {"Le moteur analyse les transactions DVF sur deux p\u00e9riodes compl\u00e9mentaires. La p\u00e9riode principale capture le march\u00e9 actuel. La p\u00e9riode de r\u00e9f\u00e9rence (2018-2020) sert de point de comparaison car les prix actuels sont revenus au niveau d'avant COVID, apr\u00e8s la correction de 2023-2025."}
+            </div>
+          </div>
+          <div className="method-block">
+            <div className="method-title">{"Coefficient de d\u00e9croissance temporelle (\u03bb)"}</div>
+            <div className="method-text">
+              {"Chaque transaction DVF re\u00e7oit un poids qui d\u00e9cro\u00eet avec son anciennet\u00e9 : poids = e^(-\u03bb \u00d7 mois). Plus \u03bb est \u00e9lev\u00e9, plus les transactions anciennes p\u00e8sent peu dans la m\u00e9diane. Ce coefficient s'applique \u00e0 toutes les transactions, quelle que soit la p\u00e9riode."}
+            </div>
+            <div className="method-formula">
+              {"\u03bb = 0.04 → Transaction \u00e0 6 mois  = poids 0.79\n"}
+              {"\u03bb = 0.04 → Transaction \u00e0 12 mois = poids 0.62\n"}
+              {"\u03bb = 0.04 → Transaction \u00e0 24 mois = poids 0.38\n"}
+              {"\u03bb = 0.04 → Transaction \u00e0 36 mois = poids 0.23"}
+            </div>
+          </div>
           <ParamRow
-            label={"P\u00e9riode principale — Ann\u00e9e min"}
-            description={"Ann\u00e9e de d\u00e9but des transactions analys\u00e9es"}
+            label={"P\u00e9riode principale \u2014 Ann\u00e9e de d\u00e9but"}
+            description={"Les transactions \u00e0 partir de cette ann\u00e9e sont analys\u00e9es en priorit\u00e9"}
             value={config?.periodes?.principale?.annee_min || 2022}
             onChange={(v: number) => updateConfig(['periodes', 'principale', 'annee_min'], v)}
             step="1"
           />
           <ParamRow
-            label={"R\u00e9f\u00e9rence pr\u00e9-COVID — Ann\u00e9e min"}
-            description={"D\u00e9but de la p\u00e9riode de r\u00e9f\u00e9rence avant la hausse COVID"}
+            label={"P\u00e9riode de r\u00e9f\u00e9rence \u2014 Ann\u00e9e de d\u00e9but"}
+            description={"D\u00e9but de la p\u00e9riode pr\u00e9-COVID (prix de r\u00e9f\u00e9rence avant la hausse)"}
             value={config?.periodes?.reference_pre_covid?.annee_min || 2018}
             onChange={(v: number) => updateConfig(['periodes', 'reference_pre_covid', 'annee_min'], v)}
             step="1"
           />
           <ParamRow
-            label={"R\u00e9f\u00e9rence pr\u00e9-COVID — Ann\u00e9e max"}
-            description={"Fin de la p\u00e9riode pr\u00e9-COVID"}
+            label={"P\u00e9riode de r\u00e9f\u00e9rence \u2014 Ann\u00e9e de fin"}
+            description={"Fin de la p\u00e9riode pr\u00e9-COVID (avant la hausse de 2021)"}
             value={config?.periodes?.reference_pre_covid?.annee_max || 2020}
             onChange={(v: number) => updateConfig(['periodes', 'reference_pre_covid', 'annee_max'], v)}
             step="1"
           />
           <ParamRow
-            label={"Lambda (d\u00e9croissance temporelle)"}
-            description={"Plus lambda est \u00e9lev\u00e9, plus les transactions anciennes p\u00e8sent peu. 0.04 = transaction \u00e0 12 mois vaut 62% d'une transaction r\u00e9cente"}
+            label={"Coefficient de d\u00e9croissance (\u03bb)"}
+            description={"0.04 = standard. Augmenter pour donner plus de poids aux transactions r\u00e9centes. Diminuer pour lisser sur une p\u00e9riode plus longue."}
             value={config?.periodes?.decay_lambda || 0.04}
             onChange={(v: number) => updateConfig(['periodes', 'decay_lambda'], v)}
             step="0.005"
@@ -197,7 +262,7 @@ export default function AdminEstimationPage() {
         </Section>
 
         {/* ════════ RAYON DE RECHERCHE ════════ */}
-        <Section title={"Rayon de recherche adaptatif"} description={config?.rayons_recherche?.description}>
+        <Section title={"Rayon de recherche adaptatif"} description={"Le moteur commence par chercher les transactions DVF dans un petit rayon autour du bien, puis \u00e9largit progressivement jusqu'\u00e0 trouver suffisamment de comparables."}>
           <ParamRow
             label={"Seuil minimum de transactions"}
             description={"Nombre minimum de transactions comparables avant d'arr\u00eater l'\u00e9largissement"}
@@ -295,13 +360,13 @@ export default function AdminEstimationPage() {
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Parking</h3>
             <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{c.parking?.description}</p>
             <ParamRow
-              label="Box ferm\u00e9" description={"Valeur absolue ajout\u00e9e"} suffix={"\u20AC"}
+              label={"Box ferm\u00e9"} description={"Valeur absolue ajout\u00e9e au prix estim\u00e9"} suffix={"\u20AC"}
               value={c.parking?.box_ferme?.valeur_defaut || 18000}
               onChange={(v: number) => updateConfig(['correcteurs', 'parking', 'box_ferme', 'valeur_defaut'], v)}
               step="1000"
             />
             <ParamRow
-              label="Parking ouvert" description={"D\u00e9cote ~45% vs box"} suffix={"\u20AC"}
+              label={"Parking ouvert"} description={"D\u00e9cote ~45% par rapport au box ferm\u00e9"} suffix={"\u20AC"}
               value={c.parking?.parking_ouvert?.valeur_defaut || 10000}
               onChange={(v: number) => updateConfig(['correcteurs', 'parking', 'parking_ouvert', 'valeur_defaut'], v)}
               step="1000"
@@ -312,19 +377,19 @@ export default function AdminEstimationPage() {
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Piscine</h3>
             <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{c.piscine?.description}</p>
             <ParamRow
-              label="Grande ville" suffix={"\u20AC"}
+              label={"Grande ville (Paris, Lyon, Marseille...)"} suffix={"\u20AC"}
               value={c.piscine?.grande_ville || 30000}
               onChange={(v: number) => updateConfig(['correcteurs', 'piscine', 'grande_ville'], v)}
               step="1000"
             />
             <ParamRow
-              label="Ville moyenne" suffix={"\u20AC"}
+              label={"Ville moyenne (Nantes, Rennes, Toulouse...)"} suffix={"\u20AC"}
               value={c.piscine?.ville_moyenne || 18000}
               onChange={(v: number) => updateConfig(['correcteurs', 'piscine', 'ville_moyenne'], v)}
               step="1000"
             />
             <ParamRow
-              label="Zone rurale" suffix={"\u20AC"}
+              label={"Zone rurale / p\u00e9riurbaine"} suffix={"\u20AC"}
               value={c.piscine?.zone_rurale || 8000}
               onChange={(v: number) => updateConfig(['correcteurs', 'piscine', 'zone_rurale'], v)}
               step="1000"

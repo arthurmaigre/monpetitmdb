@@ -33,7 +33,7 @@ export default function AdminPage() {
         .stat-card { background: #fff; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .stat-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
         .stat-value { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 800; color: #1a1210; }
-        .nav-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .nav-card { background: #fff; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); text-decoration: none; color: #1a1210; transition: transform 0.15s, box-shadow 0.15s; display: block; }
         .nav-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
         .nav-card-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
@@ -67,6 +67,10 @@ export default function AdminPage() {
           <a href="/admin/users" className="nav-card">
             <div className="nav-card-title">Gestion des utilisateurs</div>
             <div className="nav-card-sub">Plans, rôles, date d'inscription</div>
+          </a>
+          <a href="/admin/estimation" className="nav-card">
+            <div className="nav-card-title">{"Moteur d'estimation"}</div>
+            <div className="nav-card-sub">{"M\u00e9thodologie DVF, correcteurs, niveaux de confiance"}</div>
           </a>
         </div>
       </div>
