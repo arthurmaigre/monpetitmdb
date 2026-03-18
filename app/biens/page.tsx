@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
@@ -8,6 +8,7 @@ import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import { Bien } from '@/lib/types'
 import { TYPES_BIEN, TRIS } from '@/lib/constants'
+import { calculerCashflow } from '@/lib/calculs'
 
 function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' €' : '-'
@@ -30,6 +31,22 @@ export default function BiensPage() {
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
+  const tableWrapRef = useRef<HTMLDivElement>(null)
+  const floatingScrollRef = useRef<HTMLDivElement>(null)
+  const [tableWidth, setTableWidth] = useState(0)
+  const syncing = useRef(false)
+
+  const syncScroll = useCallback((source: 'table' | 'float') => {
+    if (syncing.current) return
+    syncing.current = true
+    const tw = tableWrapRef.current
+    const fs = floatingScrollRef.current
+    if (tw && fs) {
+      if (source === 'table') fs.scrollLeft = tw.scrollLeft
+      else tw.scrollLeft = fs.scrollLeft
+    }
+    requestAnimationFrame(() => { syncing.current = false })
+  }, [])
 
   useEffect(() => {
     async function load() {
@@ -94,10 +111,24 @@ export default function BiensPage() {
     return 0
   })
 
-  function CellEditable({ bien, champ }: { bien: any, champ: string }) {
+  useEffect(() => {
+    if (view !== 'list' || loading) return
+    const tw = tableWrapRef.current
+    if (!tw) return
+    const measure = () => {
+      const table = tw.querySelector('table')
+      if (table) setTableWidth(table.scrollWidth)
+    }
+    measure()
+    const obs = new ResizeObserver(measure)
+    obs.observe(tw)
+    return () => obs.disconnect()
+  }, [view, loading, strategie, allBiens.length])
+
+  function CellEditable({ bien, champ, suffix = '' }: { bien: any, champ: string, suffix?: string }) {
     const valeur = bien[champ]
     const estSaving = saving === bien.id + champ
-    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}</span>
+    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}{suffix}</span>
     if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
     return (
       <input type="number" defaultValue="" placeholder="NC" disabled={!!estSaving}
@@ -124,7 +155,7 @@ export default function BiensPage() {
   return (
     <Layout>
       <style>{`
-        .main { max-width: 1400px; margin: 0 auto; padding: 32px 48px; }
+        .main { max-width: 1600px; margin: 0 auto; padding: 32px 48px; box-sizing: border-box; }
         .filter-bar { background: #fff; border-radius: 16px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
         .filter-label { font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -142,22 +173,30 @@ export default function BiensPage() {
         .empty-state { text-align: center; padding: 80px 40px; color: #9a8a80; }
         .empty-state h3 { font-family: 'Fraunces', serif; font-size: 22px; color: #1a1210; margin-bottom: 8px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
-        .list-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-        .list-table thead tr { background: #f7f4f0; border-bottom: 2px solid #ede8e0; }
-        .list-table thead th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; }
+        .list-wrap { position: relative; overflow-x: scroll; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .list-wrap::-webkit-scrollbar { height: 0; }
+        .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 20px; max-width: 1504px; margin: 0 auto; }
+        .floating-scroll-inner { height: 1px; pointer-events: none; }
+        .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
+        .list-table thead tr { background: #f7f4f0; }
+        .list-table thead th { padding: 12px 14px; text-align: center; font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
         .list-table thead th span { display: block; font-size: 10px; font-weight: 400; color: #b0a898; letter-spacing: 0; text-transform: none; margin-top: 2px; height: 14px; }
-        .list-table tbody tr { border-bottom: 1px solid #f0ede8; transition: background 0.12s; }
-        .list-table tbody tr:last-child { border-bottom: none; }
+        .list-table tbody tr { transition: background 0.12s; }
         .list-table tbody tr:hover { background: #faf8f5; }
-        .list-table td { padding: 10px 16px; font-size: 13px; vertical-align: middle; }
+        .list-table td { padding: 10px 14px; font-size: 13px; vertical-align: middle; border-bottom: 1px solid #f0ede8; text-align: center; }
+        .sticky-col { position: sticky; z-index: 2; background: #fff; text-align: left; }
+        .sticky-col-head { position: sticky; z-index: 3; background: #f7f4f0; text-align: left !important; }
+        .list-table tbody tr:hover .sticky-col { background: #faf8f5; }
         .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; }
         .list-thumb-empty { width: 72px; height: 52px; border-radius: 8px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
         .td-bien-title { font-weight: 600; color: #1a1210; display: block; margin-bottom: 2px; }
         .td-bien-quartier { font-size: 11px; color: #b0a898; display: block; }
-        .td-prix { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; }
+        .td-prix { font-weight: 500; font-size: 13px; letter-spacing: -0.01em; white-space: nowrap; }
         .td-strat { display: inline-block; font-size: 11px; font-weight: 600; color: #2a4a8a; background: #d4ddf5; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
         .td-btn { display: inline-block; padding: 7px 16px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 0.15s; }
         .td-btn:hover { opacity: 0.75; }
+        .td-btn-contact { display: inline-block; padding: 7px 12px; background: #c0392b; color: #fff; border-radius: 8px; text-decoration: none; font-size: 11px; font-weight: 500; white-space: nowrap; transition: opacity 0.15s; }
+        .td-btn-contact:hover { opacity: 0.75; }
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 0.15s; }
         .td-heart:hover { transform: scale(1.2); }
         .edit-hint { font-size: 11px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
@@ -262,31 +301,43 @@ export default function BiensPage() {
               <>
                 {userId && <p className="edit-hint">Les champs NC sont editables — vos modifications enrichissent la base de donnees.</p>}
                 {!userId && <p className="edit-hint">Connectez-vous pour enrichir les donnees manquantes.</p>}
-                <table className="list-table">
+                <div className="list-wrap" ref={tableWrapRef} onScroll={() => syncScroll('table')}><table className="list-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '40px' }}><span></span></th>
-                      <th style={{ width: '80px' }}><span></span></th>
-                      <th>Bien<span></span></th>
+                      <th className="sticky-col-head" style={{ left: 0, width: '40px', minWidth: '40px' }}><span></span></th>
+                      <th className="sticky-col-head" style={{ left: '40px', width: '80px', minWidth: '80px' }}><span></span></th>
+                      <th className="sticky-col-head" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
                       <th>Commune<span></span></th>
-                      <th>Metropole<span></span></th>
-                      <th>Strategie<span></span></th>
+                      <th>{`M\u00e9tropole`}<span></span></th>
                       <th>Prix FAI<span></span></th>
+                      {strategie !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
+                      {strategie !== 'Travaux lourds' && <th>{`\u00c9cart`}<span></span></th>}
                       <th>Prix/m2<span></span></th>
-                      <th>Loyer<span>/mois</span></th>
-                      <th>Type loyer<span></span></th>
-                      <th>Charges rec.<span>/mois</span></th>
-                      <th>Charges copro<span>/mois</span></th>
-                      <th>Taxe fonciere<span>/an</span></th>
-                      <th>Rendement brut<span></span></th>
-                      <th>Locataire<span></span></th>
-                      <th><span></span></th>
+                      {strategie === 'Travaux lourds' ? (
+                        <>
+                          <th>Score travaux<span></span></th>
+                          <th>DPE<span></span></th>
+                          <th>{`Ann\u00e9e`}<span></span></th>
+                        </>
+                      ) : (
+                        <>
+                          <th>Loyer<span>/mois</span></th>
+                          <th>Type loyer<span></span></th>
+                          <th>{`Charges r\u00e9cup.`}<span>/mois</span></th>
+                          <th>Charges copro<span>/mois</span></th>
+                          <th>{`Taxe fonci\u00e8re`}<span>/an</span></th>
+                          <th>Rendement brut<span></span></th>
+                          <th>Cashflow brut<span>/mois</span></th>
+                          <th>Locataire<span></span></th>
+                        </>
+                      )}
+                      <th>Actions<span></span></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map(bien => (
                       <tr key={bien.id}>
-                        <td>
+                        <td className="sticky-col" style={{ left: 0, width: '40px', minWidth: '40px' }}>
                           <button
                             className="td-heart"
                             onClick={async () => {
@@ -311,28 +362,93 @@ export default function BiensPage() {
                             {watchlistIds.has(bien.id) ? '♥' : '♡'}
                           </button>
                         </td>
-                        <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
-                        <td>
+                        <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
+                        <td className="sticky-col" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
                           <span className="td-bien-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500 }}>{bien.ville}</td>
                         <td><MetroBadge metropole={bien.metropole} /></td>
-                        <td>{bien.strategie_mdb && <span className="td-strat">{bien.strategie_mdb}</span>}</td>
-                        <td className="td-prix">{formatPrix(bien.prix_fai)}</td>
-                        <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? bien.prix_m2.toLocaleString('fr-FR') : '-'}</td>
-                        <td><CellEditable bien={bien} champ="loyer" /></td>
-                        <td><CellTypeLoyer bien={bien} /></td>
-                        <td><CellEditable bien={bien} champ="charges_rec" /></td>
-                        <td><CellEditable bien={bien} champ="charges_copro" /></td>
-                        <td><CellEditable bien={bien} champ="taxe_fonc_ann" /></td>
-                        <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
-                        <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire || '-'}</td>
-                        <td><a href={`/biens/${bien.id}`} className="td-btn">Analyse</a></td>
+                        {(() => {
+                          const peutCalculer = bien.loyer && bien.prix_fai
+                          const resultat = peutCalculer ? calculerCashflow(
+                            { prix_fai: bien.prix_fai, loyer: bien.loyer, type_loyer: bien.type_loyer, charges_rec: bien.charges_rec || 0, charges_copro: bien.charges_copro || 0, taxe_fonc_ann: bien.taxe_fonc_ann || 0, surface: bien.surface },
+                            { apport: 20000, tauxCredit: 3.5, tauxAssurance: 0.3, dureeAns: 20, fraisNotaire: 7.5, objectifCashflow: 0 },
+                            { tmi: 30, regime: 'micro_foncier' }
+                          ) : null
+                          const ecartPct = resultat ? ((resultat.prix_cible - bien.prix_fai) / bien.prix_fai * 100) : null
+                          const isLocataire = strategie !== 'Travaux lourds'
+                          return <>
+                            <td className="td-prix">{formatPrix(bien.prix_fai)}</td>
+                            {isLocataire && (
+                              <td className="td-prix" style={{ fontSize: '13px' }}>
+                                {resultat ? (
+                                  resultat.prix_cible >= bien.prix_fai
+                                    ? <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 9px', borderRadius: '6px', background: '#d4f5e0', color: '#1a7a40', whiteSpace: 'nowrap' }}>Cash Flow Positif</span>
+                                    : formatPrix(resultat.prix_cible)
+                                ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
+                              </td>
+                            )}
+                            {isLocataire && (
+                              <td>
+                                {resultat && resultat.prix_cible < bien.prix_fai && ecartPct !== null ? (
+                                  <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 9px', borderRadius: '6px', background: '#fde8e8', color: '#c0392b', whiteSpace: 'nowrap' }}>
+                                    {ecartPct.toFixed(1)}{'\u00A0'}%
+                                  </span>
+                                ) : resultat && resultat.prix_cible >= bien.prix_fai ? null : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
+                              </td>
+                            )}
+                            <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
+                            {!isLocataire ? (
+                              <>
+                                <td>
+                                  {(bien as any).score_travaux ? (
+                                    <span style={{ fontSize: '12px', fontWeight: 600, background: '#fff3cd', color: '#856404', padding: '4px 9px', borderRadius: '6px' }}>
+                                      {(bien as any).score_travaux}/5
+                                    </span>
+                                  ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}
+                                </td>
+                                <td>
+                                  {(bien as any).dpe ? (
+                                    <span style={{
+                                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                      width: '28px', height: '28px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', color: '#fff',
+                                      background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[(bien as any).dpe] || '#9a8a80'
+                                    }}>{(bien as any).dpe}</span>
+                                  ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}
+                                </td>
+                                <td style={{ color: '#9a8a80' }}>{(bien as any).annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                              </>
+                            ) : (
+                              <>
+                                <td><CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} /></td>
+                                <td><CellTypeLoyer bien={bien} /></td>
+                                <td><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
+                                <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
+                                <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
+                                <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
+                                <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
+                                  {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
+                                </td>
+                                <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire || '-'}</td>
+                              </>
+                            )}
+                          </>
+                        })()}
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <a href={`/biens/${bien.id}`} className="td-btn">Analyse</a>
+                          {' '}
+                          <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{`R\u00e9cup\u00e9rer les donn\u00e9es`}</a>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
+                {tableWidth > 0 && (
+                  <div className="floating-scroll" ref={floatingScrollRef} onScroll={() => syncScroll('float')}>
+                    <div className="floating-scroll-inner" style={{ width: tableWidth }} />
+                  </div>
+                )}
               </>
             )}
           </>

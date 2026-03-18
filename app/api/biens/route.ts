@@ -17,15 +17,16 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('biens')
       .select(`
-        id, url, metropole, ville, quartier,
-        type_bien, nb_pieces, surface, etage,
-        prix_fai, prix_m2, loyer, type_loyer,
-        charges_rec, charges_copro, taxe_fonc_ann,
-        rendement_brut, statut, strategie_mdb,
-        profil_locataire, fin_bail,
-        photo_storage_path, photo_url,
-        created_at, updated_at
-      `)
+  id, url, metropole, ville, quartier,
+  type_bien, nb_pieces, surface, etage,
+  prix_fai, prix_m2, loyer, type_loyer,
+  charges_rec, charges_copro, taxe_fonc_ann,
+  rendement_brut, statut, strategie_mdb,
+  profil_locataire, fin_bail, score_travaux,
+  dpe, annee_construction,
+  photo_storage_path, photo_url,
+  created_at, updated_at
+`)
       .in('id', idList)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -35,15 +36,16 @@ export async function GET(request: NextRequest) {
   let query = supabaseAdmin
     .from('biens')
     .select(`
-      id, url, metropole, ville, quartier,
-      type_bien, nb_pieces, surface, etage,
-      prix_fai, prix_m2, loyer, type_loyer,
-      charges_rec, charges_copro, taxe_fonc_ann,
-      rendement_brut, statut, strategie_mdb,
-      profil_locataire, fin_bail,
-      photo_storage_path, photo_url,
-      created_at, updated_at
-    `)
+  id, url, metropole, ville, quartier,
+  type_bien, nb_pieces, surface, etage,
+  prix_fai, prix_m2, loyer, type_loyer,
+  charges_rec, charges_copro, taxe_fonc_ann,
+  rendement_brut, statut, strategie_mdb,
+  profil_locataire, fin_bail, score_travaux,
+  dpe, annee_construction,
+  photo_storage_path, photo_url,
+  created_at, updated_at
+`)
     .eq('statut', statut)
     .order('created_at', { ascending: false })
 

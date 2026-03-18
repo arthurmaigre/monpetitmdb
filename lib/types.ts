@@ -21,6 +21,13 @@ export interface Bien {
   fin_bail: string
   charges_copro: number
   taxe_fonc_ann: number
+  adresse: string
+  surface_terrain: number
+  score_travaux: number
+  score_commentaire: string
+  message_contact: string
+  message_statut: 'brouillon' | 'envoye' | 'repondu' | null
+  message_date: string
   created_at: string
   updated_at: string
 }

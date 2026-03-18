@@ -20,6 +20,8 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
   const [isInWatchlist, setIsInWatchlist] = useState(inWatchlist)
   const [loading, setLoading] = useState(false)
   const lienTitre = bien.url ? bien.url : '/biens/' + bien.id
+  const scoreTravaux = (bien as any).score_travaux
+  const isTravaux = bien.strategie_mdb === 'Travaux lourds'
 
   async function toggleWatchlist(e: React.MouseEvent) {
     e.preventDefault()
@@ -53,10 +55,16 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
         <span style={{ position: 'absolute', top: '12px', left: '12px' }}>
           <MetroBadge metropole={bien.metropole} />
         </span>
-        <span style={{ position: 'absolute', top: '12px', right: '12px' }}>
-          <RendementBadge rendement={bien.rendement_brut} />
-        </span>
-       <button onClick={toggleWatchlist} disabled={loading} style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', transition: 'all 0.15s', opacity: loading ? 0.6 : 1, color: isInWatchlist ? '#c0392b' : '#c0b0a0' }} title={isInWatchlist ? 'Retirer de la watchlist' : 'Ajouter a la watchlist'}>
+        {!isTravaux && (
+          <span style={{ position: 'absolute', top: '12px', right: '12px' }}>
+            <RendementBadge rendement={bien.rendement_brut} />
+          </span>
+        )}
+        <button
+          onClick={toggleWatchlist}
+          disabled={loading}
+          style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', transition: 'all 0.15s', opacity: loading ? 0.6 : 1, color: isInWatchlist ? '#c0392b' : '#c0b0a0' }}
+          title={isInWatchlist ? 'Retirer de la watchlist' : 'Ajouter a la watchlist'}>
           {isInWatchlist ? '♥' : '♡'}
         </button>
       </div>
@@ -71,13 +79,45 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
         <div style={{ fontSize: '24px', fontWeight: 700, margin: '12px 0 8px', letterSpacing: '-0.02em' }}>
           {formatPrix(bien.prix_fai)}
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          {bien.loyer
-            ? <span style={{ fontSize: '12px', color: '#9a8a80', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px' }}>{bien.loyer} €/mois</span>
-            : <span style={{ fontSize: '12px', color: '#c0b0a0', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px', fontStyle: 'italic' }}>Loyer NC</span>
-          }
-          {bien.prix_m2 && <span style={{ fontSize: '12px', color: '#9a8a80', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px' }}>{Number(bien.prix_m2).toLocaleString('fr-FR')} €/m2</span>}
-          {bien.profil_locataire && <span style={{ fontSize: '12px', color: '#9a8a80', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px' }}>{bien.profil_locataire}</span>}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          {isTravaux ? (
+            <>
+              {scoreTravaux ? (
+                <span style={{ fontSize: '12px', fontWeight: 600, background: '#fff3cd', color: '#856404', padding: '4px 9px', borderRadius: '6px' }}>
+                  Score travaux : {scoreTravaux}/5
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', color: '#c0b0a0', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px', fontStyle: 'italic' }}>Score NC</span>
+              )}
+              {bien.prix_m2 && <span style={{ fontSize: '12px', color: '#9a8a80', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px' }}>{Number(bien.prix_m2).toLocaleString('fr-FR')} {'\u20AC'}/m2</span>}
+              {(bien as any).dpe && (
+                <span style={{
+                  fontSize: '12px', fontWeight: 700, padding: '4px 9px', borderRadius: '6px', color: '#fff',
+                  background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[(bien as any).dpe] || '#9a8a80'
+                }}>DPE {(bien as any).dpe}</span>
+              )}
+            </>
+          ) : (
+            <>
+              {bien.loyer
+                ? <span style={{ fontSize: '12px', color: '#9a8a80', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px' }}>{bien.loyer} {'\u20AC'}/mois</span>
+                : <span style={{ fontSize: '12px', color: '#c0b0a0', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px', fontStyle: 'italic' }}>Loyer NC</span>
+              }
+              {bien.prix_m2 && <span style={{ fontSize: '12px', color: '#9a8a80', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px' }}>{Number(bien.prix_m2).toLocaleString('fr-FR')} {'\u20AC'}/m2</span>}
+              {(bien as any).dpe && (
+                <span style={{
+                  fontSize: '12px', fontWeight: 700, padding: '4px 9px', borderRadius: '6px', color: '#fff',
+                  background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[(bien as any).dpe] || '#9a8a80'
+                }}>DPE {(bien as any).dpe}</span>
+              )}
+              {scoreTravaux ? (
+                <span style={{ fontSize: '12px', fontWeight: 600, background: '#fff3cd', color: '#856404', padding: '4px 9px', borderRadius: '6px' }}>
+                  Travaux : {scoreTravaux}/5
+                </span>
+              ) : null}
+              {bien.profil_locataire && <span style={{ fontSize: '12px', color: '#9a8a80', background: '#f7f4f0', padding: '4px 9px', borderRadius: '6px' }}>{bien.profil_locataire}</span>}
+            </>
+          )}
         </div>
         <a href={'/biens/' + bien.id} style={{ display: 'block', textAlign: 'center', padding: '11px', background: '#f7f4f0', color: '#1a1210', borderRadius: '10px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, border: '1.5px solid #ede8e0' }}>
           Voir l'analyse
