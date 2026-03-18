@@ -60,6 +60,17 @@ const LABEL_MAP: Record<string, string> = {
   'vue_degagee': 'Vue d\u00e9gag\u00e9e',
   'exposition_sud': 'Exposition sud',
   'vis_a_vis': 'Vis-\u00e0-vis',
+  'cave': 'Cave',
+  'cave_sous_sol': 'Cave / Sous-sol',
+  'grenier_combles': 'Grenier / Combles am\u00e9nageables',
+  'gardien': 'Gardien / Concierge',
+  'double_vitrage': 'Double vitrage',
+  'cuisine_equipee': 'Cuisine \u00e9quip\u00e9e',
+  'plain_pied': 'Plain-pied',
+  'assainissement_individuel': 'Assainissement individuel',
+  'individuelle': 'Maison individuelle',
+  'semi_mitoyen': 'Semi-mitoyenne',
+  'mitoyen': 'Mitoyenne',
   'neuf': 'Neuf / Livr\u00e9 neuf',
   'refait_recemment': 'R\u00e9nov\u00e9 r\u00e9cemment',
   'bon_etat': 'Bon \u00e9tat',
@@ -347,10 +358,12 @@ export default function AdminEstimationPage() {
             description={c.exterieur?.description}
             onChange={(k, v) => updateConfig(['correcteurs', 'exterieur', k], v)}
           />
-          <div className="method-block" style={{ marginBottom: '16px' }}>
-            <div className="method-title">{"Autres correcteurs appartement"}</div>
-            <div className="method-text">{"Cave (+2%), gardien (+2%), double vitrage (+2%), cuisine \u00e9quip\u00e9e (+1.5%), grenier/combles (+3%), nombre de SDB (+4% si 2+, +6% si 3+). Ces correcteurs sont appliqu\u00e9s automatiquement quand les donn\u00e9es sont d\u00e9tect\u00e9es par NLP."}</div>
-          </div>
+          <CorrectionTable
+            title={"Annexes et \u00e9quipements"}
+            corrections={c.annexes_appartement || { cave: 1.02, grenier_combles: 1.03, gardien: 1.02, double_vitrage: 1.02, cuisine_equipee: 1.015 }}
+            description={"D\u00e9tect\u00e9s par NLP sur la description de l'annonce."}
+            onChange={(k, v) => updateConfig(['correcteurs', 'annexes_appartement', k], v)}
+          />
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Parking</h3>
             <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{"Valeurs par d\u00e9faut. Les prix r\u00e9els par ville sont calcul\u00e9s automatiquement via DVF (table ref_prix_parking)."}</p>
@@ -409,15 +422,18 @@ export default function AdminEstimationPage() {
               step="1000"
             />
           </div>
-          <div className="method-block" style={{ marginBottom: '16px' }}>
-            <div className="method-title">{"Autres correcteurs maison"}</div>
-            <div className="method-text">
-              {"Plain-pied (+4%), sous-sol/cave (+3%), grenier am\u00e9nageable (+4%), nombre de SDB (+4% si 2+). "}
-              {"Mitoyennet\u00e9 : individuelle (+5%), semi-mitoyenne (-2%), mitoyenne (-7%). "}
-              {"Assainissement individuel (-4%). "}
-              {"Ces correcteurs sont d\u00e9tect\u00e9s automatiquement par NLP sur la description."}
-            </div>
-          </div>
+          <CorrectionTable
+            title={"Annexes et configuration"}
+            corrections={c.annexes_maison || { cave_sous_sol: 1.03, grenier_combles: 1.04, plain_pied: 1.04, assainissement_individuel: 0.96 }}
+            description={"D\u00e9tect\u00e9s par NLP sur la description."}
+            onChange={(k, v) => updateConfig(['correcteurs', 'annexes_maison', k], v)}
+          />
+          <CorrectionTable
+            title={"Mitoyennet\u00e9"}
+            corrections={c.mitoyennete || { individuelle: 1.05, semi_mitoyen: 0.98, mitoyen: 0.93 }}
+            description={"Impact fort sur le prix. Maison individuelle = premium. Mitoyenne = d\u00e9cote (bruit, intimit\u00e9)."}
+            onChange={(k, v) => updateConfig(['correcteurs', 'mitoyennete', k], v)}
+          />
           <div className="method-block">
             <div className="method-title">{"Terrain"}</div>
             <div className="method-text">{"La valorisation du terrain est calcul\u00e9e automatiquement via une r\u00e9gression logarithmique sur les transactions DVF de maisons dans la zone. Les premiers m\u00b2 valent plus que les suivants (valeur marginale d\u00e9croissante)."}</div>
