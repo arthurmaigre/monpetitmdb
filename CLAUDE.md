@@ -1,15 +1,18 @@
 # Mon Petit MDB — CLAUDE.md
 
 ## Projet
-SaaS de sourcing immobilier pour investisseurs particuliers (méthodologie marchand de biens).
-Stratégies : **Locataire en place** / **Travaux lourds**. Territoire : France entière.
-Modèle freemium : Free / Pro ~19€ / Expert ~49€.
+SaaS de sourcing immobilier pour investisseurs particuliers (methodologie marchand de biens).
+Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Decoupe**.
+Territoire : France entiere.
+Modele freemium : Free / Pro ~19 euros / Expert ~49 euros.
 
 ## Stack
 - **Frontend** : Next.js App Router, TypeScript, Tailwind — Vercel
 - **DB** : Supabase (West EU / Ireland) — auth + tables + storage
-- **Scraper** : Python + Playwright + Chromium → Leboncoin — Hetzner VPS
+- **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
+- **Sourcing API** : Moteur Immo (aggregateur 60+ plateformes) — module `moteurimmo_client.py`
 - **AI scoring** : Claude API (Haiku) pour `score_travaux`
+- **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
 - **Storage bucket** : `mdb-files`
 
 ## Structure repo (`C:\Users\GAMER\monpetitmdb`)
@@ -17,26 +20,46 @@ Modèle freemium : Free / Pro ~19€ / Expert ~49€.
 monpetitmdb/
 ├── app/
 │   ├── api/
-│   │   ├── biens/          # GET /api/biens, /api/biens/[id]
-│   │   └── ...
-│   ├── biens/[id]/         # Page détail bien + simulateur fiscal
-│   ├── mes-biens/          # Watchlist utilisateur
-│   └── mon-profil/         # Paramètres fiscaux + financement
-├── components/             # BienCard, MetroBadge, RendementBadge, Layout...
+│   │   ├── biens/              # GET /api/biens, /api/biens/[id]
+│   │   ├── communes/           # Recherche localisation (ville, dept, region, metropole)
+│   │   ├── estimation/[id]/    # Estimation DVF par bien
+│   │   ├── estimation/batch/   # Estimation DVF batch tous biens
+│   │   └── admin/estimation/   # Config estimateur (GET/PUT)
+│   ├── admin/estimation/       # Page admin config estimateur
+│   ├── biens/[id]/             # Page detail bien + simulateur fiscal + scenario revente
+│   ├── biens/                  # Liste biens avec filtres
+│   ├── mes-biens/              # Watchlist utilisateur
+│   └── mon-profil/             # Parametres fiscaux + financement
+├── components/
+│   ├── BienCard.tsx            # Carte bien (grille)
+│   ├── PlusValueBadge.tsx      # Badge +/- value brute
+│   ├── RendementBadge.tsx      # Badge rendement brut
+│   ├── MetroBadge.tsx
+│   └── Layout.tsx
 ├── lib/
 │   ├── types.ts
 │   ├── constants.ts
 │   ├── theme.ts
-│   └── calculs.ts          # TOUTE la logique calculs fiscaux (frontend only)
+│   ├── calculs.ts              # Calculs fiscaux + scenario revente (frontend only)
+│   ├── estimation.ts           # Moteur estimation DVF + correcteurs
+│   ├── supabase.ts             # Client Supabase public (anon key)
+│   └── supabase-admin.ts       # Client Supabase admin (secret key)
+├── scrapper/
+│   ├── scraper_supabase_prod.py    # Scraper LBC legacy
+│   ├── moteurimmo_client.py        # Module sourcing Moteur Immo
+│   ├── supabase_client.py          # Client Supabase Python
+│   ├── ai_learning.json            # Exemples extraction IA
+│   ├── ai_learning_travaux.json    # Exemples scoring travaux (455 exemples)
+│   └── .env                        # Cles API (ne pas committer)
 └── public/
 ```
 
-## Table `biens` — colonnes réelles (source : supabase_client.py)
+## Table `biens` — colonnes
 
-**Identité**
-- `id` (auto Supabase), `url`, `statut` ("Toujours disponible" | "Annonce expirée")
-- `strategie_mdb` ("Locataire en place" | "Travaux lourds")
-- `metropole`, `ville`, `quartier`, `adresse`
+**Identite**
+- `id` (auto Supabase), `url` (unique), `statut` ("Toujours disponible" | "Annonce expiree")
+- `strategie_mdb` ("Locataire en place" | "Travaux lourds" | "Division" | "Decoupe")
+- `metropole`, `ville`, `quartier`, `adresse`, `code_postal`
 
 **Bien**
 - `type_bien`, `nb_pieces` (TEXT ex: "T2"), `etage` (TEXT ex: "RDC")
@@ -44,57 +67,99 @@ monpetitmdb/
 - `ascenseur`, `acces_exterieur`, `type_chauffage`, `mode_chauffage`
 - `nb_sdb` (int), `nb_chambres` (int)
 - `ges`, `dpe_valeur`, `budget_energie_min`, `budget_energie_max`
+- `surface_terrain` (float)
 
 **Prix**
-- `prix_fai` (float), `prix_m2` (float, calculé scraper)
+- `prix_fai` (float), `prix_m2` (float, calcule scraper)
 
-**Locatif** (stratégie Locataire en place)
+**Locatif** (strategie Locataire en place)
 - `loyer` (float, TOUJOURS HC), `type_loyer` ("HC"), `charges_rec`
 - `charges_copro`, `taxe_fonc_ann`, `fin_bail` (date ISO)
-- `profil_locataire` (TEXT formaté "Statut | Compo | Ancienneté")
-- `rendement_brut` (float) — SEUL calcul stocké en base (loyer×12/prix)
+- `profil_locataire` (TEXT formate "Statut | Compo | Anciennete")
+- `rendement_brut` (float) — loyer x 12 / prix
 
-**Travaux** (stratégie Travaux lourds)
-- `score_travaux` (smallint 1-5) — 1=état correct, 5=ruine/très lourds
+**Travaux** (strategie Travaux lourds)
+- `score_travaux` (smallint 1-5) — 1=etat correct, 5=ruine/tres lourds
 - `score_commentaire` (TEXT) — justification IA
 
+**NLP / Options**
+- `parking_type`, `has_piscine`, `exposition`, `vue`, `etat_interieur`
+- `jardin_etat`, `has_cave`, `has_gardien`, `has_double_vitrage`
+- `has_cuisine_equipee`, `is_plain_pied`, `standing_immeuble`
+
+**Estimation DVF (cache)**
+- `estimation_prix_m2`, `estimation_prix_total`
+- `estimation_confiance` (A/B/C/D), `estimation_nb_comparables`, `estimation_rayon_m`
+- `estimation_date`, `estimation_details` (JSONB complet)
+- `latitude`, `longitude`
+
 **Photos**
-- `photo_url` (URL Leboncoin), `photo_storage_path` (chemin bucket)
-- Format Storage : `photos/{md5_12}_cover.jpg`
+- `photo_url` (URL externe plateforme), `photo_storage_path` (chemin bucket)
+
+**Moteur Immo**
+- `moteurimmo_data` (JSONB) — JSON brut complet (description, toutes photos, publisher, priceStats, duplicates, options, historique)
 
 **Dates** : `created_at`, `updated_at`, `derniere_verif_statut`
 
 ## Autres tables
-- `profiles` — role, plan, TMI, régime fiscal, financement (lié Auth)
+- `profiles` — role, plan, TMI, regime fiscal, financement (lie Auth)
 - `learning_logs` — exemples extractions IA
 - `scoring_exemples` — few-shot examples score_travaux
 - `biens_user_edits` — audit des enrichissements communautaires
-- `watchlist` — biens sauvegardés par utilisateur
+- `watchlist` — biens sauvegardes par utilisateur
+- `ref_communes` — code postal, nom commune, metropole (pour recherche localisation)
+- `ref_prix_parking` — prix median parking/box par ville (DVF)
+- `estimation_config` — config estimateur (JSONB, id=1)
 
-## API supabase_client.py — fonctions clés
-```python
-upsert_biens_batch(props)             # Insert/update, clé = url
-get_existing_urls() -> set            # Déduplication
-get_active_urls() -> list             # Biens "Toujours disponible"
-update_statut(bien_id, statut)
-update_score_travaux(id, score, commentaire)
-upload_photo(bien_id, photo_url, index=0)  # → Storage mdb-files
-sync_files_on_startup(base_dir)       # Télécharge ai_learning*.json
-sync_files_after_save(base_dir)       # Upload ai_learning*.json
+## Estimation DVF — architecture
+
+3 couches :
+1. **Base DVF** : transactions notariales reelles, filtre par type bien + nombre de pieces exact + surface +/- 30-40%
+2. **Correcteurs qualitatifs** : DPE, etage/ascenseur, exterieur, vue, parking, etc. (PAS de decote travaux — estimation = prix marche "en bon etat" = prix de revente apres travaux)
+3. **Confiance** : A (+-5%) a D (+-30%) selon nb comparables et variables qualitatives
+
+Rayon adaptatif : 50m -> 110m -> 220m -> 330m -> 550m -> 770m -> 1100m
+Periodes : 2022+ et 2018-2020 (meme poids, marche post-COVID surgonfle)
+
+## Analyse fiscale — regimes
+
+5 regimes supportes :
+- **Micro-foncier** : abattement 30%, TMI + 17.2% PS
+- **Reel** : charges deductibles, TMI + 17.2% PS
+- **LMNP** : amortissement immo + mobilier, TMI seul (pas de PS)
+- **SCI IS** : IS 15/25%, amortissement immo, PV reste dans la SCI
+- **Marchand de biens** : IS 15/25% + TVA sur marge 20%, frais notaire reduits 2.5%, pas d'amortissement (biens = stock), pas de charges sociales
+
+## Scenario revente (dans PnlColonne)
+
+Waterfall : Prix DVF - frais agence (5% modifiable) - prix achat - frais notaire - travaux = PV brute
+Puis fiscalite PV selon regime, puis bilan net (PV nette + cashflow locatif cumule)
+Duree detention : 1-5 ans
+Comparaison 2 regimes cote a cote
+
+## Sourcing Moteur Immo
+
+Module : `scrapper/moteurimmo_client.py`
+API : POST https://moteurimmo.fr/api/ads (auth par apiKey)
+Pagination par date (tranches 30j) pour eviter timeouts sur pages profondes
+
+4 strategies :
+- **Locataire en place** : keywords "locataire en place", "vendu loue", "bail en cours"
+- **Travaux lourds** : option `hasWorksRequired` + keywords "a renover", "renovation complete", etc.
+- **Division** : keywords "divisible", "possibilite de division", "creer des lots", etc.
+- **Decoupe** : keywords "immeuble de rapport", "monopropriete", "copropriete a creer", etc. (categories block, house)
+
+```bash
+# Ingestion par date (recommande pour gros volumes)
+python moteurimmo_client.py --by-date --since 2022-01-01
+python moteurimmo_client.py --by-date --since 2022-01-01 --strategie "Travaux lourds"
+
+# Ingestion par page (petits volumes)
+python moteurimmo_client.py --strategie "Locataire en place" --max-pages 10
+
+# Dry run
+python moteurimmo_client.py --dry-run --strategie "Division"
 ```
-
-## Scraper — architecture
-3 phases : collecte URLs → analyse annonces → vérification statuts
-
-Modes : `--init` (complet) / HEBDO défaut (7 derniers jours)
-
-Métropoles : Nantes, Paris, Lyon, Marseille, Bordeaux, Toulouse, Rennes
-
-Keywords actifs :
-- Locataire en place : "locataire en place", "vendu loué", "bail en cours"
-- Travaux lourds : "à rénover", "gros travaux", "rénovation complète", "succession", "DPE G"...
-
-Fichiers locaux scraper : `ai_learning.json`, `ai_learning_travaux.json`, `progress.json`
 
 ## Commandes
 ```bash
@@ -103,23 +168,42 @@ npm run dev
 npm run build
 npm run lint
 
-# Scraper
+# Scraper LBC legacy
 python scraper_supabase_prod.py
 python scraper_supabase_prod.py --init
-python scraper_supabase_prod.py --metropoles Nantes Lyon
+
+# Sourcing Moteur Immo
+python moteurimmo_client.py --by-date --since 2022-01-01
+
+# Estimation batch
+curl -X POST http://localhost:3000/api/estimation/batch
 ```
 
 ## Variables d'environnement
+
+### scrapper/.env
 ```
-SUPABASE_URL / SUPABASE_KEY (service_role)
+SUPABASE_URL / SUPABASE_KEY (sb_secret_...)
 ANTHROPIC_API_KEY
-IPROYAL_USER / IPROYAL_PASS  # proxy optionnel VPS
+MOTEURIMMO_API_KEY
+#IPROYAL_USER / IPROYAL_PASS  # proxy optionnel VPS
 ```
 
-## Règles absolues
+### .env.local (frontend)
+```
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY (sb_publishable_...)
+SUPABASE_SECRET_KEY (sb_secret_...)
+```
+
+Note : Supabase a migre vers les nouvelles cles (sb_publishable_ / sb_secret_). Les anciennes cles legacy (JWT) sont desactivees.
+
+## Regles absolues
 - **Tous les calculs financiers dans `calculs.ts`** — jamais en DB sauf `rendement_brut`
-- **Loyer toujours stocké HC** (converti depuis CC si charges connues)
-- **Déduplication par `url`** — id assigné par Supabase
-- **Encoding JSX** : pas de `€` → écrire `euros` ; `{'♥'}` pour les icônes
+- **Loyer toujours stocke HC** (converti depuis CC si charges connues)
+- **Deduplication par `url`** — id assigne par Supabase
+- **Encoding JSX** : pas de `euro` -> ecrire `euros` ou `{'\u20AC'}` ; `{'heart'}` pour les icones
 - **Next.js App Router** : toujours `await params` dans les route handlers (bug Next.js 16)
-- Clean avant scale : corriger les bugs avant d'étendre le périmètre
+- **Estimation DVF = prix marche "en bon etat"** : pas de decote travaux, c'est le prix de revente apres travaux
+- **MdB toujours a l'IS** : pas de regime IR pour marchand de biens
+- Clean avant scale : corriger les bugs avant d'etendre le perimetre
