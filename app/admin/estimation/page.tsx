@@ -52,11 +52,11 @@ const LABEL_MAP: Record<string, string> = {
   'jardin_privatif_appartement': 'Jardin privatif (appartement)',
   'loggia': 'Loggia',
   'aucun': 'Aucun acc\u00e8s ext\u00e9rieur',
-  'soigne_sud': 'Jardin soign\u00e9 exposé sud',
-  'standard': 'Jardin standard',
-  'a_amenager': 'Jardin \u00e0 am\u00e9nager',
-  'friche': 'Jardin en friche',
-  'soigne': 'Jardin soign\u00e9',
+  'soigne_sud': 'Soign\u00e9, expos\u00e9 sud',
+  'standard': 'Standard',
+  'a_amenager': '\u00c0 am\u00e9nager',
+  'friche': 'En friche',
+  'soigne': 'Soign\u00e9',
   'vue_degagee': 'Vue d\u00e9gag\u00e9e',
   'exposition_sud': 'Exposition sud',
   'vis_a_vis': 'Vis-\u00e0-vis',
@@ -366,13 +366,23 @@ export default function AdminEstimationPage() {
         </Section>
 
         {/* ════════ CORRECTEURS MAISON ════════ */}
-        <Section title={"Correcteurs Maison"} description={"Correcteurs sp\u00e9cifiques aux maisons individuelles."}>
+        <Section title={"Correcteurs Maison"} description={"Correcteurs sp\u00e9cifiques aux maisons individuelles. Les correcteurs communs (DPE, travaux, vue, exposition) s'appliquent \u00e9galement."}>
           <CorrectionTable
             title={"\u00c9tat du jardin"}
             corrections={c.jardin_etat || {}}
-            description={"D\u00e9tect\u00e9 par analyse de la description et des photos. Impact mod\u00e9r\u00e9 sur le prix."}
+            description={"D\u00e9tect\u00e9 par analyse de la description et des photos."}
             onChange={(k, v) => updateConfig(['correcteurs', 'jardin_etat', k], v)}
           />
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Garage attenant</h3>
+            <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{"Valeur absolue ajout\u00e9e. Le garage attenant \u00e0 une maison est valoris\u00e9 diff\u00e9remment d'un box en copropri\u00e9t\u00e9. Prix par d\u00e9faut si pas de donn\u00e9es DVF locales."}</p>
+            <ParamRow
+              label={"Garage attenant"} description={"Valeur absolue par d\u00e9faut"} suffix={"\u20AC"}
+              value={c.parking?.garage_attenant?.valeur_defaut || 15000}
+              onChange={(v: number) => updateConfig(['correcteurs', 'parking', 'garage_attenant', 'valeur_defaut'], v)}
+              step="1000"
+            />
+          </div>
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Piscine</h3>
             <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{"Valeur absolue ajout\u00e9e. Varie fortement selon la r\u00e9gion. Appliquer 60-70% en cas de doute."}</p>
