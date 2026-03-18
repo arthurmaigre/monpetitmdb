@@ -347,6 +347,10 @@ export default function AdminEstimationPage() {
             description={c.exterieur?.description}
             onChange={(k, v) => updateConfig(['correcteurs', 'exterieur', k], v)}
           />
+          <div className="method-block" style={{ marginBottom: '16px' }}>
+            <div className="method-title">{"Autres correcteurs appartement"}</div>
+            <div className="method-text">{"Cave (+2%), gardien (+2%), double vitrage (+2%), cuisine \u00e9quip\u00e9e (+1.5%), grenier/combles (+3%), nombre de SDB (+4% si 2+, +6% si 3+). Ces correcteurs sont appliqu\u00e9s automatiquement quand les donn\u00e9es sont d\u00e9tect\u00e9es par NLP."}</div>
+          </div>
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginBottom: '4px' }}>Parking</h3>
             <p style={{ fontSize: '11px', color: '#b0a898', marginBottom: '10px' }}>{"Valeurs par d\u00e9faut. Les prix r\u00e9els par ville sont calcul\u00e9s automatiquement via DVF (table ref_prix_parking)."}</p>
@@ -404,6 +408,15 @@ export default function AdminEstimationPage() {
               onChange={(v: number) => updateConfig(['correcteurs', 'piscine', 'zone_rurale'], v)}
               step="1000"
             />
+          </div>
+          <div className="method-block" style={{ marginBottom: '16px' }}>
+            <div className="method-title">{"Autres correcteurs maison"}</div>
+            <div className="method-text">
+              {"Plain-pied (+4%), sous-sol/cave (+3%), grenier am\u00e9nageable (+4%), nombre de SDB (+4% si 2+). "}
+              {"Mitoyennet\u00e9 : individuelle (+5%), semi-mitoyenne (-2%), mitoyenne (-7%). "}
+              {"Assainissement individuel (-4%). "}
+              {"Ces correcteurs sont d\u00e9tect\u00e9s automatiquement par NLP sur la description."}
+            </div>
           </div>
           <div className="method-block">
             <div className="method-title">{"Terrain"}</div>

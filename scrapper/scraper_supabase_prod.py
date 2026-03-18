@@ -557,7 +557,10 @@ JSON attendu :
   "has_gardien": true | false,
   "has_double_vitrage": true | false,
   "has_cuisine_equipee": true | false,
-  "is_plain_pied": true | false
+  "is_plain_pied": true | false,
+  "mitoyennete": "individuelle" | "semi_mitoyen" | "mitoyen" | null,
+  "has_grenier": true | false,
+  "assainissement": "collectif" | "individuel" | null
 }}
 
 Regles :
@@ -565,6 +568,9 @@ Regles :
 - exposition : uniquement si explicitement mentionne
 - vue : "degagee" si mentionne vue degagee/panoramique, "vis_a_vis" si mentionne vis-a-vis
 - etat_interieur : "neuf" si neuf ou livre neuf, "refait_recemment" si renove recemment, "bon_etat" si bien entretenu, "a_rafraichir" si travaux legers, "a_renover" si gros travaux
+- mitoyennete : uniquement pour les maisons. "individuelle" si detachee/isolee, "semi_mitoyen" si un cote mitoyen, "mitoyen" si deux cotes mitoyens ou maison de ville
+- has_grenier : true si mentionne grenier, combles amenageables, mansarde
+- assainissement : "individuel" si fosse septique ou assainissement autonome, "collectif" si tout-a-l'egout
 - Si une info n'est pas dans la description, mettre null ou false"""
 
     content = []
@@ -1662,10 +1668,10 @@ async def scrape_listing_detail(page, url, strategie_active: str = "Locataire en
         photo_urls = data.get("_all_photo_urls", [])
         qualite = extract_qualite_nlp(description, photo_urls)
         if qualite:
-            for k in ["parking_type", "exposition", "vue", "etat_interieur", "jardin_etat"]:
+            for k in ["parking_type", "exposition", "vue", "etat_interieur", "jardin_etat", "mitoyennete", "assainissement"]:
                 if qualite.get(k):
                     data[k] = qualite[k]
-            for k in ["has_piscine", "has_cave", "has_gardien", "has_double_vitrage", "has_cuisine_equipee", "is_plain_pied"]:
+            for k in ["has_piscine", "has_cave", "has_gardien", "has_double_vitrage", "has_cuisine_equipee", "is_plain_pied", "has_grenier"]:
                 if qualite.get(k) is True:
                     data[k] = True
             if qualite.get("standing_immeuble"):

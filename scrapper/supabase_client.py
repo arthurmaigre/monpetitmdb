@@ -296,6 +296,9 @@ def prop_to_row(prop: dict, params: dict = None) -> dict:
         "has_cuisine_equipee":  prop.get("has_cuisine_equipee"),
         "is_plain_pied":        prop.get("is_plain_pied"),
         "standing_immeuble":    prop.get("standing_immeuble"),
+        "mitoyennete":          prop.get("mitoyennete"),
+        "has_grenier":          prop.get("has_grenier"),
+        "assainissement":       prop.get("assainissement"),
         # ── Photos ────────────────────────────────────────────────
         "photo_url":            prop.get("photo_url"),
         "photo_storage_path":   prop.get("photo_storage_path"),

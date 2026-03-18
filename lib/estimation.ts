@@ -61,6 +61,8 @@ interface BienForEstimation {
   adresse?: string
   ville: string
   code_postal?: string
+  nb_sdb?: number
+  nb_chambres?: number
   // Champs NLP
   parking_type?: string
   has_piscine?: boolean
@@ -69,7 +71,15 @@ interface BienForEstimation {
   etat_interieur?: string
   jardin_etat?: string
   has_cave?: boolean
+  has_gardien?: boolean
+  has_double_vitrage?: boolean
+  has_cuisine_equipee?: boolean
+  is_plain_pied?: boolean
   standing_immeuble?: number
+  // Nouveaux champs NLP
+  mitoyennete?: string
+  has_grenier?: boolean
+  assainissement?: string
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -476,13 +486,95 @@ export function calculateCorrections(bien: BienForEstimation, prixParkingLocal?:
     }
   }
 
-  // --- Cave ---
+  // --- Cave / Sous-sol ---
   if (bien.has_cave) {
     corrections.push({
-      facteur: 'Cave',
-      multiplicateur: 1.02,
+      facteur: isMaison ? 'Sous-sol / Cave' : 'Cave',
+      multiplicateur: isMaison ? 1.03 : 1.02,
       raison: 'Espace de rangement suppl\u00e9mentaire'
     })
+  }
+
+  // --- Gardien / Concierge (appartements) ---
+  if (bien.has_gardien && !isMaison) {
+    corrections.push({
+      facteur: 'Gardien',
+      multiplicateur: 1.02,
+      raison: 'Service de gardiennage / conciergerie'
+    })
+  }
+
+  // --- Double vitrage ---
+  if (bien.has_double_vitrage) {
+    corrections.push({
+      facteur: 'Double vitrage',
+      multiplicateur: 1.02,
+      raison: 'Isolation phonique et thermique'
+    })
+  }
+
+  // --- Cuisine equipee ---
+  if (bien.has_cuisine_equipee) {
+    corrections.push({
+      facteur: 'Cuisine \u00e9quip\u00e9e',
+      multiplicateur: 1.015,
+      raison: '\u00c9conomie de travaux pour l\'acheteur'
+    })
+  }
+
+  // --- Nombre de salles de bain ---
+  if (bien.nb_sdb && bien.nb_sdb >= 2) {
+    const c = bien.nb_sdb >= 3 ? 1.06 : 1.04
+    corrections.push({
+      facteur: `${bien.nb_sdb} salles de bain`,
+      multiplicateur: c,
+      raison: 'Confort suppl\u00e9mentaire, bien familial'
+    })
+  }
+
+  // --- Plain-pied (maisons) ---
+  if (bien.is_plain_pied && isMaison) {
+    corrections.push({
+      facteur: 'Plain-pied',
+      multiplicateur: 1.04,
+      raison: 'Accessibilit\u00e9, recherch\u00e9 par seniors et familles'
+    })
+  }
+
+  // --- Mitoyennete (maisons) ---
+  if (bien.mitoyennete && isMaison) {
+    const mitCorrections: Record<string, number> = {
+      individuelle: 1.05, semi_mitoyen: 0.98, mitoyen: 0.93
+    }
+    const c = mitCorrections[bien.mitoyennete]
+    if (c && c !== 1.0) {
+      corrections.push({
+        facteur: bien.mitoyennete === 'individuelle' ? 'Maison individuelle' :
+                 bien.mitoyennete === 'semi_mitoyen' ? 'Semi-mitoyenne' : 'Mitoyenne',
+        multiplicateur: c,
+        raison: c > 1 ? 'Pas de mur partag\u00e9, intimit\u00e9' : 'Murs partag\u00e9s, nuisances potentielles'
+      })
+    }
+  }
+
+  // --- Grenier amenageable ---
+  if (bien.has_grenier) {
+    corrections.push({
+      facteur: 'Grenier / Combles am\u00e9nageables',
+      multiplicateur: isMaison ? 1.04 : 1.03,
+      raison: 'Potentiel d\'extension de surface habitable'
+    })
+  }
+
+  // --- Assainissement (maisons) ---
+  if (bien.assainissement && isMaison) {
+    if (bien.assainissement === 'individuel') {
+      corrections.push({
+        facteur: 'Assainissement individuel',
+        multiplicateur: 0.96,
+        raison: 'Co\u00fbt d\'entretien et mise aux normes potentielle'
+      })
+    }
   }
 
   return corrections
@@ -511,6 +603,12 @@ export function calculateConfidence(
   if (bien.exposition) qualVars++
   if (bien.etat_interieur) qualVars++
   if (bien.standing_immeuble) qualVars++
+  if (bien.has_cave) qualVars++
+  if (bien.has_gardien) qualVars++
+  if (bien.has_double_vitrage) qualVars++
+  if (bien.nb_sdb) qualVars++
+  if (bien.mitoyennete) qualVars++
+  if (bien.is_plain_pied) qualVars++
 
   if (hasExactAddress && nbComparables >= 15 && rayonM <= 500 && qualVars >= 4) {
     return { level: 'A', marge_pct: 5 }

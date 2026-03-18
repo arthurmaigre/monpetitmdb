@@ -78,7 +78,16 @@ export async function GET(
     etat_interieur: bien.etat_interieur,
     jardin_etat: bien.jardin_etat,
     has_cave: bien.has_cave,
-    standing_immeuble: bien.standing_immeuble
+    has_gardien: bien.has_gardien,
+    has_double_vitrage: bien.has_double_vitrage,
+    has_cuisine_equipee: bien.has_cuisine_equipee,
+    is_plain_pied: bien.is_plain_pied,
+    standing_immeuble: bien.standing_immeuble,
+    nb_sdb: bien.nb_sdb,
+    nb_chambres: bien.nb_chambres,
+    mitoyennete: bien.mitoyennete,
+    has_grenier: bien.has_grenier,
+    assainissement: bien.assainissement
   }, existingGeo, prixParkingLocal)
 
   if (!estimation) {
