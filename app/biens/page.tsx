@@ -36,6 +36,7 @@ export default function BiensPage() {
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
+  const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
   const [tableWidth, setTableWidth] = useState(0)
@@ -67,9 +68,14 @@ export default function BiensPage() {
       if (session) {
         setUserId(session.user.id)
         setUserToken(session.access_token)
-        const wRes = await fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        const [wRes, pRes] = await Promise.all([
+          fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } }),
+          fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        ])
         const wData = await wRes.json()
         setWatchlistIds(new Set((wData.watchlist || []).map((w: any) => w.bien_id)))
+        const pData = await pRes.json()
+        if (pData.profile?.budget_travaux_m2) setBudgetTravauxM2(pData.profile.budget_travaux_m2)
       }
       setLoading(false)
     }
@@ -383,6 +389,7 @@ export default function BiensPage() {
                       {strategie === 'Travaux lourds' ? (
                         <>
                           <th>Score travaux<span></span></th>
+                          <th>{"Estimation travaux"}<span></span></th>
                           <th>DPE<span></span></th>
                           <th>{`Ann\u00e9e`}<span></span></th>
                         </>
@@ -474,6 +481,15 @@ export default function BiensPage() {
                                       {(bien as any).score_travaux}/5
                                     </span>
                                   ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}
+                                </td>
+                                <td style={{ whiteSpace: 'nowrap' }}>
+                                  {(bien as any).score_travaux && bien.surface ? (
+                                    (() => {
+                                      const budget = budgetTravauxM2[String((bien as any).score_travaux)] || 0
+                                      const total = Math.round(budget * bien.surface)
+                                      return <span style={{ fontWeight: 500 }}>{total.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                                    })()
+                                  ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>
                                 <td>
                                   {(bien as any).dpe ? (

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('watchlist')
-    .select('bien_id, created_at')
+    .select('bien_id, created_at, score_travaux_perso')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -46,6 +46,42 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ item: data })
+}
+
+// PATCH — mettre a jour le score travaux perso
+export async function PATCH(req: NextRequest) {
+  const user = await getUser(req)
+  if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
+
+  const { bien_id, score_travaux_perso } = await req.json()
+  if (!bien_id) return NextResponse.json({ error: 'bien_id requis' }, { status: 400 })
+  if (score_travaux_perso !== null && (score_travaux_perso < 1 || score_travaux_perso > 5)) {
+    return NextResponse.json({ error: 'Score entre 1 et 5' }, { status: 400 })
+  }
+
+  // Upsert : si pas encore en watchlist, l'ajouter
+  const { data: existing } = await supabaseAdmin
+    .from('watchlist')
+    .select('bien_id')
+    .eq('user_id', user.id)
+    .eq('bien_id', bien_id)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabaseAdmin
+      .from('watchlist')
+      .update({ score_travaux_perso })
+      .eq('user_id', user.id)
+      .eq('bien_id', bien_id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else {
+    const { error } = await supabaseAdmin
+      .from('watchlist')
+      .insert({ user_id: user.id, bien_id, score_travaux_perso })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
 }
 
 // DELETE — retirer un bien

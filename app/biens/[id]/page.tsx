@@ -449,6 +449,7 @@ export default function FicheBienPage() {
   const [profil, setProfil] = useState<any>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [champsStatut, setChampsStatut] = useState<Record<string, { valeur: string, statut: 'jaune' | 'vert' }>>({})
+  const [scorePerso, setScorePerso] = useState<number | null>(null)
 
   const [baseCalc, setBaseCalc] = useState<'fai' | 'cible'>('fai')
   const [apport, setApport] = useState(20000)
@@ -460,6 +461,7 @@ export default function FicheBienPage() {
   const [regime, setRegime] = useState('micro_foncier')
   const [objectifCashflow, setObjectifCashflow] = useState(0)
   const [regime2, setRegime2] = useState('reel')
+  const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
 
   useEffect(() => {
     async function load() {
@@ -489,12 +491,29 @@ export default function FicheBienPage() {
           if (p.tmi) setTmi(p.tmi)
           if (p.regime) setRegime(p.regime)
           if (p.objectif_cashflow != null) setObjectifCashflow(p.objectif_cashflow)
+          if (p.budget_travaux_m2) setBudgetTravauxM2(p.budget_travaux_m2)
         }
+        // Charger le score perso depuis la watchlist
+        const wRes = await fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        const wData = await wRes.json()
+        const wItem = (wData.watchlist || []).find((w: any) => String(w.bien_id) === String(id))
+        if (wItem?.score_travaux_perso) setScorePerso(wItem.score_travaux_perso)
       }
       setLoading(false)
     }
     load()
   }, [id])
+
+  async function handleScorePerso(score: number) {
+    if (!userToken) return
+    const newScore = score === scorePerso ? null : score
+    setScorePerso(newScore)
+    await fetch('/api/watchlist', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ bien_id: id, score_travaux_perso: newScore })
+    })
+  }
 
   async function handleUpdate(champ: string, valeur: any) {
     if (!userToken) return
@@ -707,29 +726,74 @@ export default function FicheBienPage() {
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">
             <h2 className="section-title">Diagnostic travaux</h2>
-            {bien.score_travaux != null && (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <span className="data-label" style={{ margin: 0 }}>Score travaux</span>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    {[1, 2, 3, 4, 5].map(i => (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <span className="data-label" style={{ margin: 0, minWidth: '110px' }}>Score IA</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {[1, 2, 3, 4, 5].map(i => {
+                    const color = i <= 2 ? '#1a7a40' : i <= 3 ? '#f0a830' : '#c0392b'
+                    return (
                       <div key={i} style={{
-                        width: '28px', height: '8px', borderRadius: '4px',
-                        background: i <= bien.score_travaux
-                          ? bien.score_travaux <= 2 ? '#1a7a40' : bien.score_travaux <= 3 ? '#f0a830' : '#c0392b'
-                          : '#e8e2d8'
+                        width: '28px', height: '10px', borderRadius: '4px',
+                        background: i <= (bien.score_travaux || 0) ? color : '#e8e2d8'
                       }} />
-                    ))}
-                  </div>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{bien.score_travaux}/5</span>
+                    )
+                  })}
                 </div>
-                {bien.score_commentaire && (
-                  <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#555', lineHeight: '1.5', fontStyle: 'italic' }}>
-                    {bien.score_commentaire}
-                  </div>
-                )}
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{bien.score_travaux ? `${bien.score_travaux}/5` : 'NC'}</span>
               </div>
-            )}
+              {bien.score_commentaire && (
+                <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#555', lineHeight: '1.5', fontStyle: 'italic', marginBottom: '12px' }}>
+                  {bien.score_commentaire}
+                </div>
+              )}
+              {userToken && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                  <span className="data-label" style={{ margin: 0, minWidth: '110px' }}>Mon estimation</span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {[1, 2, 3, 4, 5].map(i => {
+                      const scoreAffiche = scorePerso || bien.score_travaux || 0
+                      const active = i <= scoreAffiche
+                      const color = i <= 2 ? '#1a7a40' : i <= 3 ? '#f0a830' : '#c0392b'
+                      return (
+                        <div key={i} onClick={() => handleScorePerso(i)} style={{
+                          width: '28px', height: '11px', borderRadius: '4px',
+                          cursor: 'pointer',
+                          background: active ? color : '#e8e2d8',
+                          transition: 'transform 0.15s'
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = 'scaleY(1.3)' }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = '' }}
+                        />
+                      )
+                    })}
+                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{(scorePerso || bien.score_travaux) ? `${scorePerso || bien.score_travaux}/5` : 'NC'}</span>
+                  {scorePerso && scorePerso !== bien.score_travaux && <span style={{ fontSize: '11px', color: '#b0a898', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleScorePerso(scorePerso)}>{"R\u00e9initialiser au score IA"}</span>}
+                </div>
+              )}
+            </div>
+            {(() => {
+              const scoreUtilise = scorePerso || bien.score_travaux
+              if (!scoreUtilise || !bien.surface) return null
+              const budgetM2 = budgetTravauxM2[String(scoreUtilise)] || 0
+              const total = Math.round(budgetM2 * bien.surface)
+              return (
+                <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{"Estimation budget travaux"}</div>
+                      <div style={{ fontSize: '13px', color: '#9a8a80' }}>
+                        {`${budgetM2} \u20AC/m\u00b2 \u00d7 ${bien.surface} m\u00b2 (${scorePerso ? 'mon estimation' : 'score IA'} ${scoreUtilise}/5)`}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }}>
+                      {total.toLocaleString('fr-FR')} {'\u20AC'}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
             <div className="data-grid">
               <div className="data-item">
                 <span className="data-label">{`Taxe fonci\u00e8re`}</span>
