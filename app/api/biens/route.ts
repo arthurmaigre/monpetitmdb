@@ -49,9 +49,15 @@ export async function GET(request: NextRequest) {
   estimation_prix_total,
   moteurimmo_data,
   created_at, updated_at
-`, { count: 'exact' })
+`)
     .eq('statut', statut)
     .order('created_at', { ascending: false })
+
+  // Count separement (plus leger, pas de timeout)
+  let countQuery = supabaseAdmin
+    .from('biens')
+    .select('id', { count: 'exact', head: true })
+    .eq('statut', statut)
 
   const strategie = searchParams.get('strategie')
   const page = parseInt(searchParams.get('page') || '1')
@@ -62,11 +68,11 @@ export async function GET(request: NextRequest) {
   const locationValue = searchParams.get('locationValue')
   const locationCP = searchParams.get('locationCP')
 
-  if (strategie) query = query.eq('strategie_mdb', strategie)
+  if (strategie) { query = query.eq('strategie_mdb', strategie); countQuery = countQuery.eq('strategie_mdb', strategie) }
   if (locationType === 'metropole' && locationValue) {
-    query = query.eq('metropole', locationValue)
+    query = query.eq('metropole', locationValue); countQuery = countQuery.eq('metropole', locationValue)
   } else if (locationType === 'departement' && locationCP) {
-    query = query.like('code_postal', `${locationCP}%`)
+    query = query.like('code_postal', `${locationCP}%`); countQuery = countQuery.like('code_postal', `${locationCP}%`)
   } else if (locationType === 'region' && locationValue) {
     // Region : recuperer les departements de la region depuis le mapping
     const deptsByRegion: Record<string, string[]> = {
@@ -102,7 +108,7 @@ export async function GET(request: NextRequest) {
 
   query = query.range(from, from + limit - 1)
 
-  const { data, error, count } = await query
+  const [{ data, error }, { count: totalCount }] = await Promise.all([query, countQuery])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Extraire pictureUrls du moteurimmo_data et supprimer le JSON lourd
@@ -118,5 +124,5 @@ export async function GET(request: NextRequest) {
     return { ...rest, pictureUrls }
   })
 
-  return NextResponse.json({ biens, total: count ?? biens.length, page, limit, hasMore: biens.length === limit })
+  return NextResponse.json({ biens, total: totalCount ?? biens.length, page, limit, hasMore: biens.length === limit })
 }
