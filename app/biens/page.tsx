@@ -247,7 +247,7 @@ export default function BiensPage() {
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  const strategies = ['Locataire en place', 'Travaux lourds', 'Division', 'Decoupe']
+  const strategies = ['Locataire en place', 'Travaux lourds', 'Division', 'D\u00e9coupe']
 
   // Filtres cote client (les autres sont cote serveur)
   let filtered = allBiens.filter(b => {

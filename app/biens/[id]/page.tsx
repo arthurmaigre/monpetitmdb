@@ -43,6 +43,106 @@ function PhotoCarousel({ bien }: { bien: any }) {
   )
 }
 
+const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: string }> = {
+  leboncoin: { name: 'Leboncoin', color: '#F56B2A', abbrev: 'LBC' },
+  seloger: { name: 'SeLoger', color: '#E5002B', abbrev: 'SL' },
+  bienici: { name: 'Bien\'ici', color: '#00B8D4', abbrev: 'BI' },
+  pap: { name: 'PAP', color: '#004A8F', abbrev: 'PAP' },
+  orpi: { name: 'Orpi', color: '#003D6B', abbrev: 'OR' },
+  century21: { name: 'Century 21', color: '#B8860B', abbrev: 'C21' },
+  laforet: { name: 'Laforet', color: '#006633', abbrev: 'LF' },
+  figaro: { name: 'Le Figaro', color: '#1A1A1A', abbrev: 'FIG' },
+  ouestfrance: { name: 'Ouest-France', color: '#D4213D', abbrev: 'OF' },
+  paruvendu: { name: 'ParuVendu', color: '#FF6600', abbrev: 'PV' },
+  safti: { name: 'Safti', color: '#00A3E0', abbrev: 'SF' },
+  iad: { name: 'IAD', color: '#E30613', abbrev: 'IAD' },
+  capifrance: { name: 'Capifrance', color: '#003366', abbrev: 'CF' },
+  foncia: { name: 'Foncia', color: '#003D6B', abbrev: 'FO' },
+  guyhoquet: { name: 'Guy Hoquet', color: '#E30613', abbrev: 'GH' },
+  efficity: { name: 'Efficity', color: '#FF4500', abbrev: 'EF' },
+  notaires: { name: 'Notaires', color: '#1A1A1A', abbrev: 'NOT' },
+  immonot: { name: 'Immonot', color: '#003366', abbrev: 'IM' },
+  properstar: { name: 'Properstar', color: '#FF6600', abbrev: 'PS' },
+  lesiteimmo: { name: 'LeSiteImmo', color: '#0066CC', abbrev: 'LSI' },
+  immoregion: { name: 'ImmoRegion', color: '#336699', abbrev: 'IR' },
+  greenacres: { name: 'Green-Acres', color: '#4CAF50', abbrev: 'GA' },
+  megagence: { name: 'Megagence', color: '#E91E63', abbrev: 'MG' },
+  nestenn: { name: 'Nestenn', color: '#FF5722', abbrev: 'NE' },
+  era: { name: 'ERA', color: '#C62828', abbrev: 'ERA' },
+  arthurimmo: { name: 'Arthur Immo', color: '#1565C0', abbrev: 'AI' },
+  optimhome: { name: 'OptimHome', color: '#FF9800', abbrev: 'OH' },
+  cessionpme: { name: 'CessionPME', color: '#555', abbrev: 'CP' },
+  gensdeconfiance: { name: 'Gens de Confiance', color: '#2E7D32', abbrev: 'GC' },
+}
+
+function getPlatformFromUrl(url: string): string {
+  if (!url) return 'autre'
+  const u = url.toLowerCase()
+  for (const [key] of Object.entries(PLATFORM_LOGOS)) {
+    if (u.includes(key)) return key
+  }
+  if (u.includes('immobilier.notaires')) return 'notaires'
+  if (u.includes('lefigaro')) return 'figaro'
+  if (u.includes('maisonsetappartements')) return 'lesiteimmo'
+  return 'autre'
+}
+
+function PlatformLinks({ bien }: { bien: any }) {
+  const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
+  const links: { origin: string, url: string }[] = []
+
+  // Annonce principale
+  if (bien.url) {
+    const origin = mi?.origin || getPlatformFromUrl(bien.url)
+    links.push({ origin, url: bien.url })
+  }
+
+  // Duplicates
+  if (mi?.duplicates) {
+    for (const d of mi.duplicates) {
+      if (d.url && !links.some(l => l.url === d.url)) {
+        links.push({ origin: d.origin || getPlatformFromUrl(d.url), url: d.url })
+      }
+    }
+  }
+
+  if (links.length === 0) return null
+
+  return (
+    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+      <span style={{ fontSize: '11px', color: '#9a8a80', alignSelf: 'center', marginRight: '4px' }}>Voir sur :</span>
+      {links.map((l, i) => {
+        const platform = PLATFORM_LOGOS[l.origin]
+        const name = platform?.name || l.origin
+        const color = platform?.color || '#9a8a80'
+        const abbrev = platform?.abbrev || l.origin.slice(0, 3).toUpperCase()
+        return (
+          <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', borderRadius: '8px',
+              border: `1.5px solid ${color}20`, background: `${color}08`,
+              textDecoration: 'none', transition: 'all 0.15s',
+              fontSize: '12px', fontWeight: 600, color,
+            }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.background = `${color}15`; (e.target as HTMLElement).style.borderColor = color }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.background = `${color}08`; (e.target as HTMLElement).style.borderColor = `${color}20` }}
+            title={`Voir sur ${name}`}
+          >
+            <span style={{
+              width: '22px', height: '22px', borderRadius: '4px',
+              background: color, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '9px', fontWeight: 700, letterSpacing: '-0.02em',
+            }}>{abbrev}</span>
+            {name}
+          </a>
+        )
+      })}
+    </div>
+  )
+}
+
 const REGIMES = [
   { value: 'micro_foncier', label: 'Micro-foncier' },
   { value: 'reel', label: 'Reel' },
@@ -1006,7 +1106,7 @@ export default function FicheBienPage() {
                 </>
               )}
             </div>
-            {bien.url && <a href={bien.url} target="_blank" rel="noopener noreferrer" className="lbc-btn">Voir sur Leboncoin</a>}
+            <PlatformLinks bien={bien} />
           </div>
         </div>
 
