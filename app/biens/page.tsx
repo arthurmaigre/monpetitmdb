@@ -135,6 +135,8 @@ export default function BiensPage() {
     if (!strategie) { setAllBiens([]); setLoading(false); setTotalBiens(0); setHasMore(false); return }
     setLoading(true)
     setCurrentPage(1)
+    setScoreTravauxMin('')
+    scrollRestored.current = false
     fetch(buildApiUrl(1))
       .then(r => r.json())
       .then(d => {
