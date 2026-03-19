@@ -92,19 +92,24 @@ export async function GET(request: NextRequest) {
     }
     const depts = deptsByRegion[locationValue]
     if (depts) {
-      query = query.or(depts.map(d => `code_postal.like.${d}%`).join(','))
+      const orFilter = depts.map(d => `code_postal.like.${d}%`).join(',')
+      query = query.or(orFilter)
+      countQuery = countQuery.or(orFilter)
     }
   } else if (locationType === 'commune' && locationCP === 'tous' && locationValue) {
-    query = query.ilike('ville', locationValue)
+    query = query.ilike('ville', `${locationValue}%`)
+    countQuery = countQuery.ilike('ville', `${locationValue}%`)
   } else if (locationType === 'commune' && locationCP && locationCP !== 'tous') {
     query = query.eq('code_postal', locationCP)
+    countQuery = countQuery.eq('code_postal', locationCP)
   } else if (metropole) {
     query = query.eq('metropole', metropole)
+    countQuery = countQuery.eq('metropole', metropole)
   }
-  if (prix_min) query = query.gte('prix_fai', Number(prix_min))
-  if (prix_max) query = query.lte('prix_fai', Number(prix_max))
-  if (rendement_min) query = query.gte('rendement_brut', Number(rendement_min) / 100)
-  if (type_bien) query = query.eq('type_bien', type_bien)
+  if (prix_min) { query = query.gte('prix_fai', Number(prix_min)); countQuery = countQuery.gte('prix_fai', Number(prix_min)) }
+  if (prix_max) { query = query.lte('prix_fai', Number(prix_max)); countQuery = countQuery.lte('prix_fai', Number(prix_max)) }
+  if (rendement_min) { query = query.gte('rendement_brut', Number(rendement_min) / 100); countQuery = countQuery.gte('rendement_brut', Number(rendement_min) / 100) }
+  if (type_bien) { query = query.eq('type_bien', type_bien); countQuery = countQuery.eq('type_bien', type_bien) }
 
   query = query.range(from, from + limit - 1)
 
