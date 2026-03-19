@@ -194,9 +194,32 @@ MOTEURIMMO_API_KEY
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY (sb_publishable_...)
 SUPABASE_SECRET_KEY (sb_secret_...)
+ANTHROPIC_API_KEY
+UNSPLASH_ACCESS_KEY
 ```
 
-Note : Supabase a migre vers les nouvelles cles (sb_publishable_ / sb_secret_). Les anciennes cles legacy (JWT) sont desactivees.
+## Editorial CMS (/editorial)
+
+Pipeline generation article :
+1. **Opus** redige l'article (systeme prompt avec ligne editoriale MDB, sources, references)
+2. **Sonnet** relit et fact-checke (taux, seuils, lois a jour mars 2026)
+3. **Unsplash** insere 1-2 photos avec navigation pour choisir
+
+Tables : `articles` (contenu, statut, auteur, date publication, SEO score) + `editorial_calendar` (52 semaines)
+Workflow : draft -> review -> approved -> published
+Auteur par defaut : "La redaction Mon Petit MDB"
+Police articles : Lora (serif) pour le corps, Fraunces pour les titres
+Sources : BOFiP, Service-Public, Legifrance, experts-comptables.fr, compta-online.com, etc.
+
+## Batch IA post-ingestion
+
+1. **Validation regex** : filtre faux positifs par strategie (titre + description)
+2. **Score travaux** (Haiku) : prompt avec signaux determinants (DPE, structure, photos)
+3. **Extraction donnees** (Haiku) : loyer HC/CC, charges, taxe fonciere, fin bail, type bail, profil locataire
+4. **Estimation DVF batch** : POST /api/estimation/batch
+
+Profil locataire standardise : Particulier | Etudiant | Senior | Famille | Colocation | Professionnel | Commercial + "depuis YYYY" ou "X ans"
+Type bail : nu | meuble | commercial | pre-89
 
 ## Regles absolues
 - **Tous les calculs financiers dans `calculs.ts`** — jamais en DB sauf `rendement_brut`

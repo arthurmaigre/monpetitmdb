@@ -1,175 +1,103 @@
-# MonPetitMDB — Roadmap
+# Mon Petit MDB — Roadmap
 
-## Stack
-- Frontend + Backend : Next.js (App Router, TypeScript, Tailwind)
-- Base de données : Supabase (West EU / Ireland)
-- Hébergement frontend : Vercel
-- Hébergement scraper : Hetzner VPS
-- Scraper : Python + Playwright → Leboncoin
+## FAIT
 
-## Ce qui est fait ✅
-- Scraper Python → Supabase (table `biens`)
-- Listing `/biens` avec filtres (stratégie, métropole, ville, type, prix, rendement)
-- Composants partagés : Layout, BienCard, MetroBadge, RendementBadge
-- Lib partagée : types.ts, constants.ts, theme.ts, calculs.ts
-- Auth : login, register, déconnexion (Supabase Auth)
-- Table `profiles` (role, plan, TMI, régime, financement)
-- Trigger inscription → création profil automatique
-- Page `/mon-profil` — édition paramètres fiscaux et financement
-- API routes : /api/biens, /api/biens/[id], /api/calculs, /api/metropoles, /api/profile
+### Sourcing
+- [x] Scraper Leboncoin (legacy, 7 metropoles)
+- [x] Integration Moteur Immo (60+ plateformes, France entiere)
+- [x] 4 strategies : Locataire en place, Travaux lourds, Division, Decoupe
+- [x] Ingestion par date (pagination 30j) pour gros volumes
+- [x] ~80 000+ biens en base
+- [x] 22 metropoles avec vrais perimetres communaux (geo.api.gouv.fr)
+- [x] Multi-photos depuis moteurimmo_data.pictureUrls
+- [x] Description complete stockee pour analyse IA
 
----
+### Estimation DVF
+- [x] Moteur estimation 3 couches (base DVF + correcteurs + confiance)
+- [x] Filtre par nombre de pieces exact (T2 vs T2)
+- [x] Rayon adaptatif 50m -> 1100m (ville vs campagne)
+- [x] Poids egal pre-COVID / post-COVID
+- [x] Estimation = prix marche "en bon etat" (pas de decote travaux)
+- [x] Batch estimation + bouton recalculer + force cache
 
-## PHASE 1 — Base de données complète
-- [ ] Table `watchlist` dans Supabase
-- [ ] Vérifier que tous les champs de `biens` sont bien scrappés (loyer, charges_copro, taxe_fonciere, url)
+### Analyse fiscale & revente
+- [x] 5 regimes : micro-foncier, reel, LMNP, SCI IS, MdB (IS)
+- [x] Scenario revente waterfall (DVF - agence - achat - notaire - travaux - fiscalite)
+- [x] Duree detention 1-5 ans, frais agence modifiable
+- [x] Comparaison 2 regimes cote a cote
+- [x] Badge +/- Value sur cartes et liste
 
----
+### Frontend
+- [x] Recherche localisation (ville, CP, departement, region, metropole)
+- [x] Scroll infini (50/page, IntersectionObserver)
+- [x] Filtres cote serveur (strategie, localisation, prix, type bien)
+- [x] Carrousel photos (fiches bien + cartes)
+- [x] Persistance filtres + scroll (sessionStorage)
+- [x] Header compact avec navigation active + user pill
+- [x] Watchlist avec onglets par strategie
+- [x] Score travaux min en filtre pour travaux lourds
+- [x] Code postal sur cartes et liste
 
-## PHASE 2 — Back-office admin
-- [ ] Middleware protection `/admin/*` (role = admin uniquement)
-- [ ] `/admin` — dashboard stats (nb biens, nb users, nb watchlist)
-- [ ] `/admin/biens` — tableau gestion biens (modifier statut, champs manquants, supprimer)
-- [ ] `/admin/users` — tableau utilisateurs (plan, rôle, date inscription)
+### Auth & profil
+- [x] Auth Supabase (login, register)
+- [x] Profil fiscal (TMI, regime, financement, budget travaux)
+- [x] Message contact vendeur auto-genere
+- [x] Enrichissement communautaire des donnees
 
----
+### Admin
+- [x] Dashboard admin stats
+- [x] Gestion biens + users
+- [x] Config estimateur DVF (/admin/estimation)
 
-## PHASE 3 — Fiche bien + simulateur
-- [ ] `/biens/[id]` — page fiche complète (toutes les infos du bien)
-- [ ] Simulateur fiscal interactif (utilise lib/calculs.ts)
-- [ ] Profil fiscal pré-rempli si utilisateur connecté
-- [ ] Calcul rendement net, cashflow, prix cible affiché sur la fiche
+### Editorial CMS
+- [x] Generation articles via Opus + fact-checking Sonnet
+- [x] Photos Unsplash avec navigation pour choisir
+- [x] Calendrier editorial 52 semaines genere par IA
+- [x] Backlog 8 sujets + workflow draft/review/approved/published
+- [x] Sources officielles + references Mon Petit MDB
+- [x] Auteur + date publication modifiables
+- [x] Police Lora pour articles
 
----
+## EN COURS
 
-## PHASE 4 — Watchlist + enrichissement communautaire
-- [ ] Bouton coeur sur BienCard (ajouter/retirer de la watchlist)
-- [ ] API `/api/watchlist` (GET, POST, DELETE)
-- [ ] Page `/mes-biens` — tableau style Excel
-  - Colonnes : photo, titre, ville, prix, loyer, charges, taxe foncière, rendement
-  - Champs éditables inline : loyer, charges_copro, taxe_fonciere
-  - Sauvegarde automatique onBlur → PATCH /api/biens/[id]
-  - Rendement recalculé en temps réel avec les données enrichies
-- [ ] Les données enrichies par les utilisateurs alimentent directement la table `biens`
+- [ ] Ingestion Decoupe + Locataire en place/Travaux lourds 2022-2023
+- [ ] Tests score travaux + extraction donnees IA (prompts valides sur 200 biens)
 
----
+## A FAIRE — Priorite haute
 
-## PHASE 5 — Couche d'accès et monétisation
-- [ ] Flouter simulateur fiscal si non connecté
-- [ ] Bloquer accès aux biens selon `strategies_autorisees` dans le profil
-- [ ] Page `/tarifs` (free / starter ~19€ / pro ~49€)
-- [ ] Stripe integration (paiement + mise à jour plan dans profiles)
+### Batch IA post-ingestion
+- [ ] Validation regex batch (4 strategies, prompts valides sur 2500 annonces)
+- [ ] Score travaux batch (Haiku, ~52k biens)
+- [ ] Extraction donnees batch (Haiku, ~20k biens : loyer HC/CC, charges, TF, bail, profil)
+- [ ] Upload photos batch (biens sans photo_storage_path)
+- [ ] Estimation DVF batch sur nouveaux biens
 
----
-
-## PHASE 6 — Front public
-- [ ] Landing page `/` (hero, valeur, comment ça marche, tarifs)
-- [ ] Page `/comment-ca-marche`
+### Mise en ligne
+- [ ] Deploiement Vercel (env vars + domain monpetitmdb.io)
+- [ ] 6-8 articles de lancement (antidates)
+- [ ] Page blog publique (articles publies visibles par tous)
+- [ ] Landing page / page d'accueil
 - [ ] SEO : metadata, sitemap, og:image
 
----
+### Monetisation
+- [ ] Page tarifs (Free / Pro ~19 EUR / Expert ~49 EUR)
+- [ ] Stripe integration
+- [ ] Gestion acces par plan (strategies, simulateur, export)
 
-## PHASE 7 — Déploiement
-- [ ] Vercel (frontend) — connexion GitHub auto-deploy
-- [ ] Variables d'environnement sur Vercel
-- [ ] Domaine custom monpetitmdb.fr
-- [ ] Scraper sur Hetzner VPS + cron job nightly
-- [ ] Proxy résidentiel rotation pour scraping à grande échelle
+## A FAIRE — Priorite moyenne
 
----
+- [ ] Webhooks Moteur Immo (nouvelles annonces en temps reel)
+- [ ] Google Custom Search pour fact-checking articles
+- [ ] Verification statut annonces (retirees / expirees)
+- [ ] Alertes email (nouveaux biens matchant les criteres utilisateur)
+- [ ] Page "Comment ca marche"
+- [ ] Afficher description complete sur fiche bien
 
-## Modèle tarifaire
-- Gratuit : voir listing + fiches + enrichir les données de sa watchlist
-- Starter (~19€/mois) : 1 stratégie + simulateur fiscal + watchlist
-- Pro (~49€/mois) : toutes les stratégies + export Excel + alertes
+## A FAIRE — Priorite basse
 
-## Villes cibles (scraping progressif)
-Nantes, Lyon, Paris, Bordeaux, Marseille, Toulouse, Rennes
-→ objectif 20 villes françaises# MonPetitMDB — Roadmap
-
-## Stack
-- Frontend + Backend : Next.js (App Router, TypeScript, Tailwind)
-- Base de données : Supabase (West EU / Ireland)
-- Hébergement frontend : Vercel
-- Hébergement scraper : Hetzner VPS
-- Scraper : Python + Playwright → Leboncoin
-
-## Ce qui est fait ✅
-- Scraper Python → Supabase (table `biens`)
-- Listing `/biens` avec filtres (stratégie, métropole, ville, type, prix, rendement)
-- Composants partagés : Layout, BienCard, MetroBadge, RendementBadge
-- Lib partagée : types.ts, constants.ts, theme.ts, calculs.ts
-- Auth : login, register, déconnexion (Supabase Auth)
-- Table `profiles` (role, plan, TMI, régime, financement)
-- Trigger inscription → création profil automatique
-- Page `/mon-profil` — édition paramètres fiscaux et financement
-- API routes : /api/biens, /api/biens/[id], /api/calculs, /api/metropoles, /api/profile
-
----
-
-## PHASE 1 — Base de données complète
-- [ ] Table `watchlist` dans Supabase
-- [ ] Vérifier que tous les champs de `biens` sont bien scrappés (loyer, charges_copro, taxe_fonciere, url)
-
----
-
-## PHASE 2 — Back-office admin
-- [ ] Middleware protection `/admin/*` (role = admin uniquement)
-- [ ] `/admin` — dashboard stats (nb biens, nb users, nb watchlist)
-- [ ] `/admin/biens` — tableau gestion biens (modifier statut, champs manquants, supprimer)
-- [ ] `/admin/users` — tableau utilisateurs (plan, rôle, date inscription)
-
----
-
-## PHASE 3 — Fiche bien + simulateur
-- [ ] `/biens/[id]` — page fiche complète (toutes les infos du bien)
-- [ ] Simulateur fiscal interactif (utilise lib/calculs.ts)
-- [ ] Profil fiscal pré-rempli si utilisateur connecté
-- [ ] Calcul rendement net, cashflow, prix cible affiché sur la fiche
-
----
-
-## PHASE 4 — Watchlist + enrichissement communautaire
-- [ ] Bouton coeur sur BienCard (ajouter/retirer de la watchlist)
-- [ ] API `/api/watchlist` (GET, POST, DELETE)
-- [ ] Page `/mes-biens` — tableau style Excel
-  - Colonnes : photo, titre, ville, prix, loyer, charges, taxe foncière, rendement
-  - Champs éditables inline : loyer, charges_copro, taxe_fonciere
-  - Sauvegarde automatique onBlur → PATCH /api/biens/[id]
-  - Rendement recalculé en temps réel avec les données enrichies
-- [ ] Les données enrichies par les utilisateurs alimentent directement la table `biens`
-
----
-
-## PHASE 5 — Couche d'accès et monétisation
-- [ ] Flouter simulateur fiscal si non connecté
-- [ ] Bloquer accès aux biens selon `strategies_autorisees` dans le profil
-- [ ] Page `/tarifs` (free / starter ~19€ / pro ~49€)
-- [ ] Stripe integration (paiement + mise à jour plan dans profiles)
-
----
-
-## PHASE 6 — Front public
-- [ ] Landing page `/` (hero, valeur, comment ça marche, tarifs)
-- [ ] Page `/comment-ca-marche`
-- [ ] SEO : metadata, sitemap, og:image
-
----
-
-## PHASE 7 — Déploiement
-- [ ] Vercel (frontend) — connexion GitHub auto-deploy
-- [ ] Variables d'environnement sur Vercel
-- [ ] Domaine custom monpetitmdb.fr
-- [ ] Scraper sur Hetzner VPS + cron job nightly
-- [ ] Proxy résidentiel rotation pour scraping à grande échelle
-
----
-
-## Modèle tarifaire
-- Gratuit : voir listing + fiches + enrichir les données de sa watchlist
-- Starter (~19€/mois) : 1 stratégie + simulateur fiscal + watchlist
-- Pro (~49€/mois) : toutes les stratégies + export Excel + alertes
-
-## Villes cibles (scraping progressif)
-Nantes, Lyon, Paris, Bordeaux, Marseille, Toulouse, Rennes
-→ objectif 20 villes françaises
+- [ ] Publication LinkedIn / Instagram automatique
+- [ ] Editeur rich text (TipTap) pour articles
+- [ ] Export PDF analyses de biens
+- [ ] Comparateur de biens cote a cote
+- [ ] Carte interactive (Mapbox/Leaflet)
+- [ ] Analytics utilisateur
