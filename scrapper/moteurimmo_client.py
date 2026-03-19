@@ -218,23 +218,20 @@ def _map_options(options: list) -> dict:
 
 
 def _detect_metropole(city: str, postal_code: str) -> str | None:
-    """Detecte la metropole a partir de la ville/CP."""
+    """Detecte la metropole via ref_communes en base. Fallback None."""
     if not postal_code:
         return None
-    dept = postal_code[:2]
-
-    # Mapping simple departement -> metropole
-    DEPT_METRO = {
-        "75": "Paris", "92": "Paris", "93": "Paris", "94": "Paris",
-        "77": "Paris", "78": "Paris", "91": "Paris", "95": "Paris",
-        "69": "Lyon",
-        "33": "Bordeaux",
-        "31": "Toulouse",
-        "44": "Nantes",
-        "35": "Rennes",
-        "13": "Marseille",
-    }
-    return DEPT_METRO.get(dept)
+    try:
+        from supabase_client import get_client
+        client = get_client()
+        if not client:
+            return None
+        r = client.table("ref_communes").select("metropole").eq("code_postal", postal_code).not_.is_("metropole", "null").limit(1).execute()
+        if r.data and r.data[0].get("metropole"):
+            return r.data[0]["metropole"]
+    except:
+        pass
+    return None
 
 
 def ad_to_bien(ad: dict, strategie: str) -> dict:

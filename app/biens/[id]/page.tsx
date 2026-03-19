@@ -392,6 +392,7 @@ function genererMessageContact(bien: any): { message: string, champsManquants: s
     if (!bien.charges_copro) manquants.push("les charges de copropri\u00e9t\u00e9")
     if (!bien.taxe_fonc_ann) manquants.push("la taxe fonci\u00e8re annuelle")
     if (!bien.charges_rec) manquants.push("les charges r\u00e9cup\u00e9rables")
+    if (!bien.fin_bail) manquants.push("la date de fin du bail en cours")
     if (!bien.adresse) manquants.push("l'adresse exacte du bien")
     manquants.push("les travaux vot\u00e9s ou \u00e0 pr\u00e9voir dans la copropri\u00e9t\u00e9, et si oui le montant chiffr\u00e9")
 

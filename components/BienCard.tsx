@@ -73,7 +73,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
           {bien.type_bien} {bien.nb_pieces} - {bien.surface} m2
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', fontWeight: 500 }}>{bien.ville}</span>
+          <span style={{ fontSize: '13px', fontWeight: 500 }}>{bien.ville}{(bien as any).code_postal ? ` - ${(bien as any).code_postal}` : ''}</span>
           {bien.quartier && <span style={{ fontSize: '12px', color: '#9a8a80' }}>- {bien.quartier}</span>}
         </div>
         <div style={{ fontSize: '24px', fontWeight: 700, margin: '12px 0 8px', letterSpacing: '-0.02em' }}>

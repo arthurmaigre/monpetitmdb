@@ -15,25 +15,34 @@ function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' €' : '-'
 }
 
+function getSessionFilters() {
+  if (typeof window === 'undefined') return null
+  try {
+    const saved = sessionStorage.getItem('biens_filters')
+    return saved ? JSON.parse(saved) : null
+  } catch { return null }
+}
+
 export default function BiensPage() {
+  const saved = useRef(getSessionFilters())
   const [allBiens, setAllBiens] = useState<Bien[]>([])
   const [metropoles, setMetropoles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<'grid' | 'list'>('grid')
-  const [strategie, setStrategie] = useState('')
-  const [metropole, setMetropole] = useState('Toutes')
-  const [ville, setVille] = useState('Toutes')
-  const [communeSearch, setCommuneSearch] = useState('')
+  const [view, setView] = useState<'grid' | 'list'>(saved.current?.view || 'grid')
+  const [strategie, setStrategie] = useState(saved.current?.strategie || '')
+  const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
+  const [ville, setVille] = useState(saved.current?.ville || 'Toutes')
+  const [communeSearch, setCommuneSearch] = useState(saved.current?.communeSearch || '')
   const [communeSuggestions, setCommuneSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(null)
+  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(saved.current?.selectedCommune || null)
   const communeTimeout = useRef<any>(null)
-  const [typeBien, setTypeBien] = useState('Tous')
-  const [prixMin, setPrixMin] = useState('')
-  const [prixMax, setPrixMax] = useState('')
-  const [rendMin, setRendMin] = useState('')
-  const [scoreTravauxMin, setScoreTravauxMin] = useState('')
-  const [tri, setTri] = useState('recent')
+  const [typeBien, setTypeBien] = useState(saved.current?.typeBien || 'Tous')
+  const [prixMin, setPrixMin] = useState(saved.current?.prixMin || '')
+  const [prixMax, setPrixMax] = useState(saved.current?.prixMax || '')
+  const [rendMin, setRendMin] = useState(saved.current?.rendMin || '')
+  const [scoreTravauxMin, setScoreTravauxMin] = useState(saved.current?.scoreTravauxMin || '')
+  const [tri, setTri] = useState(saved.current?.tri || 'recent')
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
@@ -56,14 +65,66 @@ export default function BiensPage() {
     requestAnimationFrame(() => { syncing.current = false })
   }, [])
 
+  // Sauvegarder les filtres dans sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('biens_filters', JSON.stringify({
+        strategie, metropole, ville, communeSearch, selectedCommune,
+        typeBien, prixMin, prixMax, rendMin, scoreTravauxMin, tri, view,
+      }))
+    } catch {}
+  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin, tri, view])
+
+  // Sauvegarder la position de scroll avant de quitter
+  useEffect(() => {
+    const saveScroll = () => {
+      try { sessionStorage.setItem('biens_scroll', String(window.scrollY)) } catch {}
+    }
+    window.addEventListener('beforeunload', saveScroll)
+    // Sauvegarder aussi quand on clique sur un lien
+    const handleClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest('a')
+      if (link && link.href.includes('/biens/')) saveScroll()
+    }
+    document.addEventListener('click', handleClick)
+    return () => { window.removeEventListener('beforeunload', saveScroll); document.removeEventListener('click', handleClick) }
+  }, [])
+
+  // Restaurer le scroll apres chargement des biens
+  const scrollRestored = useRef(false)
+  useEffect(() => {
+    if (!loading && allBiens.length > 0 && !scrollRestored.current) {
+      scrollRestored.current = true
+      try {
+        const savedScroll = sessionStorage.getItem('biens_scroll')
+        if (savedScroll) {
+          requestAnimationFrame(() => {
+            window.scrollTo(0, parseInt(savedScroll))
+          })
+        }
+      } catch {}
+    }
+  }, [loading, allBiens])
+
+  // Charger les biens quand la strategie change
+  useEffect(() => {
+    if (!strategie) { setAllBiens([]); setLoading(false); return }
+    setLoading(true)
+    fetch(`/api/biens?strategie=${encodeURIComponent(strategie)}`)
+      .then(r => r.json())
+      .then(d => {
+        setAllBiens(d.biens || [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [strategie])
+
   useEffect(() => {
     async function load() {
-      const [biensData, metroData, sessionData] = await Promise.all([
-        fetch('/api/biens').then(r => r.json()),
+      const [metroData, sessionData] = await Promise.all([
         fetch('/api/metropoles').then(r => r.json()),
         supabase.auth.getSession(),
       ])
-      setAllBiens(biensData.biens || [])
       setMetropoles(metroData.metropoles || [])
 
       const session = sessionData.data.session
@@ -79,7 +140,7 @@ export default function BiensPage() {
         const pData = await pRes.json()
         if (pData.profile?.budget_travaux_m2) setBudgetTravauxM2(pData.profile.budget_travaux_m2)
       }
-      setLoading(false)
+      if (!strategie) setLoading(false)
     }
     load()
   }, [])
@@ -129,7 +190,7 @@ export default function BiensPage() {
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  const strategies = [...new Set(allBiens.map(b => b.strategie_mdb).filter(Boolean))].sort()
+  const strategies = ['Locataire en place', 'Travaux lourds', 'Division', 'Decoupe']
 
   let filtered = allBiens.filter(b => {
     if (strategie && b.strategie_mdb !== strategie) return false
@@ -480,7 +541,7 @@ export default function BiensPage() {
                           <span className="td-bien-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
-                        <td style={{ fontWeight: 500 }}>{bien.ville}</td>
+                        <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{(bien as any).code_postal ? ` - ${(bien as any).code_postal}` : ''}</td>
                         <td><MetroBadge metropole={bien.metropole} /></td>
                         {(() => {
                           const peutCalculer = bien.loyer && bien.prix_fai

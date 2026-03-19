@@ -51,11 +51,15 @@ export async function GET(request: NextRequest) {
     .eq('statut', statut)
     .order('created_at', { ascending: false })
 
+  const strategie = searchParams.get('strategie')
+  if (strategie) query = query.eq('strategie_mdb', strategie)
   if (metropole) query = query.eq('metropole', metropole)
   if (prix_min) query = query.gte('prix_fai', Number(prix_min))
   if (prix_max) query = query.lte('prix_fai', Number(prix_max))
   if (rendement_min) query = query.gte('rendement_brut', Number(rendement_min) / 100)
   if (type_bien) query = query.eq('type_bien', type_bien)
+
+  query = query.limit(1000)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

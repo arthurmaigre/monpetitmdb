@@ -63,7 +63,12 @@ const DEPT_NOMS: Record<string, string> = {
   '94': 'Val-de-Marne', '95': 'Val-d\'Oise',
 }
 
-const METROPOLES = ['Nantes', 'Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Rennes']
+const METROPOLES = [
+  'Paris', 'Lyon', 'Marseille', 'Nantes', 'Bordeaux', 'Toulouse', 'Rennes',
+  'Lille', 'Nice', 'Rouen', 'Toulon', 'Strasbourg', 'Montpellier', 'Grenoble',
+  'Clermont-Ferrand', 'Dijon', 'Orleans', 'Saint-Etienne', 'Tours', 'Metz',
+  'Nancy', 'Brest',
+]
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
