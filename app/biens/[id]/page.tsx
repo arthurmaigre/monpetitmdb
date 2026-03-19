@@ -6,6 +6,43 @@ import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu } from '@/lib/calculs'
 
+function getPhotos(bien: any): string[] {
+  const photos: string[] = []
+  // Photos depuis moteurimmo_data.pictureUrls
+  const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
+  if (mi?.pictureUrls?.length > 0) {
+    photos.push(...mi.pictureUrls)
+  } else if (bien.photo_url) {
+    photos.push(bien.photo_url)
+  }
+  return photos
+}
+
+function PhotoCarousel({ bien }: { bien: any }) {
+  const [idx, setIdx] = useState(0)
+  const photos = getPhotos(bien)
+
+  if (photos.length === 0) return <div className="fiche-photo-empty">Pas de photo</div>
+
+  const prev = () => setIdx(i => i > 0 ? i - 1 : photos.length - 1)
+  const next = () => setIdx(i => i < photos.length - 1 ? i + 1 : 0)
+
+  return (
+    <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
+      <img src={photos[idx]} alt="" className="fiche-photo" />
+      {photos.length > 1 && (
+        <>
+          <button onClick={prev} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'<'}</button>
+          <button onClick={next} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'>'}</button>
+          <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: '12px', padding: '4px 12px', fontSize: '12px', fontWeight: 600 }}>
+            {idx + 1} / {photos.length}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 const REGIMES = [
   { value: 'micro_foncier', label: 'Micro-foncier' },
   { value: 'reel', label: 'Reel' },
@@ -939,9 +976,8 @@ export default function FicheBienPage() {
         <a href="/biens" className="back-link">Retour aux biens</a>
 
         <div className="hero-grid">
-          <div>
-            {bien.photo_url ? <img src={bien.photo_url} alt="" className="fiche-photo" /> : <div className="fiche-photo-empty">Pas de photo</div>}
-          </div>
+          <PhotoCarousel bien={bien} />
+
           <div className="fiche-info">
             <h1 className="fiche-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</h1>
             <p className="fiche-sub">{bien.quartier ? `${bien.quartier} - ` : ''}{bien.ville} - {bien.metropole}</p>

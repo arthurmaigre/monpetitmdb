@@ -43,6 +43,12 @@ export default function BiensPage() {
   const [rendMin, setRendMin] = useState(saved.current?.rendMin || '')
   const [scoreTravauxMin, setScoreTravauxMin] = useState(saved.current?.scoreTravauxMin || '')
   const [tri, setTri] = useState(saved.current?.tri || 'recent')
+  const [totalBiens, setTotalBiens] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const PAGE_SIZE = 50
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
@@ -106,18 +112,67 @@ export default function BiensPage() {
     }
   }, [loading, allBiens])
 
-  // Charger les biens quand la strategie change
+  // Construire l'URL API avec filtres
+  function buildApiUrl(page: number) {
+    const params = new URLSearchParams()
+    params.set('page', String(page))
+    params.set('limit', String(PAGE_SIZE))
+    if (strategie) params.set('strategie', strategie)
+    if (selectedCommune) {
+      params.set('locationType', selectedCommune.type || 'commune')
+      params.set('locationValue', selectedCommune.nom_commune)
+      params.set('locationCP', selectedCommune.code_postal)
+    }
+    if (typeBien !== 'Tous') params.set('type_bien', typeBien)
+    if (prixMin) params.set('prix_min', prixMin)
+    if (prixMax) params.set('prix_max', prixMax)
+    if (rendMin) params.set('rendement_min', rendMin)
+    return `/api/biens?${params.toString()}`
+  }
+
+  // Charger les biens quand la strategie ou les filtres changent
   useEffect(() => {
-    if (!strategie) { setAllBiens([]); setLoading(false); return }
+    if (!strategie) { setAllBiens([]); setLoading(false); setTotalBiens(0); setHasMore(false); return }
     setLoading(true)
-    fetch(`/api/biens?strategie=${encodeURIComponent(strategie)}`)
+    setCurrentPage(1)
+    fetch(buildApiUrl(1))
       .then(r => r.json())
       .then(d => {
         setAllBiens(d.biens || [])
+        setTotalBiens(d.total || 0)
+        setHasMore(d.hasMore || false)
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [strategie])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin])
+
+  // Charger plus de biens
+  const loadMoreRef = useRef<() => void>()
+  loadMoreRef.current = () => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const nextPage = currentPage + 1
+    fetch(buildApiUrl(nextPage))
+      .then(r => r.json())
+      .then(d => {
+        setAllBiens(prev => [...prev, ...(d.biens || [])])
+        setCurrentPage(nextPage)
+        setHasMore(d.hasMore || false)
+        setLoadingMore(false)
+      })
+      .catch(() => setLoadingMore(false))
+  }
+
+  // Scroll infini via IntersectionObserver
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadMoreRef.current?.()
+    }, { rootMargin: '400px' })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMore, loading])
 
   useEffect(() => {
     async function load() {
@@ -192,49 +247,9 @@ export default function BiensPage() {
 
   const strategies = ['Locataire en place', 'Travaux lourds', 'Division', 'Decoupe']
 
+  // Filtres cote client (les autres sont cote serveur)
   let filtered = allBiens.filter(b => {
-    if (strategie && b.strategie_mdb !== strategie) return false
-    if (metropole !== 'Toutes' && b.metropole !== metropole) return false
-    if (ville !== 'Toutes' && b.ville !== ville) return false
-    if (selectedCommune) {
-      if (selectedCommune.type === 'metropole') {
-        if (b.metropole !== selectedCommune.nom_commune) return false
-      } else if (selectedCommune.type === 'region') {
-        // Filtre par region : match les 2 premiers chiffres du CP contre les departements de la region
-        const deptRegionMap: Record<string, string> = {
-          '01':'Auvergne-Rhone-Alpes','03':'Auvergne-Rhone-Alpes','07':'Auvergne-Rhone-Alpes','15':'Auvergne-Rhone-Alpes','26':'Auvergne-Rhone-Alpes','38':'Auvergne-Rhone-Alpes','42':'Auvergne-Rhone-Alpes','43':'Auvergne-Rhone-Alpes','63':'Auvergne-Rhone-Alpes','69':'Auvergne-Rhone-Alpes','73':'Auvergne-Rhone-Alpes','74':'Auvergne-Rhone-Alpes',
-          '21':'Bourgogne-Franche-Comte','25':'Bourgogne-Franche-Comte','39':'Bourgogne-Franche-Comte','58':'Bourgogne-Franche-Comte','70':'Bourgogne-Franche-Comte','71':'Bourgogne-Franche-Comte','89':'Bourgogne-Franche-Comte','90':'Bourgogne-Franche-Comte',
-          '22':'Bretagne','29':'Bretagne','35':'Bretagne','56':'Bretagne',
-          '18':'Centre-Val de Loire','28':'Centre-Val de Loire','36':'Centre-Val de Loire','37':'Centre-Val de Loire','41':'Centre-Val de Loire','45':'Centre-Val de Loire',
-          '08':'Grand Est','10':'Grand Est','51':'Grand Est','52':'Grand Est','54':'Grand Est','55':'Grand Est','57':'Grand Est','67':'Grand Est','68':'Grand Est','88':'Grand Est',
-          '02':'Hauts-de-France','59':'Hauts-de-France','60':'Hauts-de-France','62':'Hauts-de-France','80':'Hauts-de-France',
-          '75':'Ile-de-France','77':'Ile-de-France','78':'Ile-de-France','91':'Ile-de-France','92':'Ile-de-France','93':'Ile-de-France','94':'Ile-de-France','95':'Ile-de-France',
-          '14':'Normandie','27':'Normandie','50':'Normandie','61':'Normandie','76':'Normandie',
-          '16':'Nouvelle-Aquitaine','17':'Nouvelle-Aquitaine','19':'Nouvelle-Aquitaine','23':'Nouvelle-Aquitaine','24':'Nouvelle-Aquitaine','33':'Nouvelle-Aquitaine','40':'Nouvelle-Aquitaine','47':'Nouvelle-Aquitaine','64':'Nouvelle-Aquitaine','79':'Nouvelle-Aquitaine','86':'Nouvelle-Aquitaine','87':'Nouvelle-Aquitaine',
-          '09':'Occitanie','11':'Occitanie','12':'Occitanie','30':'Occitanie','31':'Occitanie','32':'Occitanie','34':'Occitanie','46':'Occitanie','48':'Occitanie','65':'Occitanie','66':'Occitanie','81':'Occitanie','82':'Occitanie',
-          '44':'Pays de la Loire','49':'Pays de la Loire','53':'Pays de la Loire','72':'Pays de la Loire','85':'Pays de la Loire',
-          '04':"Provence-Alpes-Cote d'Azur",'05':"Provence-Alpes-Cote d'Azur",'06':"Provence-Alpes-Cote d'Azur",'13':"Provence-Alpes-Cote d'Azur",'83':"Provence-Alpes-Cote d'Azur",'84':"Provence-Alpes-Cote d'Azur",
-        }
-        const cp = (b as any).code_postal || ''
-        const dept = cp.substring(0, 2)
-        if (deptRegionMap[dept] !== selectedCommune.nom_commune) return false
-      } else if (selectedCommune.type === 'departement') {
-        const cp = (b as any).code_postal || ''
-        if (!cp.startsWith(selectedCommune.code_postal)) return false
-      } else if (selectedCommune.code_postal === 'tous') {
-        const matchVille = b.ville && b.ville.toUpperCase() === selectedCommune.nom_commune.toUpperCase()
-        if (!matchVille) return false
-      } else {
-        const matchVille = b.ville && b.ville.toUpperCase() === selectedCommune.nom_commune.toUpperCase()
-        const matchCP = (b as any).code_postal === selectedCommune.code_postal
-        if (!matchVille && !matchCP) return false
-      }
-    }
-    if (typeBien !== 'Tous' && b.type_bien !== typeBien) return false
-    if (prixMin && b.prix_fai < Number(prixMin)) return false
-    if (prixMax && b.prix_fai > Number(prixMax)) return false
-    if (rendMin && (!b.rendement_brut || b.rendement_brut * 100 < Number(rendMin))) return false
-    if (scoreTravauxMin && (!b.score_travaux || b.score_travaux < Number(scoreTravauxMin))) return false
+    if (scoreTravauxMin && (!(b as any).score_travaux || (b as any).score_travaux < Number(scoreTravauxMin))) return false
     return true
   })
 
@@ -440,7 +455,7 @@ export default function BiensPage() {
           <>
             <div className="results-bar">
               <p className="results-count">
-                <strong>{filtered.length}</strong> bien{filtered.length > 1 ? 's' : ''} trouve{filtered.length > 1 ? 's' : ''}
+                <strong>{filtered.length}</strong> bien{filtered.length > 1 ? 's' : ''} affich{'\u00e9'}{filtered.length > 1 ? 's' : ''} sur <strong>{totalBiens.toLocaleString('fr-FR')}</strong>
                 {strategie && <> - {strategie}</>}
                 {metropole !== 'Toutes' && <> - {metropole}</>}
                 {ville !== 'Toutes' && <> - {ville}</>}
@@ -635,6 +650,11 @@ export default function BiensPage() {
                   </div>
                 )}
               </>
+            )}
+            {hasMore && (
+              <div ref={sentinelRef} style={{ textAlign: 'center', padding: '32px 0' }}>
+                {loadingMore && <p style={{ color: '#9a8a80', fontSize: '13px' }}>Chargement...</p>}
+              </div>
             )}
           </>
         )}

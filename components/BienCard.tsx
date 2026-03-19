@@ -17,9 +17,17 @@ function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' €' : '-'
 }
 
+function getPhotos(bien: any): string[] {
+  if (bien.pictureUrls?.length > 0) return bien.pictureUrls
+  if (bien.photo_url) return [bien.photo_url]
+  return []
+}
+
 export default function BienCard({ bien, inWatchlist = false, userToken, onWatchlistChange }: Props) {
   const [isInWatchlist, setIsInWatchlist] = useState(inWatchlist)
   const [loading, setLoading] = useState(false)
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const photos = getPhotos(bien)
   const lienTitre = bien.url ? bien.url : '/biens/' + bien.id
   const scoreTravaux = (bien as any).score_travaux
   const isTravaux = bien.strategie_mdb === 'Travaux lourds'
@@ -49,10 +57,20 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = '' }}
     >
       <div style={{ height: '195px', background: '#ede8e0', overflow: 'hidden', position: 'relative' }}>
-        {bien.photo_url
-          ? <img src={bien.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {photos.length > 0
+          ? <img src={photos[photoIdx]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c0b8b0', fontSize: '13px' }}>Pas de photo</div>
         }
+        {photos.length > 1 && (
+          <>
+            <button onClick={e => { e.preventDefault(); e.stopPropagation(); setPhotoIdx(i => i > 0 ? i - 1 : photos.length - 1) }} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>{'<'}</button>
+            <button onClick={e => { e.preventDefault(); e.stopPropagation(); setPhotoIdx(i => i < photos.length - 1 ? i + 1 : 0) }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>{'>'}</button>
+            <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '4px' }}>
+              {photos.slice(0, 6).map((_, i) => <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)' }} />)}
+              {photos.length > 6 && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.4)', fontSize: '8px', color: '#fff' }} />}
+            </div>
+          </>
+        )}
         <span style={{ position: 'absolute', top: '12px', left: '12px' }}>
           <MetroBadge metropole={bien.metropole} />
         </span>

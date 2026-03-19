@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
+import RendementBadge from '@/components/RendementBadge'
+import PlusValueBadge from '@/components/PlusValueBadge'
 
 export default function MesBiensPage() {
   const [biens, setBiens] = useState<any[]>([])
@@ -11,6 +13,7 @@ export default function MesBiensPage() {
   const [userToken, setUserToken] = useState<string | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
   const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [activeTab, setActiveTab] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -25,14 +28,28 @@ export default function MesBiensPage() {
 
       if (items.length === 0) { setLoading(false); return }
 
-      // Charger les biens de la watchlist
       const biensRes = await fetch('/api/biens?ids=' + items.map((w: any) => w.bien_id).join(','))
       const biensData = await biensRes.json()
-      setBiens(biensData.biens || [])
+      const b = biensData.biens || []
+      setBiens(b)
+
+      // Selectionner le premier onglet avec des biens
+      const strategies = [...new Set(b.map((x: any) => x.strategie_mdb).filter(Boolean))]
+      if (strategies.length > 0) setActiveTab(strategies[0] as string)
+
       setLoading(false)
     }
     load()
   }, [])
+
+  // Onglets par strategie (seulement celles qui ont des biens)
+  const strategies = [...new Set(biens.map(b => b.strategie_mdb).filter(Boolean))] as string[]
+  const filteredBiens = activeTab ? biens.filter(b => b.strategie_mdb === activeTab) : biens
+
+  function handleRemove(bienId: string) {
+    setBiens(prev => prev.filter(b => b.id !== bienId))
+    setWatchlistIds(prev => { const next = new Set(prev); next.delete(bienId); return next })
+  }
 
   if (loading) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#9a8a80' }}>Chargement...</p></Layout>
 
@@ -40,12 +57,18 @@ export default function MesBiensPage() {
     <Layout>
       <style>{`
         .mes-biens-wrap { max-width: 1320px; margin: 0 auto; padding: 40px 48px; }
-        .mes-biens-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 12px; }
+        .mes-biens-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
         .mes-biens-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; color: #1a1210; }
         .mes-biens-sub { font-size: 14px; color: #9a8a80; margin-top: 4px; }
         .view-toggle { display: flex; gap: 4px; }
         .view-btn { padding: 9px 16px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; background: transparent; color: #888; }
         .view-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; border-radius: 10px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; background: #fff; color: #9a8a80; display: flex; align-items: center; gap: 8px; }
+        .tab.active { background: #1a1210; color: #fff; border-color: #1a1210; }
+        .tab-count { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+        .tab.active .tab-count { background: rgba(255,255,255,0.2); }
+        .tab:not(.active) .tab-count { background: #f0ede8; color: #9a8a80; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
         .empty-state { text-align: center; padding: 80px 40px; color: #9a8a80; background: #fff; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .empty-state h3 { font-family: 'Fraunces', serif; font-size: 22px; color: #1a1210; margin-bottom: 8px; }
@@ -68,7 +91,7 @@ export default function MesBiensPage() {
         <div className="mes-biens-header">
           <div>
             <h1 className="mes-biens-title">Ma watchlist</h1>
-            <p className="mes-biens-sub">{biens.length} bien{biens.length > 1 ? 's' : ''} sauvegarde{biens.length > 1 ? 's' : ''}</p>
+            <p className="mes-biens-sub">{biens.length} bien{biens.length > 1 ? 's' : ''} sauvegard{'\u00e9'}{biens.length > 1 ? 's' : ''}</p>
           </div>
           <div className="view-toggle">
             <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
@@ -82,62 +105,96 @@ export default function MesBiensPage() {
             <p>Ajoutez des biens en cliquant sur le coeur depuis le listing.</p>
             <a href="/biens" className="empty-link">Voir les biens disponibles</a>
           </div>
-        ) : view === 'grid' ? (
-          <div className="grid">
-            {biens.map(bien => (
-              <BienCard
-                key={bien.id}
-                bien={bien}
-                inWatchlist={true}
-                userToken={userToken}
-                onWatchlistChange={(bienId, added) => {
-                  if (!added) setBiens(prev => prev.filter(b => b.id !== bienId))
-                  setWatchlistIds(prev => { const next = new Set(prev); added ? next.add(bienId) : next.delete(bienId); return next })
-                }}
-              />
-            ))}
-          </div>
         ) : (
-          <table className="list-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th></th>
-                <th>Bien</th>
-                <th>Ville</th>
-                <th>Prix FAI</th>
-                <th>Loyer</th>
-                <th>Rendement</th>
-                <th>Strategie</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {biens.map(bien => (
-                <tr key={bien.id}>
-                  <td>
-                    <button className="td-heart" onClick={async () => {
-                      if (!userToken) return
-                      const res = await fetch('/api/watchlist', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-                        body: JSON.stringify({ bien_id: bien.id })
-                      })
-                      if (res.ok) setBiens(prev => prev.filter(b => b.id !== bien.id))
-                    }}>♥</button>
-                  </td>
-                  <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
-                  <td style={{ fontWeight: 600 }}>{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</td>
-                  <td>{bien.ville}</td>
-                  <td style={{ fontWeight: 700 }}>{bien.prix_fai?.toLocaleString('fr-FR')} €</td>
-                  <td>{bien.loyer ? `${bien.loyer} €/mois` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
-                  <td style={{ color: '#c0392b', fontWeight: 600 }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : '-'}</td>
-                  <td>{bien.strategie_mdb || '-'}</td>
-                  <td><a href={`/biens/${bien.id}`} className="td-btn">Analyse</a></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <>
+            {/* Onglets par strategie */}
+            {strategies.length > 1 && (
+              <div className="tabs">
+                {strategies.map(strat => {
+                  const count = biens.filter(b => b.strategie_mdb === strat).length
+                  return (
+                    <button key={strat} className={`tab ${activeTab === strat ? 'active' : ''}`} onClick={() => setActiveTab(strat)}>
+                      {strat}
+                      <span className="tab-count">{count}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            <p style={{ fontSize: '13px', color: '#9a8a80', marginBottom: '16px' }}>
+              <strong style={{ color: '#1a1210' }}>{filteredBiens.length}</strong> bien{filteredBiens.length > 1 ? 's' : ''} {activeTab && `\u2014 ${activeTab}`}
+            </p>
+
+            {view === 'grid' ? (
+              <div className="grid">
+                {filteredBiens.map(bien => (
+                  <BienCard
+                    key={bien.id}
+                    bien={bien}
+                    inWatchlist={true}
+                    userToken={userToken}
+                    onWatchlistChange={(bienId, added) => {
+                      if (!added) handleRemove(bienId)
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <table className="list-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th></th>
+                    <th>Bien</th>
+                    <th>Commune</th>
+                    <th>Prix FAI</th>
+                    {activeTab !== 'Travaux lourds' && <th>Loyer</th>}
+                    {activeTab !== 'Travaux lourds' && <th>Rendement</th>}
+                    {activeTab === 'Travaux lourds' && <th>Score travaux</th>}
+                    {activeTab === 'Travaux lourds' && <th>DPE</th>}
+                    <th>+/- Value</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredBiens.map(bien => (
+                    <tr key={bien.id}>
+                      <td>
+                        <button className="td-heart" onClick={async () => {
+                          if (!userToken) return
+                          const res = await fetch('/api/watchlist', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+                            body: JSON.stringify({ bien_id: bien.id })
+                          })
+                          if (res.ok) handleRemove(bien.id)
+                        }}>{'\u2665'}</button>
+                      </td>
+                      <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
+                      <td style={{ fontWeight: 600 }}>{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</td>
+                      <td style={{ fontWeight: 500 }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
+                      <td style={{ fontWeight: 700 }}>{bien.prix_fai?.toLocaleString('fr-FR')} {'\u20AC'}</td>
+                      {activeTab !== 'Travaux lourds' && (
+                        <td>{bien.loyer ? `${bien.loyer} \u20AC/mois` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                      )}
+                      {activeTab !== 'Travaux lourds' && (
+                        <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
+                      )}
+                      {activeTab === 'Travaux lourds' && (
+                        <td>{bien.score_travaux ? <span style={{ fontWeight: 600, color: '#856404', background: '#fff3cd', padding: '3px 8px', borderRadius: '6px', fontSize: '12px' }}>{bien.score_travaux}/5</span> : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                      )}
+                      {activeTab === 'Travaux lourds' && (
+                        <td>{bien.dpe ? <span style={{ fontWeight: 700, fontSize: '12px', padding: '3px 8px', borderRadius: '6px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[bien.dpe] || '#9a8a80' }}>{bien.dpe}</span> : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                      )}
+                      <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
+                      <td><a href={`/biens/${bien.id}`} className="td-btn">Analyse</a></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
         )}
       </div>
     </Layout>
