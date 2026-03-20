@@ -212,9 +212,9 @@ export default function MesBiensPage() {
                       <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
                       <td style={{ fontWeight: 600 }}>{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</td>
                       <td style={{ fontWeight: 500 }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
-                      <td style={{ fontWeight: 700 }}>{bien.prix_fai?.toLocaleString('fr-FR')} euros</td>
+                      <td style={{ fontWeight: 700 }}>{bien.prix_fai?.toLocaleString('fr-FR')} {'\u20AC'}</td>
                       {activeTab !== 'Travaux lourds' && (
-                        <td>{bien.loyer ? `${bien.loyer} euros/mois` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                        <td>{bien.loyer ? `${bien.loyer} \u20AC/mois` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
                       )}
                       {activeTab !== 'Travaux lourds' && (
                         <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>

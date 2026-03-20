@@ -51,7 +51,7 @@ export interface ParamsFinancement {
 
 export interface ParamsFiscal {
   tmi: number
-  regime: 'micro_foncier' | 'reel' | 'lmnp' | 'sci_is'
+  regime: 'nu_micro_foncier' | 'nu_reel_foncier' | 'lmnp_micro_bic' | 'lmnp_reel_bic' | 'lmp_reel_bic' | 'sci_is' | 'marchand_de_biens'
 }
 
 export interface ResultatCalcul {

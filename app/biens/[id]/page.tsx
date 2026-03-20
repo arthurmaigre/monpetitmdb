@@ -144,11 +144,13 @@ function PlatformLinks({ bien }: { bien: any }) {
 }
 
 const REGIMES = [
-  { value: 'micro_foncier', label: 'Micro-foncier' },
-  { value: 'reel', label: 'Reel' },
-  { value: 'lmnp', label: 'LMNP' },
-  { value: 'sci_is', label: 'SCI IS' },
-  { value: 'marchand_de_biens', label: 'Marchand de biens' },
+  { value: 'nu_micro_foncier', label: 'Nu Micro-foncier' },
+  { value: 'nu_reel_foncier', label: 'Nu R\u00E9el foncier' },
+  { value: 'lmnp_micro_bic', label: 'LMNP Micro-BIC' },
+  { value: 'lmnp_reel_bic', label: 'LMNP R\u00E9el BIC' },
+  { value: 'lmp_reel_bic', label: 'LMP R\u00E9el BIC' },
+  { value: 'sci_is', label: "SCI \u00E0 l'IS" },
+  { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
 ]
 
 function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate }: any) {
@@ -266,11 +268,12 @@ function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
   return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}</span>
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5 }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5, chargesUtilisateur }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { montantEmprunte, tauxCredit, tauxAssurance, dureeAns } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
   const hasLoyer = loyer && loyer > 0
+  const isMarchand = regime === 'marchand_de_biens'
 
   const loyerAnnuel = (loyer || 0) * 12
   const chargesRecAnn = (charges_rec || 0) * 12
@@ -282,29 +285,50 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const amortMobilier = prix_fai * 0.10 / 10
   const amortLMNP = amortImmo + amortMobilier
   const amortSCI = prix_fai * 0.85 / 30
-  const hasAmort = regime === 'lmnp' || regime === 'sci_is'
-  const amort = regime === 'lmnp' ? amortLMNP : regime === 'sci_is' ? amortSCI : 0
+  const hasAmort = regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
+  const amort = (regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic') ? amortLMNP : regime === 'sci_is' ? amortSCI : 0
+
+  // Charges utilisateur (deductibles seulement en reel)
+  const isReel = regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
+  const assurancePNO = isReel ? (chargesUtilisateur?.assurance_pno || 0) : 0
+  const fraisGestionPct = isReel ? (chargesUtilisateur?.frais_gestion_pct || 0) : 0
+  const fraisGestion = loyerAnnuel * fraisGestionPct / 100
+  const honorairesComptable = isReel ? (chargesUtilisateur?.honoraires_comptable || 0) : 0
+  const cfe = isReel ? (chargesUtilisateur?.cfe || 0) : 0
+  const fraisOGA = isReel ? (chargesUtilisateur?.frais_oga || 0) : 0
+  const chargesSupplementaires = assurancePNO + fraisGestion + honorairesComptable + cfe + fraisOGA
 
   let revenuImposable = 0
   let impot = 0
 
-  if (regime === 'micro_foncier') {
+  if (regime === 'nu_micro_foncier') {
     revenuImposable = loyerAnnuel * 0.70
     impot = revenuImposable * (tmi / 100 + 0.172)
-  } else if (regime === 'reel') {
-    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn
+  } else if (regime === 'nu_reel_foncier') {
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + chargesSupplementaires
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable * (tmi / 100 + 0.172)
-  } else if (regime === 'lmnp') {
-    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort
+  } else if (regime === 'lmnp_micro_bic') {
+    revenuImposable = loyerAnnuel * 0.50
+    impot = revenuImposable * (tmi / 100 + 0.172)
+  } else if (regime === 'lmnp_reel_bic') {
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort + chargesSupplementaires
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable * (tmi / 100)
-  } else if (regime === 'sci_is' || regime === 'marchand_de_biens') {
-    // SCI IS et MdB : IS 15% / 25%, charges deductibles + amortissement (SCI IS seulement)
-    const amortRegime = regime === 'sci_is' ? amort : 0
-    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amortRegime
+  } else if (regime === 'lmp_reel_bic') {
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort + chargesSupplementaires
+    const benefice = Math.max(0, loyerAnnuel - chargesDeductibles)
+    revenuImposable = benefice
+    const cotisationsSSI = Math.max(0, benefice) * 0.45
+    impot = benefice * (tmi / 100) + cotisationsSSI
+  } else if (regime === 'sci_is') {
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort + chargesSupplementaires
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable <= 42500 ? revenuImposable * 0.15 : 42500 * 0.15 + (revenuImposable - 42500) * 0.25
+  } else if (regime === 'marchand_de_biens') {
+    // MdB : pas de phase locative (achat-revente)
+    revenuImposable = 0
+    impot = 0
   }
 
   const mensualiteCredit = calculerMensualite(montantEmprunte, tauxCredit, dureeAns)
@@ -333,24 +357,37 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const pvBrute = Math.max(0, prixRevente - prix_fai - fraisNotaireMontant - budgetTravaux)
 
   // Fiscalite PV selon regime
-  let irPV = 0, psPV = 0, tvaMarge = 0, chargesSocMdb = 0, isPV = 0, pfuPV = 0
-  if (regime === 'micro_foncier' || regime === 'reel') {
+  let irPV = 0, psPV = 0, tvaMarge = 0, isPV = 0
+  let reintegrationAmort = 0
+  if (regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier' || regime === 'lmnp_micro_bic') {
+    // Particuliers : IR 19% + PS 17.2%, pas de reintegration
     irPV = pvBrute * 0.19
     psPV = pvBrute * 0.172
-  } else if (regime === 'lmnp') {
-    const amortsCumules = ((prix_fai * 0.85 / 30) + (prix_fai * 0.10 / 10)) * dur
-    const pvReintegree = Math.max(0, pvBrute + amortsCumules)
+  } else if (regime === 'lmnp_reel_bic') {
+    // LMNP reel : reintegration des amortissements cumules (reforme LFI 2025)
+    reintegrationAmort = amort * dur
+    const pvReintegree = Math.max(0, pvBrute + reintegrationAmort)
     irPV = pvReintegree * 0.19
     psPV = pvReintegree * 0.172
+  } else if (regime === 'lmp_reel_bic') {
+    // LMP : exoneration totale si detention > 5 ans, sinon PV professionnelle
+    if (dur > 5) {
+      irPV = 0
+      psPV = 0
+    } else {
+      irPV = pvBrute * (tmi / 100)
+      psPV = 0
+    }
   } else if (regime === 'sci_is') {
+    // SCI IS : PV sur VNC, IS 15/25%, pas d'abattement
     const amortCumule = (prix_fai * 0.85 / 30) * dur
-    const vnc = prix_fai - amortCumule
-    const pvSCI = Math.max(0, prixRevente - vnc - budgetTravaux)
+    const vnc = prix_fai + fraisNotaireMontant + budgetTravaux - amortCumule
+    const pvSCI = Math.max(0, prixRevente - vnc)
     isPV = pvSCI <= 42500 ? pvSCI * 0.15 : 42500 * 0.15 + (pvSCI - 42500) * 0.25
   } else if (regime === 'marchand_de_biens') {
     // MdB toujours a l'IS : TVA sur marge + IS sur benefice
     const marge = Math.max(0, prixReventeBrut - prix_fai)
-    tvaMarge = marge * 0.20
+    tvaMarge = marge * 20 / 120
     const benefice = Math.max(0, prixRevente - prix_fai - budgetTravaux - fraisNotaireMontant - tvaMarge)
     isPV = benefice <= 42500 ? benefice * 0.15 : 42500 * 0.15 + (benefice - 42500) * 0.25
   }
@@ -358,7 +395,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const pvNette = Math.round(pvBrute - totalFiscPV)
 
   // Cashflow locatif net cumule
-  const cashflowCumule = hasLoyer && !isTravauxLourds ? Math.round(cashflowNetAnnuel * dur) : 0
+  const cashflowCumule = hasLoyer && !isTravauxLourds && !isMarchand ? Math.round(cashflowNetAnnuel * dur) : 0
 
   // Capital restant du
   const crd = calculerCapitalRestantDu(montantEmprunte, tauxCredit, dureeAns, dur)
@@ -397,7 +434,12 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
       <div style={{ fontFamily: "'Fraunces', serif", fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: '#1a1210' }}>{titre}</div>
 
       {/* === PARTIE LOCATIVE (annuelle) === */}
-      {hasLoyer && !isTravauxLourds && (
+      {isMarchand && hasLoyer && !isTravauxLourds && (
+        <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#a06010', marginBottom: '12px' }}>
+          {"Non applicable \u2014 strat\u00E9gie achat-revente"}
+        </div>
+      )}
+      {hasLoyer && !isTravauxLourds && !isMarchand && (
         <>
           <SectionLabel label="Revenus locatifs (annuel)" />
           <Row label="Loyer brut annuel" value={`${fmt(loyerAnnuel)} \u20AC`} />
@@ -406,7 +448,13 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
           <Row label="Taxe fonciere" value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge />
           <Row label="Interets emprunt" value={`-${fmt(interetsAnn)} \u20AC`} rouge />
           <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge />
-          <Row label="Amortissement" value={`-${fmt(amort)} \u20AC`} rouge tiret={!hasAmort} info={regime === 'marchand_de_biens' ? "Pas d'amortissement en MdB : les biens sont du stock (actif circulant), pas des immobilisations" : "Amortissement fiscal uniquement en LMNP et SCI IS"} />
+          {isReel && assurancePNO > 0 && <Row label="Assurance PNO" value={`-${fmt(assurancePNO)} \u20AC`} rouge />}
+          {isReel && fraisGestion > 0 && <Row label={`Gestion locative (${fraisGestionPct}%)`} value={`-${fmt(fraisGestion)} \u20AC`} rouge />}
+          {isReel && honorairesComptable > 0 && <Row label="Honoraires comptable" value={`-${fmt(honorairesComptable)} \u20AC`} rouge />}
+          {isReel && cfe > 0 && <Row label="CFE" value={`-${fmt(cfe)} \u20AC`} rouge />}
+          {isReel && fraisOGA > 0 && <Row label="Frais OGA" value={`-${fmt(fraisOGA)} \u20AC`} rouge />}
+          <Row label="Amortissement" value={`-${fmt(amort)} \u20AC`} rouge tiret={!hasAmort} info={"Amortissement fiscal uniquement en LMNP r\u00E9el, LMP et SCI IS"} />
+          {regime === 'lmp_reel_bic' && <Row label="Cotisations SSI (45%)" value={`-${fmt(Math.max(0, revenuImposable) * 0.45)} \u20AC`} rouge info="Cotisations sociales des ind\u00E9pendants (SSI)" />}
           <Row label="Resultat imposable" value={`${fmt(revenuImposable)} \u20AC`} bold />
           <Row label="Impot" value={`-${fmt(impot)} \u20AC`} rouge bold />
           <div style={{ marginTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
@@ -436,20 +484,33 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
           <Row label="Plus-value brute" value={`${pvBrute > 0 ? '+' : ''}${fmt(pvBrute)} \u20AC`} bold vert={pvBrute > 0} rouge={pvBrute <= 0} />
 
           {/* Fiscalite PV */}
-          {(regime === 'micro_foncier' || regime === 'reel' || regime === 'lmnp') && (
+          {(regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier' || regime === 'lmnp_micro_bic') && (
             <>
               <Row label="IR sur PV (19%)" value={`-${fmt(Math.round(irPV))} \u20AC`} rouge />
               <Row label={`Pr\u00e9l. sociaux (17.2%)`} value={`-${fmt(Math.round(psPV))} \u20AC`} rouge />
-              {regime === 'lmnp' && <Row label={`R\u00e9int\u00e9gration amortissements`} value="" info="Amortissements d\u00e9duits r\u00e9int\u00e9gr\u00e9s dans la base imposable (r\u00e9forme 2025)" tiret />}
             </>
           )}
+          {regime === 'lmnp_reel_bic' && (
+            <>
+              <Row label={`R\u00e9int\u00e9gration amortissements`} value={`+${fmt(Math.round(reintegrationAmort))} \u20AC`} rouge info="Amortissements d\u00e9duits r\u00e9int\u00e9gr\u00e9s dans la base imposable (r\u00e9forme LFI 2025)" />
+              <Row label="IR sur PV (19%)" value={`-${fmt(Math.round(irPV))} \u20AC`} rouge />
+              <Row label={`Pr\u00e9l. sociaux (17.2%)`} value={`-${fmt(Math.round(psPV))} \u20AC`} rouge />
+            </>
+          )}
+          {regime === 'lmp_reel_bic' && (
+            dur > 5 ? (
+              <Row label="PV professionnelle" value={"Exon\u00e9r\u00e9e (> 5 ans)"} vert info={"Exon\u00e9ration totale de la plus-value professionnelle apr\u00e8s 5 ans de d\u00e9tention"} />
+            ) : (
+              <Row label={`PV professionnelle (TMI ${tmi}%)`} value={`-${fmt(Math.round(irPV))} \u20AC`} rouge />
+            )
+          )}
           {regime === 'sci_is' && (
-            <Row label="IS sur PV (15% / 25%)" value={`-${fmt(Math.round(isPV))} \u20AC`} rouge info="PV reste dans la SCI, pas de flat tax sur dividendes" />
+            <Row label="IS sur PV (15% / 25%)" value={`-${fmt(Math.round(isPV))} \u20AC`} rouge info="PV sur VNC (valeur nette comptable), reste dans la SCI" />
           )}
           {regime === 'marchand_de_biens' && (
             <>
-              <Row label="TVA sur marge (20%)" value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge />
-              <Row label="IS sur b{'\u00e9'}n{'\u00e9'}fice (15% / 25%)" value={`-${fmt(Math.round(isPV))} \u20AC`} rouge />
+              <Row label="TVA sur marge (20/120)" value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge />
+              <Row label={`IS sur b\u00e9n\u00e9fice (15% / 25%)`} value={`-${fmt(Math.round(isPV))} \u20AC`} rouge />
             </>
           )}
           <Row label="Plus-value nette" value={`${pvNette >= 0 ? '+' : ''}${fmt(pvNette)} \u20AC`} bold vert={pvNette >= 0} rouge={pvNette < 0} />
@@ -521,7 +582,7 @@ function genererMessageContact(bien: any): { message: string, champsManquants: s
       manquants.push("les travaux r\u00e9alis\u00e9s r\u00e9cemment ou \u00e0 pr\u00e9voir")
     }
 
-    msg += `Investisseur, je me permets de vous contacter au sujet de votre ${typeBien} \u00e0 ${localisation} affich\u00e9 \u00e0 ${prixFmt} euros.\n\n`
+    msg += `Investisseur, je me permets de vous contacter au sujet de votre ${typeBien} \u00e0 ${localisation} affich\u00e9 \u00e0 ${prixFmt} \u20AC.\n\n`
     msg += `J'\u00e9tudie ce bien dans le cadre d'un projet de r\u00e9novation et j'aurais besoin de quelques \u00e9l\u00e9ments pour chiffrer les travaux et finaliser mon analyse.\n\n`
   } else {
     // --- Strat\u00e9gie Locataire en place ---
@@ -533,7 +594,7 @@ function genererMessageContact(bien: any): { message: string, champsManquants: s
     if (!bien.adresse) manquants.push("l'adresse exacte du bien")
     manquants.push("les travaux vot\u00e9s ou \u00e0 pr\u00e9voir dans la copropri\u00e9t\u00e9, et si oui le montant chiffr\u00e9")
 
-    msg += `Investisseur locatif, je me permets de vous contacter au sujet de votre ${typeBien} \u00e0 ${localisation} affich\u00e9 \u00e0 ${prixFmt} euros.\n\n`
+    msg += `Investisseur locatif, je me permets de vous contacter au sujet de votre ${typeBien} \u00e0 ${localisation} affich\u00e9 \u00e0 ${prixFmt} \u20AC.\n\n`
     msg += `J'\u00e9tudie actuellement ce bien dans le cadre d'un projet d'investissement et j'aurais besoin de quelques \u00e9l\u00e9ments pour finaliser mon analyse financi\u00e8re.\n\n`
   }
 
@@ -708,10 +769,13 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: string, prixFai: number, onEstimationLoaded?: (est: any) => void }) {
+function EstimationSection({ bienId, prixFai, adresseInitiale, villeInitiale, userToken, onEstimationLoaded }: { bienId: string, prixFai: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void }) {
   const [estimation, setEstimation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [adresse, setAdresse] = useState(adresseInitiale || '')
+  const [adresseEdit, setAdresseEdit] = useState(false)
+  const [adresseSaving, setAdresseSaving] = useState(false)
 
   const loadEstimation = async (force = false) => {
     setLoading(true)
@@ -726,6 +790,22 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
       else if (data.error) setError(data.error)
     } catch { setError('Erreur de connexion') }
     setLoading(false)
+  }
+
+  const saveAdresseAndRecalculate = async () => {
+    setAdresseSaving(true)
+    try {
+      // Sauvegarder l'adresse en DB
+      await fetch(`/api/biens/${bienId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) },
+        body: JSON.stringify({ adresse, latitude: null, longitude: null })
+      })
+      setAdresseEdit(false)
+      // Relancer l'estimation avec force pour re-geocoder
+      await loadEstimation(true)
+    } catch { setError('Erreur lors de la sauvegarde') }
+    setAdresseSaving(false)
   }
 
   useEffect(() => {
@@ -770,7 +850,49 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
 
   return (
     <div className="section">
-      <h2 className="section-title">{"Estimation marché DVF"}</h2>
+      <h2 className="section-title">{"Estimation march\u00E9 DVF"}</h2>
+
+      {/* --- Adresse pour affiner le géocodage --- */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '10px 16px', background: '#faf8f5', borderRadius: '8px', fontSize: '13px' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9a8a80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        {adresseEdit ? (
+          <>
+            <input
+              type="text"
+              value={adresse}
+              onChange={e => setAdresse(e.target.value)}
+              placeholder={"Ex : 12 rue de la Paix"}
+              style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+              autoFocus
+            />
+            <button
+              onClick={saveAdresseAndRecalculate}
+              disabled={adresseSaving}
+              style={{ padding: '6px 12px', borderRadius: '6px', background: '#1a1210', color: '#fff', border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              {adresseSaving ? 'Recalcul...' : 'Recalculer'}
+            </button>
+            <button
+              onClick={() => { setAdresseEdit(false); setAdresse(adresseInitiale || '') }}
+              style={{ padding: '6px 10px', borderRadius: '6px', background: 'none', border: '1px solid #e8e2d8', fontSize: '12px', color: '#9a8a80', cursor: 'pointer' }}
+            >
+              Annuler
+            </button>
+          </>
+        ) : (
+          <>
+            <span style={{ color: adresse ? '#1a1210' : '#b0a898', fontStyle: adresse ? 'normal' : 'italic', flex: 1 }}>
+              {adresse ? `${adresse}${villeInitiale ? `, ${villeInitiale}` : ''}` : 'Adresse non renseign\u00E9e \u2014 cliquez pour affiner l\u2019estimation'}
+            </span>
+            <button
+              onClick={() => setAdresseEdit(true)}
+              style={{ padding: '4px 10px', borderRadius: '6px', background: 'none', border: '1px solid #e8e2d8', fontSize: '11px', fontWeight: 600, color: '#9a8a80', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              Modifier
+            </button>
+          </>
+        )}
+      </div>
 
       {/* --- Bloc principal : 3 colonnes --- */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0', marginBottom: '24px' }}>
@@ -892,9 +1014,9 @@ export default function FicheBienPage() {
   const [duree, setDuree] = useState(20)
   const [fraisNotaire, setFraisNotaire] = useState(7.5)
   const [tmi, setTmi] = useState(30)
-  const [regime, setRegime] = useState('micro_foncier')
+  const [regime, setRegime] = useState('nu_micro_foncier')
   const [objectifCashflow, setObjectifCashflow] = useState(0)
-  const [regime2, setRegime2] = useState('reel')
+  const [regime2, setRegime2] = useState('nu_reel_foncier')
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [estimationData, setEstimationData] = useState<any>(null)
   const [dureeRevente, setDureeRevente] = useState<number>(5)
@@ -1180,7 +1302,7 @@ export default function FicheBienPage() {
           </div>
         </div>
 
-        <EstimationSection bienId={id} prixFai={bien.prix_fai} onEstimationLoaded={setEstimationData} />
+        <EstimationSection bienId={id} prixFai={bien.prix_fai} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} />
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">

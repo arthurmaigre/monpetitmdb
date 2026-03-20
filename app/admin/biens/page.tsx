@@ -113,7 +113,7 @@ export default function AdminBiensPage() {
                     <td style={{ fontFamily: 'monospace', fontSize: '11px', color: '#9a8a80' }}>{bien.id}</td>
                     <td style={{ fontWeight: 500 }}>{bien.ville}</td>
                     <td>{bien.type_bien} {bien.nb_pieces}</td>
-                    <td style={{ fontWeight: 600 }}>{bien.prix_fai ? bien.prix_fai.toLocaleString('fr-FR') + ' euros' : '-'}</td>
+                    <td style={{ fontWeight: 600 }}>{bien.prix_fai ? bien.prix_fai.toLocaleString('fr-FR') + ' \u20AC' : '-'}</td>
                     <td><input className="td-input" type="number" defaultValue={bien.loyer || ''} placeholder="NC" onBlur={e => { if (Number(e.target.value) !== bien.loyer) updateBien(bien.id, 'loyer', Number(e.target.value)) }} /></td>
                     <td>
                       <select className="td-select" value={bien.type_loyer || 'HC'} onChange={e => updateBien(bien.id, 'type_loyer', e.target.value)}>

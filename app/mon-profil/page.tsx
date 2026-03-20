@@ -4,69 +4,120 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
-const TMI_OPTIONS = [0, 11, 30, 41, 45]
-const REGIME_OPTIONS = [
-  { value: 'micro_foncier', label: 'Micro foncier' },
-  { value: 'reel', label: 'Reel' },
-  { value: 'lmnp', label: 'LMNP' },
-  { value: 'sci_is', label: 'SCI IS' },
-]
-
 export default function MonProfilPage() {
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
+  const [prenom, setPrenom] = useState('')
+  const [nom, setNom] = useState('')
+  const [telephone, setTelephone] = useState('')
+
+  // Facturation
+  const [isSociete, setIsSociete] = useState(false)
+  const [societeNom, setSocieteNom] = useState('')
+  const [siret, setSiret] = useState('')
+  const [tvaIntra, setTvaIntra] = useState('')
+  const [adresse, setAdresse] = useState('')
+  const [codePostal, setCodePostal] = useState('')
+  const [ville, setVille] = useState('')
+  const [pays, setPays] = useState('France')
+
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
   useEffect(() => {
-    async function loadProfile() {
+    async function load() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) { window.location.href = '/login'; return }
-        const res = await fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
-        if (!res.ok) throw new Error('Impossible de charger le profil')
-        const data = await res.json()
-        setProfile(data.profile)
-      } catch (err: any) {
-        setError(err.message || 'Erreur lors du chargement du profil')
+        setUser(session.user)
+
+        // Charger les metadata du profil
+        const meta = session.user.user_metadata || {}
+        setPrenom(meta.prenom || '')
+        setNom(meta.nom || '')
+        setTelephone(meta.telephone || '')
+        setIsSociete(meta.is_societe || false)
+        setSocieteNom(meta.societe_nom || '')
+        setSiret(meta.siret || '')
+        setTvaIntra(meta.tva_intra || '')
+        setAdresse(meta.adresse || '')
+        setCodePostal(meta.code_postal || '')
+        setVille(meta.ville || '')
+        setPays(meta.pays || 'France')
+      } catch {
+        setError('Impossible de charger le profil')
       } finally {
         setLoading(false)
       }
     }
-    loadProfile()
+    load()
   }, [])
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSaveInfo(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    setSuccess(false)
     setError('')
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    const res = await fetch('/api/profile', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify(profile)
-    })
-    const data = await res.json()
-    if (data.error) { setError('Erreur lors de la sauvegarde') } else { setProfile(data.profile); setSuccess(true); setTimeout(() => setSuccess(false), 3000) }
+    setSuccess('')
+    try {
+      const { error: err } = await supabase.auth.updateUser({
+        data: { prenom, nom, telephone, is_societe: isSociete, societe_nom: societeNom, siret, tva_intra: tvaIntra, adresse, code_postal: codePostal, ville, pays }
+      })
+      if (err) throw err
+      setSuccess('Informations mises \u00E0 jour')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la sauvegarde')
+    }
     setSaving(false)
   }
 
-  function update(key: string, value: any) { setProfile((p: any) => ({ ...p, [key]: value })) }
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (newPassword.length < 8) {
+      setError('Le nouveau mot de passe doit faire au moins 8 caract\u00E8res')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const { error: err } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      if (err) throw err
+      setSuccess('Mot de passe modifi\u00E9 avec succ\u00E8s')
+      setOldPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du changement de mot de passe')
+    }
+    setSaving(false)
+  }
 
   if (loading) return (
     <Layout>
       <div style={{ maxWidth: '720px', margin: '48px auto', padding: '0 24px' }}>
         <div style={{ width: '200px', height: '32px', background: '#e8e2d8', borderRadius: '8px', marginBottom: '8px', animation: 'pulse 1.5s ease infinite' }} />
         <div style={{ width: '320px', height: '16px', background: '#e8e2d8', borderRadius: '8px', marginBottom: '40px', animation: 'pulse 1.5s ease infinite', animationDelay: '0.1s' }} />
-        {[1, 2, 3].map(i => (
+        {[1, 2].map(i => (
           <div key={i} style={{ background: '#fff', borderRadius: '16px', padding: '32px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-            <div style={{ width: '120px', height: '12px', background: '#e8e2d8', borderRadius: '8px', marginBottom: '20px', animation: 'pulse 1.5s ease infinite', animationDelay: `${i * 0.15}s` }} />
+            <div style={{ width: '120px', height: '12px', background: '#e8e2d8', borderRadius: '8px', marginBottom: '20px', animation: 'pulse 1.5s ease infinite' }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={{ height: '44px', background: '#f7f4f0', borderRadius: '8px', animation: 'pulse 1.5s ease infinite', animationDelay: `${i * 0.15 + 0.1}s` }} />
-              <div style={{ height: '44px', background: '#f7f4f0', borderRadius: '8px', animation: 'pulse 1.5s ease infinite', animationDelay: `${i * 0.15 + 0.2}s` }} />
+              <div style={{ height: '44px', background: '#f7f4f0', borderRadius: '8px', animation: 'pulse 1.5s ease infinite' }} />
+              <div style={{ height: '44px', background: '#f7f4f0', borderRadius: '8px', animation: 'pulse 1.5s ease infinite' }} />
             </div>
           </div>
         ))}
@@ -78,165 +129,165 @@ export default function MonProfilPage() {
   return (
     <Layout>
       <style>{`
-        .profil-wrap { max-width: 720px; margin: 48px auto; padding: 0 24px; }
-        .profil-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; color: #1a1210; }
-        .profil-sub { font-size: 16px; color: #9a8a80; margin-bottom: 40px; line-height: 1.5; }
-        .profil-section { background: #fff; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-        .profil-section-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1210; margin-bottom: 8px; padding-bottom: 12px; border-bottom: 2px solid #e8e2d8; }
-        .profil-section-desc { font-size: 14px; color: #9a8a80; margin-bottom: 20px; }
-        .profil-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .profil-field { display: flex; flex-direction: column; gap: 4px; }
-        .profil-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.06em; text-transform: uppercase; }
-        .profil-input, .profil-select { padding: 12px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1210; background: #faf8f5; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; }
-        .profil-input:focus, .profil-select:focus { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192,57,43,0.1); }
-        .profil-hint { font-size: 12px; color: #bfb2a6; margin-top: 4px; }
-        .tmi-options { display: flex; gap: 8px; flex-wrap: wrap; }
-        .tmi-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #faf8f5; color: #9a8a80; }
-        .tmi-btn:hover { border-color: #1a1210; color: #1a1210; background: #fff; }
-        .tmi-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; box-shadow: 0 2px 8px rgba(26,18,16,0.2); }
-        .save-btn { width: 100%; padding: 16px; border-radius: 12px; border: none; background: #c0392b; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: opacity 150ms ease, transform 150ms ease; }
-        .save-btn:hover { opacity: 0.85; }
-        .save-btn:active { transform: scale(0.99); }
-        .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .profil-toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); z-index: 100; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.15); animation: toastSlideUp 300ms ease; }
-        .profil-toast-success { background: #1a7a40; color: #fff; }
-        .profil-toast-error { background: #e74c3c; color: #fff; }
-        @keyframes toastSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(16px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-        .profil-error { background: #fdedec; color: #e74c3c; border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; }
+        .mp-wrap { max-width: 720px; margin: 48px auto; padding: 0 24px; }
+        .mp-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; color: #1a1210; }
+        .mp-sub { font-size: 16px; color: #9a8a80; margin-bottom: 40px; line-height: 1.5; }
+        .mp-section { background: #fff; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .mp-section-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1210; margin-bottom: 8px; padding-bottom: 12px; border-bottom: 2px solid #e8e2d8; }
+        .mp-section-desc { font-size: 14px; color: #9a8a80; margin-bottom: 20px; }
+        .mp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .mp-field { display: flex; flex-direction: column; gap: 4px; }
+        .mp-field-full { display: flex; flex-direction: column; gap: 4px; grid-column: 1 / -1; }
+        .mp-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.06em; text-transform: uppercase; }
+        .mp-input { padding: 12px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1210; background: #faf8f5; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; }
+        .mp-input:focus { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192,57,43,0.1); }
+        .mp-input:disabled { background: #f0ede8; color: #9a8a80; cursor: not-allowed; }
+        .mp-hint { font-size: 12px; color: #bfb2a6; margin-top: 4px; }
+        .mp-toggle { padding: 8px 20px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #faf8f5; color: #9a8a80; }
+        .mp-toggle:hover { border-color: #1a1210; color: #1a1210; }
+        .mp-toggle.active { background: #1a1210; color: #fff; border-color: #1a1210; }
+        .mp-btn { width: 100%; padding: 14px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 150ms ease; margin-top: 8px; }
+        .mp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .mp-btn-primary { background: #c0392b; color: #fff; }
+        .mp-btn-primary:hover:not(:disabled) { opacity: 0.85; }
+        .mp-btn-secondary { background: #1a1210; color: #fff; }
+        .mp-btn-secondary:hover:not(:disabled) { opacity: 0.85; }
+        .mp-link { display: inline-block; margin-top: 20px; padding: 12px 24px; border-radius: 10px; border: 1.5px solid #e8e2d8; text-decoration: none; font-size: 14px; font-weight: 600; color: #1a1210; transition: all 150ms ease; }
+        .mp-link:hover { border-color: #1a1210; background: rgba(0,0,0,0.03); }
+        .mp-toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); z-index: 100; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.15); animation: mpToast 300ms ease; }
+        .mp-toast-ok { background: #1a7a40; color: #fff; }
+        .mp-toast-err { background: #e74c3c; color: #fff; }
+        @keyframes mpToast { from { opacity: 0; transform: translateX(-50%) translateY(16px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .mp-error { background: #fdedec; color: #e74c3c; border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; }
+        .mp-avatar-big { width: 64px; height: 64px; border-radius: 50%; background: #c0392b; color: #fff; font-size: 24px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
         @media (max-width: 768px) {
-          .profil-wrap { padding: 0 16px; margin: 24px auto; }
-          .profil-title { font-size: 24px; }
-          .profil-section { padding: 24px 16px; }
-          .profil-grid { grid-template-columns: 1fr; }
-          .tmi-options { gap: 4px; }
-          .tmi-btn { padding: 8px 12px; font-size: 12px; }
+          .mp-wrap { padding: 0 16px; margin: 24px auto; }
+          .mp-title { font-size: 24px; }
+          .mp-section { padding: 24px 16px; }
+          .mp-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
-      <div className="profil-wrap">
-        <h1 className="profil-title">Mon profil</h1>
-        <p className="profil-sub">Vos paramètres sont utilisés automatiquement dans le simulateur fiscal.</p>
+      <div className="mp-wrap">
+        <h1 className="mp-title">Mon Profil</h1>
+        <p className="mp-sub">{"G\u00E9rez vos informations personnelles et votre mot de passe."}</p>
 
-        {error && <div className="profil-error" role="alert">{error}</div>}
-        {success && <div className="profil-toast profil-toast-success" role="status">Profil sauvegardé avec succès</div>}
+        {error && <div className="mp-error" role="alert">{error}</div>}
+        {success && <div className="mp-toast mp-toast-ok" role="status">{success}</div>}
 
-        <form onSubmit={handleSave}>
+        {/* Informations personnelles */}
+        <form onSubmit={handleSaveInfo}>
+          <div className="mp-section">
+            <h2 className="mp-section-title">Informations personnelles</h2>
+            <p className="mp-section-desc">{"Ces informations sont priv\u00E9es et ne sont pas partag\u00E9es."}</p>
 
-          <div className="profil-section">
-            <h2 className="profil-section-title">Fiscalité</h2>
-            <p className="profil-section-desc">Votre situation fiscale pour les simulations de rendement net.</p>
-            <div className="profil-field" style={{ marginBottom: '20px' }}>
-              <label className="profil-label" id="tmi-label">Tranche marginale d'imposition (TMI)</label>
-              <div className="tmi-options" role="group" aria-labelledby="tmi-label">
-                {TMI_OPTIONS.map(t => (
-                  <button key={t} type="button" className={`tmi-btn ${profile?.tmi === t ? 'active' : ''}`} onClick={() => update('tmi', t)} aria-pressed={profile?.tmi === t} aria-label={`TMI ${t} pourcent`}>{t} %</button>
-                ))}
+            <div className="mp-avatar-big">{(prenom || user?.email || '?')[0].toUpperCase()}</div>
+
+            <div className="mp-grid">
+              <div className="mp-field">
+                <label className="mp-label" htmlFor="prenom-input">{"Pr\u00E9nom"}</label>
+                <input id="prenom-input" className="mp-input" type="text" value={prenom} onChange={e => { const v = e.target.value; setPrenom(v.charAt(0).toUpperCase() + v.slice(1)) }} placeholder={"Votre pr\u00E9nom"} />
+              </div>
+              <div className="mp-field">
+                <label className="mp-label" htmlFor="nom-input">Nom</label>
+                <input id="nom-input" className="mp-input" type="text" value={nom} onChange={e => { const v = e.target.value; setNom(v.charAt(0).toUpperCase() + v.slice(1)) }} placeholder="Votre nom" />
+              </div>
+              <div className="mp-field">
+                <label className="mp-label" htmlFor="email-display">Adresse email</label>
+                <input id="email-display" className="mp-input" type="email" value={user?.email || ''} disabled />
+                <span className="mp-hint">{"L\u2019email ne peut pas \u00EAtre modifi\u00E9 directement. Contactez-nous si n\u00E9cessaire."}</span>
+              </div>
+              <div className="mp-field">
+                <label className="mp-label" htmlFor="tel-input">{"T\u00E9l\u00E9phone"}</label>
+                <input id="tel-input" className="mp-input" type="tel" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="06 12 34 56 78" />
               </div>
             </div>
-            <div className="profil-field">
-              <label className="profil-label" htmlFor="regime-select">Régime fiscal préféré</label>
-              <select id="regime-select" className="profil-select" value={profile?.regime || 'micro_foncier'} onChange={e => update('regime', e.target.value)} aria-label="Régime fiscal">
-                {REGIME_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
-            </div>
+
           </div>
 
-          <div className="profil-section">
-            <h2 className="profil-section-title">Financement</h2>
-            <p className="profil-section-desc">Paramètres de crédit utilisés pour calculer la mensualité et le cashflow.</p>
-            <div className="profil-grid">
-              <div className="profil-field">
-                <label className="profil-label" htmlFor="apport-input">Apport (euros)</label>
-                <input id="apport-input" className="profil-input" type="number" value={profile?.apport ?? ''} onChange={e => update('apport', Number(e.target.value))} aria-label="Montant de l'apport en euros" />
-                <span className="profil-hint">Montant que vous pouvez investir</span>
-              </div>
-              <div className="profil-field">
-                <label className="profil-label" htmlFor="taux-credit-input">Taux crédit (%)</label>
-                <input id="taux-credit-input" className="profil-input" type="number" step="0.01" value={profile?.taux_credit || ''} onChange={e => update('taux_credit', Number(e.target.value))} aria-label="Taux du crédit en pourcentage" />
-              </div>
-              <div className="profil-field">
-                <label className="profil-label" htmlFor="taux-assurance-input">Taux assurance (%)</label>
-                <input id="taux-assurance-input" className="profil-input" type="number" step="0.01" value={profile?.taux_assurance ?? 0.3} onChange={e => update('taux_assurance', Number(e.target.value))} aria-label="Taux de l'assurance en pourcentage" />
-                <span className="profil-hint">Taux moyen ADI décès-PTIA</span>
-              </div>
-              <div className="profil-field">
-                <label className="profil-label" htmlFor="duree-input">Durée (ans)</label>
-                <input id="duree-input" className="profil-input" type="number" value={profile?.duree_ans || ''} onChange={e => update('duree_ans', Number(e.target.value))} aria-label="Durée du crédit en années" />
-              </div>
-              <div className="profil-field">
-                <label className="profil-label" htmlFor="frais-notaire-input">Frais de notaire (%)</label>
-                <input id="frais-notaire-input" className="profil-input" type="number" step="0.1" value={profile?.frais_notaire || ''} onChange={e => update('frais_notaire', Number(e.target.value))} aria-label="Frais de notaire en pourcentage" />
-                <span className="profil-hint">~7.5% ancien, ~2.5% neuf</span>
-              </div>
-              <div className="profil-field">
-                <label className="profil-label" htmlFor="objectif-cashflow-input">Objectif cashflow (% du FAI)</label>
-                <input id="objectif-cashflow-input" className="profil-input" type="number" step="0.1" value={profile?.objectif_cashflow ?? 0} onChange={e => update('objectif_cashflow', Number(e.target.value))} aria-label="Objectif de cashflow en pourcentage du prix FAI" />
-                <span className="profil-hint">0 = équilibre | 5 = +5% du prix FAI/an</span>
+          {/* Facturation */}
+          <div className="mp-section">
+            <h2 className="mp-section-title">Facturation</h2>
+            <p className="mp-section-desc">{"Informations utilis\u00E9es pour vos factures d\u2019abonnement."}</p>
+
+            <div className="mp-field" style={{ marginBottom: '20px' }}>
+              <label className="mp-label">Type de compte</label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button type="button" className={`mp-toggle ${!isSociete ? 'active' : ''}`} onClick={() => setIsSociete(false)}>Particulier</button>
+                <button type="button" className={`mp-toggle ${isSociete ? 'active' : ''}`} onClick={() => setIsSociete(true)}>{"Soci\u00E9t\u00E9"}</button>
               </div>
             </div>
-          </div>
 
-          <div className="profil-section">
-            <h2 className="profil-section-title">Budget travaux au m2</h2>
-            <p className="profil-section-desc">Ajustez le coût estimé par m2 pour chaque niveau de travaux.</p>
-            <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.6', marginBottom: '16px' }}>
-              {"Chaque bien en stratégie Travaux lourds reçoit un score de 1 à 5 par notre IA, basé sur l'analyse des photos et de la description de l'annonce. Ce score reflète l'ampleur des travaux à prévoir."}
-            </p>
-            <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.6', marginBottom: '20px' }}>
-              {"Les valeurs pré-remplies sont nos estimations actuelles du coût moyen des travaux au m² pour chaque niveau. Elles nous paraissent réalistes, mais restent indicatives. N'hésitez pas à les ajuster selon votre expérience, votre région ou vos artisans. Ces valeurs seront utilisées pour estimer le budget total de rénovation sur les fiches biens."}
-            </p>
-            <div style={{ background: '#faf8f5', borderRadius: '12px', padding: '24px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>Score</th>
-                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{"Niveau de travaux"}</th>
-                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{"Exemples"}</th>
-                    <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{"Budget euros/m2"}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { score: '1', label: 'Rafraîchissement', desc: 'Peinture, sol, petites finitions', color: '#1a7a40', bg: '#d4f5e0' },
-                    { score: '2', label: 'Travaux légers', desc: 'Cuisine, salle de bain, électricité partielle', color: '#3a8a20', bg: '#e0f5d4' },
-                    { score: '3', label: 'Travaux moyens', desc: 'Rénovation complète intérieure, plomberie, électricité', color: '#a06010', bg: '#fff8f0' },
-                    { score: '4', label: 'Travaux lourds', desc: 'Reprise structure partielle, toiture, façade, redistribution', color: '#c0392b', bg: '#fde8e8' },
-                    { score: '5', label: 'Réhabilitation complète', desc: 'Ruine, tout à refaire : structure, charpente, planchers, réseaux', color: '#8b0000', bg: '#fde0e0' },
-                  ].map(row => (
-                    <tr key={row.score}>
-                      <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', color: row.color, background: row.bg }}>{row.score}</span>
-                      </td>
-                      <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8', fontWeight: 600, fontSize: '13px', color: '#1a1210' }}>{row.label}</td>
-                      <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8', fontSize: '12px', color: '#9a8a80' }}>{row.desc}</td>
-                      <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8', textAlign: 'right' }}>
-                        <input
-                          className="profil-input"
-                          type="number"
-                          step="50"
-                          style={{ width: '100px', textAlign: 'right' }}
-                          aria-label={`Budget euros par m2 pour score ${row.score} - ${row.label}`}
-                          value={(profile?.budget_travaux_m2 || { '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })[row.score] ?? ''}
-                          onChange={e => {
-                            const current = profile?.budget_travaux_m2 || { '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 }
-                            update('budget_travaux_m2', { ...current, [row.score]: Number(e.target.value) })
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {isSociete && (
+              <div className="mp-grid" style={{ marginBottom: '16px' }}>
+                <div className="mp-field">
+                  <label className="mp-label" htmlFor="societe-input">{"Raison sociale"}</label>
+                  <input id="societe-input" className="mp-input" type="text" value={societeNom} onChange={e => setSocieteNom(e.target.value)} placeholder={"Nom de la soci\u00E9t\u00E9"} />
+                </div>
+                <div className="mp-field">
+                  <label className="mp-label" htmlFor="siret-input">SIRET</label>
+                  <input id="siret-input" className="mp-input" type="text" value={siret} onChange={e => setSiret(e.target.value.replace(/\D/g, '').slice(0, 14))} placeholder="14 chiffres" maxLength={14} />
+                </div>
+                <div className="mp-field">
+                  <label className="mp-label" htmlFor="tva-input">{"N\u00B0 TVA intracommunautaire"}</label>
+                  <input id="tva-input" className="mp-input" type="text" value={tvaIntra} onChange={e => setTvaIntra(e.target.value.toUpperCase())} placeholder="FR 12 345678901" />
+                  <span className="mp-hint">Optionnel</span>
+                </div>
+              </div>
+            )}
+
+            <div className="mp-grid">
+              <div className="mp-field-full">
+                <label className="mp-label" htmlFor="adresse-input">Adresse</label>
+                <input id="adresse-input" className="mp-input" type="text" value={adresse} onChange={e => setAdresse(e.target.value)} placeholder={"Num\u00E9ro et nom de rue"} />
+              </div>
+              <div className="mp-field">
+                <label className="mp-label" htmlFor="cp-input">Code postal</label>
+                <input id="cp-input" className="mp-input" type="text" value={codePostal} onChange={e => setCodePostal(e.target.value.replace(/\D/g, '').slice(0, 5))} placeholder="75001" maxLength={5} />
+              </div>
+              <div className="mp-field">
+                <label className="mp-label" htmlFor="ville-input">Ville</label>
+                <input id="ville-input" className="mp-input" type="text" value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" />
+              </div>
+              <div className="mp-field">
+                <label className="mp-label" htmlFor="pays-input">Pays</label>
+                <input id="pays-input" className="mp-input" type="text" value={pays} onChange={e => setPays(e.target.value)} />
+              </div>
             </div>
-            <p style={{ fontSize: '12px', color: '#bfb2a6', marginTop: '12px', fontStyle: 'italic' }}>
-              {"Ces montants sont indicatifs et varient selon la région, l'état réel du bien et la qualité des finitions souhaitées."}
-            </p>
-          </div>
 
-          <button className="save-btn" type="submit" disabled={saving} aria-label="Sauvegarder mon profil">
-            {saving ? 'Sauvegarde en cours...' : 'Sauvegarder mon profil'}
-          </button>
+            <button className="mp-btn mp-btn-primary" type="submit" disabled={saving}>
+              {saving ? 'Sauvegarde...' : 'Enregistrer mes informations'}
+            </button>
+          </div>
         </form>
+
+        {/* Changement de mot de passe */}
+        <form onSubmit={handleChangePassword}>
+          <div className="mp-section">
+            <h2 className="mp-section-title">Mot de passe</h2>
+            <p className="mp-section-desc">{"Modifiez votre mot de passe. Minimum 8 caract\u00E8res."}</p>
+
+            <div className="mp-grid">
+              <div className="mp-field-full">
+                <label className="mp-label" htmlFor="new-pw">Nouveau mot de passe</label>
+                <input id="new-pw" className="mp-input" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder={"8 caract\u00E8res minimum"} />
+              </div>
+              <div className="mp-field-full">
+                <label className="mp-label" htmlFor="confirm-pw">Confirmer le mot de passe</label>
+                <input id="confirm-pw" className="mp-input" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={"Retapez le mot de passe"} />
+              </div>
+            </div>
+
+            <button className="mp-btn mp-btn-secondary" type="submit" disabled={saving || !newPassword}>
+              {saving ? 'Modification...' : 'Changer mon mot de passe'}
+            </button>
+          </div>
+        </form>
+
+        {/* Lien vers paramètres */}
+        <a href="/parametres" className="mp-link">
+          {"Mes param\u00E8tres fiscaux et financement \u2192"}
+        </a>
       </div>
     </Layout>
   )

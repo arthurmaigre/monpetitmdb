@@ -52,7 +52,7 @@ export async function PATCH(
 
   const { data: bien } = await supabaseAdmin
     .from('biens')
-    .select('loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, prix_fai')
+    .select('loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, prix_fai, adresse, latitude, longitude')
     .eq('id', id)
     .maybeSingle()
 
@@ -65,14 +65,15 @@ export async function PATCH(
 
   const champsUserEdits = new Set(userEdits?.map((e: any) => e.champ) || [])
 
-  const champsAutorises = ['loyer', 'type_loyer', 'charges_rec', 'charges_copro', 'taxe_fonc_ann']
+  const champsAutorises = ['loyer', 'type_loyer', 'charges_rec', 'charges_copro', 'taxe_fonc_ann', 'adresse', 'latitude', 'longitude']
   const updates: any = {}
   const audits: any[] = []
 
   for (const champ of champsAutorises) {
     if (body[champ] === undefined) continue
     const valeurActuelle = (bien as any)[champ]
-    if (valeurActuelle === null || champsUserEdits.has(champ)) {
+    const champsLibres = ['adresse', 'latitude', 'longitude']
+    if (valeurActuelle === null || champsUserEdits.has(champ) || champsLibres.includes(champ)) {
       updates[champ] = body[champ]
       audits.push({
         bien_id: id,

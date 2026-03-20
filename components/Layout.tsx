@@ -11,21 +11,61 @@ interface Props {
 
 export default function Layout({ children }: Props) {
   const [user, setUser] = useState<any>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+      if (data.user) {
+        fetch('/api/profile', { headers: { Authorization: `Bearer ${data.user.id}` } })
+          .catch(() => {})
+      }
+    })
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (session?.access_token) {
+        fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
+          .then(r => r.json())
+          .then(d => { if (d.profile?.role) setUserRole(d.profile.role) })
+          .catch(() => {})
+      } else {
+        setUserRole(null)
+      }
     })
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // Close mobile menu on route change
+  // Charger le role au mount
+  useEffect(() => {
+    if (!user) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then(r => r.json())
+        .then(d => { if (d.profile?.role) setUserRole(d.profile.role) })
+        .catch(() => {})
+    })
+  }, [user])
+
+  // Close menus on route change
   useEffect(() => {
     setMenuOpen(false)
+    setUserMenuOpen(false)
   }, [pathname])
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement
+      if (!target.closest('.user-pill-wrap')) setUserMenuOpen(false)
+    }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [userMenuOpen])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -142,17 +182,21 @@ export default function Layout({ children }: Props) {
         }
         .btn-login:hover { border-color: ${theme.colors.ink}; background: rgba(0,0,0,0.03); /* theme.colors.ink 3% */ }
 
+        .user-pill-wrap { position: relative; }
         .user-pill {
           display: flex;
           align-items: center;
           gap: 8px;
           padding: 4px 8px 4px 12px;
           border-radius: 20px;
-          background: rgba(0,0,0,0.04); /* theme.colors.ink 4% */
+          background: rgba(0,0,0,0.04);
           text-decoration: none;
           transition: background 150ms ease;
+          cursor: pointer;
+          border: none;
+          font-family: ${theme.fonts.body};
         }
-        .user-pill:hover { background: rgba(0,0,0,0.07); /* theme.colors.ink 7% */ }
+        .user-pill:hover { background: rgba(0,0,0,0.07); }
         .user-email { font-size: 12px; color: ${theme.colors.muted}; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .user-avatar {
           width: 24px; height: 24px; border-radius: 50%;
@@ -160,6 +204,27 @@ export default function Layout({ children }: Props) {
           color: #fff; font-size: 11px; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
         }
+        .user-dropdown {
+          position: absolute; top: calc(100% + 8px); right: 0;
+          background: #fff; border: 1.5px solid ${theme.colors.sand}; border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+          min-width: 200px; padding: 8px 0; z-index: 110;
+          opacity: 0; pointer-events: none; transform: translateY(-4px);
+          transition: all 150ms ease;
+        }
+        .user-dropdown.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .user-dropdown-item {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 16px; font-size: 13px; font-weight: 500;
+          color: ${theme.colors.ink}; text-decoration: none;
+          transition: background 150ms ease; border: none;
+          background: none; width: 100%; cursor: pointer;
+          font-family: ${theme.fonts.body}; text-align: left;
+        }
+        .user-dropdown-item:hover { background: ${theme.colors.sandLight}; }
+        .user-dropdown-item svg { color: ${theme.colors.muted}; flex-shrink: 0; }
+        .user-dropdown-sep { height: 1px; background: ${theme.colors.sand}; margin: 6px 0; }
+        .user-dropdown-item.logout { color: ${theme.colors.primary}; }
 
         .btn-logout {
           padding: 8px 16px;
@@ -370,32 +435,73 @@ export default function Layout({ children }: Props) {
               href="/biens"
               className="mdb-nav-link"
               aria-current={isActive('/biens') ? 'page' : undefined}
-              aria-label="Voir tous les biens"
             >
-              Biens
+              Biens Immobiliers
             </a>
             <a
-              href="/mes-biens"
-              className="nav-watchlist"
-              aria-current={isActive('/mes-biens') ? 'page' : undefined}
-              aria-label="Ma watchlist de biens favoris"
+              href="/strategies"
+              className="mdb-nav-link"
+              aria-current={isActive('/strategies') ? 'page' : undefined}
             >
-              <svg className="nav-heart" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-              Watchlist
+              {"Strat\u00E9gies MDB"}
+            </a>
+            <a
+              href="/blog"
+              className="mdb-nav-link"
+              aria-current={isActive('/blog') ? 'page' : undefined}
+            >
+              Conseils
             </a>
             <div className="mdb-nav-sep" role="separator" aria-hidden="true" />
             {user ? (
               <>
-                <a href="/mon-profil" className="user-pill" aria-label="Mon profil">
-                  <span className="user-email">{user.email}</span>
-                  <span className="user-avatar" aria-hidden="true">{(user.email || '?')[0].toUpperCase()}</span>
+                <a
+                  href="/mes-biens"
+                  className="nav-watchlist"
+                  aria-current={isActive('/mes-biens') ? 'page' : undefined}
+                >
+                  <svg className="nav-heart" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                  Watchlist
                 </a>
-                <button className="btn-logout" onClick={handleLogout} aria-label="Se déconnecter">Déconnexion</button>
+                <div className="user-pill-wrap">
+                  <button className="user-pill" onClick={() => setUserMenuOpen(!userMenuOpen)} aria-expanded={userMenuOpen} aria-haspopup="true">
+                    <span className="user-email">{user.email}</span>
+                    <span className="user-avatar" aria-hidden="true">{(user.email || '?')[0].toUpperCase()}</span>
+                  </button>
+                  <div className={`user-dropdown ${userMenuOpen ? 'open' : ''}`}>
+                    <a href="/mon-profil" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      Mon Profil
+                    </a>
+                    <a href="/parametres" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                      {"Mes param\u00E8tres"}
+                    </a>
+                    <a href="/mes-biens" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      Ma Watchlist
+                    </a>
+                    {userRole === 'admin' && (
+                      <>
+                        <div className="user-dropdown-sep" />
+                        <a href="/admin/biens" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                          Administration
+                        </a>
+                      </>
+                    )}
+                    <div className="user-dropdown-sep" />
+                    <button className="user-dropdown-item logout" onClick={() => { setUserMenuOpen(false); handleLogout() }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                      {"D\u00E9connexion"}
+                    </button>
+                  </div>
+                </div>
               </>
             ) : (
-              <a href="/login" className="btn-login" aria-label="Se connecter à votre compte">Se connecter</a>
+              <a href="/login" className="btn-login" aria-label="Se connecter">Se connecter</a>
             )}
           </nav>
 
@@ -440,30 +546,41 @@ export default function Layout({ children }: Props) {
             aria-current={isActive('/biens') ? 'page' : undefined}
             aria-label="Voir tous les biens"
           >
-            Biens
+            Biens Immobiliers
           </a>
           <a
-            href="/mes-biens"
-            className="nav-watchlist"
-            aria-current={isActive('/mes-biens') ? 'page' : undefined}
-            aria-label="Ma watchlist de biens favoris"
+            href="/strategies"
+            className="mdb-nav-link"
+            aria-current={isActive('/strategies') ? 'page' : undefined}
           >
-            <svg className="nav-heart" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-            Watchlist
+            {"Strat\u00E9gies MDB"}
+          </a>
+          <a
+            href="/blog"
+            className="mdb-nav-link"
+            aria-current={isActive('/blog') ? 'page' : undefined}
+          >
+            Conseils
           </a>
           <div className="mdb-nav-sep" role="separator" aria-hidden="true" />
           {user ? (
             <>
-              <a href="/mon-profil" className="user-pill" aria-label="Mon profil">
-                <span className="user-email">{user.email}</span>
-                <span className="user-avatar" aria-hidden="true">{(user.email || '?')[0].toUpperCase()}</span>
+              <a
+                href="/mes-biens"
+                className="nav-watchlist"
+                aria-current={isActive('/mes-biens') ? 'page' : undefined}
+              >
+                <svg className="nav-heart" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                Watchlist
               </a>
-              <button className="btn-logout" onClick={handleLogout} aria-label="Se déconnecter">Déconnexion</button>
+              <a href="/mon-profil" className="mdb-nav-link" aria-current={isActive('/mon-profil') ? 'page' : undefined}>Mon Profil</a>
+              <a href="/parametres" className="mdb-nav-link" aria-current={isActive('/parametres') ? 'page' : undefined}>{"Mes param\u00E8tres"}</a>
+              <button className="btn-logout" onClick={handleLogout} aria-label="Se d\u00E9connecter">{"D\u00E9connexion"}</button>
             </>
           ) : (
-            <a href="/login" className="btn-login" aria-label="Se connecter à votre compte">Se connecter</a>
+            <a href="/login" className="btn-login" aria-label="Se connecter">Se connecter</a>
           )}
         </nav>
 
@@ -486,8 +603,9 @@ export default function Layout({ children }: Props) {
               <div className="mdb-footer-col">
                 <div className="mdb-footer-col-title">Plateforme</div>
                 <a href="/biens" className="mdb-footer-link" aria-label="Voir les biens">Biens</a>
-                <a href="/tarifs" className="mdb-footer-link" aria-label="Voir les tarifs">Tarifs</a>
-                <a href="/blog" className="mdb-footer-link" aria-label="Lire le blog">Blog</a>
+                <a href="/strategies" className="mdb-footer-link" aria-label="Les strat\u00E9gies">{"Strat\u00E9gies"}</a>
+                <a href="/blog" className="mdb-footer-link" aria-label="Conseils et guides">Conseils</a>
+                <a href="/#pricing" className="mdb-footer-link" aria-label="Voir les tarifs">Tarifs</a>
               </div>
               <div className="mdb-footer-col">
                 <div className="mdb-footer-col-title">Support</div>

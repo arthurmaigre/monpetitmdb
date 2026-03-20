@@ -15,7 +15,7 @@ interface Props {
 }
 
 function formatPrix(n: number) {
-  return n ? n.toLocaleString('fr-FR') + ' euros' : '-'
+  return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
 }
 
 function getPhotos(bien: any): string[] {

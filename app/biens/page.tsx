@@ -12,7 +12,7 @@ import { TYPES_BIEN, TRIS } from '@/lib/constants'
 import { calculerCashflow } from '@/lib/calculs'
 
 function formatPrix(n: number) {
-  return n ? n.toLocaleString('fr-FR') + ' euros' : '-'
+  return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
 }
 
 function getSessionFilters() {
@@ -354,8 +354,8 @@ export default function BiensPage() {
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 150ms ease; }
         .td-heart:hover { transform: scale(1.2); }
         .edit-hint { font-size: 12px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
-        .commune-wrap { position: relative; }
-        .commune-input { padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #f7f4f0; color: #1a1210; outline: none; transition: border-color 150ms ease; width: 320px; }
+        .commune-wrap { position: relative; flex: 1; display: flex; }
+        .commune-input { padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #f7f4f0; color: #1a1210; outline: none; transition: border-color 150ms ease; min-width: 280px; width: auto; flex: 1; }
         .commune-input:focus { border-color: #c0392b; }
         .commune-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: #9a8a80; padding: 2px 6px; }
         .commune-clear:hover { color: #c0392b; }
@@ -420,13 +420,13 @@ export default function BiensPage() {
             </select>
           </div>
           <div className="filter-sep" />
-          <div className="filter-group">
+          <div className="filter-group" style={{ flex: 1 }}>
             <label className="filter-label">Localisation</label>
             <div className="commune-wrap">
               <input
                 className="commune-input"
                 type="text"
-                placeholder="Ville, code postal, département, région..."
+                placeholder="Rechercher une ville, un département..."
                 value={communeSearch}
                 onChange={e => handleCommuneSearch(e.target.value)}
                 onFocus={() => { if (communeSuggestions.length > 0) setShowSuggestions(true) }}
@@ -446,36 +446,36 @@ export default function BiensPage() {
             </div>
           </div>
           <div className="filter-group">
-            <label className="filter-label">Type de bien</label>
+            <label className="filter-label">Type</label>
             <select value={typeBien} onChange={e => setTypeBien(e.target.value)}>
               {TYPES_BIEN.map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <div className="filter-sep" />
           <div className="filter-group">
-            <label className="filter-label">Prix minimum</label>
-            <input type="number" placeholder="ex: 80000" value={prixMin} onChange={e => setPrixMin(e.target.value)} />
+            <label className="filter-label">Prix min</label>
+            <input type="number" placeholder={"50 000 \u20AC"} value={prixMin} onChange={e => setPrixMin(e.target.value)} style={{ width: '120px' }} />
           </div>
           <div className="filter-group">
-            <label className="filter-label">Prix maximum</label>
-            <input type="number" placeholder="ex: 200000" value={prixMax} onChange={e => setPrixMax(e.target.value)} />
+            <label className="filter-label">Prix max</label>
+            <input type="number" placeholder={"300 000 \u20AC"} value={prixMax} onChange={e => setPrixMax(e.target.value)} style={{ width: '120px' }} />
           </div>
           {strategie !== 'Travaux lourds' && (
             <div className="filter-group">
-              <label className="filter-label">Rendement minimum</label>
-              <input type="number" placeholder="ex: 5" value={rendMin} onChange={e => setRendMin(e.target.value)} />
+              <label className="filter-label">Rdt brut min</label>
+              <input type="number" placeholder="5 %" step="0.5" value={rendMin} onChange={e => setRendMin(e.target.value)} style={{ width: '80px' }} />
             </div>
           )}
           {strategie === 'Travaux lourds' && (
             <div className="filter-group">
-              <label className="filter-label">Score travaux min</label>
+              <label className="filter-label">Score travaux</label>
               <select value={scoreTravauxMin} onChange={e => setScoreTravauxMin(e.target.value)}>
                 <option value="">Tous</option>
-                <option value="1">1 - Rafraîchissement</option>
-                <option value="2">2 - Travaux légers</option>
-                <option value="3">3 - Rénovation moyenne</option>
-                <option value="4">4 - Gros travaux</option>
-                <option value="5">5 - Réhabilitation</option>
+                <option value="1">1 - Rafra{'\u00EE'}chissement</option>
+                <option value="2">2 - L{'\u00E9'}gers</option>
+                <option value="3">3 - Moyens</option>
+                <option value="4">4 - Lourds</option>
+                <option value="5">5 - R{'\u00E9'}habilitation</option>
               </select>
             </div>
           )}
@@ -634,7 +634,7 @@ export default function BiensPage() {
                           const resultat = peutCalculer ? calculerCashflow(
                             { prix_fai: bien.prix_fai, loyer: bien.loyer, type_loyer: bien.type_loyer, charges_rec: bien.charges_rec || 0, charges_copro: bien.charges_copro || 0, taxe_fonc_ann: bien.taxe_fonc_ann || 0, surface: bien.surface },
                             { apport: 20000, tauxCredit: 3.5, tauxAssurance: 0.3, dureeAns: 20, fraisNotaire: 7.5, objectifCashflow: 0 },
-                            { tmi: 30, regime: 'micro_foncier' }
+                            { tmi: 30, regime: 'nu_micro_foncier' }
                           ) : null
                           const ecartPct = resultat ? ((resultat.prix_cible - bien.prix_fai) / bien.prix_fai * 100) : null
                           const isLocataire = strategie !== 'Travaux lourds'
@@ -658,7 +658,7 @@ export default function BiensPage() {
                                 ) : resultat && resultat.prix_cible >= bien.prix_fai ? null : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                               </td>
                             )}
-                            <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2.toLocaleString('fr-FR')} euros` : '-'}</td>
+                            <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
                             {!isLocataire ? (
                               <>
                                 <td>
@@ -673,7 +673,7 @@ export default function BiensPage() {
                                     (() => {
                                       const budget = budgetTravauxM2[String((bien as any).score_travaux)] || 0
                                       const total = Math.round(budget * bien.surface)
-                                      return <span style={{ fontWeight: 500 }}>{total.toLocaleString('fr-FR')} euros</span>
+                                      return <span style={{ fontWeight: 500 }}>{total.toLocaleString('fr-FR')} {'\u20AC'}</span>
                                     })()
                                   ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>
@@ -691,15 +691,15 @@ export default function BiensPage() {
                               </>
                             ) : (
                               <>
-                                <td><CellEditable bien={bien} champ="loyer" suffix={` euros`} /></td>
+                                <td><CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} /></td>
                                 <td><CellTypeLoyer bien={bien} /></td>
-                                <td><CellEditable bien={bien} champ="charges_rec" suffix={` euros`} /></td>
-                                <td><CellEditable bien={bien} champ="charges_copro" suffix={` euros`} /></td>
-                                <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` euros`} /></td>
+                                <td><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
+                                <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
+                                <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
-                                  {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} euros` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
+                                  {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>
                                 <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire || '-'}</td>
                               </>
