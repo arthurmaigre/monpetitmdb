@@ -2,17 +2,18 @@
 
 ## Projet
 SaaS de sourcing immobilier pour investisseurs particuliers (methodologie marchand de biens).
-Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Decoupe**.
-Territoire : France entiere.
-Modele freemium : Free / Pro ~19€ / Expert ~49€.
+Strategies : **Locataire en place** / **Travaux lourds** / **Division (Immeuble de rapport)** / **Decoupe (Revente a la decoupe)**.
+Territoire : France entiere, 22 metropoles.
+Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 1 strategie, 2 regimes) / Expert 49€ (illimite, toutes strategies, tous regimes).
 
 ## Stack
-- **Frontend** : Next.js App Router, TypeScript, Tailwind — Vercel
-- **DB** : Supabase (West EU / Ireland) — auth + tables + storage
+- **Frontend** : Next.js App Router, TypeScript — Vercel
+- **DB** : Supabase Pro (West EU / Ireland) — auth + tables + storage
 - **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
 - **Sourcing API** : Moteur Immo (aggregateur 60+ plateformes) — module `moteurimmo_client.py`
-- **AI scoring** : Claude API (Haiku) pour `score_travaux`
+- **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
+- **Editorial** : Claude Opus (redaction) + Sonnet (fact-check) + Unsplash (photos)
 - **Storage bucket** : `mdb-files`
 
 ## Structure repo (`C:\Users\GAMER\monpetitmdb`)
@@ -20,27 +21,41 @@ Modele freemium : Free / Pro ~19€ / Expert ~49€.
 monpetitmdb/
 ├── app/
 │   ├── api/
-│   │   ├── biens/              # GET /api/biens, /api/biens/[id]
+│   │   ├── biens/              # GET /api/biens, GET/PATCH /api/biens/[id]
+│   │   ├── blog/               # GET /api/blog (articles publies)
 │   │   ├── communes/           # Recherche localisation (ville, dept, region, metropole)
 │   │   ├── estimation/[id]/    # Estimation DVF par bien
 │   │   ├── estimation/batch/   # Estimation DVF batch tous biens
+│   │   ├── editorial/          # CRUD articles + generation IA
+│   │   ├── profile/            # GET/PUT profil utilisateur
+│   │   ├── watchlist/          # GET/POST/DELETE watchlist
 │   │   └── admin/estimation/   # Config estimateur (GET/PUT)
-│   ├── admin/estimation/       # Page admin config estimateur
-│   ├── biens/[id]/             # Page detail bien + simulateur fiscal + scenario revente
+│   ├── page.tsx                # Landing page (hero, strategies, pricing, screenshot)
+│   ├── admin/biens/            # Admin gestion biens
+│   ├── admin/estimation/       # Admin config estimateur
+│   ├── admin/guide-fiscal/     # Reference fiscale 7 regimes (admin only)
+│   ├── biens/[id]/             # Fiche bien + PnlColonne 7 regimes + scenario revente
 │   ├── biens/                  # Liste biens avec filtres
+│   ├── blog/                   # Listing articles publies
+│   ├── blog/[slug]/            # Page article individuelle
+│   ├── strategies/             # Page 4 strategies detaillees
+│   ├── editorial/              # CMS articles IA (admin)
 │   ├── mes-biens/              # Watchlist utilisateur
-│   └── mon-profil/             # Parametres fiscaux + financement
+│   ├── mon-profil/             # Donnees personnelles + facturation
+│   ├── parametres/             # Fiscalite, financement, charges recurrentes, budget travaux
+│   ├── login/ + register/      # Auth
+│   ├── cgu/ + mentions-legales/ + not-found.tsx
 ├── components/
 │   ├── BienCard.tsx            # Carte bien (grille)
 │   ├── PlusValueBadge.tsx      # Badge +/- value brute
 │   ├── RendementBadge.tsx      # Badge rendement brut
 │   ├── MetroBadge.tsx
-│   └── Layout.tsx
+│   └── Layout.tsx              # Header (nav + dropdown user) + Footer
 ├── lib/
 │   ├── types.ts
 │   ├── constants.ts
-│   ├── theme.ts
-│   ├── calculs.ts              # Calculs fiscaux + scenario revente (frontend only)
+│   ├── theme.ts                # Design system (fontSizes, spacing, transitions, breakpoints)
+│   ├── calculs.ts              # Calculs fiscaux 7 regimes + scenario revente + abattements PV
 │   ├── estimation.ts           # Moteur estimation DVF + correcteurs
 │   ├── supabase.ts             # Client Supabase public (anon key)
 │   └── supabase-admin.ts       # Client Supabase admin (secret key)
@@ -48,8 +63,10 @@ monpetitmdb/
 │   ├── scraper_supabase_prod.py    # Scraper LBC legacy
 │   ├── moteurimmo_client.py        # Module sourcing Moteur Immo
 │   ├── supabase_client.py          # Client Supabase Python
-│   ├── ai_learning.json            # Exemples extraction IA
-│   ├── ai_learning_travaux.json    # Exemples scoring travaux (455 exemples)
+│   ├── batch_extraction.py         # Extraction donnees locatives IA (Haiku, 5 workers paralleles)
+│   ├── batch_score_travaux.py      # Score travaux IA (Haiku)
+│   ├── batch_regex_validation.py   # Validation regex faux positifs
+│   ├── batch_nuit.py               # Script nuit (enchaine tous les batches)
 │   └── .env                        # Cles API (ne pas committer)
 └── public/
 ```
@@ -57,7 +74,7 @@ monpetitmdb/
 ## Table `biens` — colonnes
 
 **Identite**
-- `id` (auto Supabase), `url` (unique), `statut` ("Toujours disponible" | "Annonce expiree")
+- `id` (auto Supabase), `url` (unique), `statut` ("Toujours disponible" | "Annonce expiree" | "Faux positif")
 - `strategie_mdb` ("Locataire en place" | "Travaux lourds" | "Division" | "Decoupe")
 - `metropole`, `ville`, `quartier`, `adresse`, `code_postal`
 
@@ -73,9 +90,9 @@ monpetitmdb/
 - `prix_fai` (float), `prix_m2` (float, calcule scraper)
 
 **Locatif** (strategie Locataire en place)
-- `loyer` (float, TOUJOURS HC), `type_loyer` ("HC"), `charges_rec`
-- `charges_copro`, `taxe_fonc_ann`, `fin_bail` (date ISO)
-- `profil_locataire` (TEXT formate "Statut | Compo | Anciennete")
+- `loyer` (float, TOUJOURS HC), `type_loyer` ("HC" | "CC"), `charges_rec`
+- `charges_copro`, `taxe_fonc_ann`, `fin_bail` (date ISO ou "inconnu")
+- `profil_locataire` (TEXT : "Statut | depuis YYYY" ou "NC" si non trouve par IA)
 - `rendement_brut` (float) — loyer x 12 / prix
 
 **Travaux** (strategie Travaux lourds)
@@ -97,19 +114,41 @@ monpetitmdb/
 - `photo_url` (URL externe plateforme), `photo_storage_path` (chemin bucket)
 
 **Moteur Immo**
-- `moteurimmo_data` (JSONB) — JSON brut complet (description, toutes photos, publisher, priceStats, duplicates, options, historique)
+- `moteurimmo_data` (JSONB) — JSON brut complet
 
 **Dates** : `created_at`, `updated_at`, `derniere_verif_statut`
 
+## Table `profiles` — colonnes
+- `id` (FK auth.users), `role` ("admin" | "user"), `plan` ("free" | "pro" | "expert")
+- **Fiscalite** : `tmi` (int), `regime` (text)
+- **Financement** : `apport`, `taux_credit`, `taux_assurance`, `duree_ans`, `frais_notaire`, `objectif_cashflow`
+- **Charges recurrentes** : `assurance_pno`, `frais_gestion_pct`, `honoraires_comptable`, `cfe`, `frais_oga`
+- **Budget travaux** : `budget_travaux_m2` (JSONB : {"1": 200, "2": 500, "3": 800, "4": 1200, "5": 1800})
+
 ## Autres tables
-- `profiles` — role, plan, TMI, regime fiscal, financement (lie Auth)
+- `articles` — contenu, statut (draft/review/approved/published), auteur, slug, SEO
+- `editorial_calendar` — planning 52 semaines
 - `learning_logs` — exemples extractions IA
 - `scoring_exemples` — few-shot examples score_travaux
 - `biens_user_edits` — audit des enrichissements communautaires
 - `watchlist` — biens sauvegardes par utilisateur
-- `ref_communes` — code postal, nom commune, metropole (pour recherche localisation)
+- `ref_communes` — code postal, nom commune, metropole (22 metropoles reelles)
 - `ref_prix_parking` — prix median parking/box par ville (DVF)
 - `estimation_config` — config estimateur (JSONB, id=1)
+
+## Analyse fiscale — 7 regimes
+
+| Code | Label | Phase locative | Phase revente |
+|------|-------|---------------|---------------|
+| `nu_micro_foncier` | Nu Micro-foncier | Abattement 30%, TMI + PS 17.2% | IR 19% + PS 17.2% avec abattements duree |
+| `nu_reel_foncier` | Nu Reel foncier | Charges deductibles, TMI + PS, deficit foncier 10700€/an | IR 19% + PS 17.2% avec abattements duree |
+| `lmnp_micro_bic` | LMNP Micro-BIC | Abattement 50%, TMI + PS 17.2% | IR 19% + PS 17.2% avec abattements duree |
+| `lmnp_reel_bic` | LMNP Reel BIC | Amortissement composants, TMI seul | IR 19% + PS 17.2%, reintegration amortissements (LFI 2025) |
+| `lmp_reel_bic` | LMP Reel BIC | Comme LMNP reel + cotisations SSI ~45% | PV pro, exo si recettes <90k et >5 ans |
+| `sci_is` | SCI a l'IS | IS 15/25%, amortissement | IS sur VNC, pas d'abattement duree |
+| `marchand_de_biens` | Marchand de biens (IS) | N/A (achat-revente) | TVA marge 20/120 + IS 15/25%, frais notaire 2.5% |
+
+**Abattements PV** (regimes particuliers) : 0% < 6 ans, 6%/an IR + 1.65%/an PS (6-21 ans), exo IR a 22 ans, exo totale a 30 ans.
 
 ## Estimation DVF — architecture
 
@@ -119,58 +158,55 @@ monpetitmdb/
 3. **Confiance** : A (+-5%) a D (+-30%) selon nb comparables et variables qualitatives
 
 Rayon adaptatif : 50m -> 110m -> 220m -> 330m -> 550m -> 770m -> 1100m
-Periodes : 2022+ et 2018-2020 (meme poids, marche post-COVID surgonfle)
-
-## Analyse fiscale — regimes
-
-5 regimes supportes :
-- **Micro-foncier** : abattement 30%, TMI + 17.2% PS
-- **Reel** : charges deductibles, TMI + 17.2% PS
-- **LMNP** : amortissement immo + mobilier, TMI seul (pas de PS)
-- **SCI IS** : IS 15/25%, amortissement immo, PV reste dans la SCI
-- **Marchand de biens** : IS 15/25% + TVA sur marge 20%, frais notaire reduits 2.5%, pas d'amortissement (biens = stock), pas de charges sociales
+Periodes : 2022+ et 2018-2020 (meme poids)
 
 ## Scenario revente (dans PnlColonne)
 
 Waterfall : Prix DVF - frais agence (5% modifiable) - prix achat - frais notaire - travaux = PV brute
-Puis fiscalite PV selon regime, puis bilan net (PV nette + cashflow locatif cumule)
+Puis fiscalite PV selon regime (avec abattements duree si applicable)
+Bilan net = PV nette + cashflow locatif cumule
 Duree detention : 1-5 ans
 Comparaison 2 regimes cote a cote
+
+## Navigation (Layout.tsx)
+
+**Header desktop** : Biens Immobiliers | Strategies MDB | Conseils | [Watchlist] | [email dropdown]
+**Dropdown user** : Mon Profil | Mes parametres | Ma Watchlist | Administration (si admin) | Deconnexion
+**Footer** : Plateforme (Biens, Strategies, Conseils, Tarifs) | Support (Contact, Mentions legales, CGU)
+
+## Batch IA post-ingestion
+
+1. **Validation regex** : filtre faux positifs par strategie (titre + description) — TERMINE
+2. **Extraction donnees** (Haiku, 5 workers paralleles) : loyer HC/CC, charges copro, charges recup, taxe fonciere, fin bail, type bail, profil locataire — EN COURS
+3. **Score travaux** (Haiku) : prompt avec signaux (DPE, structure, photos, description) — EN ATTENTE
+4. **Estimation DVF batch** : POST /api/estimation/batch — EN ATTENTE
+
+Profil locataire : Particulier | Etudiant | Senior | Famille | Colocation | Professionnel | Commercial + "depuis YYYY" ou "X ans". "NC" si non trouve.
+Type bail : nu | meuble | commercial | pre-89
 
 ## Sourcing Moteur Immo
 
 Module : `scrapper/moteurimmo_client.py`
 API : POST https://moteurimmo.fr/api/ads (auth par apiKey)
-Pagination par date (tranches 30j) pour eviter timeouts sur pages profondes
+Pagination par date (tranches 30j)
+90 000+ biens ingeres, 4 strategies, France entiere
 
-4 strategies :
-- **Locataire en place** : keywords "locataire en place", "vendu loue", "bail en cours"
-- **Travaux lourds** : option `hasWorksRequired` + keywords "a renover", "renovation complete", etc.
-- **Division** : keywords "divisible", "possibilite de division", "creer des lots", etc.
-- **Decoupe** : keywords "immeuble de rapport", "monopropriete", "copropriete a creer", etc. (categories block, house)
+## Editorial CMS (/editorial)
 
-```bash
-# Ingestion par date (recommande pour gros volumes)
-python moteurimmo_client.py --by-date --since 2022-01-01
-python moteurimmo_client.py --by-date --since 2022-01-01 --strategie "Travaux lourds"
-
-# Ingestion par page (petits volumes)
-python moteurimmo_client.py --strategie "Locataire en place" --max-pages 10
-
-# Dry run
-python moteurimmo_client.py --dry-run --strategie "Division"
-```
+Pipeline : Opus redige → Sonnet fact-checke → Unsplash photos
+Blog public : `/blog` (listing) + `/blog/[slug]` (article, police Lora)
+Label nav : "Conseils"
 
 ## Commandes
 ```bash
 # Frontend
 npm run dev
 npm run build
-npm run lint
 
-# Scraper LBC legacy
-python scraper_supabase_prod.py
-python scraper_supabase_prod.py --init
+# Batches IA
+PYTHONUNBUFFERED=1 python batch_extraction.py    # 5 workers paralleles
+python batch_score_travaux.py
+python batch_regex_validation.py
 
 # Sourcing Moteur Immo
 python moteurimmo_client.py --by-date --since 2022-01-01
@@ -186,7 +222,6 @@ curl -X POST http://localhost:3000/api/estimation/batch
 SUPABASE_URL / SUPABASE_KEY (sb_secret_...)
 ANTHROPIC_API_KEY
 MOTEURIMMO_API_KEY
-#IPROYAL_USER / IPROYAL_PASS  # proxy optionnel VPS
 ```
 
 ### .env.local (frontend)
@@ -198,35 +233,15 @@ ANTHROPIC_API_KEY
 UNSPLASH_ACCESS_KEY
 ```
 
-## Editorial CMS (/editorial)
-
-Pipeline generation article :
-1. **Opus** redige l'article (systeme prompt avec ligne editoriale MDB, sources, references)
-2. **Sonnet** relit et fact-checke (taux, seuils, lois a jour mars 2026)
-3. **Unsplash** insere 1-2 photos avec navigation pour choisir
-
-Tables : `articles` (contenu, statut, auteur, date publication, SEO score) + `editorial_calendar` (52 semaines)
-Workflow : draft -> review -> approved -> published
-Auteur par defaut : "La redaction Mon Petit MDB"
-Police articles : Lora (serif) pour le corps, Fraunces pour les titres
-Sources : BOFiP, Service-Public, Legifrance, experts-comptables.fr, compta-online.com, etc.
-
-## Batch IA post-ingestion
-
-1. **Validation regex** : filtre faux positifs par strategie (titre + description)
-2. **Score travaux** (Haiku) : prompt avec signaux determinants (DPE, structure, photos)
-3. **Extraction donnees** (Haiku) : loyer HC/CC, charges, taxe fonciere, fin bail, type bail, profil locataire
-4. **Estimation DVF batch** : POST /api/estimation/batch
-
-Profil locataire standardise : Particulier | Etudiant | Senior | Famille | Colocation | Professionnel | Commercial + "depuis YYYY" ou "X ans"
-Type bail : nu | meuble | commercial | pre-89
-
 ## Regles absolues
 - **Tous les calculs financiers dans `calculs.ts`** — jamais en DB sauf `rendement_brut`
 - **Loyer toujours stocke HC** (converti depuis CC si charges connues)
 - **Deduplication par `url`** — id assigne par Supabase
-- **Encoding JSX** : pas de `€` direct dans le JSX -> utiliser `{'\u20AC'}` ; `{'♥'}` pour les icones
+- **Encoding JSX** : `{'\u20AC'}` pour € ; `{'♥'}` pour les icones. Accents dans placeholders : `placeholder={"texte accentué"}`
 - **Next.js App Router** : toujours `await params` dans les route handlers (bug Next.js 16)
 - **Estimation DVF = prix marche "en bon etat"** : pas de decote travaux, c'est le prix de revente apres travaux
-- **MdB toujours a l'IS** : pas de regime IR pour marchand de biens
+- **MdB toujours a l'IS** : pas de regime IR pour marchand de biens, pas d'amortissement (biens = stock)
+- **TVA sur marge MdB** : marge × 20/120 (TVA "en dedans", pas × 20%)
+- **profil_locataire = "NC"** : traite comme vide dans l'UI (Non communique en grise)
+- **Admin conditionne** : lien Administration visible uniquement si `profiles.role = 'admin'`
 - Clean avant scale : corriger les bugs avant d'etendre le perimetre
