@@ -744,7 +744,7 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
   if (loading) {
     return (
       <div className="section">
-        <h2 className="section-title">{"Estimation march\u00e9 DVF"}</h2>
+        <h2 className="section-title">{"Estimation marché DVF"}</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#9a8a80', fontSize: '13px' }}>
           <div style={{ width: '16px', height: '16px', border: '2px solid #e8e2d8', borderTop: '2px solid #c0392b', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
           {"Analyse des transactions en cours..."}
@@ -757,8 +757,8 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
   if (error || !estimation) {
     return (
       <div className="section">
-        <h2 className="section-title">{"Estimation march\u00e9 DVF"}</h2>
-        <div className="nc-warning">{error || "Estimation impossible \u2014 donn\u00e9es insuffisantes ou pas de transactions comparables"}</div>
+        <h2 className="section-title">{"Estimation marché DVF"}</h2>
+        <div className="nc-warning">{error || "Estimation impossible — données insuffisantes ou pas de transactions comparables"}</div>
       </div>
     )
   }
@@ -770,14 +770,14 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
 
   return (
     <div className="section">
-      <h2 className="section-title">{"Estimation march\u00e9 DVF"}</h2>
+      <h2 className="section-title">{"Estimation marché DVF"}</h2>
 
       {/* --- Bloc principal : 3 colonnes --- */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0', marginBottom: '24px' }}>
 
         {/* Colonne gauche : Prix FAI */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Prix demand{'\u00E9'}</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demandé"}</div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210' }}>{fmt(prixFai)} {'\u20AC'}</div>
         </div>
 
@@ -792,17 +792,17 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
             </div>
           </div>
           <div style={{ fontSize: '11px', color: '#9a8a80', marginTop: '6px', textAlign: 'center' }}>
-            {ecartPositif ? 'Au-dessus du march\u00e9' : 'En dessous du march\u00e9'}
+            {ecartPositif ? 'Au-dessus du marché' : 'En dessous du marché'}
           </div>
         </div>
 
         {/* Colonne droite : Estimation */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-            {"Estimation march\u00e9"}
+            {"Estimation marché"}
           </div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210' }}>{fmt(estimation.prix_total)} {'\u20AC'}</div>
-          <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}>{fmt(estimation.prix_m2_corrige)} {'\u20AC'}/m{'\u00B2'}</div>
+          <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}>{fmt(estimation.prix_m2_corrige)} {'\u20AC'}/m{"²"}</div>
         </div>
       </div>
 
@@ -811,7 +811,7 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <span style={{ fontSize: '12px', fontWeight: 600, color: '#9a8a80' }}>Fourchette</span>
           <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: conf.bg, color: conf.color }}>
-            Confiance {estimation.confiance} ({'\u00B1'}{estimation.marge_pct}%)
+            Confiance {estimation.confiance} ({"±"}{estimation.marge_pct}%)
           </span>
         </div>
         <div style={{ position: 'relative', height: '10px', background: '#e8e2d8', borderRadius: '5px', marginBottom: '4px' }}>
@@ -844,7 +844,7 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         {estimation.corrections && estimation.corrections.length > 0 && (
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{"Correcteurs appliqu\u00E9s"}</div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{"Correcteurs appliqués"}</div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {estimation.corrections.map((c: any, i: number) => (
                 <span key={i} style={{
@@ -861,7 +861,7 @@ function EstimationSection({ bienId, prixFai, onEstimationLoaded }: { bienId: st
         <div style={{ fontSize: '11px', color: '#b0a898', textAlign: 'right' }}>
           <div>{estimation.nb_comparables} transactions comparables</div>
           <div>Rayon : {estimation.rayon_m}m</div>
-          <div style={{ marginTop: '4px', fontStyle: 'italic' }}>Source : DVF (donn{'\u00E9'}es notariales)</div>
+          <div style={{ marginTop: '4px', fontStyle: 'italic' }}>{"Source : DVF (données notariales)"}</div>
           <button
             onClick={() => loadEstimation(true)}
             disabled={loading}
@@ -978,7 +978,15 @@ export default function FicheBienPage() {
     setBien((prev: any) => ({ ...prev, message_contact: message, message_statut: statut, message_date: new Date().toISOString() }))
   }
 
-  if (loading) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#9a8a80' }}>Chargement...</p></Layout>
+  if (loading) return (
+    <Layout>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px', gap: '16px' }}>
+        <div style={{ width: '32px', height: '32px', border: '3px solid #e8e2d8', borderTop: '3px solid #c0392b', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <p style={{ color: '#9a8a80', fontSize: '14px', margin: 0 }}>Chargement du bien...</p>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </Layout>
+  )
   if (!bien) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#9a8a80' }}>Bien introuvable</p></Layout>
 
   const peutCalculer = bien.loyer && bien.prix_fai
@@ -1070,10 +1078,22 @@ export default function FicheBienPage() {
         .legende { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
         .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9a8a80; }
         .legende-dot { width: 10px; height: 10px; border-radius: 50%; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #9a8a80; margin-bottom: 20px; }
+        .breadcrumb a { color: #9a8a80; text-decoration: none; }
+        .breadcrumb a:hover { color: #1a1210; }
+        .breadcrumb .sep { color: #d0c8be; }
+        @media (max-width: 767px) { .fiche-wrap { padding: 16px; } .hero-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { flex-direction: column; } }
       `}</style>
 
       <div className="fiche-wrap">
-        <a href="/biens" className="back-link">Retour aux biens</a>
+        <nav className="breadcrumb">
+          <a href="/biens">Biens</a>
+          <span className="sep">{'>'}</span>
+          {bien.strategie_mdb && <><a href={`/biens?strategie=${encodeURIComponent(bien.strategie_mdb)}`}>{bien.strategie_mdb}</a><span className="sep">{'>'}</span></>}
+          {bien.ville && <><a href={`/biens?ville=${encodeURIComponent(bien.ville)}`}>{bien.ville}</a><span className="sep">{'>'}</span></>}
+          <span style={{ color: '#1a1210', fontWeight: 500 }}>Ce bien</span>
+        </nav>
 
         <div className="hero-grid">
           <PhotoCarousel bien={bien} />
@@ -1111,10 +1131,10 @@ export default function FicheBienPage() {
         </div>
 
         <div className="section">
-          <h2 className="section-title">{"Caract\u00e9ristiques du bien"}</h2>
+          <h2 className="section-title">{"Caractéristiques du bien"}</h2>
           <div className="data-grid">
             <div className="data-item">
-              <span className="data-label">{`Ann\u00e9e de construction`}</span>
+              <span className="data-label">{"Année de construction"}</span>
               <span className={`data-value ${!bien.annee_construction ? 'nc' : ''}`}>{bien.annee_construction || 'NC'}</span>
             </div>
             <div className="data-item">
@@ -1123,22 +1143,22 @@ export default function FicheBienPage() {
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff',
-                  background: { A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' }[bien.dpe] || '#9a8a80'
+                  background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#9a8a80'
                 }}>{bien.dpe}</span>
               ) : <span className="data-value nc">NC</span>}
             </div>
             <div className="data-item">
               <span className="data-label">Surface</span>
-              <span className="data-value">{bien.surface ? `${bien.surface} m\u00b2` : 'NC'}</span>
+              <span className="data-value">{bien.surface ? `${bien.surface} m²` : 'NC'}</span>
             </div>
             {(bien.type_bien || '').toLowerCase().includes('maison') && (
               <div className="data-item">
                 <span className="data-label">Terrain</span>
-                <span className={`data-value ${!bien.surface_terrain ? 'nc' : ''}`}>{bien.surface_terrain ? `${bien.surface_terrain} m\u00b2` : 'NC'}</span>
+                <span className={`data-value ${!bien.surface_terrain ? 'nc' : ''}`}>{bien.surface_terrain ? `${bien.surface_terrain} m²` : 'NC'}</span>
               </div>
             )}
             <div className="data-item">
-              <span className="data-label">{`Pi\u00e8ces`}</span>
+              <span className="data-label">{"Pièces"}</span>
               <span className={`data-value ${!bien.nb_pieces ? 'nc' : ''}`}>{bien.nb_pieces || 'NC'}</span>
             </div>
             <div className="data-item">
@@ -1150,7 +1170,7 @@ export default function FicheBienPage() {
               <span className={`data-value ${bien.nb_sdb == null ? 'nc' : ''}`}>{bien.nb_sdb != null ? bien.nb_sdb : 'NC'}</span>
             </div>
             <div className="data-item">
-              <span className="data-label">{`\u00c9tage`}</span>
+              <span className="data-label">{"Étage"}</span>
               <span className={`data-value ${!bien.etage ? 'nc' : ''}`}>{bien.etage || 'NC'}</span>
             </div>
             <div className="data-item">
@@ -1208,7 +1228,7 @@ export default function FicheBienPage() {
                     })}
                   </div>
                   <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{(scorePerso || bien.score_travaux) ? `${scorePerso || bien.score_travaux}/5` : 'NC'}</span>
-                  {scorePerso && scorePerso !== bien.score_travaux && <span style={{ fontSize: '11px', color: '#b0a898', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleScorePerso(scorePerso)}>{"R\u00e9initialiser au score IA"}</span>}
+                  {scorePerso && scorePerso !== bien.score_travaux && <span style={{ fontSize: '11px', color: '#b0a898', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleScorePerso(scorePerso)}>{"Réinitialiser au score IA"}</span>}
                 </div>
               )}
             </div>
@@ -1223,7 +1243,7 @@ export default function FicheBienPage() {
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{"Estimation budget travaux"}</div>
                       <div style={{ fontSize: '13px', color: '#9a8a80' }}>
-                        {`${budgetM2} \u20AC/m\u00b2 \u00d7 ${bien.surface} m\u00b2 (${scorePerso ? 'mon estimation' : 'score IA'} ${scoreUtilise}/5)`}
+                        {`${budgetM2} \u20AC/m² × ${bien.surface} m² (${scorePerso ? 'mon estimation' : 'score IA'} ${scoreUtilise}/5)`}
                       </div>
                     </div>
                     <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }}>
@@ -1235,7 +1255,7 @@ export default function FicheBienPage() {
             })()}
             <div className="data-grid">
               <div className="data-item">
-                <span className="data-label">{`Taxe fonci\u00e8re`}</span>
+                <span className="data-label">{"Taxe foncière"}</span>
                 <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
               </div>
               {!(bien.type_bien || '').toLowerCase().includes('maison') && (
@@ -1245,7 +1265,7 @@ export default function FicheBienPage() {
                 </div>
               )}
               <div className="data-item">
-                <span className="data-label">{`Budget \u00e9nergie`}</span>
+                <span className="data-label">{"Budget énergie"}</span>
                 <span className={`data-value ${!bien.budget_energie_min ? 'nc' : ''}`}>
                   {bien.budget_energie_min && bien.budget_energie_max ? `${bien.budget_energie_min} - ${bien.budget_energie_max} \u20AC/an` : 'NC'}
                 </span>
@@ -1256,14 +1276,14 @@ export default function FicheBienPage() {
               </div>
             </div>
             <div className="legende" style={{ marginTop: '12px' }}>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{`Renseign\u00e9 par 1 utilisateur \u2014 modifiable`}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{`Valid\u00e9 par 2+ utilisateurs \u2014 clic droit pour modifier`}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Renseigné par 1 utilisateur — modifiable"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"Validé par 2+ utilisateurs — clic droit pour modifier"}</div>
             </div>
-            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{`Connectez-vous pour compl\u00e9ter les donn\u00e9es manquantes`}</p>}
+            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
           </div>
         ) : (
           <div className="section">
-            <h2 className="section-title">{"Donn\u00e9es locatives"}</h2>
+            <h2 className="section-title">{"Données locatives"}</h2>
             <div className="data-grid">
               <div className="data-item">
                 <span className="data-label">Loyer</span>
@@ -1274,7 +1294,7 @@ export default function FicheBienPage() {
                 <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
               </div>
               <div className="data-item">
-                <span className="data-label">{`Charges r\u00e9cup.`}</span>
+                <span className="data-label">{"Charges récup."}</span>
                 <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
               </div>
               <div className="data-item">
@@ -1282,7 +1302,7 @@ export default function FicheBienPage() {
                 <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
               </div>
               <div className="data-item">
-                <span className="data-label">{`Taxe fonci\u00e8re`}</span>
+                <span className="data-label">{"Taxe foncière"}</span>
                 <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
               </div>
               <div className="data-item">
@@ -1299,15 +1319,15 @@ export default function FicheBienPage() {
               </div>
             </div>
             <div className="legende">
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{`Renseign\u00e9 par 1 utilisateur \u2014 modifiable`}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{`Valid\u00e9 par 2+ utilisateurs \u2014 clic droit pour modifier`}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Renseigné par 1 utilisateur — modifiable"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"Validé par 2+ utilisateurs — clic droit pour modifier"}</div>
             </div>
-            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{`Connectez-vous pour compl\u00e9ter les donn\u00e9es manquantes`}</p>}
+            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
           </div>
         )}
 
         <div id="contact" className="section">
-          <h2 className="section-title">{"R\u00e9cup\u00e9rer les donn\u00e9es manquantes"}</h2>
+          <h2 className="section-title">{"Récupérer les données manquantes"}</h2>
           <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />
         </div>
 
@@ -1401,7 +1421,7 @@ export default function FicheBienPage() {
 
         {bien.prix_fai && (
           <div className="section">
-            <h2 className="section-title">{`Analyse fiscale & sc\u00e9nario revente`}</h2>
+            <h2 className="section-title">{"Analyse fiscale & scénario revente"}</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#9a8a80' }}>Comparer avec :</span>
@@ -1410,7 +1430,7 @@ export default function FicheBienPage() {
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#9a8a80' }}>{`D\u00e9tention :`}</span>
+                <span style={{ fontSize: '13px', color: '#9a8a80' }}>{"Détention :"}</span>
                 {[1, 2, 3, 4, 5].map(d => (
                   <button key={d} onClick={() => setDureeRevente(d)} style={{
                     padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',

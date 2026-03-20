@@ -546,7 +546,7 @@ export default function EditorialPage() {
                     const articleHtml = currentArticle.content || ''
                     const author = currentArticle.author || 'La r\u00e9daction Mon Petit MDB'
                     // Encoder tous les accents en entites HTML pour le dangerouslySetInnerHTML
-                    const authorHtml = Array.from(author).map(c => c.charCodeAt(0) > 127 ? `&#${c.charCodeAt(0)};` : c).join('')
+                    const authorHtml = author.split('').map((c: string) => c.charCodeAt(0) > 127 ? `&#${c.charCodeAt(0)};` : c).join('')
                     const date = currentArticle.published_at
                       ? new Date(currentArticle.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
                       : new Date(currentArticle.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })

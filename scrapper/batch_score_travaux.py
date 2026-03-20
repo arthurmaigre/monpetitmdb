@@ -39,23 +39,37 @@ def run():
         return
 
     stats = {"total": 0, "scored": 0, "errors": 0}
-    offset = 0
-    page_size = 100
 
-    while True:
+    # Recuperer les IDs par pagination sur created_at
+    all_ids = []
+    last_date = "2020-01-01T00:00:00Z"
+    for strat in ["Travaux lourds", "Locataire en place"]:
+        while True:
+            r = c.table("biens") \
+                .select("id, created_at") \
+                .eq("strategie_mdb", strat) \
+                .eq("statut", "Toujours disponible") \
+                .is_("score_travaux", "null") \
+                .gt("created_at", last_date) \
+                .order("created_at") \
+                .limit(500) \
+                .execute()
+            rows = r.data or []
+            if not rows: break
+            all_ids.extend([b["id"] for b in rows])
+            last_date = rows[-1]["created_at"]
+        last_date = "2020-01-01T00:00:00Z"
+
+    log.info(f"  {len(all_ids)} biens a scorer")
+
+    for i in range(0, len(all_ids), 20):
+        batch_ids = all_ids[i:i+20]
         r = c.table("biens") \
             .select("id, ville, prix_fai, surface, dpe, annee_construction, moteurimmo_data") \
-            .in_("strategie_mdb", ["Travaux lourds", "Division", "Locataire en place", "D\u00e9coupe"]) \
-            .eq("statut", "Toujours disponible") \
-            .is_("score_travaux", "null") \
-            .range(offset, offset + page_size - 1) \
+            .in_("id", batch_ids) \
             .execute()
 
-        biens = r.data or []
-        if not biens:
-            break
-
-        for b in biens:
+        for b in (r.data or []):
             stats["total"] += 1
             mi = b.get("moteurimmo_data")
             if mi and isinstance(mi, str):
@@ -93,8 +107,6 @@ def run():
                     break
 
             time.sleep(0.1)
-
-        offset += page_size
 
     log.info(f"\nResultats: {json.dumps(stats)}")
 

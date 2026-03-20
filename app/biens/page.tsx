@@ -12,7 +12,7 @@ import { TYPES_BIEN, TRIS } from '@/lib/constants'
 import { calculerCashflow } from '@/lib/calculs'
 
 function formatPrix(n: number) {
-  return n ? n.toLocaleString('fr-FR') + ' €' : '-'
+  return n ? n.toLocaleString('fr-FR') + ' euros' : '-'
 }
 
 function getSessionFilters() {
@@ -28,6 +28,7 @@ export default function BiensPage() {
   const [allBiens, setAllBiens] = useState<Bien[]>([])
   const [metropoles, setMetropoles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<'grid' | 'list'>(saved.current?.view || 'grid')
   const [strategie, setStrategie] = useState(saved.current?.strategie || '')
   const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
@@ -134,22 +135,23 @@ export default function BiensPage() {
   useEffect(() => {
     if (!strategie) { setAllBiens([]); setLoading(false); setTotalBiens(0); setHasMore(false); return }
     setLoading(true)
+    setError(null)
     setCurrentPage(1)
     setScoreTravauxMin('')
     scrollRestored.current = false
     fetch(buildApiUrl(1))
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error('Erreur serveur'); return r.json() })
       .then(d => {
         setAllBiens(d.biens || [])
         setTotalBiens(d.total || 0)
         setHasMore(d.hasMore || false)
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
   }, [strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin])
 
   // Charger plus de biens
-  const loadMoreRef = useRef<() => void>()
+  const loadMoreRef = useRef<(() => void) | undefined>(undefined)
   loadMoreRef.current = () => {
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
@@ -247,7 +249,7 @@ export default function BiensPage() {
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  const strategies = ['Locataire en place', 'Travaux lourds', 'Division', 'D\u00e9coupe']
+  const strategies = ['Locataire en place', 'Travaux lourds', 'Division', 'Découpe']
 
   // Filtres cote client (les autres sont cote serveur)
   let filtered = allBiens.filter(b => {
@@ -308,62 +310,104 @@ export default function BiensPage() {
     <Layout>
       <style>{`
         .main { max-width: 1600px; margin: 0 auto; padding: 32px 48px; box-sizing: border-box; }
-        .filter-bar { background: #fff; border-radius: 16px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-label { font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; }
-        .filter-bar select, .filter-bar input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; color: #1a1210; outline: none; transition: border-color 0.15s; }
+        .filter-bar { background: #fff; border-radius: 16px; padding: 16px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; }
+        .filter-bar select, .filter-bar input { padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #f7f4f0; color: #1a1210; outline: none; transition: border-color 150ms ease; }
         .filter-bar select:focus, .filter-bar input:focus { border-color: #c0392b; }
         .filter-bar select.required { border-color: #c0392b; background: #fff8f7; }
         .filter-bar input { width: 140px; }
         .filter-sep { width: 1px; height: 44px; background: #e8e2d8; align-self: flex-end; margin: 0 4px; }
         .view-toggle { margin-left: auto; display: flex; gap: 4px; align-self: flex-end; }
-        .view-btn { padding: 9px 16px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; background: transparent; color: #888; }
+        .view-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease; background: transparent; color: #888; }
         .view-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
-        .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .results-count { font-size: 14px; color: #9a8a80; }
         .results-count strong { color: #1a1210; font-weight: 600; }
         .empty-state { text-align: center; padding: 80px 40px; color: #9a8a80; }
         .empty-state h3 { font-family: 'Fraunces', serif; font-size: 22px; color: #1a1210; margin-bottom: 8px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 24px; }
         .list-wrap { position: relative; overflow-x: scroll; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .list-wrap::-webkit-scrollbar { height: 0; }
-        .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 20px; max-width: 1504px; margin: 0 auto; }
+        .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 16px; max-width: 1504px; margin: 0 auto; }
         .floating-scroll-inner { height: 1px; pointer-events: none; }
         .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
         .list-table thead tr { background: #f7f4f0; }
-        .list-table thead th { padding: 12px 14px; text-align: center; font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
+        .list-table thead th { padding: 12px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
         .list-table thead th span { display: block; font-size: 10px; font-weight: 400; color: #b0a898; letter-spacing: 0; text-transform: none; margin-top: 2px; height: 14px; }
-        .list-table tbody tr { transition: background 0.12s; }
+        .list-table tbody tr { transition: background 150ms ease; }
         .list-table tbody tr:hover { background: #faf8f5; }
-        .list-table td { padding: 10px 14px; font-size: 13px; vertical-align: middle; border-bottom: 1px solid #f0ede8; text-align: center; }
+        .list-table td { padding: 8px 12px; font-size: 14px; vertical-align: middle; border-bottom: 1px solid #f0ede8; text-align: center; }
         .sticky-col { position: sticky; z-index: 2; background: #fff; text-align: left; }
         .sticky-col-head { position: sticky; z-index: 3; background: #f7f4f0; text-align: left !important; }
         .list-table tbody tr:hover .sticky-col { background: #faf8f5; }
         .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; }
         .list-thumb-empty { width: 72px; height: 52px; border-radius: 8px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
         .td-bien-title { font-weight: 600; color: #1a1210; display: block; margin-bottom: 2px; }
-        .td-bien-quartier { font-size: 11px; color: #b0a898; display: block; }
-        .td-prix { font-weight: 500; font-size: 13px; letter-spacing: -0.01em; white-space: nowrap; }
-        .td-strat { display: inline-block; font-size: 11px; font-weight: 600; color: #2a4a8a; background: #d4ddf5; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
-        .td-btn { display: inline-block; padding: 7px 16px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 0.15s; }
+        .td-bien-quartier { font-size: 12px; color: #b0a898; display: block; }
+        .td-prix { font-weight: 500; font-size: 14px; letter-spacing: -0.01em; white-space: nowrap; }
+        .td-strat { display: inline-block; font-size: 12px; font-weight: 600; color: #2a4a8a; background: #d4ddf5; padding: 4px 8px; border-radius: 20px; white-space: nowrap; }
+        .td-btn { display: inline-block; padding: 8px 16px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 150ms ease; }
         .td-btn:hover { opacity: 0.75; }
-        .td-btn-contact { display: inline-block; padding: 7px 12px; background: #c0392b; color: #fff; border-radius: 8px; text-decoration: none; font-size: 11px; font-weight: 500; white-space: nowrap; transition: opacity 0.15s; }
+        .td-btn-contact { display: inline-block; padding: 8px 12px; background: #c0392b; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 150ms ease; }
         .td-btn-contact:hover { opacity: 0.75; }
-        .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 0.15s; }
+        .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 150ms ease; }
         .td-heart:hover { transform: scale(1.2); }
-        .edit-hint { font-size: 11px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
+        .edit-hint { font-size: 12px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
         .commune-wrap { position: relative; }
-        .commune-input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; color: #1a1210; outline: none; transition: border-color 0.15s; width: 320px; }
+        .commune-input { padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #f7f4f0; color: #1a1210; outline: none; transition: border-color 150ms ease; width: 320px; }
         .commune-input:focus { border-color: #c0392b; }
         .commune-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: #9a8a80; padding: 2px 6px; }
         .commune-clear:hover { color: #c0392b; }
-        .commune-dropdown { position: absolute; top: 100%; left: 0; min-width: 100%; width: max-content; max-width: 450px; background: #fff; border: 1.5px solid #e8e2d8; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 20; max-height: 240px; overflow-y: auto; margin-top: 4px; }
-        .commune-item { padding: 10px 14px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ede8; }
+        .commune-dropdown { position: absolute; top: 100%; left: 0; min-width: 100%; width: max-content; max-width: 450px; background: #fff; border: 1.5px solid #e8e2d8; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 20; max-height: 240px; overflow-y: auto; margin-top: 4px; }
+        .commune-item { padding: 8px 12px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ede8; transition: background 150ms ease; }
         .commune-item:last-child { border-bottom: none; }
         .commune-item:hover { background: #faf8f5; }
         .commune-item-name { font-weight: 500; color: #1a1210; }
         .commune-item-cp { font-size: 12px; color: #9a8a80; font-weight: 600; }
-        .commune-item-metro { font-size: 11px; color: #b0a898; }
+        .commune-item-metro { font-size: 12px; color: #b0a898; }
+
+        /* Skeleton loader */
+        @keyframes shimmer {
+          0% { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
+        }
+        .skeleton-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .skeleton-img { height: 180px; background: linear-gradient(90deg, #f0ede8 25%, #e8e2d8 50%, #f0ede8 75%); background-size: 800px 100%; animation: shimmer 1.5s infinite linear; }
+        .skeleton-line { border-radius: 4px; background: linear-gradient(90deg, #f0ede8 25%, #e8e2d8 50%, #f0ede8 75%); background-size: 800px 100%; animation: shimmer 1.5s infinite linear; }
+
+        /* Spinner */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { width: 24px; height: 24px; border: 3px solid #e8e2d8; border-top-color: #c0392b; border-radius: 50%; animation: spin 0.6s linear infinite; }
+
+        /* Responsive: Mobile (< 640px) */
+        @media (max-width: 639px) {
+          .main { padding: 16px; }
+          .filter-bar { flex-direction: column; gap: 12px; padding: 12px 16px; border-radius: 12px; }
+          .filter-sep { display: none; }
+          .view-toggle { margin-left: 0; justify-content: stretch; width: 100%; }
+          .view-toggle .view-btn { flex: 1; text-align: center; }
+          .view-toggle .view-btn:last-child { display: none; }
+          .grid { grid-template-columns: 1fr; gap: 16px; }
+          .commune-input { width: 100% !important; }
+          .filter-group { width: 100%; }
+          .filter-bar select, .filter-bar input { width: 100%; }
+          .empty-state { padding: 48px 24px; }
+          .floating-scroll { left: 16px; right: 16px; }
+        }
+
+        /* Responsive: Tablet (640px - 1023px) */
+        @media (min-width: 640px) and (max-width: 1023px) {
+          .main { padding: 24px 32px; }
+          .grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+          .commune-input { width: 240px; }
+          .floating-scroll { left: 32px; right: 32px; }
+        }
+
+        /* Responsive: Desktop (>= 1024px) */
+        @media (min-width: 1024px) {
+          .grid { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
+        }
       `}</style>
 
       <div className="main">
@@ -382,7 +426,7 @@ export default function BiensPage() {
               <input
                 className="commune-input"
                 type="text"
-                placeholder="Ville, code postal, d\u00e9partement, r\u00e9gion..."
+                placeholder="Ville, code postal, département, région..."
                 value={communeSearch}
                 onChange={e => handleCommuneSearch(e.target.value)}
                 onFocus={() => { if (communeSuggestions.length > 0) setShowSuggestions(true) }}
@@ -427,11 +471,11 @@ export default function BiensPage() {
               <label className="filter-label">Score travaux min</label>
               <select value={scoreTravauxMin} onChange={e => setScoreTravauxMin(e.target.value)}>
                 <option value="">Tous</option>
-                <option value="1">1 - Rafra{'\u00ee'}chissement</option>
-                <option value="2">2 - Travaux l{'\u00e9'}gers</option>
-                <option value="3">3 - R{'\u00e9'}novation moyenne</option>
+                <option value="1">1 - Rafraîchissement</option>
+                <option value="2">2 - Travaux légers</option>
+                <option value="3">3 - Rénovation moyenne</option>
                 <option value="4">4 - Gros travaux</option>
-                <option value="5">5 - R{'\u00e9'}habilitation</option>
+                <option value="5">5 - Réhabilitation</option>
               </select>
             </div>
           )}
@@ -450,14 +494,20 @@ export default function BiensPage() {
 
         {!strategie ? (
           <div className="empty-state">
-            <h3>Choisissez une strategie pour commencer</h3>
-            <p>Selectionnez une strategie MDB dans le filtre ci-dessus pour afficher les biens correspondants.</p>
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ marginBottom: '16px', opacity: 0.6 }}>
+              <rect x="8" y="12" width="48" height="40" rx="6" stroke="#9a8a80" strokeWidth="2.5" fill="none"/>
+              <path d="M8 24h48M24 24v28M40 24v28" stroke="#9a8a80" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="32" cy="18" r="3" fill="#c0392b"/>
+            </svg>
+            <h3>Choisissez une stratégie pour commencer</h3>
+            <p style={{ marginBottom: '24px' }}>Sélectionnez une stratégie MDB dans le filtre ci-dessus pour afficher les biens correspondants.</p>
+            <button onClick={() => { const sel = document.querySelector('.filter-bar select') as HTMLSelectElement; if (sel) sel.focus() }} style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'opacity 150ms ease' }}>Commencer</button>
           </div>
         ) : (
           <>
             <div className="results-bar">
               <p className="results-count">
-                <strong>{filtered.length}</strong> bien{filtered.length > 1 ? 's' : ''} affich{'\u00e9'}{filtered.length > 1 ? 's' : ''} sur <strong>{totalBiens.toLocaleString('fr-FR')}</strong>
+                <strong>{filtered.length}</strong> bien{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''} sur <strong>{totalBiens.toLocaleString('fr-FR')}</strong>
                 {strategie && <> - {strategie}</>}
                 {metropole !== 'Toutes' && <> - {metropole}</>}
                 {ville !== 'Toutes' && <> - {ville}</>}
@@ -465,8 +515,27 @@ export default function BiensPage() {
               </p>
             </div>
 
+            {error && (
+              <div style={{ background: '#fdedec', border: '1px solid #e74c3c', borderRadius: '12px', padding: '16px 24px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#e74c3c"/><path d="M10 5v6M10 13.5v1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                <span style={{ color: '#c0392b', fontSize: '14px', fontWeight: 500, flex: 1 }}>{error}</span>
+                <button onClick={() => { setError(null); setLoading(true); fetch(buildApiUrl(1)).then(r => r.json()).then(d => { setAllBiens(d.biens || []); setTotalBiens(d.total || 0); setHasMore(d.hasMore || false); setLoading(false) }).catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) }) }} style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>Réessayer</button>
+              </div>
+            )}
+
             {loading ? (
-              <p style={{ color: '#9a8a80', textAlign: 'center', padding: '80px' }}>Chargement...</p>
+              <div className="grid">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="skeleton-card">
+                    <div className="skeleton-img" />
+                    <div style={{ padding: '16px' }}>
+                      <div className="skeleton-line" style={{ width: '60%', height: '16px', marginBottom: '12px' }} />
+                      <div className="skeleton-line" style={{ width: '40%', height: '12px', marginBottom: '8px' }} />
+                      <div className="skeleton-line" style={{ width: '80%', height: '12px' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : view === 'grid' ? (
               <div className="grid">
                 {filtered.map(bien => (
@@ -496,26 +565,26 @@ export default function BiensPage() {
                       <th className="sticky-col-head" style={{ left: '40px', width: '80px', minWidth: '80px' }}><span></span></th>
                       <th className="sticky-col-head" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
                       <th>Commune<span></span></th>
-                      <th>{`M\u00e9tropole`}<span></span></th>
+                      <th>Métropole<span></span></th>
                       <th>Prix FAI<span></span></th>
                       {strategie !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
-                      {strategie !== 'Travaux lourds' && <th>{`\u00c9cart`}<span></span></th>}
+                      {strategie !== 'Travaux lourds' && <th>Écart<span></span></th>}
                       <th>Prix/m2<span></span></th>
                       {strategie === 'Travaux lourds' ? (
                         <>
                           <th>Score travaux<span></span></th>
                           <th>{"Estimation travaux"}<span></span></th>
                           <th>DPE<span></span></th>
-                          <th>{`Ann\u00e9e`}<span></span></th>
+                          <th>Année<span></span></th>
                           <th>+/- Value<span></span></th>
                         </>
                       ) : (
                         <>
                           <th>Loyer<span>/mois</span></th>
                           <th>Type loyer<span></span></th>
-                          <th>{`Charges r\u00e9cup.`}<span>/mois</span></th>
+                          <th>Charges récup.<span>/mois</span></th>
                           <th>Charges copro<span>/mois</span></th>
-                          <th>{`Taxe fonci\u00e8re`}<span>/an</span></th>
+                          <th>Taxe foncière<span>/an</span></th>
                           <th>Rendement brut<span></span></th>
                           <th>+/- Value<span></span></th>
                           <th>Cashflow brut<span>/mois</span></th>
@@ -575,7 +644,7 @@ export default function BiensPage() {
                               <td className="td-prix" style={{ fontSize: '13px' }}>
                                 {resultat ? (
                                   resultat.prix_cible >= bien.prix_fai
-                                    ? <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 9px', borderRadius: '6px', background: '#d4f5e0', color: '#1a7a40', whiteSpace: 'nowrap' }}>Cash Flow Positif</span>
+                                    ? <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '6px', background: '#d4f5e0', color: '#1a7a40', whiteSpace: 'nowrap' }}>Cash Flow Positif</span>
                                     : formatPrix(resultat.prix_cible)
                                 ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                               </td>
@@ -583,18 +652,18 @@ export default function BiensPage() {
                             {isLocataire && (
                               <td>
                                 {resultat && resultat.prix_cible < bien.prix_fai && ecartPct !== null ? (
-                                  <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 9px', borderRadius: '6px', background: '#fde8e8', color: '#c0392b', whiteSpace: 'nowrap' }}>
-                                    {ecartPct.toFixed(1)}{'\u00A0'}%
+                                  <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '6px', background: '#fde8e8', color: '#c0392b', whiteSpace: 'nowrap' }}>
+                                    {ecartPct.toFixed(1)}&nbsp;%
                                   </span>
                                 ) : resultat && resultat.prix_cible >= bien.prix_fai ? null : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                               </td>
                             )}
-                            <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
+                            <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2.toLocaleString('fr-FR')} euros` : '-'}</td>
                             {!isLocataire ? (
                               <>
                                 <td>
                                   {(bien as any).score_travaux ? (
-                                    <span style={{ fontSize: '12px', fontWeight: 600, background: '#fff3cd', color: '#856404', padding: '4px 9px', borderRadius: '6px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, background: '#fff3cd', color: '#856404', padding: '4px 8px', borderRadius: '6px' }}>
                                       {(bien as any).score_travaux}/5
                                     </span>
                                   ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}
@@ -604,7 +673,7 @@ export default function BiensPage() {
                                     (() => {
                                       const budget = budgetTravauxM2[String((bien as any).score_travaux)] || 0
                                       const total = Math.round(budget * bien.surface)
-                                      return <span style={{ fontWeight: 500 }}>{total.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                                      return <span style={{ fontWeight: 500 }}>{total.toLocaleString('fr-FR')} euros</span>
                                     })()
                                   ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>
@@ -622,15 +691,15 @@ export default function BiensPage() {
                               </>
                             ) : (
                               <>
-                                <td><CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} /></td>
+                                <td><CellEditable bien={bien} champ="loyer" suffix={` euros`} /></td>
                                 <td><CellTypeLoyer bien={bien} /></td>
-                                <td><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
-                                <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
-                                <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
+                                <td><CellEditable bien={bien} champ="charges_rec" suffix={` euros`} /></td>
+                                <td><CellEditable bien={bien} champ="charges_copro" suffix={` euros`} /></td>
+                                <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` euros`} /></td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
-                                  {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
+                                  {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} euros` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>
                                 <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire || '-'}</td>
                               </>
@@ -640,7 +709,7 @@ export default function BiensPage() {
                         <td style={{ whiteSpace: 'nowrap' }}>
                           <a href={`/biens/${bien.id}`} className="td-btn">Analyse</a>
                           {' '}
-                          <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{`R\u00e9cup\u00e9rer les donn\u00e9es`}</a>
+                          <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">Récupérer les données</a>
                         </td>
                       </tr>
                     ))}
@@ -654,8 +723,8 @@ export default function BiensPage() {
               </>
             )}
             {hasMore && (
-              <div ref={sentinelRef} style={{ textAlign: 'center', padding: '32px 0' }}>
-                {loadingMore && <p style={{ color: '#9a8a80', fontSize: '13px' }}>Chargement...</p>}
+              <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+                {loadingMore && <div className="spinner" />}
               </div>
             )}
           </>

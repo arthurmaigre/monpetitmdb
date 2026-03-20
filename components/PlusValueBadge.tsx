@@ -1,3 +1,5 @@
+import { theme } from '@/lib/theme'
+
 interface Props {
   prixFai: number
   estimationPrix: number | null
@@ -15,13 +17,19 @@ export default function PlusValueBadge({
   budgetTravauxM2 = { '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 },
   size = 'md'
 }: Props) {
+  const padY = size === 'sm' ? theme.spacing[1] : theme.spacing[1]
+  const padX = size === 'sm' ? theme.spacing[2] : theme.spacing[3]
+
   if (!estimationPrix || !prixFai) return (
     <span style={{
       display: 'inline-block',
-      fontSize: size === 'sm' ? '11px' : '12px',
-      fontWeight: 600, color: '#bbb',
-      background: '#f0ede8', padding: size === 'sm' ? '3px 8px' : '4px 10px',
-      borderRadius: '14px', whiteSpace: 'nowrap',
+      fontSize: size === 'sm' ? theme.fontSizes.xs : theme.fontSizes.sm,
+      fontWeight: 600,
+      color: theme.colors.textTertiary,
+      background: theme.colors.bgHover,
+      padding: `${padY} ${padX}`,
+      borderRadius: theme.radii.sm,
+      whiteSpace: 'nowrap',
     }}>PV NC</span>
   )
 
@@ -37,18 +45,18 @@ export default function PlusValueBadge({
 
   const isPositif = pvPct >= 0
   const colors = isPositif
-    ? { bg: '#d4f5e0', color: '#1a7a40' }
-    : { bg: '#fde8e8', color: '#c0392b' }
+    ? { bg: theme.colors.successLight, color: theme.colors.success }
+    : { bg: theme.colors.errorLight, color: theme.colors.error }
 
   return (
     <span style={{
       display: 'inline-block',
-      fontSize: size === 'sm' ? '11px' : '12px',
+      fontSize: size === 'sm' ? theme.fontSizes.xs : theme.fontSizes.sm,
       fontWeight: 600,
       color: colors.color,
       background: colors.bg,
-      padding: size === 'sm' ? '3px 8px' : '4px 10px',
-      borderRadius: '14px',
+      padding: `${padY} ${padX}`,
+      borderRadius: theme.radii.sm,
       whiteSpace: 'nowrap',
     }}>
       {isPositif ? '+' : ''}{pvPct.toFixed(1)}% PV

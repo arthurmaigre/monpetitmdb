@@ -132,26 +132,39 @@ def run_batch(dry_run: bool = False):
         log.info(f"STRATEGIE : {strategie}")
         log.info(f"{'='*60}")
 
-        # Recuperer les biens de cette strategie
-        offset = 0
-        page_size = 500
+        # Etape 1 : recuperer tous les IDs par pagination sur created_at (evite timeout sur gros offsets)
+        all_ids = []
+        last_date = "2020-01-01T00:00:00Z"
+        while True:
+            r = client.table("biens") \
+                .select("id, created_at") \
+                .eq("strategie_mdb", strategie) \
+                .eq("statut", "Toujours disponible") \
+                .gt("created_at", last_date) \
+                .order("created_at") \
+                .limit(500) \
+                .execute()
+            rows = r.data or []
+            if not rows:
+                break
+            all_ids.extend([b["id"] for b in rows])
+            last_date = rows[-1]["created_at"]
+
+        log.info(f"  {len(all_ids)} biens a valider")
+
         total = 0
         valid_count = 0
         invalid_count = 0
 
-        while True:
+        # Etape 2 : charger moteurimmo_data par batch de 50 IDs
+        for i in range(0, len(all_ids), 10):
+            batch_ids = all_ids[i:i+10]
             r = client.table("biens") \
-                .select("id, url, moteurimmo_data") \
-                .eq("strategie_mdb", strategie) \
-                .eq("statut", "Toujours disponible") \
-                .range(offset, offset + page_size - 1) \
+                .select("id, moteurimmo_data") \
+                .in_("id", batch_ids) \
                 .execute()
 
-            biens = r.data or []
-            if not biens:
-                break
-
-            for b in biens:
+            for b in (r.data or []):
                 total += 1
                 mi = b.get("moteurimmo_data")
                 if mi:
@@ -175,13 +188,9 @@ def run_batch(dry_run: bool = False):
                 else:
                     invalid_count += 1
                     if dry_run:
-                        log.info(f"  [FAUX POSITIF] {b['url'][:80]}")
+                        log.info(f"  [FAUX POSITIF] id={b['id']}")
                     else:
                         client.table("biens").update({"statut": "Faux positif"}).eq("id", b["id"]).execute()
-
-            offset += page_size
-            if len(biens) < page_size:
-                break
 
         pct_valid = valid_count * 100 // max(1, total)
         pct_invalid = invalid_count * 100 // max(1, total)
