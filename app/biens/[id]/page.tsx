@@ -1429,7 +1429,7 @@ export default function FicheBienPage() {
               </div>
               <div className="data-item">
                 <span className="data-label">Profil locataire</span>
-                <span className={`data-value ${!bien.profil_locataire ? 'nc' : ''}`}>{bien.profil_locataire || 'NC'}</span>
+                <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'Non communiqu\u00E9'}</span>
               </div>
               <div className="data-item">
                 <span className="data-label">Fin de bail</span>

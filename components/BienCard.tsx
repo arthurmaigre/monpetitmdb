@@ -355,7 +355,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
                   Travaux : {scoreTravaux}/5
                 </span>
               ) : null}
-              {bien.profil_locataire && <span style={pillStyle()}>{bien.profil_locataire}</span>}
+              {bien.profil_locataire && bien.profil_locataire !== 'NC' && <span style={pillStyle()}>{bien.profil_locataire}</span>}
             </>
           )}
         </div>
