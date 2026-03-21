@@ -32,7 +32,7 @@ export default function Home() {
         .stat-num{font-family:'Fraunces',serif;font-size:28px;font-weight:800;}
         .stat-lbl{font-size:12px;color:var(--muted);}
         /* HERO VISUAL */
-        .hero-visual{position:relative;height:520px;}
+        .hero-visual{position:relative;height:580px;}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
         .mc{background:#fff;border-radius:20px;box-shadow:0 24px 64px rgba(26,18,16,.12);overflow:hidden;position:absolute;}
         .mc-main{width:400px;right:0;top:0;bottom:0;animation:float 6s ease-in-out infinite;}
@@ -266,11 +266,24 @@ export default function Home() {
                   <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Charges copro</span><span className="mc-val r">-60 {'\u20AC'}</span></div>
                   <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Taxe fonci\u00E8re"}</span><span className="mc-val r">-45 {'\u20AC'}</span></div>
                   <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Mensualit\u00E9 cr\u00E9dit (20 ans)"}</span><span className="mc-val r">-310 {'\u20AC'}</span></div>
-                  <div className="mc-cf" style={{ background: '#d4f5e0' }}>
-                    <div><div className="mc-cflbl">Cashflow brut</div><div className="mc-cfval" style={{ color: '#1a7a40' }}>+65 {'\u20AC'}/mois</div></div>
-                    <div style={{ textAlign: 'center' }}><div className="mc-cflbl">Rdt brut</div><div style={{ fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>8.60 %</div></div>
-                    <div style={{ textAlign: 'right' }}><div className="mc-cflbl">Rdt net</div><div style={{ fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>6.71 %</div></div>
-                  </div>
+                </div>
+              </div>
+              {/* KPIs sous la card principale */}
+              <div style={{
+                position: 'absolute', right: 0, bottom: '-60px', width: '400px',
+                display: 'flex', gap: '8px',
+              }}>
+                <div style={{ flex: 1, background: '#d4f5e0', borderRadius: '12px', padding: '10px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#1a7a40', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '2px' }}>Cashflow</div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 800, color: '#1a7a40' }}>+65 {'\u20AC'}</div>
+                </div>
+                <div style={{ flex: 1, background: '#fff', border: '1px solid #e8e2d8', borderRadius: '12px', padding: '10px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '2px' }}>Rdt brut</div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 800, color: '#1a1210' }}>8.60 %</div>
+                </div>
+                <div style={{ flex: 1, background: '#fff', border: '1px solid #e8e2d8', borderRadius: '12px', padding: '10px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '2px' }}>Rdt net</div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 800, color: '#1a1210' }}>6.71 %</div>
                 </div>
               </div>
             </div>
