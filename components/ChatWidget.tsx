@@ -30,13 +30,9 @@ const COUNTER_KEY = 'mdb_chat_count'
 const MAX_HISTORY = 20
 
 function getWelcomeMessage(plan?: string | null): string {
-  if (plan === 'expert') {
-    return "Bonjour ! Je suis votre assistant fiscal expert. Je ma\u00EEtrise les 7 r\u00E9gimes fiscaux et peux faire des simulations chiffr\u00E9es. Comment puis-je vous aider ?"
-  }
-  if (plan === 'pro') {
-    return "Bonjour ! Je peux vous expliquer tous les calculs et strat\u00E9gies de votre analyse. Que souhaitez-vous comprendre ?"
-  }
-  return "Bonjour ! Je suis l'assistant Mon Petit MDB. Posez-moi vos questions sur l'investissement immobilier."
+  if (plan === 'expert') return "Bonjour ! Je suis votre assistant fiscal expert. Je ma\u00EEtrise les 7 r\u00E9gimes fiscaux et peux r\u00E9aliser des simulations chiffr\u00E9es. Comment puis-je vous aider ?"
+  if (plan === 'pro') return "Bonjour ! Je peux vous expliquer tous les calculs et strat\u00E9gies de votre analyse. Que souhaitez-vous comprendre ?"
+  return "Bonjour ! Je suis l\u2019assistant Mon Petit MDB. Posez-moi vos questions sur l\u2019investissement immobilier."
 }
 
 function getDailyLimit(plan?: string | null): number {
@@ -45,44 +41,27 @@ function getDailyLimit(plan?: string | null): number {
   return 5
 }
 
-function getTodayKey(): string {
-  return new Date().toISOString().slice(0, 10)
-}
+function getTodayKey(): string { return new Date().toISOString().slice(0, 10) }
 
 function getDailyCount(): number {
   try {
     const raw = sessionStorage.getItem(COUNTER_KEY)
     if (!raw) return 0
     const parsed = JSON.parse(raw)
-    if (parsed.date !== getTodayKey()) return 0
-    return parsed.count || 0
-  } catch {
-    return 0
-  }
+    return parsed.date === getTodayKey() ? (parsed.count || 0) : 0
+  } catch { return 0 }
 }
 
 function incrementDailyCount(): void {
-  try {
-    const count = getDailyCount() + 1
-    sessionStorage.setItem(COUNTER_KEY, JSON.stringify({ date: getTodayKey(), count }))
-  } catch {}
+  try { sessionStorage.setItem(COUNTER_KEY, JSON.stringify({ date: getTodayKey(), count: getDailyCount() + 1 })) } catch {}
 }
 
 function loadHistory(): Message[] {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    return JSON.parse(raw)
-  } catch {
-    return []
-  }
+  try { const raw = sessionStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : [] } catch { return [] }
 }
 
 function saveHistory(messages: Message[]): void {
-  try {
-    const trimmed = messages.slice(-MAX_HISTORY)
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed))
-  } catch {}
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-MAX_HISTORY))) } catch {}
 }
 
 export default function ChatWidget({ plan, context }: ChatWidgetProps) {
@@ -94,52 +73,23 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Initialize messages from sessionStorage + welcome
   useEffect(() => {
     const saved = loadHistory()
-    if (saved.length > 0) {
-      setMessages(saved)
-    } else {
-      setMessages([{ role: 'assistant', content: getWelcomeMessage(plan) }])
-    }
+    setMessages(saved.length > 0 ? saved : [{ role: 'assistant', content: getWelcomeMessage(plan) }])
     setInitialized(true)
   }, [plan])
 
-  // Save history whenever messages change
-  useEffect(() => {
-    if (initialized && messages.length > 0) {
-      saveHistory(messages)
-    }
-  }, [messages, initialized])
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
-
-  // Focus input when panel opens
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-  }, [open])
-
-  const getUpgradePlan = useCallback((): string => {
-    if (plan === 'pro') return 'Expert'
-    return 'Pro'
-  }, [plan])
+  useEffect(() => { if (initialized && messages.length > 0) saveHistory(messages) }, [messages, initialized])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 150) }, [open])
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim()
     if (!trimmed || loading) return
 
-    const limit = getDailyLimit(plan)
-    if (getDailyCount() >= limit) {
-      setMessages(prev => [
-        ...prev,
-        { role: 'user', content: trimmed },
-        { role: 'assistant', content: `Limite atteinte. Passez au plan ${getUpgradePlan()} pour continuer.` }
-      ])
+    if (getDailyCount() >= getDailyLimit(plan)) {
+      const upgrade = plan === 'pro' ? 'Expert' : 'Pro'
+      setMessages(prev => [...prev, { role: 'user', content: trimmed }, { role: 'assistant', content: `Vous avez atteint la limite quotidienne. Passez au plan ${upgrade} pour continuer \u00E0 discuter.` }])
       setInput('')
       return
     }
@@ -155,256 +105,156 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          plan,
-          context,
-        }),
+        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })), plan, context }),
       })
 
-      if (!res.ok || !res.body) {
-        throw new Error('Erreur serveur')
-      }
+      if (!res.ok || !res.body) throw new Error()
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let assistantContent = ''
-
-      // Add placeholder assistant message
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        const chunk = decoder.decode(value, { stream: true })
-        assistantContent += chunk
-        const currentContent = assistantContent
-        setMessages(prev => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: currentContent }
-          return updated
-        })
+        assistantContent += decoder.decode(value, { stream: true })
+        const c = assistantContent
+        setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: c }; return u })
       }
 
-      // Final update with complete content
-      setMessages(prev => {
-        const updated = [...prev]
-        updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
-        return updated
-      })
+      setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: assistantContent }; return u })
     } catch {
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: "D\u00E9sol\u00E9, une erreur est survenue. Veuillez r\u00E9essayer." }
-      ])
+      setMessages(prev => [...prev, { role: 'assistant', content: "D\u00E9sol\u00E9, une erreur est survenue. Veuillez r\u00E9essayer." }])
     } finally {
       setLoading(false)
     }
-  }, [input, loading, messages, plan, context, getUpgradePlan])
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
-  }
+  }, [input, loading, messages, plan, context])
 
   return (
     <>
       <style>{`
-        @keyframes mdb-chat-slide-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes mdb-chat-dots {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
-        }
-        @media (max-width: 767px) {
-          .mdb-chat-panel {
-            width: calc(100vw - 16px) !important;
-            right: 8px !important;
-            left: 8px !important;
-            bottom: 8px !important;
-          }
-        }
+        @keyframes mdb-slide-up { from { opacity: 0; transform: translateY(16px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes mdb-dot-pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+        @keyframes mdb-bubble-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .mdb-cw-panel::-webkit-scrollbar { width: 4px; }
+        .mdb-cw-panel::-webkit-scrollbar-track { background: transparent; }
+        .mdb-cw-panel::-webkit-scrollbar-thumb { background: #e8e2d8; border-radius: 4px; }
+        @media (max-width: 767px) { .mdb-cw-container { width: 100% !important; right: 0 !important; bottom: 0 !important; border-radius: 16px 16px 0 0 !important; height: 70vh !important; } }
       `}</style>
 
-      {/* Floating button */}
+      {/* Bulle flottante */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          aria-label="Ouvrir l'assistant Mon Petit MDB"
+          aria-label="Ouvrir l'assistant"
           style={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            width: 56,
-            height: 56,
-            borderRadius: '50%',
-            background: '#c0392b',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(192, 57, 43, 0.35)',
-            transition: 'transform 150ms ease, box-shadow 150ms ease',
-            zIndex: 1000,
+            position: 'fixed', bottom: 24, right: 24, width: 56, height: 56,
+            borderRadius: '50%', background: '#c0392b', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(192,57,43,0.35)', zIndex: 1000,
+            transition: 'transform 150ms ease',
           }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
-          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
         >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
         </button>
       )}
 
-      {/* Chat panel */}
+      {/* Panneau chat */}
       {open && (
         <div
-          className="mdb-chat-panel"
+          className="mdb-cw-container"
           style={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            width: 400,
-            maxWidth: 'calc(100vw - 32px)',
-            height: 500,
-            maxHeight: 'calc(100vh - 48px)',
+            position: 'fixed', bottom: 24, right: 24,
+            width: 380, height: 520,
+            borderRadius: 20, overflow: 'hidden',
+            boxShadow: '0 16px 56px rgba(26,18,16,0.18), 0 0 0 1px rgba(0,0,0,0.06)',
+            display: 'flex', flexDirection: 'column',
+            zIndex: 1000, fontFamily: "'DM Sans', sans-serif",
+            animation: 'mdb-slide-up 200ms ease-out',
             background: '#faf8f5',
-            borderRadius: 16,
-            boxShadow: '0 12px 48px rgba(0, 0, 0, 0.18)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            zIndex: 1000,
-            animation: 'mdb-chat-slide-up 250ms ease-out',
-            fontFamily: "'DM Sans', sans-serif",
           }}
         >
           {/* Header */}
-          <div
-            style={{
-              background: '#1a1210',
-              color: '#fff',
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 15 }}>
-              Assistant Mon Petit MDB
-            </span>
+          <div style={{
+            background: 'linear-gradient(135deg, #1a1210, #2a2220)',
+            padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 12, background: '#c0392b',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Mon Petit MDB</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+                {plan === 'expert' ? 'Assistant fiscal expert' : plan === 'pro' ? 'Assistant analyse' : 'Assistant immobilier'}
+              </div>
+            </div>
             <button
               onClick={() => setOpen(false)}
-              aria-label="Fermer l'assistant"
+              aria-label="Fermer"
               style={{
-                background: 'none',
-                border: 'none',
-                color: '#fff',
-                cursor: 'pointer',
-                padding: 4,
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background 150ms ease',
+                background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.6)',
+                cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex', transition: 'all 150ms ease',
               }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)'
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'none'
-              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>
 
-          {/* Messages area */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-            }}
-          >
+          {/* Messages */}
+          <div className="mdb-cw-panel" style={{
+            flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 10,
+          }}>
             {messages.map((msg, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: '80%',
-                    padding: '10px 14px',
-                    fontSize: 14,
-                    lineHeight: 1.55,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    ...(msg.role === 'user'
-                      ? {
-                          background: '#1a1210',
-                          color: '#fff',
-                          borderRadius: '16px 16px 4px 16px',
-                        }
-                      : {
-                          background: '#fff',
-                          color: '#1a1210',
-                          border: '1px solid #e8e2d8',
-                          borderRadius: '16px 16px 16px 4px',
-                        }),
-                  }}
-                >
+              <div key={i} style={{
+                display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                animation: 'mdb-bubble-pop 200ms ease-out',
+              }}>
+                {msg.role === 'assistant' && (
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 8, background: '#c0392b', flexShrink: 0, marginRight: 8, marginTop: 2,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                  </div>
+                )}
+                <div style={{
+                  maxWidth: '78%', padding: '10px 14px', fontSize: 13.5, lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  ...(msg.role === 'user'
+                    ? { background: '#1a1210', color: '#fff', borderRadius: '14px 14px 4px 14px' }
+                    : { background: '#fff', color: '#1a1210', border: '1px solid #ede8e0', borderRadius: '4px 14px 14px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }
+                  ),
+                }}>
                   {msg.content}
                 </div>
               </div>
             ))}
 
-            {/* Loading dots */}
-            {loading && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <div
-                  style={{
-                    background: '#fff',
-                    border: '1px solid #e8e2d8',
-                    borderRadius: '16px 16px 16px 4px',
-                    padding: '12px 18px',
-                    display: 'flex',
-                    gap: 5,
-                    alignItems: 'center',
-                  }}
-                >
+            {loading && messages[messages.length - 1]?.content === '' && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8, background: '#c0392b', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                </div>
+                <div style={{
+                  background: '#fff', border: '1px solid #ede8e0', borderRadius: '4px 14px 14px 14px',
+                  padding: '12px 16px', display: 'flex', gap: 4, alignItems: 'center',
+                }}>
                   {[0, 1, 2].map(idx => (
-                    <span
-                      key={idx}
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: '50%',
-                        background: '#9a8a80',
-                        display: 'inline-block',
-                        animation: 'mdb-chat-dots 1.4s infinite ease-in-out both',
-                        animationDelay: `${idx * 0.16}s`,
-                      }}
-                    />
+                    <span key={idx} style={{
+                      width: 6, height: 6, borderRadius: '50%', background: '#c0392b', display: 'inline-block',
+                      animation: 'mdb-dot-pulse 1.4s infinite ease-in-out', animationDelay: `${idx * 0.2}s`,
+                    }} />
                   ))}
                 </div>
               </div>
@@ -413,71 +263,48 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input area */}
-          <div
-            style={{
-              borderTop: '1px solid #e8e2d8',
-              padding: 12,
-              display: 'flex',
-              gap: 8,
-              background: '#fff',
-              flexShrink: 0,
-            }}
-          >
+          {/* Input */}
+          <div style={{
+            padding: '12px 14px', borderTop: '1px solid #ede8e0', background: '#fff',
+            display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0,
+          }}>
             <input
               ref={inputRef}
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
               placeholder={"Posez votre question..."}
+              disabled={loading}
               style={{
-                flex: 1,
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: '1.5px solid #e8e2d8',
-                outline: 'none',
-                fontSize: 14,
-                fontFamily: "'DM Sans', sans-serif",
-                color: '#1a1210',
-                background: '#faf8f5',
+                flex: 1, padding: '10px 14px', borderRadius: 12,
+                border: '1.5px solid #ede8e0', fontSize: 13.5, fontFamily: "'DM Sans', sans-serif",
+                background: '#faf8f5', color: '#1a1210', outline: 'none',
                 transition: 'border-color 150ms ease',
               }}
-              onFocus={e => {
-                (e.target as HTMLInputElement).style.borderColor = '#c0392b'
-              }}
-              onBlur={e => {
-                (e.target as HTMLInputElement).style.borderColor = '#e8e2d8'
-              }}
+              onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#c0392b' }}
+              onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#ede8e0' }}
             />
             <button
               onClick={sendMessage}
               disabled={loading || !input.trim()}
-              aria-label="Envoyer le message"
+              aria-label="Envoyer"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                border: 'none',
-                background: loading || !input.trim() ? '#e8e2d8' : '#c0392b',
-                color: '#fff',
-                cursor: loading || !input.trim() ? 'default' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: 38, height: 38, borderRadius: 10,
+                background: input.trim() ? '#c0392b' : '#e8e2d8',
+                border: 'none', cursor: input.trim() ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 150ms ease, transform 150ms ease',
                 flexShrink: 0,
-                transition: 'background 150ms ease',
               }}
+              onMouseEnter={e => { if (input.trim()) (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
             </button>
           </div>
         </div>
       )}
-
     </>
   )
 }
