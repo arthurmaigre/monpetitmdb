@@ -242,6 +242,9 @@ export default function Home() {
                 <div className="mc-frow"><span className="mc-flabel">Prix FAI</span><span className="mc-fval" style={{ color: 'var(--red)' }}>67 000 {'\u20AC'}</span></div>
                 <div className="mc-frow"><span className="mc-flabel">{"Estimation march\u00E9"}</span><span className="mc-fval" style={{ color: 'var(--ink)' }}>82 500 {'\u20AC'}</span></div>
                 <span className="mc-ecart">-18.8 % sous le march{'\u00E9'}</span>
+                <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e8e2d8' }}>
+                  <div className="mc-frow"><span className="mc-flabel">Cashflow brut</span><span className="mc-fval" style={{ color: '#1a7a40' }}>+65 {'\u20AC'}/mois</span></div>
+                </div>
               </div>
               {/* Main property card */}
               <div className="mc mc-main">
