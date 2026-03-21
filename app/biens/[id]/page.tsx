@@ -984,7 +984,8 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
         <div style={{ fontSize: '11px', color: '#b0a898', textAlign: 'right' }}>
           <div>{estimation.nb_comparables} transactions comparables</div>
           <div>Rayon : {estimation.rayon_m}m</div>
-          <div style={{ marginTop: '4px', fontStyle: 'italic' }}>{"Source : DVF (données notariales)"}</div>
+          <div style={{ marginTop: '4px', fontStyle: 'italic' }}>{"Source : DVF (donn\u00E9es notariales)"}</div>
+          <div style={{ marginTop: '2px', fontStyle: 'italic' }}>{"Estimation sur la base d\u2019un bien en bon \u00E9tat g\u00E9n\u00E9ral, sans travaux"}</div>
           <button
             onClick={() => loadEstimation(true)}
             disabled={loading}
@@ -1434,7 +1435,21 @@ export default function FicheBienPage() {
               </div>
               <div className="data-item">
                 <span className="data-label">Fin de bail</span>
-                <span className={`data-value ${!bien.fin_bail ? 'nc' : ''}`}>{bien.fin_bail || 'NC'}</span>
+                <input
+                  type="date"
+                  defaultValue={bien.fin_bail && bien.fin_bail !== 'inconnu' && bien.fin_bail !== 'NC' ? bien.fin_bail.slice(0, 10) : ''}
+                  onBlur={async (e) => {
+                    const val = e.target.value
+                    if (!val || !userToken) return
+                    await fetch(`/api/biens/${bien.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+                      body: JSON.stringify({ fin_bail: val })
+                    })
+                    bien.fin_bail = val
+                  }}
+                  style={{ padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none', width: '120px' }}
+                />
               </div>
               <div className="data-item">
                 <span className="data-label">Rendement brut</span>
@@ -1544,7 +1559,7 @@ export default function FicheBienPage() {
 
         {bien.prix_fai && (
           <div className="section">
-            <h2 className="section-title">{"Analyse fiscale & scénario revente"}</h2>
+            <h2 className="section-title">Analyse Fiscale</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#9a8a80' }}>Comparer avec :</span>
