@@ -239,9 +239,9 @@ export default function Home() {
               {/* Floating estimation card */}
               <div className="mc mc-float">
                 <div className="mc-flbl">{"Estimation march\u00E9 DVF"}</div>
-                <div className="mc-frow"><span className="mc-flabel">Prix FAI</span><span className="mc-fval" style={{ color: 'var(--red)' }}>177 500 {'\u20AC'}</span></div>
-                <div className="mc-frow"><span className="mc-flabel">{"Estimation march\u00E9"}</span><span className="mc-fval" style={{ color: 'var(--ink)' }}>204 800 {'\u20AC'}</span></div>
-                <span className="mc-ecart">-13.3 % sous le march{'\u00E9'}</span>
+                <div className="mc-frow"><span className="mc-flabel">Prix FAI</span><span className="mc-fval" style={{ color: 'var(--red)' }}>67 000 {'\u20AC'}</span></div>
+                <div className="mc-frow"><span className="mc-flabel">{"Estimation march\u00E9"}</span><span className="mc-fval" style={{ color: 'var(--ink)' }}>82 500 {'\u20AC'}</span></div>
+                <span className="mc-ecart">-18.8 % sous le march{'\u00E9'}</span>
               </div>
               {/* Main property card */}
               <div className="mc mc-main">
@@ -249,24 +249,26 @@ export default function Home() {
                   <div className="mc-dot" style={{ background: '#ff5f57' }} />
                   <div className="mc-dot" style={{ background: '#febc2e' }} />
                   <div className="mc-dot" style={{ background: '#28c840' }} />
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginLeft: '8px' }}>monpetitmdb.io/biens/1353</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginLeft: '8px' }}>monpetitmdb.io/biens/4821</span>
                 </div>
                 <div className="mc-photo">
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#2a4a6a,#1a2a4a 60%,#3a2a2a)' }} />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 40%,rgba(26,18,16,.4))' }} />
-                  <span className="mc-badge">{"M\u00E9tropole Nantaise"}</span>
-                  <span className="mc-rend">5.07 %</span>
+                  <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=180&fit=crop" alt="Appartement lumineux" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 40%,rgba(26,18,16,.3))' }} />
+                  <span className="mc-badge">{"M\u00E9tropole Marseillaise"}</span>
+                  <span className="mc-rend">8.60 %</span>
                 </div>
                 <div className="mc-body">
-                  <div className="mc-title">{"Appartement T2 - 41 m\u00B2"}</div>
-                  <div className="mc-loc">{"Breil-Barberie \u2014 Nantes"}</div>
-                  <div className="mc-prix">177 500 {'\u20AC'} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--muted)', marginLeft: '6px' }}>FAI</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Loyer mensuel HC</span><span className="mc-val">750 {'\u20AC'}/mois</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Mensualit\u00E9 cr\u00E9dit"}</span><span className="mc-val r">986 {'\u20AC'}/mois</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Rendement brut</span><span className="mc-val g">5.07 %</span></div>
-                  <div className="mc-cf">
-                    <div><div className="mc-cflbl">Cashflow brut</div><div className="mc-cfval">-354 {'\u20AC'}/mois</div></div>
-                    <div style={{ textAlign: 'right' }}><div className="mc-cflbl">{"Estimation march\u00E9"}</div><div style={{ fontSize: '14px', fontWeight: 700, color: '#1a7a40' }}>204 800 {'\u20AC'}</div></div>
+                  <div className="mc-title">{"Appartement T2 - 34 m\u00B2"}</div>
+                  <div className="mc-loc">{"3e arrondissement \u2014 Marseille"}</div>
+                  <div className="mc-prix">67 000 {'\u20AC'} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--muted)', marginLeft: '6px' }}>FAI</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Loyer mensuel</span><span className="mc-val">480 {'\u20AC'}/mois</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Charges copro</span><span className="mc-val">60 {'\u20AC'}/mois</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Taxe fonci\u00E8re"}</span><span className="mc-val">45 {'\u20AC'}/mois</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Mensualit\u00E9 cr\u00E9dit (20 ans)"}</span><span className="mc-val r">-310 {'\u20AC'}/mois</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Rendement brut</span><span className="mc-val g">8.60 %</span></div>
+                  <div className="mc-cf" style={{ background: '#d4f5e0' }}>
+                    <div><div className="mc-cflbl">Cashflow brut</div><div className="mc-cfval" style={{ color: '#1a7a40' }}>+65 {'\u20AC'}/mois</div></div>
+                    <div style={{ textAlign: 'right' }}><div className="mc-cflbl">{"Estimation march\u00E9"}</div><div style={{ fontSize: '14px', fontWeight: 700, color: '#1a7a40' }}>82 500 {'\u20AC'}</div></div>
                   </div>
                 </div>
               </div>
