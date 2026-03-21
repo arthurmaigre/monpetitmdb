@@ -769,7 +769,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, adresseInitiale, villeInitiale, userToken, onEstimationLoaded }: { bienId: string, prixFai: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void }) {
+function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void }) {
   const [estimation, setEstimation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -899,8 +899,9 @@ function EstimationSection({ bienId, prixFai, adresseInitiale, villeInitiale, us
 
         {/* Colonne gauche : Prix FAI */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demandé"}</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9"}</div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210' }}>{fmt(prixFai)} {'\u20AC'}</div>
+          {surface ? <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}>{fmt(Math.round(prixFai / surface))} {'\u20AC'}/m{'\u00B2'}</div> : null}
         </div>
 
         {/* Colonne centrale : Ecart */}
@@ -1302,7 +1303,7 @@ export default function FicheBienPage() {
           </div>
         </div>
 
-        <EstimationSection bienId={id} prixFai={bien.prix_fai} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} />
+        <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} />
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">
