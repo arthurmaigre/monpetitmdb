@@ -1008,7 +1008,7 @@ export default function FicheBienPage() {
   const [scorePerso, setScorePerso] = useState<number | null>(null)
 
   const [baseCalc, setBaseCalc] = useState<'fai' | 'cible'>('fai')
-  const [apport, setApport] = useState(20000)
+  const [apport, setApport] = useState(0)
   const [taux, setTaux] = useState(3.5)
   const [tauxAssurance, setTauxAssurance] = useState(0.3)
   const [duree, setDuree] = useState(20)
@@ -1042,12 +1042,12 @@ export default function FicheBienPage() {
         if (profilData.profile) {
           const p = profilData.profile
           setProfil(p)
-          if (p.apport) setApport(p.apport)
-          if (p.taux_credit) setTaux(p.taux_credit)
+          if (p.apport != null) setApport(p.apport)
+          if (p.taux_credit != null) setTaux(p.taux_credit)
           if (p.taux_assurance != null) setTauxAssurance(p.taux_assurance)
-          if (p.duree_ans) setDuree(p.duree_ans)
-          if (p.frais_notaire) setFraisNotaire(p.frais_notaire)
-          if (p.tmi) setTmi(p.tmi)
+          if (p.duree_ans != null) setDuree(p.duree_ans)
+          if (p.frais_notaire != null) setFraisNotaire(p.frais_notaire)
+          if (p.tmi != null) setTmi(p.tmi)
           if (p.regime) setRegime(p.regime)
           if (p.objectif_cashflow != null) setObjectifCashflow(p.objectif_cashflow)
           if (p.budget_travaux_m2) setBudgetTravauxM2(p.budget_travaux_m2)
