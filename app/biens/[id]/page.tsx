@@ -1019,7 +1019,7 @@ export default function FicheBienPage() {
   const [regime2, setRegime2] = useState('nu_reel_foncier')
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [estimationData, setEstimationData] = useState<any>(null)
-  const [dureeRevente, setDureeRevente] = useState<number>(5)
+  const [dureeRevente, setDureeRevente] = useState<number>(1)
   const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number>(5)
 
   useEffect(() => {
