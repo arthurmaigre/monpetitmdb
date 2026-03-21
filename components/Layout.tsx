@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { theme } from '@/lib/theme'
+import ChatWidget from '@/components/ChatWidget'
 
 interface Props {
   children: React.ReactNode
@@ -12,6 +13,7 @@ interface Props {
 export default function Layout({ children }: Props) {
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [userPlan, setUserPlan] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -29,7 +31,7 @@ export default function Layout({ children }: Props) {
       if (session?.access_token) {
         fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
           .then(r => r.json())
-          .then(d => { if (d.profile?.role) setUserRole(d.profile.role) })
+          .then(d => { if (d.profile?.role) setUserRole(d.profile.role); if (d.profile?.plan) setUserPlan(d.profile.plan) })
           .catch(() => {})
       } else {
         setUserRole(null)
@@ -45,7 +47,7 @@ export default function Layout({ children }: Props) {
       if (!session) return
       fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
         .then(r => r.json())
-        .then(d => { if (d.profile?.role) setUserRole(d.profile.role) })
+        .then(d => { if (d.profile?.role) setUserRole(d.profile.role); if (d.profile?.plan) setUserPlan(d.profile.plan) })
         .catch(() => {})
     })
   }, [user])
@@ -619,6 +621,8 @@ export default function Layout({ children }: Props) {
             &copy; 2026 Mon Petit MDB. Tous droits réservés.
           </div>
         </footer>
+
+        <ChatWidget plan={userPlan as any} />
       </div>
     </>
   )

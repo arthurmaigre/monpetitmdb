@@ -37,7 +37,7 @@ SIGNAUX : DPE G=min 3, DPE F=min 2, toiture/charpente=4-5, elec+plomberie=min 3,
 
 JSON une seule ligne : {"score": <1-5>, "commentaire": "<1-2 phrases>"}'''
 
-WORKERS = 5
+WORKERS = 4
 
 def run():
     c = get_client()
