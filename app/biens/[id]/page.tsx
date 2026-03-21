@@ -289,7 +289,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const amort = (regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic') ? amortLMNP : regime === 'sci_is' ? amortSCI : 0
 
   // Charges utilisateur (deductibles seulement en reel)
-  const isReel = regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
+  const isReel = regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is' || regime === 'marchand_de_biens'
   const assurancePNO = isReel ? (chargesUtilisateur?.assurance_pno || 0) : 0
   const fraisGestionPct = isReel ? (chargesUtilisateur?.frais_gestion_pct || 0) : 0
   const fraisGestion = loyerAnnuel * fraisGestionPct / 100
@@ -326,9 +326,10 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impot = revenuImposable <= 42500 ? revenuImposable * 0.15 : 42500 * 0.15 + (revenuImposable - 42500) * 0.25
   } else if (regime === 'marchand_de_biens') {
-    // MdB : pas de phase locative (achat-revente)
-    revenuImposable = 0
-    impot = 0
+    // MdB : IS sur loyers (biens en stock, pas d'amortissement)
+    const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + chargesSupplementaires
+    revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
+    impot = revenuImposable <= 42500 ? revenuImposable * 0.15 : 42500 * 0.15 + (revenuImposable - 42500) * 0.25
   }
 
   const mensualiteCredit = calculerMensualite(montantEmprunte, tauxCredit, dureeAns)
@@ -434,12 +435,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
       <div style={{ fontFamily: "'Fraunces', serif", fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: '#1a1210' }}>{titre}</div>
 
       {/* === PARTIE LOCATIVE (annuelle) === */}
-      {isMarchand && hasLoyer && !isTravauxLourds && (
-        <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#a06010', marginBottom: '12px' }}>
-          {"Non applicable \u2014 strat\u00E9gie achat-revente"}
-        </div>
-      )}
-      {hasLoyer && !isTravauxLourds && !isMarchand && (
+      {hasLoyer && !isTravauxLourds && (
         <>
           <SectionLabel label="Revenus locatifs (annuel)" />
           <Row label="Loyer brut annuel" value={`${fmt(loyerAnnuel)} \u20AC`} />
