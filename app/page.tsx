@@ -242,9 +242,6 @@ export default function Home() {
                 <div className="mc-frow"><span className="mc-flabel">Prix FAI</span><span className="mc-fval" style={{ color: 'var(--red)' }}>67 000 {'\u20AC'}</span></div>
                 <div className="mc-frow"><span className="mc-flabel">{"Estimation march\u00E9"}</span><span className="mc-fval" style={{ color: 'var(--ink)' }}>82 500 {'\u20AC'}</span></div>
                 <span className="mc-ecart">-18.8 % sous le march{'\u00E9'}</span>
-                <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e8e2d8' }}>
-                  <div className="mc-frow"><span className="mc-flabel">Cashflow brut</span><span className="mc-fval" style={{ color: '#1a7a40' }}>+65 {'\u20AC'}/mois</span></div>
-                </div>
               </div>
               {/* Main property card */}
               <div className="mc mc-main">
@@ -271,7 +268,8 @@ export default function Home() {
                   <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Mensualit\u00E9 cr\u00E9dit (20 ans)"}</span><span className="mc-val r">-310 {'\u20AC'}</span></div>
                   <div className="mc-cf" style={{ background: '#d4f5e0' }}>
                     <div><div className="mc-cflbl">Cashflow brut</div><div className="mc-cfval" style={{ color: '#1a7a40' }}>+65 {'\u20AC'}/mois</div></div>
-                    <div style={{ textAlign: 'right' }}><div className="mc-cflbl">Rendement brut</div><div style={{ fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>8.60 %</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="mc-cflbl">Rdt brut</div><div style={{ fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>8.60 %</div></div>
+                    <div style={{ textAlign: 'right' }}><div className="mc-cflbl">Rdt net</div><div style={{ fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>6.71 %</div></div>
                   </div>
                 </div>
               </div>
