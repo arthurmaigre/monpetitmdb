@@ -223,7 +223,7 @@ export default function Home() {
               <div className="eyebrow">Plateforme de sourcing immobilier</div>
               <h1>Investissez comme un <em>marchand de biens</em></h1>
               <p className="hero-desc">
-                {"Mon Petit MDB agr\u00E8ge 60+ plateformes, estime les prix via les donn\u00E9es DVF et simule la fiscalit\u00E9 de vos investissements \u2014 5 r\u00E9gimes fiscaux, de la micro-foncier au marchand de biens."}
+                {"Mon Petit MDB agr\u00E8ge 60+ plateformes, estime les prix via les donn\u00E9es DVF et simule la fiscalit\u00E9 de vos investissements \u2014 7 r\u00E9gimes fiscaux, du micro-foncier au marchand de biens."}
               </p>
               <div className="hero-btns">
                 <a href="/biens" className="btn-hero">Voir les biens disponibles</a>
@@ -231,8 +231,8 @@ export default function Home() {
               </div>
               <div className="hero-stats">
                 <div><div className="stat-num">90 000+</div><div className="stat-lbl">{"Biens analys\u00E9s"}</div></div>
-                <div><div className="stat-num">{"France enti\u00E8re"}</div><div className="stat-lbl">{"22 m\u00E9tropoles"}</div></div>
-                <div><div className="stat-num">5</div><div className="stat-lbl">{"R\u00E9gimes fiscaux"}</div></div>
+                <div><div className="stat-num">{"France enti\u00E8re"}</div><div className="stat-lbl">{"36 000+ villes"}</div></div>
+                <div><div className="stat-num">7</div><div className="stat-lbl">{"R\u00E9gimes fiscaux"}</div></div>
               </div>
             </div>
             <div className="hero-visual">
@@ -249,7 +249,7 @@ export default function Home() {
                   <div className="mc-dot" style={{ background: '#ff5f57' }} />
                   <div className="mc-dot" style={{ background: '#febc2e' }} />
                   <div className="mc-dot" style={{ background: '#28c840' }} />
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginLeft: '8px' }}>monpetitmdb.io/biens/4821</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginLeft: '8px' }}>monpetitmdb.fr/biens/4821</span>
                 </div>
                 <div className="mc-photo">
                   <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=180&fit=crop" alt="Appartement lumineux" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -261,14 +261,14 @@ export default function Home() {
                   <div className="mc-title">{"Appartement T2 - 34 m\u00B2"}</div>
                   <div className="mc-loc">{"3e arrondissement \u2014 Marseille"}</div>
                   <div className="mc-prix">67 000 {'\u20AC'} <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--muted)', marginLeft: '6px' }}>FAI</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Loyer mensuel</span><span className="mc-val">480 {'\u20AC'}/mois</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Charges copro</span><span className="mc-val">60 {'\u20AC'}/mois</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Taxe fonci\u00E8re"}</span><span className="mc-val">45 {'\u20AC'}/mois</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Mensualit\u00E9 cr\u00E9dit (20 ans)"}</span><span className="mc-val r">-310 {'\u20AC'}/mois</span></div>
-                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Rendement brut</span><span className="mc-val g">8.60 %</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Loyer mensuel</span><span className="mc-val g">+480 {'\u20AC'}</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Charges r\u00E9cup\u00E9rables"}</span><span className="mc-val g">+50 {'\u20AC'}</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>Charges copro</span><span className="mc-val r">-60 {'\u20AC'}</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Taxe fonci\u00E8re"}</span><span className="mc-val r">-45 {'\u20AC'}</span></div>
+                  <div className="mc-row"><span style={{ color: 'var(--muted)' }}>{"Mensualit\u00E9 cr\u00E9dit (20 ans)"}</span><span className="mc-val r">-310 {'\u20AC'}</span></div>
                   <div className="mc-cf" style={{ background: '#d4f5e0' }}>
                     <div><div className="mc-cflbl">Cashflow brut</div><div className="mc-cfval" style={{ color: '#1a7a40' }}>+65 {'\u20AC'}/mois</div></div>
-                    <div style={{ textAlign: 'right' }}><div className="mc-cflbl">{"Estimation march\u00E9"}</div><div style={{ fontSize: '14px', fontWeight: 700, color: '#1a7a40' }}>82 500 {'\u20AC'}</div></div>
+                    <div style={{ textAlign: 'right' }}><div className="mc-cflbl">Rendement brut</div><div style={{ fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>8.60 %</div></div>
                   </div>
                 </div>
               </div>
@@ -361,7 +361,7 @@ export default function Home() {
                   <div className="app-dot" style={{ background: '#febc2e' }} />
                   <div className="app-dot" style={{ background: '#28c840' }} />
                 </div>
-                <div className="app-url">monpetitmdb.io/biens</div>
+                <div className="app-url">monpetitmdb.fr/biens</div>
               </div>
               <div className="app-body">
                 {/* Filter bar */}
@@ -409,7 +409,8 @@ export default function Home() {
                 </div>
                 <div className="ag">
                   <div className="ac">
-                    <div className="ac-img" style={{ background: 'linear-gradient(135deg,#3a5c4a,#2a4c3a)' }}>
+                    <div className="ac-img" style={{ overflow: 'hidden' }}>
+                      <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Nantes</span>
                       <span className="ac-br g">5.07 %</span>
                       <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-13 %</span>
@@ -422,7 +423,8 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="ac">
-                    <div className="ac-img" style={{ background: 'linear-gradient(135deg,#4a3a5c,#3a2a4c)' }}>
+                    <div className="ac-img" style={{ overflow: 'hidden' }}>
+                      <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Lyon</span>
                       <span className="ac-br g">6.14 %</span>
                       <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-8 %</span>
@@ -435,10 +437,11 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="ac">
-                    <div className="ac-img" style={{ background: 'linear-gradient(135deg,#5c4a3a,#4c3a2a)' }}>
+                    <div className="ac-img" style={{ overflow: 'hidden' }}>
+                      <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Marseille</span>
                       <span className="ac-br g">8.60 %</span>
-                      <span className="ac-pv" style={{ background: 'rgba(253,232,232,.95)', color: '#a33' }}>+5 %</span>
+                      <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-19 %</span>
                     </div>
                     <div className="ac-body">
                       <div className="ac-title">{"Appartement T2 - 34 m\u00B2"}</div>
@@ -448,7 +451,8 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="ac">
-                    <div className="ac-img" style={{ background: 'linear-gradient(135deg,#3a4a5c,#2a3a4c)' }}>
+                    <div className="ac-img" style={{ overflow: 'hidden' }}>
+                      <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Bordeaux</span>
                       <span className="ac-br y">3.78 %</span>
                       <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-11 %</span>
@@ -461,7 +465,8 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="ac">
-                    <div className="ac-img" style={{ background: 'linear-gradient(135deg,#5c3a4a,#4c2a3a)' }}>
+                    <div className="ac-img" style={{ overflow: 'hidden' }}>
+                      <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Rennes</span>
                       <span className="ac-br y">4.39 %</span>
                       <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-6 %</span>
@@ -474,7 +479,8 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="ac">
-                    <div className="ac-img" style={{ background: 'linear-gradient(135deg,#4a5c3a,#3a4c2a)' }}>
+                    <div className="ac-img" style={{ overflow: 'hidden' }}>
+                      <img src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Toulouse</span>
                       <span className="ac-br g">5.82 %</span>
                       <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-9 %</span>
