@@ -30,9 +30,9 @@ const COUNTER_KEY = 'mdb_chat_count'
 const MAX_HISTORY = 20
 
 function getWelcomeMessage(plan?: string | null): string {
-  if (plan === 'expert') return "Bonjour ! Je suis votre assistant fiscal expert. Je ma\u00EEtrise les 7 r\u00E9gimes fiscaux et peux r\u00E9aliser des simulations chiffr\u00E9es. Comment puis-je vous aider ?"
-  if (plan === 'pro') return "Bonjour ! Je peux vous expliquer tous les calculs et strat\u00E9gies de votre analyse. Que souhaitez-vous comprendre ?"
-  return "Bonjour ! Je suis l\u2019assistant Mon Petit MDB. Posez-moi vos questions sur l\u2019investissement immobilier."
+  if (plan === 'expert') return "Bonjour ! Je suis votre assistant fiscal expert.\n\nJe peux vous aider sur :\n\u2022 L\u2019analyse d\u00E9taill\u00E9e de chaque bien (rendement, cashflow, estimation DVF)\n\u2022 La simulation compl\u00E8te des 7 r\u00E9gimes fiscaux avec chiffres personnalis\u00E9s\n\u2022 Les sc\u00E9narios de revente et les abattements pour dur\u00E9e de d\u00E9tention\n\u2022 La comparaison entre strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Les montages juridiques (SCI IS, LMNP, marchand de biens)\n\nQue souhaitez-vous analyser ?"
+  if (plan === 'pro') return "Bonjour ! Je suis votre assistant d\u2019analyse.\n\nJe peux vous expliquer :\n\u2022 Les calculs de rendement brut et net de chaque bien\n\u2022 Le cashflow et le prix cible\n\u2022 L\u2019estimation DVF et ses correcteurs\n\u2022 Votre r\u00E9gime fiscal et une comparaison avec un second r\u00E9gime\n\nPassez au plan Expert pour acc\u00E9der aux simulations fiscales compl\u00E8tes sur les 7 r\u00E9gimes.\n\nQue souhaitez-vous comprendre ?"
+  return "Bonjour ! Je suis l\u2019assistant Mon Petit MDB.\n\nJe peux r\u00E9pondre \u00E0 vos questions sur :\n\u2022 L\u2019investissement immobilier locatif\n\u2022 Les diff\u00E9rentes strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Le fonctionnement de la plateforme\n\nCr\u00E9ez un compte Pro pour acc\u00E9der \u00E0 l\u2019analyse d\u00E9taill\u00E9e des biens et au simulateur fiscal."
 }
 
 function getDailyLimit(plan?: string | null): number {
@@ -168,7 +168,7 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
           className="mdb-cw-container"
           style={{
             position: 'fixed', bottom: 24, right: 24,
-            width: 380, height: 520,
+            width: 340, height: 500,
             borderRadius: 20, overflow: 'hidden',
             boxShadow: '0 16px 56px rgba(26,18,16,0.18), 0 0 0 1px rgba(0,0,0,0.06)',
             display: 'flex', flexDirection: 'column',
