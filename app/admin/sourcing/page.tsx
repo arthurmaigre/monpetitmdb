@@ -104,7 +104,12 @@ export default function AdminSourcingPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { window.location.href = '/login'; return }
       setToken(session.access_token)
+      // Listen for token refresh
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+        if (s?.access_token) setToken(s.access_token)
+      })
       setLoading(false)
+      return () => subscription.unsubscribe()
     }
     init()
   }, [])
@@ -130,7 +135,7 @@ export default function AdminSourcingPage() {
   }, [token])
 
   useEffect(() => {
-    if (token) { fetchStats(); fetchCronConfig() }
+    if (token) { fetchStats().then(() => fetchCronConfig()) }
   }, [token, fetchStats, fetchCronConfig])
 
   // Auto-refresh stats every 30s when a batch is running
