@@ -146,86 +146,74 @@ export async function POST(req: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
     const body = await req.json()
-    const { strategie, cursor } = body
+    const { strategie, cursor: initialCursor } = body
+    const startTime = Date.now()
+    const MAX_MS = 50000 // 50s max, leave margin for Vercel 60s timeout
 
     if (strategie && !REGEX_CONFIGS[strategie]) {
       return NextResponse.json({ error: 'Stratégie invalide' }, { status: 400 })
     }
 
-    // Query biens not yet checked by regex
-    let query = supabaseAdmin
-      .from('biens')
-      .select('id, created_at, strategie_mdb, moteurimmo_data')
-      .eq('statut', 'Toujours disponible')
-      .is('regex_statut', null)
-      .not('moteurimmo_data', 'is', null)
-      .order('created_at', { ascending: true })
-      .limit(500)
+    let totalChecked = 0
+    let totalFP = 0
+    let currentCursor: string | null = initialCursor || null
 
-    if (strategie) {
-      query = query.eq('strategie_mdb', strategie)
-    }
-    if (cursor) {
-      query = query.gt('created_at', cursor)
-    }
+    // Loop until timeout or no more biens
+    while (Date.now() - startTime < MAX_MS) {
+      let query = supabaseAdmin
+        .from('biens')
+        .select('id, created_at, strategie_mdb, moteurimmo_data')
+        .eq('statut', 'Toujours disponible')
+        .is('regex_statut', null)
+        .not('moteurimmo_data', 'is', null)
+        .order('created_at', { ascending: true })
+        .limit(1000)
 
-    const { data: biens, error } = await query
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-    if (!biens || biens.length === 0) {
-      return NextResponse.json({ checked: 0, faux_positifs: 0, next_cursor: null })
-    }
+      if (strategie) query = query.eq('strategie_mdb', strategie)
+      if (currentCursor) query = query.gt('created_at', currentCursor)
 
-    let fauxPositifs = 0
-    const idsToMarkFP: string[] = []
-    const idsValid: string[] = []
-    const now = new Date().toISOString()
+      const { data: biens, error } = await query
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (!biens || biens.length === 0) break
 
-    for (const bien of biens) {
-      const strat = bien.strategie_mdb
-      const config = REGEX_CONFIGS[strat]
-      if (!config) {
-        idsValid.push(bien.id)
-        continue
+      const idsToMarkFP: string[] = []
+      const idsValid: string[] = []
+      const now = new Date().toISOString()
+
+      for (const bien of biens) {
+        const config = REGEX_CONFIGS[bien.strategie_mdb]
+        if (!config) { idsValid.push(bien.id); continue }
+        const md = bien.moteurimmo_data as { title?: string; description?: string } | null
+        const text = [md?.title || '', md?.description || ''].join(' ')
+        if (!testRegex(text, config)) {
+          idsToMarkFP.push(bien.id)
+          totalFP++
+        } else {
+          idsValid.push(bien.id)
+        }
       }
 
-      const md = bien.moteurimmo_data as { title?: string; description?: string } | null
-      const text = [md?.title || '', md?.description || ''].join(' ')
-
-      if (!testRegex(text, config)) {
-        idsToMarkFP.push(bien.id)
-        fauxPositifs++
-      } else {
-        idsValid.push(bien.id)
+      // Batch updates (100 at a time)
+      for (let i = 0; i < idsToMarkFP.length; i += 100) {
+        await supabaseAdmin.from('biens')
+          .update({ statut: 'Faux positif', regex_statut: 'faux_positif', regex_date: now })
+          .in('id', idsToMarkFP.slice(i, i + 100))
       }
-    }
+      for (let i = 0; i < idsValid.length; i += 100) {
+        await supabaseAdmin.from('biens')
+          .update({ regex_statut: 'valide', regex_date: now })
+          .in('id', idsValid.slice(i, i + 100))
+      }
 
-    // Batch update faux positifs (50 at a time)
-    for (let i = 0; i < idsToMarkFP.length; i += 50) {
-      const batch = idsToMarkFP.slice(i, i + 50)
-      await supabaseAdmin
-        .from('biens')
-        .update({ statut: 'Faux positif', regex_statut: 'faux_positif', regex_date: now })
-        .in('id', batch)
+      totalChecked += biens.length
+      currentCursor = biens[biens.length - 1].created_at
+      if (biens.length < 1000) break // no more biens
     }
-
-    // Batch mark valid biens (50 at a time)
-    for (let i = 0; i < idsValid.length; i += 50) {
-      const batch = idsValid.slice(i, i + 50)
-      await supabaseAdmin
-        .from('biens')
-        .update({ regex_statut: 'valide', regex_date: now })
-        .in('id', batch)
-    }
-
-    const lastBien = biens[biens.length - 1]
-    const nextCursor = biens.length === 500 ? lastBien.created_at : null
 
     return NextResponse.json({
-      checked: biens.length,
-      faux_positifs: fauxPositifs,
-      next_cursor: nextCursor,
+      checked: totalChecked,
+      faux_positifs: totalFP,
+      next_cursor: currentCursor,
     })
   } catch (err) {
     console.error('Regex validation error:', err)

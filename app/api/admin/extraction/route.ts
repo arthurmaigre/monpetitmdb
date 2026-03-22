@@ -86,10 +86,12 @@ export async function POST(req: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
     const body = await req.json()
-    const { cursor } = body
+    const { cursor: initialCursor } = body
+    const startTime = Date.now()
+    const MAX_MS = 50000 // 50s max
 
     // Count remaining
-    let countQuery = supabaseAdmin
+    const { count: totalRemaining } = await supabaseAdmin
       .from('biens')
       .select('id', { count: 'exact', head: true })
       .eq('strategie_mdb', 'Locataire en place')
@@ -97,25 +99,7 @@ export async function POST(req: NextRequest) {
       .not('moteurimmo_data', 'is', null)
       .is('extraction_statut', null)
 
-    if (cursor) countQuery = countQuery.gt('created_at', cursor)
-    const { count: remaining } = await countQuery
-
-    // Query biens to process
-    let query = supabaseAdmin
-      .from('biens')
-      .select('id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, moteurimmo_data')
-      .eq('strategie_mdb', 'Locataire en place')
-      .eq('statut', 'Toujours disponible')
-      .not('moteurimmo_data', 'is', null)
-      .is('extraction_statut', null)
-      .order('created_at', { ascending: true })
-      .limit(20)
-
-    if (cursor) query = query.gt('created_at', cursor)
-
-    const { data: biens, error } = await query
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    if (!biens || biens.length === 0) {
+    if (!totalRemaining || totalRemaining === 0) {
       return NextResponse.json({
         processed: 0, loyer_found: 0, profil_found: 0,
         errors: 0, next_cursor: null, remaining: 0,
@@ -128,8 +112,28 @@ export async function POST(req: NextRequest) {
     let loyerFound = 0
     let profilFound = 0
     let errorCount = 0
+    let currentCursor: string | null = initialCursor || null
+
+    // Loop until timeout or no more biens
+    while (Date.now() - startTime < MAX_MS) {
+    let query = supabaseAdmin
+      .from('biens')
+      .select('id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, moteurimmo_data')
+      .eq('strategie_mdb', 'Locataire en place')
+      .eq('statut', 'Toujours disponible')
+      .not('moteurimmo_data', 'is', null)
+      .is('extraction_statut', null)
+      .order('created_at', { ascending: true })
+      .limit(10)
+
+    if (currentCursor) query = query.gt('created_at', currentCursor)
+
+    const { data: biens, error } = await query
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!biens || biens.length === 0) break
 
     for (const bien of biens) {
+      if (Date.now() - startTime >= MAX_MS) break
       try {
         const md = bien.moteurimmo_data as { description?: string; title?: string } | null
         const now = new Date().toISOString()
@@ -222,16 +226,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const lastBien = biens[biens.length - 1]
-    const nextCursor = biens.length === 20 ? lastBien.created_at : null
+    currentCursor = biens[biens.length - 1].created_at
+    if (biens.length < 10) break
+    } // end while
 
     return NextResponse.json({
       processed,
       loyer_found: loyerFound,
       profil_found: profilFound,
       errors: errorCount,
-      next_cursor: nextCursor,
-      remaining: (remaining || 0) - processed,
+      next_cursor: currentCursor,
+      remaining: (totalRemaining || 0) - processed,
     })
   } catch (err) {
     console.error('Extraction error:', err)
