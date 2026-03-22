@@ -12,21 +12,10 @@ const STRATEGIES = [
   { value: 'Decoupe', label: 'D\u00e9coupe' },
 ]
 
-interface DashStats {
-  total: number
-  locataire: number
-  travaux: number
-  division: number
-  decoupe: number
-  faux_positifs: number
-  extraction_pending: number
-  score_pending: number
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DashStats = Record<string, any>
 
-const defaultStats: DashStats = {
-  total: 0, locataire: 0, travaux: 0, division: 0, decoupe: 0,
-  faux_positifs: 0, extraction_pending: 0, score_pending: 0,
-}
+const defaultStats: DashStats = {}
 
 function fmt(n: number | undefined | null) { return (n ?? 0).toLocaleString('fr-FR') }
 
@@ -415,41 +404,125 @@ export default function AdminSourcingPage() {
         {/* ===== 1. Stats Dashboard ===== */}
         <div className="src-section">
           <div className="src-section-title">Vue d{"'"}ensemble</div>
+
+          {/* Ligne 1 : Totaux */}
           <div className="stat-grid">
             <div className="stat-card">
               <div className="stat-value">{fmt(stats.total)}</div>
               <div className="stat-label">Total biens</div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{fmt(stats.faux_positifs)}</div>
+              <div className="stat-value" style={{ color: '#1a7a40' }}>{fmt(stats.disponible)}</div>
+              <div className="stat-label">Disponibles</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value" style={{ color: '#9a8a80' }}>{fmt(stats.expiree)}</div>
+              <div className="stat-label">{"Expir\u00e9es"}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value" style={{ color: '#c0392b' }}>{fmt(stats.faux_positifs)}</div>
               <div className="stat-label">Faux positifs</div>
             </div>
+          </div>
+
+          {/* Ligne 2 : Par stratégie */}
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 20, marginBottom: 8 }}>Par strat{'\u00e9'}gie</div>
+          <div className="stat-sub-grid">
+            <div className="stat-sub"><div className="stat-value">{fmt(stats.locataire)}</div><div className="stat-label">Locataire en place</div></div>
+            <div className="stat-sub"><div className="stat-value">{fmt(stats.travaux)}</div><div className="stat-label">Travaux lourds</div></div>
+            <div className="stat-sub"><div className="stat-value">{fmt(stats.division)}</div><div className="stat-label">Division</div></div>
+            <div className="stat-sub"><div className="stat-value">{fmt(stats.decoupe)}</div><div className="stat-label">D{'\u00e9'}coupe</div></div>
+          </div>
+
+          {/* Ligne 3 : Pipeline de traitement */}
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 20, marginBottom: 8 }}>Pipeline de traitement</div>
+          <div className="stat-grid">
             <div className="stat-card">
-              <div className="stat-value">{fmt(stats.extraction_pending)}</div>
-              <div className="stat-label">Extraction pending</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div className="stat-label">Regex</div>
+                <span style={{ fontSize: 11, color: '#1a7a40', fontWeight: 600 }}>{fmt(stats.regex_done)} fait{stats.regex_done !== 1 ? 's' : ''}</span>
+              </div>
+              <ProgressBar value={stats.regex_done || 0} max={(stats.regex_done || 0) + (stats.regex_pending || 0)} color="#1a7a40" />
+              <div style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>{fmt(stats.regex_pending)} en attente</div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{fmt(stats.score_pending)}</div>
-              <div className="stat-label">Score pending</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div className="stat-label">Extraction IA</div>
+                <span style={{ fontSize: 11, color: '#1a7a40', fontWeight: 600 }}>{fmt(stats.extraction_done)} fait{stats.extraction_done !== 1 ? 's' : ''}</span>
+              </div>
+              <ProgressBar value={stats.extraction_done || 0} max={(stats.extraction_done || 0) + (stats.extraction_pending || 0)} color="#1a7a40" />
+              <div style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>{fmt(stats.extraction_pending)} en attente</div>
+            </div>
+            <div className="stat-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div className="stat-label">Score travaux</div>
+                <span style={{ fontSize: 11, color: '#1a7a40', fontWeight: 600 }}>{fmt(stats.score_done)} fait{stats.score_done !== 1 ? 's' : ''}</span>
+              </div>
+              <ProgressBar value={stats.score_done || 0} max={(stats.score_done || 0) + (stats.score_pending || 0)} color="#1a7a40" />
+              <div style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>{fmt(stats.score_pending)} en attente</div>
+            </div>
+            <div className="stat-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div className="stat-label">Estimation DVF</div>
+                <span style={{ fontSize: 11, color: '#1a7a40', fontWeight: 600 }}>{fmt(stats.estimation_done)} fait{stats.estimation_done !== 1 ? 's' : ''}</span>
+              </div>
+              <ProgressBar value={stats.estimation_done || 0} max={(stats.estimation_done || 0) + (stats.estimation_pending || 0)} color="#1a7a40" />
+              <div style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>{fmt(stats.estimation_pending)} en attente</div>
             </div>
           </div>
-          <div className="stat-sub-grid">
-            <div className="stat-sub">
-              <div className="stat-value">{fmt(stats.locataire)}</div>
-              <div className="stat-label">Locataire</div>
-            </div>
-            <div className="stat-sub">
-              <div className="stat-value">{fmt(stats.travaux)}</div>
-              <div className="stat-label">Travaux</div>
-            </div>
-            <div className="stat-sub">
-              <div className="stat-value">{fmt(stats.division)}</div>
-              <div className="stat-label">Division</div>
-            </div>
-            <div className="stat-sub">
-              <div className="stat-value">{fmt(stats.decoupe)}</div>
-              <div className="stat-label">D{'\u00e9'}coupe</div>
-            </div>
+
+          {/* Ligne 4 : Qualité données Locataire en place */}
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 20, marginBottom: 8 }}>
+            {"Qualit\u00e9 donn\u00e9es — Locataire en place"}
+            {stats.loc_completude != null && <span style={{ marginLeft: 8, color: (stats.loc_completude || 0) > 70 ? '#1a7a40' : '#c0392b', fontWeight: 700 }}>{stats.loc_completude}% complets</span>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+            {[
+              { label: 'Sans loyer', value: stats.loc_sans_loyer, color: '#c0392b' },
+              { label: 'Sans charges copro', value: stats.loc_sans_charges, color: '#f0a830' },
+              { label: 'Sans taxe fonc.', value: stats.loc_sans_taxe, color: '#f0a830' },
+              { label: 'Sans profil', value: stats.loc_sans_profil, color: '#9a8a80' },
+              { label: 'Sans fin bail', value: stats.loc_sans_bail, color: '#9a8a80' },
+            ].map(s => (
+              <div key={s.label} className="stat-sub">
+                <div className="stat-value" style={{ color: s.color, fontSize: 18 }}>{fmt(s.value)}</div>
+                <div className="stat-label" style={{ fontSize: 9 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Ligne 5 : Qualité données Travaux lourds */}
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 20, marginBottom: 8 }}>
+            {"Qualit\u00e9 donn\u00e9es — Travaux lourds"}
+            {stats.trav_completude != null && <span style={{ marginLeft: 8, color: (stats.trav_completude || 0) > 70 ? '#1a7a40' : '#c0392b', fontWeight: 700 }}>{stats.trav_completude}% scor{'\u00e9'}s</span>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {[
+              { label: 'Sans score IA', value: stats.trav_sans_score, color: '#c0392b' },
+              { label: 'Sans DPE', value: stats.trav_sans_dpe, color: '#f0a830' },
+              { label: 'Actifs', value: stats.trav_actif, color: '#1a7a40' },
+            ].map(s => (
+              <div key={s.label} className="stat-sub">
+                <div className="stat-value" style={{ color: s.color, fontSize: 18 }}>{fmt(s.value)}</div>
+                <div className="stat-label" style={{ fontSize: 9 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Ligne 6 : Données générales */}
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 20, marginBottom: 8 }}>{"Donn\u00e9es g\u00e9n\u00e9rales (biens disponibles)"}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {[
+              { label: 'Sans prix', value: stats.sans_prix, color: '#c0392b' },
+              { label: 'Sans surface', value: stats.sans_surface, color: '#c0392b' },
+              { label: 'Avec photo', value: stats.avec_photo, color: '#1a7a40' },
+              { label: 'Sans photo', value: stats.sans_photo, color: '#f0a830' },
+            ].map(s => (
+              <div key={s.label} className="stat-sub">
+                <div className="stat-value" style={{ color: s.color, fontSize: 18 }}>{fmt(s.value)}</div>
+                <div className="stat-label" style={{ fontSize: 9 }}>{s.label}</div>
+              </div>
+            ))}
           </div>
         </div>
 
