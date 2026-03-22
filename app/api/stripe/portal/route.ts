@@ -3,9 +3,13 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY manquante')
+  return new Stripe(process.env.STRIPE_SECRET_KEY)
+}
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe()
   const authHeader = req.headers.get('authorization')
   if (!authHeader) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 

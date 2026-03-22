@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY manquante')
+  return new Stripe(process.env.STRIPE_SECRET_KEY)
+}
 
 const PRICE_TO_PLAN: Record<string, string> = {
-  'price_1TDnxVBsP350Ff8hRjhx0tXi': 'pro',
-  'price_1TDnxoBsP350Ff8hsBhWz9Qn': 'expert',
+  [process.env.STRIPE_PRICE_PRO || 'price_1TDnxVBsP350Ff8hRjhx0tXi']: 'pro',
+  [process.env.STRIPE_PRICE_EXPERT || 'price_1TDnxoBsP350Ff8hsBhWz9Qn']: 'expert',
 }
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe()
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')!
 

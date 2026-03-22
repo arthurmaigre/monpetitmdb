@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY manquante')
+  return new Stripe(process.env.STRIPE_SECRET_KEY)
+}
 
 const PRICE_IDS: Record<string, string> = {
-  pro: 'price_1TDnxVBsP350Ff8hRjhx0tXi',
-  expert: 'price_1TDnxoBsP350Ff8hsBhWz9Qn',
+  pro: process.env.STRIPE_PRICE_PRO || 'price_1TDnxVBsP350Ff8hRjhx0tXi',
+  expert: process.env.STRIPE_PRICE_EXPERT || 'price_1TDnxoBsP350Ff8hsBhWz9Qn',
 }
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe()
   const authHeader = req.headers.get('authorization')
   if (!authHeader) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
