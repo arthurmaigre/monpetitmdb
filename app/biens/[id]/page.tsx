@@ -275,7 +275,7 @@ function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
   return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}</span>
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5, chargesUtilisateur }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { montantEmprunte, tauxCredit, tauxAssurance, dureeAns } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
@@ -514,9 +514,9 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
         <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
           {label}
-          {info && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{info}</span></span>}
+          {info && !isFree && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{info}</span></span>}
         </span>
-        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : vert ? '#1a7a40' : '#1a1210' }}>
+        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : vert ? '#1a7a40' : '#1a1210' }} className={isFree && !tiret ? 'val-blur' : ''}>
           {tiret ? '-' : value}
         </span>
       </div>
@@ -673,38 +673,38 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
             {cashflowCumule !== 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                 <span style={{ color: '#555' }}>Cashflow locatif net cumul{'\u00e9'}</span>
-                <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
+                <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
               <span style={{ color: '#555' }}>{pvNette >= 0 ? 'Plus-value nette' : 'Moins-value nette'}</span>
-              <span style={{ fontWeight: 600, color: pvNette >= 0 ? '#1a7a40' : '#c0392b' }}>{pvNette >= 0 ? '+' : ''}{fmt(pvNette)} {'\u20AC'}</span>
+              <span style={{ fontWeight: 600, color: pvNette >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{pvNette >= 0 ? '+' : ''}{fmt(pvNette)} {'\u20AC'}</span>
             </div>
             {interetsCumules > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                 <span style={{ color: '#555' }}>{`Int\u00E9r\u00EAts d'emprunt (${dur} an${dur > 1 ? 's' : ''})`}</span>
-                <span style={{ fontWeight: 600, color: '#c0392b' }}>-{fmt(interetsCumules)} {'\u20AC'}</span>
+                <span style={{ fontWeight: 600, color: '#c0392b' }} className={isFree ? 'val-blur' : ''}>-{fmt(interetsCumules)} {'\u20AC'}</span>
               </div>
             )}
             {fraisBancairesRevente > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                 <span style={{ color: '#555' }}>Frais de dossier bancaire</span>
-                <span style={{ fontWeight: 600, color: '#c0392b' }}>-{fmt(fraisBancairesRevente)} {'\u20AC'}</span>
+                <span style={{ fontWeight: 600, color: '#c0392b' }} className={isFree ? 'val-blur' : ''}>-{fmt(fraisBancairesRevente)} {'\u20AC'}</span>
               </div>
             )}
             <div style={{ borderTop: '2px solid rgba(0,0,0,0.1)', paddingTop: '8px' }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: profitNet >= 0 ? '#1a7a40' : '#c0392b', marginBottom: '4px' }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: profitNet >= 0 ? '#1a7a40' : '#c0392b', marginBottom: '4px' }} className={isFree ? 'val-blur' : ''}>
                 {profitNet >= 0 ? '+' : ''}{fmt(profitNet)} {'\u20AC'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', marginTop: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>ROI <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '10px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '13px', height: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{`Rendement sur le co\u00FBt total de l\u2019op\u00E9ration (prix FAI + notaire + travaux = ${fmt(coutTotal)} \u20AC). Mesure la performance intrins\u00E8que de l\u2019investissement, ind\u00E9pendamment du mode de financement.`}</span></span></span>
-                  <span style={{ fontWeight: 600, color: roiTotal >= 0 ? '#1a7a40' : '#c0392b' }}>{roiTotal > 0 ? '+' : ''}{roiTotal}% ({roiAnnualise > 0 ? '+' : ''}{roiAnnualise}%/an)</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>ROI</span>
+                  <span style={{ fontWeight: 600, color: roiTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roiTotal > 0 ? '+' : ''}{roiTotal}% ({roiAnnualise > 0 ? '+' : ''}{roiAnnualise}%/an)</span>
                 </div>
                 {fondsInvestis > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>ROE <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '10px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '13px', height: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{`Rendement sur vos fonds propres (apport = ${fmt(fondsInvestis)} \u20AC). Int\u00E8gre l\u2019effet de levier du cr\u00E9dit : plus l\u2019apport est faible par rapport au prix, plus le ROE est amplifi\u00E9 (dans les deux sens).`}</span></span></span>
-                    <span style={{ fontWeight: 600, color: roeTotal >= 0 ? '#1a7a40' : '#c0392b' }}>{roeTotal > 0 ? '+' : ''}{roeTotal}% ({roeAnnualise > 0 ? '+' : ''}{roeAnnualise}%/an)</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>ROE</span>
+                    <span style={{ fontWeight: 600, color: roeTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roeTotal > 0 ? '+' : ''}{roeTotal}% ({roeAnnualise > 0 ? '+' : ''}{roeAnnualise}%/an)</span>
                   </div>
                 )}
               </div>
@@ -961,7 +961,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void }) {
+function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean }) {
   const [estimation, setEstimation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -1006,6 +1006,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   }, [bienId])
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
+  const V = ({ children }: { children: React.ReactNode }) => isFree ? <span className="val-blur">{children}</span> : <>{children}</>
 
   const confianceColors: Record<string, { bg: string, color: string }> = {
     A: { bg: '#d4f5e0', color: '#1a7a40' },
@@ -1061,6 +1062,20 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   return (
     <div className="section">
       <h2 className="section-title">{"Estimation march\u00E9 DVF"}</h2>
+      {isFree && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
+          <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
+            {"D\u00E9bloquez l\u2019estimation march\u00E9 DVF"}
+          </span>
+          <a href="/mon-profil" style={{
+            display: 'inline-block', padding: '7px 18px', borderRadius: 8,
+            background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
+            textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
+          }}>
+            {"Passez Pro"}
+          </a>
+        </div>
+      )}
 
       {/* --- Adresse pour affiner le géocodage --- */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '10px 16px', background: '#faf8f5', borderRadius: '8px', fontSize: '13px' }}>
@@ -1121,7 +1136,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
             background: ecartPositif ? '#fde8e8' : '#d4f5e0',
           }}>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: ecartPositif ? '#c0392b' : '#1a7a40', textAlign: 'center' }}>
-              {ecart > 0 ? '+' : ''}{ecart}%
+              <V>{ecart > 0 ? '+' : ''}{ecart}%</V>
             </div>
           </div>
           <div style={{ fontSize: '11px', color: '#9a8a80', marginTop: '6px', textAlign: 'center' }}>
@@ -1134,9 +1149,9 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
           <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             {isAjuste ? "Mon estimation" : "Estimation march\u00E9"}
           </div>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210' }}>{fmt(prixActuel)} {'\u20AC'}</div>
-          <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}>{fmt(prixM2Actuel)} {'\u20AC'}/m{"²"}</div>
-          {isAjuste && (
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210' }}><V>{fmt(prixActuel)} {'\u20AC'}</V></div>
+          <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}><V>{fmt(prixM2Actuel)} {'\u20AC'}/m{"²"}</V></div>
+          {isAjuste && !isFree && (
             <div style={{ fontSize: '11px', color: '#b0a898', marginTop: '4px' }}>
               DVF : {fmt(estimation.prix_total)} {'\u20AC'}
               <span onClick={resetEstimation} style={{ marginLeft: '6px', color: '#c0392b', cursor: 'pointer', textDecoration: 'underline' }}>{"R\u00E9initialiser"}</span>
@@ -1150,7 +1165,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <span style={{ fontSize: '12px', fontWeight: 600, color: '#9a8a80' }}>Fourchette</span>
           <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: conf.bg, color: conf.color }}>
-            Confiance {estimation.confiance} ({"±"}{estimation.marge_pct}%)
+            Confiance {estimation.confiance} (<V>{"±"}{estimation.marge_pct}%</V>)
           </span>
         </div>
         <div style={{ position: 'relative', height: '10px', marginBottom: '4px' }}>
@@ -1175,7 +1190,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
             <span style={{ fontSize: '10px', fontWeight: 600, color: ecartPositif ? '#c0392b' : '#1a7a40', marginTop: '4px', whiteSpace: 'nowrap' }}>{fmt(prixFai)} {'\u20AC'}</span>
           </div>
           {/* Slider transparent superpose sur la barre */}
-          <input
+          {!isFree && <input
             type="range"
             min={estimation.prix_bas}
             max={estimation.prix_haut}
@@ -1187,12 +1202,12 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
               WebkitAppearance: 'none', appearance: 'none', background: 'transparent',
               cursor: 'pointer', zIndex: 4, margin: 0, padding: 0
             }}
-          />
+          />}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#b0a898', marginTop: '8px' }}>
-          <span>{fmt(estimation.prix_bas)} {'\u20AC'}</span>
-          <span style={{ color: '#9a8a80', fontWeight: 500 }}>{fmt(estimation.prix_total)} {'\u20AC'}</span>
-          <span>{fmt(estimation.prix_haut)} {'\u20AC'}</span>
+          <span><V>{fmt(estimation.prix_bas)} {'\u20AC'}</V></span>
+          <span style={{ color: '#9a8a80', fontWeight: 500 }}><V>{fmt(estimation.prix_total)} {'\u20AC'}</V></span>
+          <span><V>{fmt(estimation.prix_haut)} {'\u20AC'}</V></span>
         </div>
       </div>
       <style>{`
@@ -1213,15 +1228,15 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
                   background: c.multiplicateur >= 1 ? '#d4f5e0' : '#fde8e8',
                   color: c.multiplicateur >= 1 ? '#1a7a40' : '#c0392b'
                 }} title={c.raison}>
-                  {c.facteur} {c.multiplicateur >= 1 ? '+' : ''}{Math.round((c.multiplicateur - 1) * 100)}%
+                  {c.facteur} <V>{c.multiplicateur >= 1 ? '+' : ''}{Math.round((c.multiplicateur - 1) * 100)}%</V>
                 </span>
               ))}
             </div>
           </div>
         )}
         <div style={{ fontSize: '11px', color: '#b0a898', textAlign: 'right' }}>
-          <div>{estimation.nb_comparables} transactions comparables</div>
-          <div>Rayon : {estimation.rayon_m}m</div>
+          <div><V>{estimation.nb_comparables}</V> transactions comparables</div>
+          <div>Rayon : <V>{estimation.rayon_m}m</V></div>
           <div style={{ marginTop: '4px', fontStyle: 'italic' }}>{"Source : DVF (donn\u00E9es notariales)"}</div>
           <div style={{ marginTop: '2px', fontStyle: 'italic' }}>{"Estimation sur la base d\u2019un bien en bon \u00E9tat g\u00E9n\u00E9ral, sans travaux"}</div>
           <button
@@ -1244,6 +1259,8 @@ export default function FicheBienPage() {
   const [loading, setLoading] = useState(true)
   const [profil, setProfil] = useState<any>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
+  const [userPlan, setUserPlan] = useState<string>('free')
+  const [freeAnalysesLeft, setFreeAnalysesLeft] = useState<number>(0)
   const [champsStatut, setChampsStatut] = useState<Record<string, { valeur: string, statut: 'jaune' | 'vert' }>>({})
   const [scorePerso, setScorePerso] = useState<number | null>(null)
   const [inWatchlist, setInWatchlist] = useState(false)
@@ -1312,6 +1329,22 @@ export default function FicheBienPage() {
         if (profilData.profile) {
           const p = profilData.profile
           setProfil(p)
+          if (p.plan) {
+            setUserPlan(p.plan)
+            // 2 analyses completes offertes aux Free
+            if (p.plan === 'free') {
+              const KEY = 'mdb_free_analyses'
+              const MAX = 2
+              try {
+                const viewed: string[] = JSON.parse(localStorage.getItem(KEY) || '[]')
+                if (!viewed.includes(id) && viewed.length < MAX) {
+                  viewed.push(id)
+                  localStorage.setItem(KEY, JSON.stringify(viewed))
+                }
+                setFreeAnalysesLeft(viewed.includes(id) ? 1 : 0)
+              } catch { setFreeAnalysesLeft(0) }
+            }
+          }
           if (p.apport != null) setApport(p.apport)
           if (p.taux_credit != null) setTaux(p.taux_credit)
           if (p.taux_assurance != null) setTauxAssurance(p.taux_assurance)
@@ -1427,6 +1460,7 @@ export default function FicheBienPage() {
   const prixCibleCombine = prixCibleChoisi || prixCiblePV || prixCibleCashflow || null
   const hasCibleContraignant = prixCibleCombine && prixCibleCombine < bien?.prix_fai
 
+  const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
   const prixBase = baseCalc === 'fai' ? bien.prix_fai : (prixCibleCombine || bien.prix_fai)
   const montantProjet = prixBase * (1 + fraisNotaire / 100) + budgetTravCalc
   const montantEmprunte = Math.max(0, montantProjet - apport)
@@ -1504,6 +1538,7 @@ export default function FicheBienPage() {
         .slider-wrap { padding: 4px 0; }
         .slider { width: 100%; accent-color: #c0392b; cursor: pointer; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #b0a898; margin-top: 2px; }
+        .val-blur { filter: blur(7px); user-select: none; pointer-events: none; }
         .results-table { width: 100%; border-collapse: collapse; }
         .results-table thead th { font-size: 11px; font-weight: 600; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; text-align: right; border-bottom: 2px solid #f0ede8; }
         .results-table thead th:first-child { text-align: left; }
@@ -1581,7 +1616,7 @@ export default function FicheBienPage() {
                         return (
                           <div style={{ marginTop: '4px', background: '#d4f5e0', borderRadius: '8px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}>
                             <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a7a40' }}>Cashflow positif</span>
-                            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>+{fmt(cashflowBrut)} {'\u20AC'}/mois</span>
+                            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a7a40' }} className={isFreeBlocked ? 'val-blur' : ''}>+{fmt(cashflowBrut)} {'\u20AC'}/mois</span>
                           </div>
                         )
                       }
@@ -1590,7 +1625,7 @@ export default function FicheBienPage() {
                       return (
                         <div style={{ marginTop: '4px', background: '#d4f5e0', borderRadius: '8px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}>
                           <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a7a40' }}>PV brute</span>
-                          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a7a40' }}>{pvBruteEstimee >= 0 ? '+' : ''}{fmt(pvBruteEstimee)} {'\u20AC'}</span>
+                          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a7a40' }} className={isFreeBlocked ? 'val-blur' : ''}>{pvBruteEstimee >= 0 ? '+' : ''}{fmt(pvBruteEstimee)} {'\u20AC'}</span>
                         </div>
                       )
                     }
@@ -1598,8 +1633,8 @@ export default function FicheBienPage() {
                     const ecart = bien.prix_fai ? ((prixAffiche - bien.prix_fai) / bien.prix_fai * 100).toFixed(1) : '0'
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="prix-cible-val">{fmt(prixAffiche)} {'\u20AC'}</span>
-                        <span className={`ecart-badge ${Number(ecart) <= 0 ? 'ecart-neg' : 'ecart-pos'}`}>{Number(ecart) > 0 ? '+' : ''}{ecart} %</span>
+                        <span className={`prix-cible-val ${isFreeBlocked ? 'val-blur' : ''}`}>{fmt(prixAffiche)} {'\u20AC'}</span>
+                        <span className={`ecart-badge ${Number(ecart) <= 0 ? 'ecart-neg' : 'ecart-pos'} ${isFreeBlocked ? 'val-blur' : ''}`}>{Number(ecart) > 0 ? '+' : ''}{ecart} %</span>
                       </div>
                     )
                   })()}
@@ -1684,7 +1719,23 @@ export default function FicheBienPage() {
           </div>
         </div>
 
-        <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} />
+        {(() => {
+          const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
+          return (
+            <div style={isFreeBlocked ? { position: 'relative' } : {}}>
+              {userPlan === 'free' && freeAnalysesLeft > 0 && (
+                <div style={{
+                  background: 'rgba(26,122,64,0.06)', border: '1px solid rgba(26,122,64,0.15)',
+                  borderRadius: 10, padding: '10px 16px', marginBottom: 16,
+                  fontSize: 13, color: '#1a7a40', fontWeight: 500
+                }}>
+                  {"\u2728 Analyse compl\u00E8te offerte \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !"}
+                </div>
+              )}
+              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} />
+            </div>
+          )
+        })()}
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">
@@ -1779,11 +1830,25 @@ export default function FicheBienPage() {
         {/* Estimation travaux (toutes strategies) */}
         <div className="section">
           <h2 className="section-title">{bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic travaux' : 'Estimation travaux'}</h2>
+          {isFreeBlocked && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
+              <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
+                {"D\u00E9bloquez le diagnostic travaux"}
+              </span>
+              <a href="/mon-profil" style={{
+                display: 'inline-block', padding: '7px 18px', borderRadius: 8,
+                background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
+                textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
+              }}>
+                {"Passez Pro"}
+              </a>
+            </div>
+          )}
           <div style={{ marginBottom: '20px' }}>
             {bien.score_travaux ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                 <span className="data-label" style={{ margin: 0, minWidth: '110px' }}>Score IA</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '4px' }} className={isFreeBlocked ? 'val-blur' : ''}>
                   {[1, 2, 3, 4, 5].map(i => {
                     const color = i <= 2 ? '#1a7a40' : i <= 3 ? '#f0a830' : '#c0392b'
                     return (
@@ -1794,13 +1859,13 @@ export default function FicheBienPage() {
                     )
                   })}
                 </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{bien.score_travaux}/5</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>{bien.score_travaux}/5</span>
               </div>
             ) : (
               <div style={{ fontSize: '13px', color: '#9a8a80', marginBottom: '8px' }}>Aucun score IA disponible</div>
             )}
             {bien.score_commentaire && (
-              <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#555', lineHeight: '1.5', fontStyle: 'italic', marginBottom: '12px' }}>
+              <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#555', lineHeight: '1.5', fontStyle: 'italic', marginBottom: '12px' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
                 {bien.score_commentaire}
               </div>
             )}
@@ -1844,13 +1909,13 @@ export default function FicheBienPage() {
                       <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
                         {hasDetail ? "Budget travaux (par poste)" : "Estimation budget travaux"}
                       </div>
-                      <div style={{ fontSize: '13px', color: '#9a8a80' }}>
+                      <div style={{ fontSize: '13px', color: '#9a8a80' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
                         {hasDetail
                           ? `${Math.round(totalAffiche / bien.surface)} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`
                           : `${budgetM2} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2 (${scorePerso ? 'mon estimation' : 'score IA'} ${scoreUtilise}/5)`}
                       </div>
                     </div>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }}>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
                       {totalAffiche.toLocaleString('fr-FR')} {'\u20AC'}
                     </div>
                   </div>
@@ -2050,17 +2115,19 @@ export default function FicheBienPage() {
         )}
 
         {bien.prix_fai && (
+          <div>
           <div className="section">
             <h2 className="section-title">Analyse Fiscale</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#9a8a80' }}>Comparer avec :</span>
                 <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
+                  {/* TODO: limit to 2 regimes for Pro — currently shows all regimes for both Pro and Expert */}
                   {REGIMES.filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#9a8a80' }}>{"Détention :"}</span>
+                <span style={{ fontSize: '13px', color: '#9a8a80' }}>{"D\u00E9tention :"}</span>
                 {[1, 2, 3, 4, 5].map(d => (
                   <button key={d} onClick={() => setDureeRevente(d)} style={{
                     padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
@@ -2080,10 +2147,27 @@ export default function FicheBienPage() {
                 <span style={{ fontSize: '12px', color: '#9a8a80' }}>%</span>
               </div>
             </div>
-            <div className="pnl-grid">
-              <PnlColonne titre={`${REGIMES.find(r => r.value === regime)?.label || regime} (votre regime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} />
-              <PnlColonne titre={REGIMES.find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} />
+            <div>
+              {isFreeBlocked && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
+                  <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
+                    {"D\u00E9bloquez les simulations fiscales compl\u00E8tes"}
+                  </span>
+                  <a href="/mon-profil" style={{
+                    display: 'inline-block', padding: '7px 18px', borderRadius: 8,
+                    background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
+                    textDecoration: 'none', fontFamily: "'DM Sans', sans-serif"
+                  }}>
+                    {"Passez Pro"}
+                  </a>
+                </div>
+              )}
+              <div className="pnl-grid">
+                <PnlColonne titre={`${REGIMES.find(r => r.value === regime)?.label || regime} (votre regime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={REGIMES.find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+              </div>
             </div>
+          </div>
           </div>
         )}
 
