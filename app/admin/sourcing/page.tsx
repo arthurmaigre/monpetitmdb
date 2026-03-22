@@ -426,10 +426,14 @@ export default function AdminSourcingPage() {
     )
   }
 
-  const extractCost = (extractStats.processed * 0.00025).toFixed(2)
-  const extractEstimatedTotal = ((stats.extraction_pending || 0) * 0.00025)
-  const scoreEstimatedTotal = ((stats.score_pending || 0) * (scoreWithPhotos ? 0.0008 : 0.0002))
-  const scoreCost = (scoreStats.processed * (scoreWithPhotos ? 0.0008 : 0.0002)).toFixed(2)
+  // Haiku 4.5: $0.80/MTok input + $4/MTok output — ~$0.001/bien extraction, ~$0.0007/bien score, ~$0.003/bien score+photos
+  const COST_EXTRACTION = 0.001
+  const COST_SCORE = scoreWithPhotos ? 0.003 : 0.0007
+  const extractCost = (extractStats.processed * COST_EXTRACTION).toFixed(2)
+  const extractEstimatedTotal = (stats.extraction_pending || 0) * COST_EXTRACTION
+  const scorePendingCount = stats.score_pending || stats.trav_sans_score || 0
+  const scoreEstimatedTotal = scorePendingCount * COST_SCORE
+  const scoreCost = (scoreStats.processed * COST_SCORE).toFixed(2)
 
   // Strategy bar chart data
   const stratValues = [
@@ -882,10 +886,10 @@ export default function AdminSourcingPage() {
               <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4f5e0', color: '#1a7a40' }}>Photos (max 3)</span>
             )}
           </div>
-          {(stats.score_pending || 0) > 0 && !scoreRunning && (
+          {scorePendingCount > 0 && !scoreRunning && (
             <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 13, color: '#1a1210' }}>
-                <strong>{fmt(stats.score_pending)}</strong> biens {'\u00e0'} scorer
+                <strong>{fmt(scorePendingCount)}</strong> biens {'\u00e0'} scorer
               </span>
               <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
                 {"Co\u00fbt estim\u00e9 : ~"}{scoreEstimatedTotal < 1 ? scoreEstimatedTotal.toFixed(2) : Math.round(scoreEstimatedTotal)} {'\u20ac'} (Haiku{scoreWithPhotos ? ' + photos' : ''})
