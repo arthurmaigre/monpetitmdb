@@ -70,7 +70,9 @@ export default function AdminSourcingPage() {
 
   // Regex state
   const [regexRunning, setRegexRunning] = useState(false)
+  const [regexStrategy, setRegexStrategy] = useState('')
   const [regexStats, setRegexStats] = useState({ faux_positifs: 0, processed: 0, total: 0, last_run: '' })
+  const [regexShowKeywords, setRegexShowKeywords] = useState(false)
   const regexStopRef = useRef(false)
 
   // Extraction state
@@ -81,6 +83,7 @@ export default function AdminSourcingPage() {
 
   // Score travaux state
   const [scoreRunning, setScoreRunning] = useState(false)
+  const [scoreWithPhotos, setScoreWithPhotos] = useState(false)
   const [scoreStats, setScoreStats] = useState({ processed: 0, total: 0, scored: 0, errors: 0 })
   const scoreStopRef = useRef(false)
 
@@ -181,7 +184,7 @@ export default function AdminSourcingPage() {
     regexStopRef.current = false
     setRegexStats({ faux_positifs: 0, processed: 0, total: 0, last_run: '' })
 
-    const strats = ['Locataire en place', 'Travaux lourds', 'Division', 'Decoupe']
+    const strats = regexStrategy ? [regexStrategy] : ['Locataire en place', 'Travaux lourds', 'Division', 'Découpe']
     for (const strat of strats) {
       if (regexStopRef.current) break
       let cursor: string | null = null
@@ -262,7 +265,7 @@ export default function AdminSourcingPage() {
         const res: Response = await fetch('/api/admin/score-travaux', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ cursor }),
+          body: JSON.stringify({ cursor, withPhotos: scoreWithPhotos }),
         })
         const data = await res.json()
         setScoreStats(prev => ({
@@ -453,14 +456,42 @@ export default function AdminSourcingPage() {
         {/* ===== 3. Regex Validation ===== */}
         <div className="src-section">
           <div className="src-section-title">Validation regex</div>
+          <p className="src-muted" style={{ marginBottom: 12 }}>Filtre les faux positifs en analysant titre + description avec des regex par strat{'\u00e9'}gie. Les biens non valides sont marqu{'\u00e9'}s "Faux positif".</p>
           <div className="src-row">
+            <select className="src-select" value={regexStrategy} onChange={e => setRegexStrategy(e.target.value)} disabled={regexRunning}>
+              {STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
             {!regexRunning ? (
-              <button className="src-btn src-btn-red" onClick={startRegex}>Lancer la validation regex</button>
+              <button className="src-btn src-btn-red" onClick={startRegex}>Lancer la validation</button>
             ) : (
               <button className="src-btn src-btn-stop" onClick={() => { regexStopRef.current = true }}>Stop</button>
             )}
             {regexStats.last_run && <span className="src-muted">Dernier run : {regexStats.last_run}</span>}
           </div>
+          <div style={{ marginTop: 10 }}>
+            <button className="src-btn src-btn-outline" style={{ fontSize: 11, padding: '5px 12px' }} onClick={() => setRegexShowKeywords(!regexShowKeywords)}>
+              {regexShowKeywords ? 'Masquer' : 'Voir'} les mots-cl{'\u00e9'}s par strat{'\u00e9'}gie
+            </button>
+          </div>
+          {regexShowKeywords && (
+            <div style={{ marginTop: 12, background: '#faf8f5', borderRadius: 10, padding: '16px 20px', fontSize: 12, lineHeight: 1.8, border: '1px solid #e8e2d8' }}>
+              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Locataire en place</strong> <span style={{ color: '#9a8a80' }}>(valid{'\u00e9'} + exclu)</span><br/>
+                <span style={{ color: '#1a7a40' }}>{"✓"}</span> locataire en place, vendu lou{'\u00e9'}, bail en cours, loyer en place, occup{'\u00e9'} par locataire, lou{'\u00e9'} et occup{'\u00e9'}, vente occup{'\u00e9'}e, revenus locatifs, rendement locatif/brut/net, investissement locatif...<br/>
+                <span style={{ color: '#c0392b' }}>{"✗"}</span> pas/sans locataire, libre de toute occupation, non lou{'\u00e9'}, r{'\u00e9'}sidence g{'\u00e9'}r{'\u00e9'}e/services/senior
+              </div>
+              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Travaux lourds</strong><br/>
+                <span style={{ color: '#1a7a40' }}>{"✓"}</span> {'\u00e0'} r{'\u00e9'}nover, r{'\u00e9'}novation compl{'\u00e8'}te/totale, gros travaux, tout {'\u00e0'} refaire, {'\u00e0'} r{'\u00e9'}habiliter, travaux importants, vendu en l{'\u2019'}{'\u00e9'}tat, toiture {'\u00e0'} refaire, mise aux normes, inhabitable, {'\u00e0'} restaurer...<br/>
+                <span style={{ color: '#c0392b' }}>{"✗"}</span> pas/sans travaux, travaux r{'\u00e9'}alis{'\u00e9'}s/termin{'\u00e9'}s, enti{'\u00e8'}rement r{'\u00e9'}nov{'\u00e9'}, r{'\u00e9'}cemment r{'\u00e9'}nov{'\u00e9'}, refait {'\u00e0'} neuf
+              </div>
+              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Division</strong><br/>
+                <span style={{ color: '#1a7a40' }}>{"✓"}</span> divisible, division possible, cr{'\u00e9'}er des lots, cr{'\u00e9'}er plusieurs logements<br/>
+                <span style={{ color: '#c0392b' }}>{"✗"}</span> non divisible, issu d{"'"}une division, chambre/pi{'\u00e8'}ce/salon/jardin divisible
+              </div>
+              <div><strong style={{ color: '#2a4a8a' }}>D{'\u00e9'}coupe</strong><br/>
+                <span style={{ color: '#1a7a40' }}>{"✓"}</span> immeuble de rapport, monopropri{'\u00e9'}t{'\u00e9'}, copropri{'\u00e9'}t{'\u00e9'} {'\u00e0'} cr{'\u00e9'}er, vente en bloc, plusieurs appartements/logements/lots
+              </div>
+            </div>
+          )}
           {(regexRunning || regexStats.processed > 0) && (
             <div className="progress-wrap">
               {regexRunning && <div style={{ marginBottom: 6 }}><Spinner /> Validation en cours...</div>}
@@ -473,9 +504,15 @@ export default function AdminSourcingPage() {
           )}
         </div>
 
-        {/* ===== 4. Extraction IA ===== */}
+        {/* ===== 4. Extraction données locatives ===== */}
         <div className="src-section">
-          <div className="src-section-title">Extraction IA (Haiku)</div>
+          <div className="src-section-title">{"Extraction donn\u00e9es locatives (Haiku)"}</div>
+          <p className="src-muted" style={{ marginBottom: 8 }}>Strat{'\u00e9'}gie : <strong>Locataire en place</strong> uniquement. Claude Haiku analyse la description de l{"'"}annonce pour extraire :</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            {['Loyer (HC/CC)', 'Charges r\u00e9cup.', 'Charges copro', 'Taxe fonci\u00e8re', 'Fin de bail', 'Type de bail', 'Profil locataire'].map(f => (
+              <span key={f} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4ddf5', color: '#2a4a8a' }}>{f}</span>
+            ))}
+          </div>
           <div className="src-row">
             {!extractRunning ? (
               <button className="src-btn src-btn-red" onClick={startExtraction}>Lancer</button>
@@ -485,7 +522,7 @@ export default function AdminSourcingPage() {
             <label className="src-toggle">
               <input type="checkbox" checked={extractAuto} onChange={e => setExtractAuto(e.target.checked)} />
               <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
-              Auto
+              Auto (cron)
             </label>
           </div>
           {(extractRunning || extractStats.processed > 0) && (
@@ -511,15 +548,30 @@ export default function AdminSourcingPage() {
           )}
         </div>
 
-        {/* ===== 5. Score Travaux ===== */}
+        {/* ===== 5. Score Travaux IA ===== */}
         <div className="src-section">
-          <div className="src-section-title">Score Travaux (Haiku)</div>
+          <div className="src-section-title">Score Travaux IA (Haiku)</div>
+          <p className="src-muted" style={{ marginBottom: 8 }}>Strat{'\u00e9'}gie : <strong>Travaux lourds</strong> uniquement. Score de 1 (rafra{'\u00ee'}chissement) {'\u00e0'} 5 (r{'\u00e9'}habilitation totale). Signaux analys{'\u00e9'}s :</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            {['Description', 'DPE', 'Ann\u00e9e construction', 'Prix/surface'].map(f => (
+              <span key={f} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fff8f0', color: '#a06010' }}>{f}</span>
+            ))}
+            {scoreWithPhotos && (
+              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4f5e0', color: '#1a7a40' }}>Photos (max 3)</span>
+            )}
+          </div>
           <div className="src-row">
             {!scoreRunning ? (
               <button className="src-btn src-btn-red" onClick={startScore}>Lancer</button>
             ) : (
               <button className="src-btn src-btn-stop" onClick={() => { scoreStopRef.current = true }}>Stop</button>
             )}
+            <label className="src-toggle">
+              <input type="checkbox" checked={scoreWithPhotos} onChange={e => setScoreWithPhotos(e.target.checked)} disabled={scoreRunning} />
+              <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
+              Analyser les photos
+            </label>
+            {scoreWithPhotos && <span className="src-muted" style={{ fontSize: 11 }}>(co{'\u00fb'}t ~3x plus {'\u00e9'}lev{'\u00e9'})</span>}
           </div>
           {(scoreRunning || scoreStats.processed > 0) && (
             <div className="progress-wrap">

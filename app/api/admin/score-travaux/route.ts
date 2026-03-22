@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
     const body = await req.json()
-    const { cursor } = body
+    const { cursor, withPhotos = false } = body
 
     // Count remaining
     let countQuery = supabaseAdmin
@@ -123,26 +123,43 @@ export async function POST(req: NextRequest) {
 
     for (const bien of biens) {
       try {
-        const md = bien.moteurimmo_data as { title?: string; description?: string } | null
+        const md = bien.moteurimmo_data as { title?: string; description?: string; pictureUrls?: string[] } | null
         const title = md?.title || ''
         const desc = (md?.description || '').slice(0, 900)
+        const photoUrls = md?.pictureUrls || []
 
         if (!desc && !title) {
-          // No data to score
           await supabaseAdmin
             .from('biens')
-            .update({ score_travaux: 1, score_commentaire: 'Pas de description disponible' })
+            .update({ score_travaux: 1, score_commentaire: 'Pas de description disponible', score_analyse_statut: 'no_data', score_analyse_date: new Date().toISOString() })
             .eq('id', bien.id)
           processed++
           continue
         }
 
-        const userMessage = `${SCORE_PROMPT}\n\nTitre: ${title}\nDescription: ${desc}\nDPE: ${bien.dpe || 'NC'}\nAnnee: ${bien.annee_construction || 'NC'}\nPrix: ${bien.prix_fai} | Surface: ${bien.surface}m2`
+        const textContent = `${SCORE_PROMPT}\n\nTitre: ${title}\nDescription: ${desc}\nDPE: ${bien.dpe || 'NC'}\nAnnee: ${bien.annee_construction || 'NC'}\nPrix: ${bien.prix_fai} | Surface: ${bien.surface}m2`
+
+        // Build message content: text + optional photos
+        const contentParts: Anthropic.MessageCreateParams['messages'][0]['content'] = []
+
+        if (withPhotos && photoUrls.length > 0) {
+          // Add up to 3 photos for visual analysis
+          for (const url of photoUrls.slice(0, 3)) {
+            try {
+              contentParts.push({ type: 'image', source: { type: 'url', url } })
+            } catch { /* skip invalid URLs */ }
+          }
+        }
+
+        contentParts.push({ type: 'text', text: withPhotos && photoUrls.length > 0
+          ? textContent + '\n\nAnalyse aussi les photos ci-dessus pour affiner le score (etat des murs, sols, plafonds, facade, toiture, menuiseries).'
+          : textContent
+        })
 
         const message = await anthropic.messages.create({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 150,
-          messages: [{ role: 'user', content: userMessage }],
+          messages: [{ role: 'user', content: contentParts }],
         })
 
         const responseText = message.content
@@ -163,6 +180,8 @@ export async function POST(req: NextRequest) {
           .update({
             score_travaux: result.score,
             score_commentaire: result.commentaire,
+            score_analyse_statut: 'ok',
+            score_analyse_date: new Date().toISOString(),
           })
           .eq('id', bien.id)
 
@@ -170,6 +189,10 @@ export async function POST(req: NextRequest) {
         processed++
       } catch (aiErr) {
         console.error(`Score error for bien ${bien.id}:`, aiErr)
+        await supabaseAdmin
+          .from('biens')
+          .update({ score_analyse_statut: 'erreur', score_analyse_date: new Date().toISOString() })
+          .eq('id', bien.id)
         errorCount++
         processed++
       }
