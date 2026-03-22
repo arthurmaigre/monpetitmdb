@@ -415,7 +415,7 @@ def ingest_strategy(strategie: str, max_pages: int = 100,
 
 
 def ingest_strategy_by_date(strategie: str, start_date: str = "2023-01-01",
-                           dry_run: bool = False) -> dict:
+                           end_date: str = None, dry_run: bool = False) -> dict:
     """
     Ingere les annonces par tranches de mois (evite les timeouts sur pages profondes).
     Pagination par creationDateAfter/creationDateBefore au lieu de page number.
@@ -432,15 +432,15 @@ def ingest_strategy_by_date(strategie: str, start_date: str = "2023-01-01",
 
     stats = {"total_api": 0, "new": 0, "updated": 0, "skipped": 0, "errors": 0, "batches": 0}
 
-    # Generer des tranches de 1 mois de start_date a maintenant
+    # Generer des tranches de 1 mois de start_date a end_date (ou maintenant)
     from datetime import datetime as dt, timedelta
     current = dt.fromisoformat(start_date.replace("Z", ""))
-    now = dt.utcnow()
+    end = dt.fromisoformat(end_date.replace("Z", "")) if end_date else dt.utcnow()
 
-    while current < now:
+    while current < end:
         next_month = current + timedelta(days=30)
-        if next_month > now:
-            next_month = now
+        if next_month > end:
+            next_month = end
 
         date_after = current.strftime("%Y-%m-%dT00:00:00.000Z")
         date_before = next_month.strftime("%Y-%m-%dT23:59:59.999Z")
@@ -585,6 +585,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Moteur Immo -> Supabase ingestion")
     parser.add_argument("--dry-run", action="store_true", help="Simuler sans ecrire en base")
     parser.add_argument("--since", type=str, default="2023-01-01", help="Date ISO de debut (ex: 2023-01-01)")
+    parser.add_argument("--until", type=str, default=None, help="Date ISO de fin (ex: 2025-01-01). Defaut: maintenant")
     parser.add_argument("--strategie", type=str, choices=list(STRATEGIES.keys()), help="Une seule strategie")
     parser.add_argument("--max-pages", type=int, default=100, help="Nombre max de pages par strategie (mode page)")
     parser.add_argument("--by-date", action="store_true", help="Paginer par tranches de mois (recommande pour gros volumes)")
@@ -604,6 +605,7 @@ if __name__ == "__main__":
             stats = ingest_strategy_by_date(
                 args.strategie,
                 start_date=args.since,
+                end_date=args.until,
                 dry_run=args.dry_run,
             )
         else:
@@ -621,7 +623,7 @@ if __name__ == "__main__":
             log.info(f"# STRATEGIE : {strategie}")
             log.info(f"{'#'*60}")
             if args.by_date:
-                all_stats[strategie] = ingest_strategy_by_date(strategie, start_date=args.since, dry_run=args.dry_run)
+                all_stats[strategie] = ingest_strategy_by_date(strategie, start_date=args.since, end_date=args.until, dry_run=args.dry_run)
             else:
                 all_stats[strategie] = ingest_strategy(strategie, max_pages=args.max_pages, creation_date_after=args.since, dry_run=args.dry_run)
         for strat, s in all_stats.items():

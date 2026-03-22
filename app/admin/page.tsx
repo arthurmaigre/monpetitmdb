@@ -72,6 +72,14 @@ export default function AdminPage() {
             <div className="nav-card-title">{"Moteur d'estimation"}</div>
             <div className="nav-card-sub">{"M\u00e9thodologie DVF, correcteurs, niveaux de confiance"}</div>
           </a>
+          <a href="/admin/sourcing" className="nav-card">
+            <div className="nav-card-title">Sourcing & Batches</div>
+            <div className="nav-card-sub">Ingestion Moteur Immo, regex, extraction IA, score travaux</div>
+          </a>
+          <a href="/admin/guide-fiscal" className="nav-card">
+            <div className="nav-card-title">{"R\u00E9f\u00E9rence fiscale"}</div>
+            <div className="nav-card-sub">Guide des 7 r\u00E9gimes fiscaux</div>
+          </a>
         </div>
       </div>
     </Layout>
