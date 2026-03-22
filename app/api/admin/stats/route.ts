@@ -77,32 +77,27 @@ export async function GET(req: NextRequest) {
         .eq('strategie_mdb', 'Locataire en place')
         .eq('statut', 'Toujours disponible')
         .is('profil_locataire', null),
-      // Score pending (Travaux lourds + Locataire en place, score_travaux IS null)
+      // Score pending (Travaux lourds only, score_travaux IS null)
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true })
-        .in('strategie_mdb', ['Travaux lourds', 'Locataire en place'])
+        .eq('strategie_mdb', 'Travaux lourds')
         .eq('statut', 'Toujours disponible')
         .is('score_travaux', null),
     ])
 
     return NextResponse.json({
+      // Format for /admin page
       biens: totalRes.count || 0,
       users: usersRes.count || 0,
       watchlist: watchlistRes.count || 0,
-      by_strategie: {
-        'Locataire en place': locataireRes.count || 0,
-        'Travaux lourds': travauxRes.count || 0,
-        'Division': divisionRes.count || 0,
-        'Découpe': decoupeRes.count || 0,
-      },
-      by_statut: {
-        'Toujours disponible': disponibleRes.count || 0,
-        'Annonce expirée': expireeRes.count || 0,
-        'Faux positif': fauxPositifRes.count || 0,
-      },
-      pending: {
-        extraction: extractionPendingRes.count || 0,
-        score_travaux: scorePendingRes.count || 0,
-      },
+      // Format for /admin/sourcing page
+      total: totalRes.count || 0,
+      locataire: locataireRes.count || 0,
+      travaux: travauxRes.count || 0,
+      division: divisionRes.count || 0,
+      decoupe: decoupeRes.count || 0,
+      faux_positifs: fauxPositifRes.count || 0,
+      extraction_pending: extractionPendingRes.count || 0,
+      score_pending: scorePendingRes.count || 0,
     })
   } catch (err) {
     console.error('Stats error:', err)
