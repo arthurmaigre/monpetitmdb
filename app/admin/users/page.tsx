@@ -4,8 +4,15 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
-const PLANS = ['Free', 'Starter', 'Pro']
-const ROLES = ['User', 'Admin']
+const PLANS = [
+  { value: 'free', label: 'Free' },
+  { value: 'pro', label: 'Pro' },
+  { value: 'expert', label: 'Expert' },
+]
+const ROLES = [
+  { value: 'user', label: 'User' },
+  { value: 'admin', label: 'Admin' },
+]
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([])
@@ -79,8 +86,8 @@ export default function AdminUsersPage() {
                 {users.map(u => (
                   <tr key={u.id} className={saving === u.id ? 'saving' : ''}>
                     <td style={{ fontWeight: 500 }}>{u.email}</td>
-                    <td><select className="td-select" value={u.plan || 'free'} onChange={e => updateUser(u.id, 'plan', e.target.value)}>{PLANS.map(p => <option key={p}>{p}</option>)}</select></td>
-                    <td><select className="td-select" value={u.role || 'user'} onChange={e => updateUser(u.id, 'role', e.target.value)}>{ROLES.map(r => <option key={r}>{r}</option>)}</select></td>
+                    <td><select className="td-select" value={u.plan || 'free'} onChange={e => updateUser(u.id, 'plan', e.target.value)}>{PLANS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></td>
+                    <td><select className="td-select" value={u.role || 'user'} onChange={e => updateUser(u.id, 'role', e.target.value)}>{ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}</select></td>
                     <td>{u.tmi} %</td>
                     <td>{u.regime}</td>
                     <td style={{ color: '#9a8a80', fontSize: '12px' }}>{new Date(u.created_at).toLocaleDateString('fr-FR')}</td>

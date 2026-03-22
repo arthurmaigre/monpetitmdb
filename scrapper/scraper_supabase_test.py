@@ -1431,6 +1431,15 @@ async def scrape_listing_detail(page, url, strategie_active: str = "Locataire en
                         addr = loc.get("address") or loc.get("street", "")
                         if addr:
                             data["adresse"] = str(addr)
+                    # Coordonnees GPS depuis Leboncoin
+                    if not data.get("latitude"):
+                        lat = loc.get("lat") or loc.get("latitude")
+                        lng = loc.get("lng") or loc.get("longitude")
+                        if lat and lng:
+                            try:
+                                data["latitude"] = float(lat)
+                                data["longitude"] = float(lng)
+                            except: pass
                 body_nd = ad_data.get("body", "")
                 if body_nd:
                     data["_description_nd"] = body_nd

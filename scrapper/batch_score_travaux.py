@@ -33,11 +33,13 @@ Score 3 - Renovation complete : tous corps d etat (elec, plomberie, isolation), 
 Score 4 - Renovation lourde : structure partielle + tous corps d etat
 Score 5 - Rehabilitation totale : structure entiere a reprendre, inhabitable
 
-SIGNAUX : DPE G=min 3, DPE F=min 2, toiture/charpente=4-5, elec+plomberie=min 3, humidite=min 3, succession/inhabitable=+1, avant 1950 sans renov=+1
+SIGNAUX : DPE G=min 3, DPE F=min 2, toiture/charpente=4-5, elec+plomberie=min 3, humidite=min 3, succession/inhabitable=+1
+
+REGLE ANNEE DE CONSTRUCTION : l annee seule ne suffit PAS a augmenter le score. Un bien ancien (avant 1950) peut avoir ete renove depuis. N appliquer +1 QUE si l annonce contient des signaux EXPLICITES de vetuste ("en l etat", "d origine", "jamais renove", "electrique vetuste", "pas d isolation", "a remettre aux normes"). L absence de mention de renovation ne signifie PAS absence de renovation.
 
 JSON une seule ligne : {"score": <1-5>, "commentaire": "<1-2 phrases>"}'''
 
-WORKERS = 4
+WORKERS = 5
 
 def run():
     c = get_client()
@@ -60,7 +62,7 @@ def run():
                 .is_("score_analyse_statut", "null") \
                 .gt("created_at", last_date) \
                 .order("created_at") \
-                .limit(500) \
+                .limit(200) \
                 .execute()
             rows = r.data or []
             if not rows: break
@@ -93,7 +95,6 @@ def run():
             title = (mi.get("title") or "")
 
             if not desc:
-                # Pas de description → marquer no_data
                 c.table("biens").update({
                     "score_analyse_date": now,
                     "score_analyse_statut": "no_data"

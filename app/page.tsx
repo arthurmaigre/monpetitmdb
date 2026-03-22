@@ -1,3 +1,5 @@
+import PricingCta from '@/components/PricingCta'
+
 export default function Home() {
   return (
     <>
@@ -516,7 +518,7 @@ export default function Home() {
                   <li><span className="pcx">{'\u2717'}</span><span style={{ color: '#c0b0a0' }}>Simulateur fiscal</span></li>
                   <li><span className="pcx">{'\u2717'}</span><span style={{ color: '#c0b0a0' }}>{"Estimation march\u00E9 DVF"}</span></li>
                 </ul>
-                <button className="plan-cta">Commencer gratuitement</button>
+                <a href="/register" className="plan-cta">Commencer gratuitement</a>
               </div>
               {/* PRO */}
               <div className="plan ft">
@@ -535,7 +537,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison 2 r\u00E9gimes"}</li>
                   <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Toutes les strat\u00E9gies"}</span></li>
                 </ul>
-                <button className="plan-cta">Essayer 14 jours gratuits</button>
+                <PricingCta plan="pro" label="Essayer 14 jours gratuits" className="plan-cta" />
               </div>
               {/* EXPERT */}
               <div className="plan">
@@ -552,7 +554,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>Alertes nouvelles annonces</li>
                   <li><span className="pck">{'\u2713'}</span>{"Support prioritaire"}</li>
                 </ul>
-                <button className="plan-cta">Commencer avec Expert</button>
+                <PricingCta plan="expert" label="Commencer avec Expert" className="plan-cta" />
               </div>
             </div>
           </div>

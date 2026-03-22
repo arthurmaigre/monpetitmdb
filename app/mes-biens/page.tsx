@@ -15,6 +15,7 @@ export default function MesBiensPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [activeTab, setActiveTab] = useState('')
   const [error, setError] = useState('')
+  const [plan, setPlan] = useState<string>('free')
 
   useEffect(() => {
     async function load() {
@@ -22,6 +23,13 @@ export default function MesBiensPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) { window.location.href = '/login'; return }
         setUserToken(session.access_token)
+
+        // Fetch user plan
+        const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setPlan(profileData.profile?.plan || 'free')
+        }
 
         const wRes = await fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
         if (!wRes.ok) throw new Error('Impossible de charger la watchlist')
@@ -48,6 +56,11 @@ export default function MesBiensPage() {
     }
     load()
   }, [])
+
+  // Plan limits
+  const watchlistLimit = plan === 'expert' ? Infinity : plan === 'pro' ? 50 : 10
+  const isAtLimit = biens.length >= watchlistLimit
+  const isExpert = plan === 'expert'
 
   // Onglets par strategie (seulement celles qui ont des biens)
   const strategies = [...new Set(biens.map(b => b.strategie_mdb).filter(Boolean))] as string[]
@@ -126,8 +139,26 @@ export default function MesBiensPage() {
       <div className="mes-biens-wrap">
         <div className="mes-biens-header">
           <div>
-            <h1 className="mes-biens-title">Ma watchlist</h1>
-            <p className="mes-biens-sub">{biens.length} bien{biens.length > 1 ? 's' : ''} sauvegardé{biens.length > 1 ? 's' : ''}</p>
+            <h1 className="mes-biens-title">
+              Ma watchlist
+              <span style={{
+                display: 'inline-block', padding: '4px 12px', borderRadius: 20,
+                background: isAtLimit && !isExpert ? 'rgba(192,57,43,0.1)' : '#f0ede8',
+                color: isAtLimit && !isExpert ? '#c0392b' : '#9a8a80',
+                fontSize: 13, fontWeight: 600, marginLeft: 12, verticalAlign: 'middle'
+              }}>
+                {isExpert ? `${biens.length} biens` : `${biens.length} / ${watchlistLimit}`}
+              </span>
+            </h1>
+            <p className="mes-biens-sub">{biens.length} bien{biens.length > 1 ? 's' : ''} sauvegard{'\u00E9'}{biens.length > 1 ? 's' : ''}</p>
+            {isAtLimit && !isExpert && (
+              <p style={{ fontSize: 14, color: '#c0392b', marginTop: 8 }}>
+                {"Vous avez atteint la limite de votre plan. "}
+                <a href="/mon-profil" style={{ color: '#c0392b', fontWeight: 600, textDecoration: 'underline' }}>
+                  {plan === 'free' ? "Passer au Pro pour 50 biens" : "Passer \u00E0 Expert pour un acc\u00E8s illimit\u00E9"}
+                </a>
+              </p>
+            )}
           </div>
           <div className="view-toggle" role="group" aria-label="Mode d'affichage">
             <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label="Affichage en grille">Grille</button>

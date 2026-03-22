@@ -25,6 +25,9 @@ export default function MonProfilPage() {
   const [ville, setVille] = useState('')
   const [pays, setPays] = useState('France')
 
+  const [plan, setPlan] = useState('free')
+  const [loadingStripe, setLoadingStripe] = useState(false)
+
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -35,6 +38,21 @@ export default function MonProfilPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) { window.location.href = '/login'; return }
         setUser(session.user)
+
+        // Charger le plan depuis profiles
+        const { data: profile } = await supabase.from('profiles').select('plan').eq('id', session.user.id).single()
+        if (profile?.plan) setPlan(profile.plan)
+
+        // Gestion retour Stripe
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('payment') === 'success') {
+          setSuccess('Abonnement activ\u00E9 avec succ\u00E8s !')
+          window.history.replaceState({}, '', '/mon-profil')
+        }
+        if (params.get('payment') === 'cancel') {
+          setError('Paiement annul\u00E9')
+          window.history.replaceState({}, '', '/mon-profil')
+        }
 
         // Charger les metadata du profil
         const meta = session.user.user_metadata || {}
@@ -107,6 +125,41 @@ export default function MonProfilPage() {
     setSaving(false)
   }
 
+  async function handleUpgrade(targetPlan: string) {
+    setLoadingStripe(true)
+    setError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = '/login'; return }
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ plan: targetPlan }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else setError(data.error || 'Erreur lors de la redirection vers le paiement')
+    } catch { setError('Erreur de connexion') }
+    finally { setLoadingStripe(false) }
+  }
+
+  async function handleManageSubscription() {
+    setLoadingStripe(true)
+    setError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = '/login'; return }
+      const res = await fetch('/api/stripe/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else setError(data.error || 'Erreur lors de la redirection')
+    } catch { setError('Erreur de connexion') }
+    finally { setLoadingStripe(false) }
+  }
+
   if (loading) return (
     <Layout>
       <div style={{ maxWidth: '720px', margin: '48px auto', padding: '0 24px' }}>
@@ -165,6 +218,7 @@ export default function MonProfilPage() {
           .mp-title { font-size: 24px; }
           .mp-section { padding: 24px 16px; }
           .mp-grid { grid-template-columns: 1fr; }
+          .mp-plans-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -260,6 +314,70 @@ export default function MonProfilPage() {
             </button>
           </div>
         </form>
+
+        {/* Abonnement */}
+        <div className="mp-section">
+          <h2 className="mp-section-title">Mon abonnement</h2>
+          <p className="mp-section-desc">{"G\u00E9rez votre plan et votre facturation."}</p>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+            <span style={{
+              padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' as const,
+              background: plan === 'expert' ? 'rgba(192,57,43,0.12)' : plan === 'pro' ? 'rgba(26,122,64,0.1)' : '#f0ede8',
+              color: plan === 'expert' ? '#c0392b' : plan === 'pro' ? '#1a7a40' : '#9a8a80',
+            }}>
+              {plan === 'expert' ? 'Expert' : plan === 'pro' ? 'Pro' : 'Free'}
+            </span>
+            <span style={{ fontSize: 14, color: '#9a8a80' }}>
+              {plan === 'expert' ? `49 ${'\u20AC'}/mois` : plan === 'pro' ? `19 ${'\u20AC'}/mois` : 'Gratuit'}
+            </span>
+          </div>
+
+          {plan === 'free' && (
+            <div className="mp-plans-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ background: '#faf8f5', borderRadius: 12, padding: 20, border: '1.5px solid #e8e2d8' }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Pro</div>
+                <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, marginBottom: 4 }}>19 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: '#9a8a80' }}>/mois</span></div>
+                <div style={{ fontSize: 13, color: '#9a8a80', marginBottom: 16 }}>{"Simulateur fiscal, estimation DVF, sc\u00E9nario de revente"}</div>
+                <button className="mp-btn mp-btn-primary" onClick={() => handleUpgrade('pro')} disabled={loadingStripe} style={{ marginTop: 0 }}>
+                  {loadingStripe ? 'Redirection...' : 'Passer au Pro'}
+                </button>
+              </div>
+              <div style={{ background: '#1a1210', borderRadius: 12, padding: 20, border: '1.5px solid #1a1210' }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 4 }}>Expert</div>
+                <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, color: '#fff', marginBottom: 4 }}>49 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.5)' }}>/mois</span></div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>{"Toutes les strat\u00E9gies, tous les r\u00E9gimes, alertes, support prioritaire"}</div>
+                <button className="mp-btn" onClick={() => handleUpgrade('expert')} disabled={loadingStripe} style={{ marginTop: 0, background: '#c0392b', color: '#fff' }}>
+                  {loadingStripe ? 'Redirection...' : 'Passer Expert'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {plan === 'pro' && (
+            <div className="mp-plans-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ background: '#1a1210', borderRadius: 12, padding: 20, border: '1.5px solid #1a1210' }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 4 }}>Expert</div>
+                <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, color: '#fff', marginBottom: 4 }}>49 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.5)' }}>/mois</span></div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>{"Toutes les strat\u00E9gies, tous les r\u00E9gimes, alertes, support prioritaire"}</div>
+                <button className="mp-btn" onClick={() => handleUpgrade('expert')} disabled={loadingStripe} style={{ marginTop: 0, background: '#c0392b', color: '#fff' }}>
+                  {loadingStripe ? 'Redirection...' : 'Passer Expert'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button className="mp-btn mp-btn-secondary" onClick={handleManageSubscription} disabled={loadingStripe} style={{ marginTop: 0 }}>
+                  {loadingStripe ? 'Redirection...' : "G\u00E9rer mon abonnement"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {plan === 'expert' && (
+            <button className="mp-btn mp-btn-secondary" onClick={handleManageSubscription} disabled={loadingStripe}>
+              {loadingStripe ? 'Redirection...' : "G\u00E9rer mon abonnement"}
+            </button>
+          )}
+        </div>
 
         {/* Changement de mot de passe */}
         <form onSubmit={handleChangePassword}>

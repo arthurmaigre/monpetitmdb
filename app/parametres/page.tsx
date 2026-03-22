@@ -17,6 +17,7 @@ const REGIME_OPTIONS = [
 
 export default function ParametresPage() {
   const [profile, setProfile] = useState<any>(null)
+  const [plan, setPlan] = useState<string>('free')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -31,6 +32,7 @@ export default function ParametresPage() {
         if (!res.ok) throw new Error('Impossible de charger le profil')
         const data = await res.json()
         setProfile(data.profile)
+        setPlan(data.profile?.plan || 'free')
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement du profil')
       } finally {
@@ -78,6 +80,8 @@ export default function ParametresPage() {
     </Layout>
   )
 
+  const isFree = plan === 'free'
+
   return (
     <Layout>
       <style>{`
@@ -121,9 +125,33 @@ export default function ParametresPage() {
         <p className="profil-sub">{"Vos param\u00E8tres sont utilis\u00E9s automatiquement dans le simulateur fiscal et les analyses de rentabilit\u00E9."}</p>
 
         {error && <div className="profil-error" role="alert">{error}</div>}
-        {success && <div className="profil-toast profil-toast-success" role="status">Profil sauvegardé avec succès</div>}
+        {success && <div className="profil-toast profil-toast-success" role="status">{"Profil sauvegard\u00E9 avec succ\u00E8s"}</div>}
 
-        <form onSubmit={handleSave}>
+        {isFree && (
+          <div style={{
+            background: 'rgba(192,57,43,0.06)', border: '1.5px solid rgba(192,57,43,0.15)',
+            borderRadius: 12, padding: '16px 20px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12
+          }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1210', marginBottom: 4 }}>
+                {"Fonctionnalit\u00E9 r\u00E9serv\u00E9e au plan Pro"}
+              </div>
+              <div style={{ fontSize: 13, color: '#9a8a80' }}>
+                {"Personnalisez vos param\u00E8tres fiscaux et de financement pour des analyses sur-mesure."}
+              </div>
+            </div>
+            <a href="/mon-profil" style={{
+              display: 'inline-block', padding: '10px 24px', borderRadius: 10,
+              background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 14,
+              textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
+            }}>
+              {"Passer au Pro \u2014 19 \u20AC/mois"}
+            </a>
+          </div>
+        )}
+
+        <form onSubmit={handleSave} style={isFree ? { filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const } : {}}>
 
           <div className="profil-section">
             <h2 className="profil-section-title">Fiscalité</h2>
