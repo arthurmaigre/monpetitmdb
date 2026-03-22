@@ -9,6 +9,8 @@ Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 1 strategie, 
 ## Stack
 - **Frontend** : Next.js App Router, TypeScript — Vercel
 - **DB** : Supabase Pro (West EU / Ireland) — auth + tables + storage
+- **Auth** : Supabase Auth (email/password + OAuth Google + OAuth Facebook)
+- **Paiement** : Stripe Checkout + Customer Portal + Webhooks
 - **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
 - **Sourcing API** : Moteur Immo (aggregateur 60+ plateformes) — module `moteurimmo_client.py`
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
@@ -29,9 +31,23 @@ monpetitmdb/
 │   │   ├── editorial/          # CRUD articles + generation IA
 │   │   ├── profile/            # GET/PUT profil utilisateur
 │   │   ├── watchlist/          # GET/POST/DELETE watchlist
+│   │   ├── stripe/             # checkout, portal, webhook (Stripe)
+│   │   ├── chat/               # Chat IA (streaming, Haiku)
+│   │   ├── moteurimmo/webhook/ # Webhook reception nouvelles annonces
+│   │   ├── admin/ingest/       # Ingestion Moteur Immo (micro-batch)
+│   │   ├── admin/regex/        # Validation regex faux positifs
+│   │   ├── admin/extraction/   # Extraction donnees locatives IA (Haiku)
+│   │   ├── admin/score-travaux/# Score travaux IA (Haiku, optionnel photos)
+│   │   ├── admin/statut/       # Verification annonces expirees
+│   │   ├── admin/stats/        # Stats dashboard (RPC admin_stats)
+│   │   ├── admin/cron-config/  # Config cron (GET/PUT)
 │   │   └── admin/estimation/   # Config estimateur (GET/PUT)
+│   ├── auth/callback/          # OAuth callback (Google, Facebook)
 │   ├── page.tsx                # Landing page (hero, strategies, pricing, screenshot)
+│   ├── admin/                  # Dashboard admin (index)
 │   ├── admin/biens/            # Admin gestion biens
+│   ├── admin/users/            # Admin gestion utilisateurs
+│   ├── admin/sourcing/         # Sourcing & Batches (ingestion, regex, IA, cron)
 │   ├── admin/estimation/       # Admin config estimateur
 │   ├── admin/guide-fiscal/     # Reference fiscale 7 regimes (admin only)
 │   ├── biens/[id]/             # Fiche bien + PnlColonne 7 regimes + scenario revente
@@ -41,15 +57,17 @@ monpetitmdb/
 │   ├── strategies/             # Page 4 strategies detaillees
 │   ├── editorial/              # CMS articles IA (admin)
 │   ├── mes-biens/              # Watchlist utilisateur
-│   ├── mon-profil/             # Donnees personnelles + facturation
+│   ├── mon-profil/             # Donnees personnelles + facturation + upgrade Stripe
 │   ├── parametres/             # Fiscalite, financement, charges recurrentes, budget travaux
-│   ├── login/ + register/      # Auth
+│   ├── login/ + register/      # Auth (email + OAuth Google/Facebook)
 │   ├── cgu/ + mentions-legales/ + not-found.tsx
 ├── components/
 │   ├── BienCard.tsx            # Carte bien (grille)
 │   ├── PlusValueBadge.tsx      # Badge +/- value brute
 │   ├── RendementBadge.tsx      # Badge rendement brut
 │   ├── MetroBadge.tsx
+│   ├── PricingCta.tsx          # Bouton pricing -> Stripe checkout
+│   ├── ChatWidget.tsx          # Chat IA flottant (Haiku, streaming, ouvert par defaut)
 │   └── Layout.tsx              # Header (nav + dropdown user) + Footer
 ├── lib/
 │   ├── types.ts
@@ -116,6 +134,11 @@ monpetitmdb/
 **Moteur Immo**
 - `moteurimmo_data` (JSONB) — JSON brut complet
 
+**Pipeline IA (tracabilite)**
+- `regex_statut` ("valide" | "faux_positif"), `regex_date` (timestamptz)
+- `extraction_statut` ("ok" | "no_data" | "echec" | "erreur"), `extraction_date` (timestamptz)
+- `score_analyse_statut` ("ok" | "no_data" | "echec" | "erreur"), `score_analyse_date` (timestamptz)
+
 **Dates** : `created_at`, `updated_at`, `derniere_verif_statut`
 
 ## Table `profiles` — colonnes
@@ -126,7 +149,8 @@ monpetitmdb/
 - **Budget travaux** : `budget_travaux_m2` (JSONB : {"1": 200, "2": 500, "3": 800, "4": 1200, "5": 1800})
 
 ## Autres tables
-- `articles` — contenu, statut (draft/review/approved/published), auteur, slug, SEO
+- `articles` — contenu, statut (draft/review/approved/published), slug, SEO, `cover_url` (image)
+- `cron_config` — id, enabled, schedule, last_run, last_result, params (config Vercel Cron)
 - `editorial_calendar` — planning 52 semaines
 - `learning_logs` — exemples extractions IA
 - `scoring_exemples` — few-shot examples score_travaux
@@ -174,22 +198,36 @@ Comparaison 2 regimes cote a cote
 **Dropdown user** : Mon Profil | Mes parametres | Ma Watchlist | Administration (si admin) | Deconnexion
 **Footer** : Plateforme (Biens, Strategies, Conseils, Tarifs) | Support (Contact, Mentions legales, CGU)
 
-## Batch IA post-ingestion
+## Pipeline IA post-ingestion
 
-1. **Validation regex** : filtre faux positifs par strategie (titre + description) — TERMINE
-2. **Extraction donnees** (Haiku, 5 workers paralleles) : loyer HC/CC, charges copro, charges recup, taxe fonciere, fin bail, type bail, profil locataire — EN COURS
-3. **Score travaux** (Haiku) : prompt avec signaux (DPE, structure, photos, description) — EN ATTENTE
-4. **Estimation DVF batch** : POST /api/estimation/batch — EN ATTENTE
+Pilotable depuis `/admin/sourcing` ou via Vercel Cron (automatique, sans PC).
+
+1. **Ingestion Moteur Immo** : API route `/api/admin/ingest` (micro-batch 30j) + webhook `/api/moteurimmo/webhook`
+2. **Validation regex** : `/api/admin/regex` — filtre faux positifs par strategie, timestamp `regex_statut`/`regex_date`
+3. **Extraction donnees locatives** (Haiku) : `/api/admin/extraction` — Locataire en place uniquement, timestamp `extraction_statut`/`extraction_date`. Cout ~1$/1000 biens.
+4. **Score travaux** (Haiku) : `/api/admin/score-travaux` — Travaux lourds uniquement, option analyse photos (3x plus cher). Cout ~0.70$/1000 biens (texte), ~3$/1000 (photos).
+5. **Verification statut** : `/api/admin/statut` — marque les annonces retirees via API `deletedAds`
+6. **Estimation DVF batch** : POST /api/estimation/batch
 
 Profil locataire : Particulier | Etudiant | Senior | Famille | Colocation | Professionnel | Commercial + "depuis YYYY" ou "X ans". "NC" si non trouve.
 Type bail : nu | meuble | commercial | pre-89
+
+### Vercel Cron (vercel.json)
+- Ingestion : tous les jours a 3h
+- Regex : tous les jours a 3h30
+- Extraction IA : toutes les 5 min de 4h a 8h
+- Score travaux : toutes les 5 min de 8h a 12h
+- Statut : dimanche a 2h
+- Chaque cron verifie `cron_config.enabled` avant execution
+- Config modifiable depuis `/admin/sourcing` (table `cron_config`)
 
 ## Sourcing Moteur Immo
 
 Module : `scrapper/moteurimmo_client.py`
 API : POST https://moteurimmo.fr/api/ads (auth par apiKey)
 Pagination par date (tranches 30j)
-90 000+ biens ingeres, 4 strategies, France entiere
+96 000+ biens ingeres, 4 strategies, France entiere
+Flag `--until` pour limiter la periode (ex: `--since 2022-01-01 --until 2025-01-01`)
 
 ## Editorial CMS (/editorial)
 
@@ -231,7 +269,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY (sb_publishable_...)
 SUPABASE_SECRET_KEY (sb_secret_...)
 ANTHROPIC_API_KEY
 UNSPLASH_ACCESS_KEY
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+STRIPE_PRICE_PRO / STRIPE_PRICE_EXPERT
+CRON_SECRET (pour auth Vercel Cron)
+MOTEURIMMO_API_KEY (pour ingestion depuis API routes)
 ```
+
+## Paywall Free
+
+Les utilisateurs free voient la structure complete des blocs mais les chiffres sont floutes (classe CSS `.val-blur`).
+Blocs concernes : **Estimation DVF**, **Analyse fiscale (PnlColonne)**, **Score/budget travaux**, **Prix cible**.
+Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, sous le titre).
+2 analyses completes offertes aux free (compteur localStorage `mdb_free_analyses`).
 
 ## Regles absolues
 - **Tous les calculs financiers dans `calculs.ts`** — jamais en DB sauf `rendement_brut`
