@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     // Article individuel
     const { data, error } = await supabaseAdmin
       .from('articles')
-      .select('title, slug, content, category, keyword, published_at, word_count')
+      .select('title, slug, content, category, keyword, published_at, word_count, cover_url')
       .eq('slug', slug)
       .eq('status', 'published')
       .maybeSingle()
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   // Liste des articles publiés
   const { data, error } = await supabaseAdmin
     .from('articles')
-    .select('title, slug, category, keyword, published_at, word_count, content')
+    .select('title, slug, category, keyword, published_at, word_count, content, cover_url')
     .eq('status', 'published')
     .order('published_at', { ascending: false })
 

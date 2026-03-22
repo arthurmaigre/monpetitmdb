@@ -9,6 +9,7 @@ interface Article {
   category: string
   keyword: string | null
   excerpt: string | null
+  cover_url: string | null
   published_at: string
   word_count: number | null
 }
@@ -69,7 +70,10 @@ export default function BlogPage() {
         .blog-featured { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 48px; border-radius: 20px; overflow: hidden; border: 1.5px solid #e8e2d8; background: #fff; transition: all 150ms ease; text-decoration: none; color: inherit; }
         .blog-featured:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(26,18,16,0.1); border-color: #d4cdc4; }
         .blog-featured-visual { background: linear-gradient(135deg, #1a1210 0%, #3a2a20 50%, #c0392b 100%); display: flex; align-items: center; justify-content: center; min-height: 320px; position: relative; overflow: hidden; }
+        .blog-featured-visual.has-img { background: #1a1210; }
+        .blog-featured-img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
         .blog-featured-visual::after { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 30h60M30 0v60' stroke='%23ffffff08' stroke-width='1'/%3E%3C/svg%3E"); }
+        .blog-featured-visual.has-img::after { display: none; }
         .blog-featured-icon { font-family: 'Fraunces', serif; font-size: 80px; font-weight: 800; color: rgba(255,255,255,0.15); z-index: 1; }
         .blog-featured-body { padding: 40px; display: flex; flex-direction: column; justify-content: center; }
         .blog-featured-cat { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-bottom: 16px; align-self: flex-start; }
@@ -86,6 +90,9 @@ export default function BlogPage() {
         .blog-card { background: #fff; border-radius: 16px; border: 1.5px solid #e8e2d8; overflow: hidden; transition: all 150ms ease; text-decoration: none; color: inherit; display: flex; flex-direction: column; }
         .blog-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(26,18,16,0.08); border-color: #d4cdc4; }
         .blog-card-top { height: 6px; }
+        .blog-card-cover { width: 100%; height: 180px; object-fit: cover; display: block; }
+        .blog-card-cover-placeholder { width: 100%; height: 180px; background: linear-gradient(135deg, #f0ede8 0%, #e8e2d8 100%); display: flex; align-items: center; justify-content: center; }
+        .blog-card-cover-placeholder span { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; color: #d4cdc4; }
         .blog-card-body { padding: 24px 28px 28px; flex: 1; display: flex; flex-direction: column; }
         .blog-card-cat { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-bottom: 14px; align-self: flex-start; letter-spacing: 0.02em; }
         .blog-card-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #1a1210; line-height: 1.35; margin-bottom: 10px; }
@@ -146,8 +153,11 @@ export default function BlogPage() {
             {/* Article mis en avant */}
             {featured && (
               <a href={`/blog/${featured.slug}`} className="blog-featured">
-                <div className="blog-featured-visual">
-                  <span className="blog-featured-icon">MDB</span>
+                <div className={`blog-featured-visual ${featured.cover_url ? 'has-img' : ''}`}>
+                  {featured.cover_url
+                    ? <img src={featured.cover_url} alt={featured.title} className="blog-featured-img" />
+                    : <span className="blog-featured-icon">MDB</span>
+                  }
                 </div>
                 <div className="blog-featured-body">
                   {featured.category && (
@@ -183,7 +193,10 @@ export default function BlogPage() {
                     const cs = catStyle(article.category)
                     return (
                       <a key={article.slug} href={`/blog/${article.slug}`} className="blog-card">
-                        <div className="blog-card-top" style={{ background: cs.color }} />
+                        {article.cover_url
+                          ? <img src={article.cover_url} alt={article.title} className="blog-card-cover" />
+                          : <div className="blog-card-top" style={{ background: cs.color }} />
+                        }
                         <div className="blog-card-body">
                           {article.category && (
                             <span className="blog-card-cat" style={{ background: cs.bg, color: cs.color }}>{article.category}</span>
