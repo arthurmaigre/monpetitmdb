@@ -98,14 +98,16 @@ export default function AdminSourcingPage() {
   // Any batch running flag for auto-refresh
   const anyRunning = ingestRunning || regexRunning || extractRunning || scoreRunning || statutRunning
 
-  // Auth check — use onAuthStateChange only (avoids lock conflicts with getSession)
+  // Auth check
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    let mounted = true
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
       if (!session) { window.location.href = '/login'; return }
       setToken(session.access_token)
       setLoading(false)
     })
-    return () => subscription.unsubscribe()
+    return () => { mounted = false }
   }, [])
 
   // Fetch stats
@@ -116,8 +118,10 @@ export default function AdminSourcingPage() {
       if (res.ok) {
         const data = await res.json()
         setStats(data)
+      } else {
+        console.error('Stats API error:', res.status, await res.text())
       }
-    } catch { /* ignore */ }
+    } catch (e) { console.error('Stats fetch error:', e) }
   }, [token])
 
   const fetchCronConfig = useCallback(async () => {
@@ -125,7 +129,8 @@ export default function AdminSourcingPage() {
     try {
       const res: Response = await fetch('/api/admin/cron-config', { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) setCronConfigs(await res.json())
-    } catch { /* ignore */ }
+      else console.error('Cron config API error:', res.status, await res.text())
+    } catch (e) { console.error('Cron config fetch error:', e) }
   }, [token])
 
   useEffect(() => {
