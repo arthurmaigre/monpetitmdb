@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       .eq('strategie_mdb', 'Locataire en place')
       .eq('statut', 'Toujours disponible')
       .not('moteurimmo_data', 'is', null)
-      .is('profil_locataire', null)
+      .is('extraction_statut', null)
 
     if (cursor) countQuery = countQuery.gt('created_at', cursor)
     const { count: remaining } = await countQuery
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       .eq('strategie_mdb', 'Locataire en place')
       .eq('statut', 'Toujours disponible')
       .not('moteurimmo_data', 'is', null)
-      .is('profil_locataire', null)
+      .is('extraction_statut', null)
       .order('created_at', { ascending: true })
       .limit(20)
 
@@ -127,12 +127,13 @@ export async function POST(req: NextRequest) {
     for (const bien of biens) {
       try {
         const md = bien.moteurimmo_data as { description?: string; title?: string } | null
+        const now = new Date().toISOString()
         const desc = (md?.description || '').slice(0, 800)
         if (!desc) {
           // Mark as processed with NC
           await supabaseAdmin
             .from('biens')
-            .update({ profil_locataire: 'NC' })
+            .update({ profil_locataire: 'NC', extraction_statut: 'no_data', extraction_date: now })
             .eq('id', bien.id)
           processed++
           continue
@@ -155,7 +156,7 @@ export async function POST(req: NextRequest) {
           console.error(`Failed to parse extraction for bien ${bien.id}`)
           await supabaseAdmin
             .from('biens')
-            .update({ profil_locataire: 'NC' })
+            .update({ profil_locataire: 'NC', extraction_statut: 'echec', extraction_date: now })
             .eq('id', bien.id)
           errorCount++
           processed++
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Build update object
-        const update: Record<string, unknown> = {}
+        const update: Record<string, unknown> = { extraction_statut: 'ok', extraction_date: now }
 
         // Loyer: only set if no existing loyer
         if (!bien.loyer && parsed.loyer && typeof parsed.loyer === 'number') {
@@ -209,7 +210,7 @@ export async function POST(req: NextRequest) {
         // Mark as processed to avoid retrying endlessly
         await supabaseAdmin
           .from('biens')
-          .update({ profil_locataire: 'NC' })
+          .update({ profil_locataire: 'NC', extraction_statut: 'erreur', extraction_date: new Date().toISOString() })
           .eq('id', bien.id)
         errorCount++
         processed++

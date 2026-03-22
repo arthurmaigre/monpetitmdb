@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     let countQuery = supabaseAdmin
       .from('biens')
       .select('id', { count: 'exact', head: true })
-      .in('strategie_mdb', ['Travaux lourds', 'Locataire en place'])
+      .eq('strategie_mdb', 'Travaux lourds')
       .eq('statut', 'Toujours disponible')
       .is('score_travaux', null)
       .not('moteurimmo_data', 'is', null)
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     let query = supabaseAdmin
       .from('biens')
       .select('id, created_at, dpe, annee_construction, prix_fai, surface, moteurimmo_data')
-      .in('strategie_mdb', ['Travaux lourds', 'Locataire en place'])
+      .eq('strategie_mdb', 'Travaux lourds')
       .eq('statut', 'Toujours disponible')
       .is('score_travaux', null)
       .not('moteurimmo_data', 'is', null)
