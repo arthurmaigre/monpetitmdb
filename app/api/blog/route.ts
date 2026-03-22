@@ -26,12 +26,34 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Générer un extrait à partir du contenu (strip markdown, 160 chars)
+  // Générer un extrait + cover_url depuis le contenu
   const articles = (data || []).map((a: Record<string, unknown>) => {
     const content = String(a.content || '')
-    const plain = content.replace(/[#*_`>\[\]()!|~-]/g, '').replace(/\n+/g, ' ').trim()
-    const excerpt = plain.length > 160 ? plain.slice(0, 160).replace(/\s\S*$/, '') + '...' : plain
-    return { ...a, content: undefined, excerpt }
+
+    // Strip HTML tags + markdown, garder le texte brut
+    const plain = content
+      .replace(/<[^>]+>/g, ' ')           // strip HTML tags
+      .replace(/&[a-z]+;/gi, ' ')         // strip HTML entities
+      .replace(/[#*_`>\[\]()!|~\-]/g, '') // strip markdown chars
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    // Sauter le titre (souvent répété en début) et les crédits photo
+    const title = String(a.title || '')
+    let cleanText = plain.startsWith(title) ? plain.slice(title.length).trim() : plain
+    cleanText = cleanText.replace(/^Photo\s*:\s*[^.]+\.\s*/i, '').replace(/^Photo\s*:\s*[^/]+\/\s*\w+\s*/i, '').trim()
+    const excerpt = cleanText.length > 180
+      ? cleanText.slice(0, 180).replace(/\s\S*$/, '') + '...'
+      : cleanText
+
+    // Si pas de cover_url, extraire la première image du contenu
+    let cover = a.cover_url as string | null
+    if (!cover) {
+      const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/) || content.match(/!\[[^\]]*\]\(([^)]+)\)/)
+      if (imgMatch) cover = imgMatch[1]
+    }
+
+    return { ...a, content: undefined, excerpt, cover_url: cover }
   })
 
   return NextResponse.json({ articles })
