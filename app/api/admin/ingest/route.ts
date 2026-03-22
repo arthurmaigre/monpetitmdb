@@ -175,7 +175,9 @@ function mapAdToBien(ad: MoteurImmoAd, strategie: string, metropoleMap: Map<stri
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  // Cron: ingest last 2 days for all strategies
+  const { data: config } = await supabaseAdmin.from('cron_config').select('enabled').eq('id', 'ingest').single()
+  if (config && !config.enabled) return NextResponse.json({ skipped: true, reason: 'cron disabled' })
+
   const now = new Date()
   const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
   const fakeReq = new NextRequest(req.url, {
@@ -186,7 +188,12 @@ export async function GET(req: NextRequest) {
       dateBefore: now.toISOString().slice(0, 10),
     }),
   })
-  return POST(fakeReq)
+  const result = await POST(fakeReq)
+
+  const resultData = await result.clone().json()
+  await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'ingest')
+
+  return result
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

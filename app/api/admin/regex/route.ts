@@ -136,8 +136,16 @@ function testRegex(text: string, config: RegexConfig): boolean {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
+  const { data: config } = await supabaseAdmin.from('cron_config').select('enabled').eq('id', 'regex').single()
+  if (config && !config.enabled) return NextResponse.json({ skipped: true, reason: 'cron disabled' })
+
   const fakeReq = new NextRequest(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify({}) })
-  return POST(fakeReq)
+  const result = await POST(fakeReq)
+
+  const resultData = await result.clone().json()
+  await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'regex')
+
+  return result
 }
 
 export async function POST(req: NextRequest) {

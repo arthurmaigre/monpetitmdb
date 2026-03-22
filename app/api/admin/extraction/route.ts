@@ -76,8 +76,18 @@ function parseJsonResponse(text: string): Record<string, unknown> | null {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
+  // Check if cron is enabled
+  const { data: config } = await supabaseAdmin.from('cron_config').select('enabled').eq('id', 'extraction').single()
+  if (config && !config.enabled) return NextResponse.json({ skipped: true, reason: 'cron disabled' })
+
   const fakeReq = new NextRequest(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify({}) })
-  return POST(fakeReq)
+  const result = await POST(fakeReq)
+
+  // Log last run
+  const resultData = await result.clone().json()
+  await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'extraction')
+
+  return result
 }
 
 export async function POST(req: NextRequest) {

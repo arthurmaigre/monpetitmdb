@@ -91,6 +91,10 @@ export default function AdminSourcingPage() {
   const [statutRunning, setStatutRunning] = useState(false)
   const [statutStats, setStatutStats] = useState({ expired: 0, checked: 0, last_check: '' })
 
+  // Cron config state
+  const [cronConfigs, setCronConfigs] = useState<Array<{ id: string; enabled: boolean; schedule: string; last_run: string | null; last_result: Record<string, unknown> | null; params: Record<string, unknown> }>>([])
+  const [cronSaving, setCronSaving] = useState<string | null>(null)
+
   // Any batch running flag for auto-refresh
   const anyRunning = ingestRunning || regexRunning || extractRunning || scoreRunning || statutRunning
 
@@ -117,9 +121,17 @@ export default function AdminSourcingPage() {
     } catch { /* ignore */ }
   }, [token])
 
+  const fetchCronConfig = useCallback(async () => {
+    if (!token) return
+    try {
+      const res: Response = await fetch('/api/admin/cron-config', { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) setCronConfigs(await res.json())
+    } catch { /* ignore */ }
+  }, [token])
+
   useEffect(() => {
-    if (token) fetchStats()
-  }, [token, fetchStats])
+    if (token) { fetchStats(); fetchCronConfig() }
+  }, [token, fetchStats, fetchCronConfig])
 
   // Auto-refresh stats every 30s when a batch is running
   useEffect(() => {
@@ -305,6 +317,28 @@ export default function AdminSourcingPage() {
     } catch { /* ignore */ }
     setStatutRunning(false)
     fetchStats()
+  }
+
+  async function updateCron(id: string, update: Record<string, unknown>) {
+    if (!token) return
+    setCronSaving(id)
+    try {
+      await fetch('/api/admin/cron-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, ...update }),
+      })
+      await fetchCronConfig()
+    } catch { /* ignore */ }
+    setCronSaving(null)
+  }
+
+  const CRON_LABELS: Record<string, string> = {
+    ingest: 'Ingestion Moteur Immo',
+    regex: 'Validation regex',
+    extraction: 'Extraction donn\u00e9es locatives',
+    score_travaux: 'Score travaux IA',
+    statut: 'V\u00e9rification statut annonces',
   }
 
   if (loading) {
@@ -605,6 +639,70 @@ export default function AdminSourcingPage() {
             <div className="src-stats-row">
               <div className="src-stat-item"><strong>{fmt(statutStats.checked)}</strong> <span className="label">v{'\u00e9'}rifi{'\u00e9'}s</span></div>
               <div className="src-stat-item"><strong>{fmt(statutStats.expired)}</strong> <span className="label">expir{'\u00e9'}s</span></div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 7. Configuration Cron ===== */}
+        <div className="src-section">
+          <div className="src-section-title">{"Planification automatique (Vercel Cron)"}</div>
+          <p className="src-muted" style={{ marginBottom: 16 }}>Les crons Vercel appellent ces routes automatiquement. Activez/d{'\u00e9'}sactivez chaque t{'\u00e2'}che sans red{'\u00e9'}ployer.</p>
+          {cronConfigs.length === 0 ? (
+            <p className="src-muted">Chargement de la config...</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {cronConfigs.map(cron => (
+                <div key={cron.id} style={{ background: '#faf8f5', borderRadius: 12, padding: '16px 20px', border: '1px solid #e8e2d8' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1210', marginBottom: 2 }}>
+                        {CRON_LABELS[cron.id] || cron.id}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#9a8a80', fontFamily: "'DM Sans', monospace" }}>
+                        {cron.schedule}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {cron.last_run && (
+                        <span className="src-muted" style={{ fontSize: 11 }}>
+                          Dernier run : {new Date(cron.last_run).toLocaleString('fr-FR')}
+                        </span>
+                      )}
+                      <label className="src-toggle">
+                        <input
+                          type="checkbox"
+                          checked={cron.enabled}
+                          onChange={() => updateCron(cron.id, { enabled: !cron.enabled })}
+                          disabled={cronSaving === cron.id}
+                        />
+                        <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
+                        {cron.enabled ? 'Actif' : 'Inactif'}
+                      </label>
+                    </div>
+                  </div>
+                  {cron.last_result && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: '#9a8a80', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {Object.entries(cron.last_result).filter(([k]) => !['next_cursor', 'skipped', 'reason', 'error'].includes(k)).map(([k, v]) => (
+                        <span key={k}><strong>{String(v)}</strong> {k.replace(/_/g, ' ')}</span>
+                      ))}
+                    </div>
+                  )}
+                  {cron.id === 'score_travaux' && (
+                    <div style={{ marginTop: 8 }}>
+                      <label className="src-toggle" style={{ fontSize: 12 }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(cron.params?.withPhotos)}
+                          onChange={() => updateCron(cron.id, { params: { ...cron.params, withPhotos: !cron.params?.withPhotos } })}
+                          disabled={cronSaving === cron.id}
+                        />
+                        <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
+                        Analyser les photos (cron)
+                      </label>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
