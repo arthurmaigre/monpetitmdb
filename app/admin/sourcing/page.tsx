@@ -28,7 +28,7 @@ const defaultStats: DashStats = {
   faux_positifs: 0, extraction_pending: 0, score_pending: 0,
 }
 
-function fmt(n: number) { return n.toLocaleString('fr-FR') }
+function fmt(n: number | undefined | null) { return (n ?? 0).toLocaleString('fr-FR') }
 
 function ProgressBar({ value, max, color = '#c0392b' }: { value: number; max: number; color?: string }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
