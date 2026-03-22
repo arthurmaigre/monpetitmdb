@@ -171,6 +171,25 @@ function mapAdToBien(ad: MoteurImmoAd, strategie: string, metropoleMap: Map<stri
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// GET /api/admin/ingest (Vercel Cron)
+// ──────────────────────────────────────────────────────────────────────────────
+
+export async function GET(req: NextRequest) {
+  // Cron: ingest last 2 days for all strategies
+  const now = new Date()
+  const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+  const fakeReq = new NextRequest(req.url, {
+    method: 'POST',
+    headers: req.headers,
+    body: JSON.stringify({
+      dateAfter: twoDaysAgo.toISOString().slice(0, 10),
+      dateBefore: now.toISOString().slice(0, 10),
+    }),
+  })
+  return POST(fakeReq)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // POST /api/admin/ingest
 // ──────────────────────────────────────────────────────────────────────────────
 

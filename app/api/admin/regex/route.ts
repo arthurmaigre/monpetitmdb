@@ -135,6 +135,11 @@ function testRegex(text: string, config: RegexConfig): boolean {
 // POST /api/admin/regex
 // ──────────────────────────────────────────────────────────────────────────────
 
+export async function GET(req: NextRequest) {
+  const fakeReq = new NextRequest(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify({}) })
+  return POST(fakeReq)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const isAdmin = await checkAdminOrCron(req)
