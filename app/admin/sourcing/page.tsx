@@ -98,20 +98,14 @@ export default function AdminSourcingPage() {
   // Any batch running flag for auto-refresh
   const anyRunning = ingestRunning || regexRunning || extractRunning || scoreRunning || statutRunning
 
-  // Auth check
+  // Auth check — use onAuthStateChange only (avoids lock conflicts with getSession)
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) { window.location.href = '/login'; return }
       setToken(session.access_token)
-      // Listen for token refresh
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-        if (s?.access_token) setToken(s.access_token)
-      })
       setLoading(false)
-      return () => subscription.unsubscribe()
-    }
-    init()
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   // Fetch stats
