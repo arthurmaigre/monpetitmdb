@@ -18,132 +18,33 @@ async function checkAdminOrCron(req: NextRequest): Promise<boolean> {
   return profile?.role === 'admin'
 }
 
-async function count(table: string, filters: Record<string, unknown> = {}, isNull?: string[]): Promise<number> {
-  let q = supabaseAdmin.from(table).select('id', { count: 'exact', head: true })
-  for (const [k, v] of Object.entries(filters)) {
-    q = q.eq(k, v)
-  }
-  for (const col of isNull || []) {
-    q = q.is(col, null)
-  }
-  const { count: c } = await q
-  return c || 0
-}
-
-async function countNotNull(table: string, col: string, filters: Record<string, unknown> = {}): Promise<number> {
-  let q = supabaseAdmin.from(table).select('id', { count: 'exact', head: true })
-  for (const [k, v] of Object.entries(filters)) {
-    q = q.eq(k, v)
-  }
-  q = q.not(col, 'is', null)
-  const { count: c } = await q
-  return c || 0
-}
-
 export async function GET(req: NextRequest) {
   try {
     const isAdmin = await checkAdminOrCron(req)
     if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-    const ACTIF = { statut: 'Toujours disponible' }
-    const LOC = { strategie_mdb: 'Locataire en place', statut: 'Toujours disponible' }
-    const TRAV = { strategie_mdb: 'Travaux lourds', statut: 'Toujours disponible' }
+    // Une seule requête SQL pour toutes les stats
+    const { data, error } = await supabaseAdmin.rpc('admin_stats')
 
-    // Batch 1: counts globaux (6 requêtes)
-    const [total, users, watchlist, disponible, expiree, fauxPositif] = await Promise.all([
-      count('biens'),
-      count('profiles'),
-      count('watchlist'),
-      count('biens', { statut: 'Toujours disponible' }),
-      count('biens', { statut: 'Annonce expirée' }),
-      count('biens', { statut: 'Faux positif' }),
-    ])
+    if (error) {
+      // Fallback: si la fonction n'existe pas, retourner des zeros
+      console.error('admin_stats RPC error:', error)
+      return NextResponse.json({
+        biens: 0, users: 0, watchlist: 0, total: 0,
+        disponible: 0, expiree: 0, faux_positifs: 0,
+        locataire: 0, travaux: 0, division: 0, decoupe: 0,
+        regex_done: 0, regex_pending: 0,
+        extraction_done: 0, extraction_pending: 0,
+        score_done: 0, score_pending: 0,
+        estimation_done: 0, estimation_pending: 0,
+        loc_actif: 0, loc_sans_loyer: 0, loc_sans_charges: 0,
+        loc_sans_taxe: 0, loc_sans_profil: 0, loc_sans_bail: 0, loc_completude: 0,
+        trav_actif: 0, trav_sans_score: 0, trav_sans_dpe: 0, trav_completude: 0,
+        sans_prix: 0, sans_surface: 0, avec_photo: 0, sans_photo: 0,
+      })
+    }
 
-    // Batch 2: par stratégie (4 requêtes)
-    const [locataire, travaux, division, decoupe] = await Promise.all([
-      count('biens', { strategie_mdb: 'Locataire en place' }),
-      count('biens', { strategie_mdb: 'Travaux lourds' }),
-      count('biens', { strategie_mdb: 'Division' }),
-      count('biens', { strategie_mdb: 'Découpe' }),
-    ])
-
-    // Batch 3: qualité données locataire en place (6 requêtes)
-    const [locActif, locSansLoyer, locSansCharges, locSansTaxe, locSansProfil, locSansBail] = await Promise.all([
-      count('biens', LOC),
-      count('biens', LOC, ['loyer']),
-      count('biens', LOC, ['charges_copro']),
-      count('biens', LOC, ['taxe_fonc_ann']),
-      count('biens', { ...LOC, profil_locataire: 'NC' }),
-      count('biens', LOC, ['fin_bail']),
-    ])
-
-    // Batch 4: qualité données travaux lourds + extraction/score pending (6 requêtes)
-    const [travActif, travSansScore, travSansDpe, extractionDone, extractionPending, scorePending] = await Promise.all([
-      count('biens', TRAV),
-      count('biens', TRAV, ['score_travaux']),
-      count('biens', TRAV, ['dpe']),
-      countNotNull('biens', 'extraction_statut', LOC),
-      count('biens', LOC, ['extraction_statut']),
-      count('biens', TRAV, ['score_travaux']),
-    ])
-
-    // Batch 5: regex + estimation (4 requêtes)
-    const [regexDone, regexPending, estimationDone, estimationPending] = await Promise.all([
-      countNotNull('biens', 'regex_statut', ACTIF),
-      count('biens', ACTIF, ['regex_statut']),
-      countNotNull('biens', 'estimation_prix_total', ACTIF),
-      count('biens', ACTIF, ['estimation_prix_total']),
-    ])
-
-    // Batch 6: données générales (4 requêtes)
-    const [sansPrix, sansSurface, avecPhoto, sansPhoto] = await Promise.all([
-      count('biens', ACTIF, ['prix_fai']),
-      count('biens', ACTIF, ['surface']),
-      countNotNull('biens', 'photo_url', ACTIF),
-      count('biens', ACTIF, ['photo_url']),
-    ])
-
-    return NextResponse.json({
-      // Compat /admin page
-      biens: total, users, watchlist,
-
-      // Global
-      total, disponible, expiree, faux_positifs: fauxPositif,
-
-      // Par stratégie
-      locataire, travaux, division, decoupe,
-
-      // Statut pipeline
-      regex_done: regexDone,
-      regex_pending: regexPending,
-      extraction_done: extractionDone,
-      extraction_pending: extractionPending,
-      score_done: travActif - travSansScore,
-      score_pending: scorePending,
-      estimation_done: estimationDone,
-      estimation_pending: estimationPending,
-
-      // Qualité — Locataire en place
-      loc_actif: locActif,
-      loc_sans_loyer: locSansLoyer,
-      loc_sans_charges: locSansCharges,
-      loc_sans_taxe: locSansTaxe,
-      loc_sans_profil: locSansProfil,
-      loc_sans_bail: locSansBail,
-      loc_completude: locActif > 0 ? Math.round((1 - locSansLoyer / locActif) * 100) : 0,
-
-      // Qualité — Travaux lourds
-      trav_actif: travActif,
-      trav_sans_score: travSansScore,
-      trav_sans_dpe: travSansDpe,
-      trav_completude: travActif > 0 ? Math.round((1 - travSansScore / travActif) * 100) : 0,
-
-      // Qualité — Données générales
-      sans_prix: sansPrix,
-      sans_surface: sansSurface,
-      avec_photo: avecPhoto,
-      sans_photo: sansPhoto,
-    })
+    return NextResponse.json(data)
   } catch (err) {
     console.error('Stats error:', err)
     return NextResponse.json(
