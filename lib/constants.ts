@@ -13,11 +13,13 @@ export const METROPOLE_LABELS: Record<string, string> = {
 export const TYPES_BIEN = ['Tous', 'Appartement', 'Maison', 'Studio']
 
 export const TRIS = [
-  { label: 'Plus récents', value: 'recent' },
-  { label: 'Rendement ↓',  value: 'rendement_desc' },
-  { label: 'Rendement ↑',  value: 'rendement_asc' },
-  { label: 'Prix ↑',       value: 'prix_asc' },
-  { label: 'Prix ↓',       value: 'prix_desc' },
+  { label: 'Plus r\u00E9cents', value: 'recent' },
+  { label: 'Rendement \u2193',  value: 'rendement_desc' },
+  { label: 'Rendement \u2191',  value: 'rendement_asc' },
+  { label: 'Prix \u2191',       value: 'prix_asc' },
+  { label: 'Prix \u2193',       value: 'prix_desc' },
+  { label: 'Plus-value \u2193', value: 'plusvalue_desc' },
+  { label: 'Plus-value \u2191', value: 'plusvalue_asc' },
 ]
 
 export const STRATEGIE_LABELS: Record<string, string> = {

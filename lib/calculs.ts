@@ -287,8 +287,8 @@ export function calculerRevente(params: ParamsRevente): ResultatRevente {
   const fraisNotaireMontant = prixAchat * fraisNotaireAchat / 100
   const prixAchatTotal = prixAchat + fraisNotaireMontant + budgetTravaux
 
-  // --- Plus-value brute ---
-  const plusValueBrute = Math.max(0, prixRevente - prixAchat - fraisNotaireMontant - budgetTravaux)
+  // --- Plus-value brute (peut etre negative = moins-value) ---
+  const plusValueBrute = prixRevente - prixAchat - fraisNotaireMontant - budgetTravaux
 
   // --- Abattements pour duree de detention (regimes particuliers) ---
   const regimesParticuliers: RegimeFiscal[] = ['nu_micro_foncier', 'nu_reel_foncier', 'lmnp_micro_bic', 'lmnp_reel_bic']
@@ -306,17 +306,21 @@ export function calculerRevente(params: ParamsRevente): ResultatRevente {
 
   if (regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier') {
     // Regime des particuliers : 19% IR + 17.2% PS, avec abattements detention
-    const pvImposableIR = plusValueBrute * (1 - abattements.abattementIR / 100)
-    const pvImposablePS = plusValueBrute * (1 - abattements.abattementPS / 100)
-    impotPlusValue = pvImposableIR * 0.19
-    prelevementsSociaux = pvImposablePS * 0.172
+    if (plusValueBrute > 0) {
+      const pvImposableIR = plusValueBrute * (1 - abattements.abattementIR / 100)
+      const pvImposablePS = plusValueBrute * (1 - abattements.abattementPS / 100)
+      impotPlusValue = pvImposableIR * 0.19
+      prelevementsSociaux = pvImposablePS * 0.172
+    }
 
   } else if (regime === 'lmnp_micro_bic') {
     // LMNP Micro-BIC : PV regime des particuliers (19% + 17.2%), avec abattements detention
-    const pvImposableIR = plusValueBrute * (1 - abattements.abattementIR / 100)
-    const pvImposablePS = plusValueBrute * (1 - abattements.abattementPS / 100)
-    impotPlusValue = pvImposableIR * 0.19
-    prelevementsSociaux = pvImposablePS * 0.172
+    if (plusValueBrute > 0) {
+      const pvImposableIR = plusValueBrute * (1 - abattements.abattementIR / 100)
+      const pvImposablePS = plusValueBrute * (1 - abattements.abattementPS / 100)
+      impotPlusValue = pvImposableIR * 0.19
+      prelevementsSociaux = pvImposablePS * 0.172
+    }
 
   } else if (regime === 'lmnp_reel_bic') {
     // LMNP Reel BIC : reintegration des amortissements deduits + abattements detention
@@ -325,10 +329,12 @@ export function calculerRevente(params: ParamsRevente): ResultatRevente {
     const amortAnnuel = amortImmo + amortMobilier
     const amortsCumules = amortAnnuel * dureeDetention
     const pvAvecReintegration = Math.max(0, plusValueBrute + amortsCumules)
-    const pvImposableIR = pvAvecReintegration * (1 - abattements.abattementIR / 100)
-    const pvImposablePS = pvAvecReintegration * (1 - abattements.abattementPS / 100)
-    impotPlusValue = pvImposableIR * 0.19
-    prelevementsSociaux = pvImposablePS * 0.172
+    if (pvAvecReintegration > 0) {
+      const pvImposableIR = pvAvecReintegration * (1 - abattements.abattementIR / 100)
+      const pvImposablePS = pvAvecReintegration * (1 - abattements.abattementPS / 100)
+      impotPlusValue = pvImposableIR * 0.19
+      prelevementsSociaux = pvImposablePS * 0.172
+    }
 
   } else if (regime === 'lmp_reel_bic') {
     // LMP : PV professionnelle

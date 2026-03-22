@@ -53,7 +53,7 @@ export default function ParametresPage() {
       body: JSON.stringify(profile)
     })
     const data = await res.json()
-    if (data.error) { setError('Erreur lors de la sauvegarde') } else { setProfile(data.profile); setSuccess(true); setTimeout(() => setSuccess(false), 3000) }
+    if (data.error) { console.error('Erreur sauvegarde profil:', data.error); setError(`Erreur : ${data.error}`) } else { setProfile(data.profile); setSuccess(true); setTimeout(() => setSuccess(false), 3000) }
     setSaving(false)
   }
 
@@ -172,9 +172,14 @@ export default function ParametresPage() {
                 <span className="profil-hint">~7.5% ancien, ~2.5% neuf</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="objectif-cashflow-input">Objectif cashflow (% du FAI)</label>
+                <label className="profil-label" htmlFor="objectif-cashflow-input">Objectif cashflow brut (% du FAI)</label>
                 <input id="objectif-cashflow-input" className="profil-input" type="number" step="0.1" value={profile?.objectif_cashflow ?? 0} onChange={e => update('objectif_cashflow', Number(e.target.value))} aria-label="Objectif de cashflow en pourcentage du prix FAI" />
-                <span className="profil-hint">0 = équilibre | 5 = +5% du prix FAI/an</span>
+                <span className="profil-hint">0 = {"équilibre"} | 5 = +5% du prix FAI/an</span>
+              </div>
+              <div className="profil-field">
+                <label className="profil-label" htmlFor="objectif-pv-input">{"Objectif plus-value brute (%)"}</label>
+                <input id="objectif-pv-input" className="profil-input" type="number" step="1" value={profile?.objectif_pv ?? 20} onChange={e => update('objectif_pv', Number(e.target.value))} aria-label="Objectif de plus-value brute en pourcentage" />
+                <span className="profil-hint">{"PV brute vis\u00E9e sur le co\u00FBt total (achat + notaire + travaux)"}</span>
               </div>
             </div>
           </div>
@@ -207,6 +212,11 @@ export default function ParametresPage() {
                 <label className="profil-label" htmlFor="oga-input">{"Frais OGA/CGA (\u20AC/an)"}</label>
                 <input id="oga-input" className="profil-input" type="number" placeholder={"150"} value={profile?.frais_oga ?? ''} onChange={e => update('frais_oga', Number(e.target.value))} aria-label="Frais OGA CGA en euros par an" />
                 <span className="profil-hint">{"R\u00e9duction d\u2019imp\u00f4t 2/3 plafonn\u00e9 \u00e0 915 \u20AC/an"}</span>
+              </div>
+              <div className="profil-field">
+                <label className="profil-label" htmlFor="frais-bancaires-input">{"Frais bancaires (\u20AC)"}</label>
+                <input id="frais-bancaires-input" className="profil-input" type="number" placeholder={"2000"} value={profile?.frais_bancaires ?? ''} onChange={e => update('frais_bancaires', Number(e.target.value))} aria-label="Frais bancaires en euros" />
+                <span className="profil-hint">{"Frais de dossier + garantie \u2014 annualis\u00E9s sur la dur\u00E9e du cr\u00E9dit"}</span>
               </div>
             </div>
           </div>

@@ -548,7 +548,7 @@ export default function GuideFiscalPage() {
                   <td>{"Meubl\u00E9"}</td>
                   <td>{"Charges r\u00E9elles"}</td>
                   <td>Oui</td>
-                  <td>TMI + PS</td>
+                  <td>TMI seul</td>
                   <td>{"PV particuli\u00E8re + r\u00E9int\u00E9gration amort.*"}</td>
                   <td>Aucune</td>
                 </tr>

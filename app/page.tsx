@@ -100,10 +100,10 @@ export default function Home() {
         .app-filter-bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:#fff;border-radius:12px;padding:12px 16px;margin-bottom:16px;border:1.5px solid var(--sand);}
         .app-fg{display:flex;flex-direction:column;gap:3px;}
         .app-fl{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
-        .app-fs{padding:6px 10px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;border:1.5px solid var(--sand);background:var(--bg);color:var(--ink);min-width:120px;}
+        .app-fs{padding:6px 10px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;border:1.5px solid var(--sand);background:var(--bg);color:var(--ink);min-width:120px;height:29px;box-sizing:border-box;display:flex;align-items:center;}
         .app-fs.active{border-color:var(--red);background:#fff8f7;color:var(--red);font-weight:600;}
-        .app-loc{min-width:200px;flex:1;}
-        .app-sep{width:1px;height:32px;background:var(--sand);align-self:flex-end;}
+        .app-loc{min-width:140px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .app-sep{width:1px;background:var(--sand);align-self:stretch;margin-top:14px;}
         .app-vt{margin-left:auto;display:flex;gap:4px;align-self:flex-end;}
         .app-vb{padding:6px 10px;border-radius:6px;border:1.5px solid var(--sand);background:transparent;color:var(--muted);font-size:10px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;}
         .app-vb.on{background:var(--ink);color:#fff;border-color:var(--ink);}
@@ -372,7 +372,7 @@ export default function Home() {
                     <div className="app-fs active">Locataire en place</div>
                   </div>
                   <div className="app-sep" />
-                  <div className="app-fg" style={{ flex: 1 }}>
+                  <div className="app-fg">
                     <span className="app-fl">Localisation</span>
                     <div className="app-fs app-loc">{"Rechercher une ville, un d\u00E9partement..."}</div>
                   </div>
@@ -414,7 +414,6 @@ export default function Home() {
                       <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Nantes</span>
                       <span className="ac-br g">5.07 %</span>
-                      <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-13 %</span>
                     </div>
                     <div className="ac-body">
                       <div className="ac-title">{"Appartement T2 - 41 m\u00B2"}</div>
@@ -428,7 +427,6 @@ export default function Home() {
                       <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Lyon</span>
                       <span className="ac-br g">6.14 %</span>
-                      <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-8 %</span>
                     </div>
                     <div className="ac-body">
                       <div className="ac-title">{"Appartement T3 - 58 m\u00B2"}</div>
@@ -442,7 +440,6 @@ export default function Home() {
                       <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Marseille</span>
                       <span className="ac-br g">8.60 %</span>
-                      <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-19 %</span>
                     </div>
                     <div className="ac-body">
                       <div className="ac-title">{"Appartement T2 - 34 m\u00B2"}</div>
@@ -456,7 +453,6 @@ export default function Home() {
                       <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Bordeaux</span>
                       <span className="ac-br y">3.78 %</span>
-                      <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-11 %</span>
                     </div>
                     <div className="ac-body">
                       <div className="ac-title">{"Appartement T4 - 91 m\u00B2"}</div>
@@ -470,7 +466,6 @@ export default function Home() {
                       <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Rennes</span>
                       <span className="ac-br y">4.39 %</span>
-                      <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-6 %</span>
                     </div>
                     <div className="ac-body">
                       <div className="ac-title">{"Appartement T1 - 32 m\u00B2"}</div>
@@ -481,10 +476,9 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src="https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Toulouse</span>
                       <span className="ac-br g">5.82 %</span>
-                      <span className="ac-pv" style={{ background: 'rgba(212,245,224,.95)', color: '#1a7a40' }}>-9 %</span>
                     </div>
                     <div className="ac-body">
                       <div className="ac-title">{"Appartement T2 - 45 m\u00B2"}</div>

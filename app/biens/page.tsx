@@ -262,6 +262,16 @@ export default function BiensPage() {
     if (tri === 'rendement_asc') return (a.rendement_brut || 0) - (b.rendement_brut || 0)
     if (tri === 'prix_asc') return (a.prix_fai || 0) - (b.prix_fai || 0)
     if (tri === 'prix_desc') return (b.prix_fai || 0) - (a.prix_fai || 0)
+    if (tri === 'plusvalue_desc') {
+      const pvA = (a.estimation_prix_total || 0) - (a.prix_fai || 0)
+      const pvB = (b.estimation_prix_total || 0) - (b.prix_fai || 0)
+      return pvB - pvA
+    }
+    if (tri === 'plusvalue_asc') {
+      const pvA = (a.estimation_prix_total || 0) - (a.prix_fai || 0)
+      const pvB = (b.estimation_prix_total || 0) - (b.prix_fai || 0)
+      return pvA - pvB
+    }
     return 0
   })
 
