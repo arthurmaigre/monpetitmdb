@@ -427,6 +427,9 @@ export default function AdminSourcingPage() {
   }
 
   const extractCost = (extractStats.processed * 0.00025).toFixed(2)
+  const extractEstimatedTotal = ((stats.extraction_pending || 0) * 0.00025)
+  const scoreEstimatedTotal = ((stats.score_pending || 0) * (scoreWithPhotos ? 0.0008 : 0.0002))
+  const scoreCost = (scoreStats.processed * (scoreWithPhotos ? 0.0008 : 0.0002)).toFixed(2)
 
   // Strategy bar chart data
   const stratValues = [
@@ -819,6 +822,16 @@ export default function AdminSourcingPage() {
               <span key={f} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4f5e0', color: '#1a7a40' }}>{f}</span>
             ))}
           </div>
+          {(stats.extraction_pending || 0) > 0 && !extractRunning && (
+            <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 13, color: '#1a1210' }}>
+                <strong>{fmt(stats.extraction_pending)}</strong> biens {'\u00e0'} traiter
+              </span>
+              <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
+                {"Co\u00fbt estim\u00e9 : ~"}{extractEstimatedTotal < 1 ? extractEstimatedTotal.toFixed(2) : Math.round(extractEstimatedTotal)} {'\u20ac'} (Haiku)
+              </span>
+            </div>
+          )}
           <div className="src-row">
             {!extractRunning ? (
               <button className="src-btn src-btn-red" onClick={startExtraction}>{'\u25B6'} Lancer</button>
@@ -869,6 +882,16 @@ export default function AdminSourcingPage() {
               <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4f5e0', color: '#1a7a40' }}>Photos (max 3)</span>
             )}
           </div>
+          {(stats.score_pending || 0) > 0 && !scoreRunning && (
+            <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 13, color: '#1a1210' }}>
+                <strong>{fmt(stats.score_pending)}</strong> biens {'\u00e0'} scorer
+              </span>
+              <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
+                {"Co\u00fbt estim\u00e9 : ~"}{scoreEstimatedTotal < 1 ? scoreEstimatedTotal.toFixed(2) : Math.round(scoreEstimatedTotal)} {'\u20ac'} (Haiku{scoreWithPhotos ? ' + photos' : ''})
+              </span>
+            </div>
+          )}
           <div className="src-row">
             {!scoreRunning ? (
               <button className="src-btn src-btn-red" onClick={startScore}>{'\u25B6'} Lancer</button>
@@ -896,6 +919,7 @@ export default function AdminSourcingPage() {
               <div className="src-stats-row">
                 <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(scoreStats.scored)}</strong> scor{'\u00e9'}s</Pill>
                 {scoreStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(scoreStats.errors)}</strong> erreurs</Pill>}
+                <Pill color="#a06010" bg="#fff8f0"><strong>~{scoreCost} {'\u20AC'}</strong> co{'\u00fb'}t</Pill>
               </div>
             </div>
           )}
