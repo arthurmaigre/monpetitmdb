@@ -20,10 +20,19 @@ export async function GET(request: NextRequest) {
   // Liste des articles publiés
   const { data, error } = await supabaseAdmin
     .from('articles')
-    .select('title, slug, category, keyword, published_at, word_count')
+    .select('title, slug, category, keyword, published_at, word_count, content')
     .eq('status', 'published')
     .order('published_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ articles: data || [] })
+
+  // Générer un extrait à partir du contenu (strip markdown, 160 chars)
+  const articles = (data || []).map((a: Record<string, unknown>) => {
+    const content = String(a.content || '')
+    const plain = content.replace(/[#*_`>\[\]()!|~-]/g, '').replace(/\n+/g, ' ').trim()
+    const excerpt = plain.length > 160 ? plain.slice(0, 160).replace(/\s\S*$/, '') + '...' : plain
+    return { ...a, content: undefined, excerpt }
+  })
+
+  return NextResponse.json({ articles })
 }
