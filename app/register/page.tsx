@@ -48,7 +48,7 @@ export default function RegisterPage() {
     })
 
     if (error) {
-      setError('Erreur lors de la création du compte')
+      setError(`[Inscription] ${error.message}`)
       setLoading(false)
     } else {
       setSuccess(true)
