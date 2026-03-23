@@ -13,14 +13,20 @@ export default function LoginPage() {
   async function handleOAuth(provider: 'google' | 'facebook') {
     setLoading(true)
     setError('')
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
-    })
-    console.log('OAuth response:', { data, error })
-    if (error) {
-      console.error('OAuth error:', error)
-      setError(error.message || 'Erreur de connexion avec ' + (provider === 'google' ? 'Google' : 'Facebook'))
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` }
+      })
+      if (error) {
+        setError(`[OAuth] ${error.message}`)
+        setLoading(false)
+      } else if (!data?.url) {
+        setError('[OAuth] Pas de redirection Google reçue')
+        setLoading(false)
+      }
+    } catch (e: any) {
+      setError(`[OAuth catch] ${e?.message || String(e)}`)
       setLoading(false)
     }
   }
