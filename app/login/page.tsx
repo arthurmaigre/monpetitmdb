@@ -16,13 +16,19 @@ export default function LoginPage() {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` }
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          skipBrowserRedirect: true
+        }
       })
       if (error) {
         setError(`[OAuth] ${error.message}`)
         setLoading(false)
-      } else if (!data?.url) {
-        setError('[OAuth] Pas de redirection Google reçue')
+      } else if (data?.url) {
+        setError(`[DEBUG URL] ${data.url}`)
+        setLoading(false)
+      } else {
+        setError('[OAuth] Pas de URL reçue')
         setLoading(false)
       }
     } catch (e: any) {
