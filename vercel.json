@@ -1,9 +1,2 @@
 {
-  "crons": [
-    { "path": "/api/admin/ingest", "schedule": "0 3 * * *" },
-    { "path": "/api/admin/regex", "schedule": "30 3 * * *" },
-    { "path": "/api/admin/extraction", "schedule": "*/5 4-8 * * *" },
-    { "path": "/api/admin/score-travaux", "schedule": "*/5 8-12 * * *" },
-    { "path": "/api/admin/statut", "schedule": "0 2 * * 0" }
-  ]
 }
