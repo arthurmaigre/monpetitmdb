@@ -13,26 +13,12 @@ export default function LoginPage() {
   async function handleOAuth(provider: 'google' | 'facebook') {
     setLoading(true)
     setError('')
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          skipBrowserRedirect: true
-        }
-      })
-      if (error) {
-        setError(`[OAuth] ${error.message}`)
-        setLoading(false)
-      } else if (data?.url) {
-        setError(`[DEBUG URL] ${data.url}`)
-        setLoading(false)
-      } else {
-        setError('[OAuth] Pas de URL reçue')
-        setLoading(false)
-      }
-    } catch (e: any) {
-      setError(`[OAuth catch] ${e?.message || String(e)}`)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` }
+    })
+    if (error) {
+      setError(error.message)
       setLoading(false)
     }
   }
