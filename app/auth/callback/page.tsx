@@ -8,31 +8,40 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     async function handleCallback() {
-      const params = new URLSearchParams(window.location.search)
-      const code = params.get('code')
-      const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      const accessToken = hashParams.get('access_token')
-
+      // 1. PKCE flow: code in query params
+      const code = new URLSearchParams(window.location.search).get('code')
       if (code) {
-        // PKCE flow (OAuth Google, email confirmation)
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         if (error) {
+          console.error('Auth callback error:', error.message)
           setError('Erreur de connexion. Veuillez réessayer.')
           return
         }
         window.location.href = '/biens'
-      } else if (accessToken) {
-        // Implicit flow (fallback)
-        // Supabase JS client detects hash tokens automatically
-        supabase.auth.onAuthStateChange((event) => {
-          if (event === 'SIGNED_IN') {
-            window.location.href = '/biens'
-          }
-        })
-      } else {
-        // No code or token — redirect to login
-        window.location.href = '/login'
+        return
       }
+
+      // 2. Implicit flow: tokens in URL hash (auto-detected by Supabase client)
+      //    Check if session was already set by auto-detection
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        window.location.href = '/biens'
+        return
+      }
+
+      // 3. Wait for auth state change (in case auto-detection is still processing)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          subscription.unsubscribe()
+          window.location.href = '/biens'
+        }
+      })
+
+      // 4. Timeout: if nothing happens after 5s, redirect to login
+      setTimeout(() => {
+        subscription.unsubscribe()
+        setError('La connexion a échoué. Veuillez réessayer.')
+      }, 5000)
     }
 
     handleCallback()
