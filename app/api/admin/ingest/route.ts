@@ -178,10 +178,13 @@ export async function GET(req: NextRequest) {
   const { data: config } = await supabaseAdmin.from('cron_config').select('enabled').eq('id', 'ingest').single()
   if (config && !config.enabled) return NextResponse.json({ skipped: true, reason: 'cron disabled' })
 
+  const { searchParams } = new URL(req.url)
+  const strategieParam = searchParams.get('strategie')
+
   const now = new Date()
   const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
-  const strategies = Object.keys(STRATEGY_CONFIGS)
-  const totals = { new: 0, updated: 0, errors: 0, processed: 0, total: 0 }
+  const strategies = strategieParam && STRATEGY_CONFIGS[strategieParam] ? [strategieParam] : Object.keys(STRATEGY_CONFIGS)
+  const totals = { new: 0, updated: 0, errors: 0, processed: 0, total: 0, strategie: strategieParam || 'toutes' }
 
   for (const strategie of strategies) {
     const fakeReq = new NextRequest(req.url, {
