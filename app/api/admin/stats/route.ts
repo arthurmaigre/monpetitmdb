@@ -55,12 +55,42 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('derniere_verif_statut', d7),
     ])
 
+    // Moteur Immo count (7 days) — quick call per strategy
+    let moteurimmo_7d = 0
+    const apiKey = process.env.MOTEURIMMO_API_KEY
+    if (apiKey) {
+      const d7date = d7.slice(0, 10)
+      const nowDate = now.toISOString().slice(0, 10)
+      const strategies = [
+        { keywords: ['locataire en place', 'vendu lou\u00E9', 'bail en cours'], categories: ['house', 'flat', 'block'] },
+        { keywords: ['\u00E0 r\u00E9nover', 'r\u00E9novation compl\u00E8te', 'gros travaux', 'tout \u00E0 refaire'], categories: ['house', 'flat', 'block'], options: ['hasWorksRequired'] },
+        { keywords: ['divisible', 'possibilit\u00E9 de division', 'division possible'], categories: ['house', 'flat', 'block', 'misc'] },
+        { keywords: ['immeuble de rapport', 'monopropri\u00E9t\u00E9', 'vente en bloc'], categories: ['block', 'house'] },
+      ]
+      try {
+        const counts = await Promise.all(strategies.map(async (s) => {
+          const body: Record<string, unknown> = {
+            types: ['sale'], categories: s.categories, keywords: s.keywords,
+            keywordsOperator: 'or', maxLength: 1, page: 1,
+            creationDateAfter: d7date, creationDateBefore: nowDate, apiKey,
+          }
+          if ((s as any).options) body.options = (s as any).options
+          const resp = await fetch('https://moteurimmo.fr/api/ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+          if (!resp.ok) return 0
+          const result = await resp.json()
+          return result.nbResults || result.totalResults || (Array.isArray(result.ads) ? result.ads.length : 0)
+        }))
+        moteurimmo_7d = counts.reduce((a, b) => a + b, 0)
+      } catch { /* ignore */ }
+    }
+
     return NextResponse.json({
       ...data,
       added_24h: r24.count || 0,
       added_7d: r7.count || 0,
       expired_24h: e24.count || 0,
       expired_7d: e7.count || 0,
+      moteurimmo_7d,
     })
   } catch (err) {
     console.error('Stats error:', err)

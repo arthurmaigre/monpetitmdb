@@ -762,15 +762,31 @@ export default function AdminSourcingPage() {
             <div className="src-section-title">Ingestion Moteur Immo</div>
           </div>
           {(stats.added_24h !== undefined || stats.added_7d !== undefined) && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
                 <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.added_24h)}</span>
-                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"biens ajout\u00E9s (24h)"}</span>
+                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"ajout\u00E9s (24h)"}</span>
               </div>
               <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
                 <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.added_7d)}</span>
-                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"biens ajout\u00E9s (7 jours)"}</span>
+                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"ajout\u00E9s (7j)"}</span>
               </div>
+              {stats.moteurimmo_7d > 0 && (
+                <>
+                  <div style={{ background: '#fff8f0', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                    <span style={{ fontWeight: 700, color: '#a06010', fontSize: 16 }}>{fmt(stats.moteurimmo_7d)}</span>
+                    <span style={{ color: '#a06010', marginLeft: 6 }}>sur Moteur Immo (7j)</span>
+                  </div>
+                  <div style={{ background: stats.added_7d >= stats.moteurimmo_7d * 0.9 ? '#d4f5e0' : '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                    <span style={{ fontWeight: 700, color: stats.added_7d >= stats.moteurimmo_7d * 0.9 ? '#1a7a40' : '#c0392b', fontSize: 14 }}>
+                      {stats.moteurimmo_7d > 0 ? Math.round(stats.added_7d / stats.moteurimmo_7d * 100) : 0}%
+                    </span>
+                    <span style={{ color: stats.added_7d >= stats.moteurimmo_7d * 0.9 ? '#1a7a40' : '#c0392b', marginLeft: 6 }}>
+                      {stats.added_7d >= stats.moteurimmo_7d * 0.9 ? '\u2713 \u00E0 jour' : '\u26A0 retard'}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           )}
           <div className="src-row">
