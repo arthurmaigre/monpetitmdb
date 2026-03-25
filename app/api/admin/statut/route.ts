@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     .not('moteurimmo_unique_id', 'is', null)
     .order('verif_cycle_id', { ascending: false })
     .limit(1)
-  const currentCycle = maxCycleRow?.[0]?.verif_cycle_id || 1
+  const currentCycle = maxCycleRow?.[0]?.verif_cycle_id ?? 0
 
   // Fetch 75 biens with the oldest cycle_id (= not yet verified this cycle)
   const { data: biens, error: fetchErr } = await supabaseAdmin

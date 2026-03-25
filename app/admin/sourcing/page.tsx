@@ -960,31 +960,6 @@ export default function AdminSourcingPage() {
               <span style={{ color: '#9a8a80', marginLeft: 6 }}>{"expir\u00E9s total"}</span>
             </div>
           </div>
-          {stats.verif_total > 0 && (() => {
-            const cycleDone = stats.verif_cycle_done || 0
-            const cycleExpired = stats.verif_cycle_expired || 0
-            const total = stats.verif_total || 0
-            const pct = total > 0 ? Math.min(100, Math.round(cycleDone / total * 100)) : 0
-            const remaining = Math.max(0, total - cycleDone)
-            const daysLeft = (stats.verified_24h || 0) > 0 ? Math.ceil(remaining / stats.verified_24h) : '?'
-            return (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9a8a80', marginBottom: 4 }}>
-                  <span>Cycle {stats.verif_cycle || 1} : {fmt(cycleDone)} / {fmt(total)} {"v\u00E9rifi\u00E9s"}</span>
-                  <span style={{ fontWeight: 700, color: pct >= 100 ? '#1e8449' : '#2a4a8a' }}>{pct}%</span>
-                </div>
-                <div style={{ height: 6, borderRadius: 3, background: '#f0ede8', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 3, background: pct >= 100 ? '#1e8449' : '#2a4a8a', width: `${pct}%`, transition: 'width 0.6s ease' }} />
-                </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#9a8a80', flexWrap: 'wrap' }}>
-                  <span><strong style={{ color: '#c0392b' }}>{fmt(cycleExpired)}</strong> {"expir\u00E9s ce cycle"}</span>
-                  <span>{'\u2022'} <strong>{fmt(stats.verified_24h || 0)}</strong> /jour</span>
-                  {remaining > 0 && <span>{'\u2022'} ~{daysLeft} jour{typeof daysLeft === 'number' && daysLeft > 1 ? 's' : ''} restants</span>}
-                  {pct >= 100 && <span style={{ color: '#1e8449', fontWeight: 700 }}>{'\u2713'} Cycle termin{'\u00E9'}</span>}
-                </div>
-              </div>
-            )
-          })()}
           <div className="src-row">
             <label style={{ fontSize: 13, color: '#9a8a80', display: 'flex', alignItems: 'center', gap: 6 }}>
               Depuis
@@ -1323,27 +1298,54 @@ export default function AdminSourcingPage() {
                                       <span>{new Date(cron.last_run).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                                       <span style={{ color: '#c0b8ae', marginLeft: 6 }}>({timeAgo(cron.last_run)})</span>
                                     </div>
-                                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                      {(lr.processed || lr.total || lr.checked || 0) > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.processed || lr.total || lr.checked}</strong> {"v\u00E9rifi\u00E9s"}</Pill>}
-                                      {lr.new > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.new}</strong> nouv.</Pill>}
-                                      {lr.expired > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.expired}</strong> {"expir\u00E9s"}</Pill>}
-                                      {lr.loyer_found > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.loyer_found}</strong> loyers</Pill>}
-                                      {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> profils</Pill>}
-                                      {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scor\u00E9s"}</Pill>}
-                                      {(lr.errors || 0) > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.errors}</strong> err.</Pill>}
-                                      {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">off</Pill>}
-                                      {lr.mode === 'active' && lr.expired === 0 && lr.checked > 0 && <Pill color="#1a7a40" bg="#d4f5e0">tous actifs</Pill>}
-                                    </div>
-                                    {progress && progress.total > 0 && (
-                                      <div style={{ marginTop: 6 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9a8a80', marginBottom: 2 }}>
-                                          <span>{fmt(progress.done)}/{fmt(progress.total)}</span>
-                                          <span style={{ fontWeight: 700, color: pctDone === 100 ? '#1e8449' : '#a06010' }}>{pctDone}%</span>
+                                    {cron.id === 'statut' && stats.verif_cycle_total > 0 ? (() => {
+                                      const cd = stats.verif_cycle_done || 0
+                                      const ct = stats.verif_cycle_total || 1
+                                      const ce = stats.verif_cycle_expired || 0
+                                      const cp = Math.min(100, Math.round(cd / ct * 100))
+                                      const rem = Math.max(0, ct - cd)
+                                      const dLeft = (stats.verified_24h || 0) > 0 ? Math.ceil(rem / stats.verified_24h) : '?'
+                                      return (
+                                        <>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9a8a80', marginBottom: 3 }}>
+                                            <span>Cycle {stats.verif_cycle || 1} : {fmt(cd)}/{fmt(ct)}</span>
+                                            <span style={{ fontWeight: 700, color: cp >= 100 ? '#1e8449' : '#2a4a8a' }}>{cp}%</span>
+                                          </div>
+                                          <div style={{ height: 4, borderRadius: 2, background: '#f0ede8', overflow: 'hidden', marginBottom: 4 }}>
+                                            <div style={{ height: '100%', borderRadius: 2, background: cp >= 100 ? '#1e8449' : '#9a8a80', width: `${cp}%`, transition: 'width 0.6s ease' }} />
+                                          </div>
+                                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            <Pill color="#c0392b" bg="#fde0dc"><strong>{ce}</strong> {"expir\u00E9s"}</Pill>
+                                            <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(stats.verified_24h || 0)}</strong> /jour</Pill>
+                                            {rem > 0 && <Pill color="#9a8a80" bg="#f0ede8">~{dLeft}j</Pill>}
+                                            {cp >= 100 && <Pill color="#1e8449" bg="#d5f5e3">{'\u2713'} {"termin\u00E9"}</Pill>}
+                                          </div>
+                                        </>
+                                      )
+                                    })() : (
+                                      <>
+                                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                          {(lr.processed || lr.total || lr.checked || 0) > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.processed || lr.total || lr.checked}</strong> {"trait\u00E9s"}</Pill>}
+                                          {lr.new > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.new}</strong> nouv.</Pill>}
+                                          {lr.expired > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.expired}</strong> {"expir\u00E9s"}</Pill>}
+                                          {lr.loyer_found > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.loyer_found}</strong> loyers</Pill>}
+                                          {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> profils</Pill>}
+                                          {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scor\u00E9s"}</Pill>}
+                                          {(lr.errors || 0) > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.errors}</strong> err.</Pill>}
+                                          {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">off</Pill>}
                                         </div>
-                                        <div style={{ height: 4, borderRadius: 2, background: '#f0ede8', overflow: 'hidden' }}>
-                                          <div style={{ height: '100%', borderRadius: 2, background: pctDone === 100 ? '#1e8449' : cronColor, width: `${pctDone}%`, transition: 'width 0.6s ease' }} />
-                                        </div>
-                                      </div>
+                                        {progress && progress.total > 0 && (
+                                          <div style={{ marginTop: 6 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9a8a80', marginBottom: 2 }}>
+                                              <span>{fmt(progress.done)}/{fmt(progress.total)}</span>
+                                              <span style={{ fontWeight: 700, color: pctDone === 100 ? '#1e8449' : '#a06010' }}>{pctDone}%</span>
+                                            </div>
+                                            <div style={{ height: 4, borderRadius: 2, background: '#f0ede8', overflow: 'hidden' }}>
+                                              <div style={{ height: '100%', borderRadius: 2, background: pctDone === 100 ? '#1e8449' : cronColor, width: `${pctDone}%`, transition: 'width 0.6s ease' }} />
+                                            </div>
+                                          </div>
+                                        )}
+                                      </>
                                     )}
                                   </>
                                 ) : (
