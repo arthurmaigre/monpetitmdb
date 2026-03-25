@@ -30,9 +30,9 @@ const COUNTER_KEY = 'mdb_chat_count'
 const MAX_HISTORY = 20
 
 function getWelcomeMessage(plan?: string | null): string {
-  if (plan === 'expert') return "Bonjour ! Je suis votre assistant fiscal expert.\n\nJe peux vous aider sur :\n\u2022 L\u2019analyse d\u00E9taill\u00E9e de chaque bien (rendement, cashflow, estimation DVF)\n\u2022 La simulation compl\u00E8te des 7 r\u00E9gimes fiscaux avec chiffres personnalis\u00E9s\n\u2022 Les sc\u00E9narios de revente et les abattements pour dur\u00E9e de d\u00E9tention\n\u2022 La comparaison entre strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Les montages juridiques (SCI IS, LMNP, marchand de biens)\n\nQue souhaitez-vous analyser ?"
-  if (plan === 'pro') return "Bonjour ! Je suis votre assistant d\u2019analyse.\n\nJe peux vous expliquer :\n\u2022 Les calculs de rendement brut et net de chaque bien\n\u2022 Le cashflow et le prix cible\n\u2022 L\u2019estimation DVF et ses correcteurs\n\u2022 Votre r\u00E9gime fiscal et une comparaison avec un second r\u00E9gime\n\nPassez au plan Expert pour acc\u00E9der aux simulations fiscales compl\u00E8tes sur les 7 r\u00E9gimes.\n\nQue souhaitez-vous comprendre ?"
-  return "Bonjour ! Je suis l\u2019assistant Mon Petit MDB.\n\nJe peux r\u00E9pondre \u00E0 vos questions sur :\n\u2022 L\u2019investissement immobilier locatif\n\u2022 Les diff\u00E9rentes strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Le fonctionnement de la plateforme\n\nCr\u00E9ez un compte Pro pour acc\u00E9der \u00E0 l\u2019analyse d\u00E9taill\u00E9e des biens et au simulateur fiscal."
+  if (plan === 'expert') return "Bonjour ! Je suis Memo, votre assistant IA immobilier.\n\nJe peux vous aider sur :\n\u2022 L\u2019analyse d\u00E9taill\u00E9e de chaque bien (rendement, cashflow, estimation DVF)\n\u2022 La simulation compl\u00E8te des 7 r\u00E9gimes fiscaux avec chiffres personnalis\u00E9s\n\u2022 Les sc\u00E9narios de revente et les abattements pour dur\u00E9e de d\u00E9tention\n\u2022 La comparaison entre strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Les montages juridiques (SCI IS, LMNP, marchand de biens)\n\nQue souhaitez-vous analyser ?"
+  if (plan === 'pro') return "Bonjour ! Je suis Memo, votre assistant IA immobilier.\n\nJe peux vous expliquer :\n\u2022 Les calculs de rendement brut et net de chaque bien\n\u2022 Le cashflow et le prix cible\n\u2022 L\u2019estimation DVF et ses correcteurs\n\u2022 Votre r\u00E9gime fiscal et une comparaison avec un second r\u00E9gime\n\nPassez au plan Expert pour acc\u00E9der aux simulations fiscales compl\u00E8tes sur les 7 r\u00E9gimes.\n\nQue souhaitez-vous comprendre ?"
+  return "Bonjour ! Je suis Memo, l\u2019assistant IA de Mon Petit MDB.\n\nJe peux r\u00E9pondre \u00E0 vos questions sur :\n\u2022 L\u2019investissement immobilier locatif\n\u2022 Les diff\u00E9rentes strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Le fonctionnement de la plateforme\n\nCr\u00E9ez un compte Pro pour acc\u00E9der \u00E0 l\u2019analyse d\u00E9taill\u00E9e des biens et au simulateur fiscal."
 }
 
 function getDailyLimit(plan?: string | null): number {
@@ -189,9 +189,9 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Mon Petit MDB</div>
+              <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Memo</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
-                {plan === 'expert' ? 'Assistant fiscal expert' : plan === 'pro' ? 'Assistant analyse' : 'Assistant immobilier'}
+                Assistant IA immobilier
               </div>
             </div>
             <button

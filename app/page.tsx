@@ -515,10 +515,9 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>{"Fiches biens compl\u00E8tes"}</li>
                   <li><span className="pck">{'\u2713'}</span>Enrichissement communautaire</li>
                   <li><span className="pck">{'\u2713'}</span>Watchlist (10 biens max)</li>
-                  <li><span className="pck">{'\u2713'}</span>Assistant IA immobilier</li>
+                  <li><span className="pck">{'\u2713'}</span>Memo {'\u2014'} assistant IA (5 msg/jour)</li>
                   <li><span className="pcx">{'\u2717'}</span><span style={{ color: '#c0b0a0' }}>Simulateur fiscal</span></li>
                   <li><span className="pcx">{'\u2717'}</span><span style={{ color: '#c0b0a0' }}>{"Estimation march\u00E9 DVF"}</span></li>
-                  <li><span className="pcx">{'\u2717'}</span><span style={{ color: '#c0b0a0' }}>Analyse IA des biens</span></li>
                 </ul>
                 <a href="/register" className="plan-cta">Commencer gratuitement</a>
               </div>
@@ -537,8 +536,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>{"Estimation march\u00E9 DVF"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Sc\u00E9nario de revente"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison 2 r\u00E9gimes"}</li>
-                  <li><span className="pck">{'\u2713'}</span>Analyse IA des annonces</li>
-                  <li><span className="pck">{'\u2713'}</span>Score travaux IA</li>
+                  <li><span className="pck">{'\u2713'}</span>Memo {'\u2014'} assistant IA (50 msg/jour)</li>
                   <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Toutes les strat\u00E9gies"}</span></li>
                 </ul>
                 <PricingCta plan="pro" label="Essayer 14 jours gratuits" className="plan-cta" />
@@ -554,7 +552,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Watchlist illimit\u00E9e"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison tous les r\u00E9gimes"}</li>
-                  <li><span className="pck">{'\u2713'}</span>Analyse IA approfondie + photos</li>
+                  <li><span className="pck">{'\u2713'}</span>Memo {'\u2014'} assistant IA illimit\u00E9</li>
                   <li><span className="pck">{'\u2713'}</span>Export Excel</li>
                   <li><span className="pck">{'\u2713'}</span>Alertes nouvelles annonces</li>
                   <li><span className="pck">{'\u2713'}</span>{"Support prioritaire"}</li>
