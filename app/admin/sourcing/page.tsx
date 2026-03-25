@@ -956,7 +956,7 @@ export default function AdminSourcingPage() {
               <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9s (7j)"}</span>
             </div>
             <div style={{ background: '#f0ede8', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-              <span style={{ fontWeight: 700, color: '#1a1210', fontSize: 16 }}>{fmt(stats.expirees)}</span>
+              <span style={{ fontWeight: 700, color: '#1a1210', fontSize: 16 }}>{fmt(stats.expiree)}</span>
               <span style={{ color: '#9a8a80', marginLeft: 6 }}>{"expir\u00E9s total"}</span>
             </div>
           </div>
@@ -974,8 +974,8 @@ export default function AdminSourcingPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#9a8a80' }}>
                   {stats.verif_oldest && <span>{"Cycle d\u00E9but\u00E9 le "}{new Date(stats.verif_oldest).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</span>}
-                  <span>{'\u2022'} <strong style={{ color: '#c0392b' }}>{fmt(stats.expirees)}</strong> {"expir\u00E9s trouv\u00E9s"}</span>
-                  {stats.verif_total < (stats.disponibles || stats.disponible || 0) && <span>{'\u2022'} {fmt((stats.disponibles || stats.disponible || 0) - stats.verif_total)} biens sans ID Moteur Immo (non v{'\u00E9'}rifiables)</span>}
+                  <span>{'\u2022'} <strong style={{ color: '#c0392b' }}>{fmt(stats.expiree || stats.expiree || 0)}</strong> {"expir\u00E9s trouv\u00E9s"}</span>
+                  {stats.verif_total < (stats.disponible || stats.disponible || 0) && <span>{'\u2022'} {fmt((stats.disponible || stats.disponible || 0) - stats.verif_total)} biens sans ID Moteur Immo (non v{'\u00E9'}rifiables)</span>}
                 </div>
               </div>
             )
@@ -1242,7 +1242,7 @@ export default function AdminSourcingPage() {
               regex: { done: stats.regex_done || 0, total: (stats.regex_done || 0) + (stats.regex_pending || 0) },
               extraction: { done: stats.extraction_done || 0, total: (stats.extraction_done || 0) + (stats.extraction_pending || 0) },
               score_travaux: { done: stats.score_done || 0, total: (stats.score_done || 0) + (stats.score_pending || 0) },
-              statut: { done: stats.disponibles || 0, total: (stats.disponibles || 0) + (stats.expirees || 0) },
+              statut: { done: stats.disponible || 0, total: (stats.disponible || 0) + (stats.expiree || 0) },
             }
 
             function CronRow({ cron }: { cron: any }) {
