@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     .eq('statut', 'Toujours disponible')
     .not('moteurimmo_unique_id', 'is', null)
     .order('derniere_verif_statut', { ascending: true, nullsFirst: true })
-    .limit(100)
+    .limit(75)
 
   if (fetchErr || !biens || biens.length === 0) {
     const resultData = { checked: 0, expired: 0, errors: 0, mode: 'active' }
