@@ -963,20 +963,19 @@ export default function AdminSourcingPage() {
           {stats.verif_total > 0 && (() => {
             const done = stats.verif_total - (stats.verif_not_done || 0)
             const pct = stats.verif_total > 0 ? Math.round(done / stats.verif_total * 100) : 0
-            const isFirstCycle = (stats.verif_not_done || 0) > 0
             return (
               <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9a8a80', marginBottom: 4 }}>
-                  <span>{isFirstCycle ? 'Premier cycle' : 'Cycle continu'} : {fmt(done)} / {fmt(stats.verif_total)} {"v\u00E9rifi\u00E9s"}</span>
+                  <span>{"V\u00E9rification : "}{fmt(done)} / {fmt(stats.verif_total)} biens Moteur Immo</span>
                   <span style={{ fontWeight: 700, color: pct >= 100 ? '#1e8449' : '#2a4a8a' }}>{pct}%</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: '#f0ede8', overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 3, background: pct >= 100 ? '#1e8449' : '#2a4a8a', width: `${Math.min(100, pct)}%`, transition: 'width 0.6s ease' }} />
                 </div>
-                <div style={{ fontSize: 11, color: '#9a8a80', marginTop: 4 }}>
-                  {stats.verif_oldest && <>{"V\u00E9rif. la plus ancienne : "}{new Date(stats.verif_oldest).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</>}
-                  {stats.verif_newest && <>{" \u2014 la plus r\u00E9cente : "}{new Date(stats.verif_newest).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</>}
-                  {(stats.verif_not_done || 0) > 0 && <>{" \u2014 "}<strong style={{ color: '#c0392b' }}>{fmt(stats.verif_not_done)} jamais v{'\u00E9'}rifi{'\u00E9'}s</strong></>}
+                <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#9a8a80' }}>
+                  {stats.verif_oldest && <span>{"Cycle d\u00E9but\u00E9 le "}{new Date(stats.verif_oldest).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</span>}
+                  <span>{'\u2022'} <strong style={{ color: '#c0392b' }}>{fmt(stats.expirees)}</strong> {"expir\u00E9s trouv\u00E9s"}</span>
+                  {stats.verif_total < (stats.disponibles || stats.disponible || 0) && <span>{'\u2022'} {fmt((stats.disponibles || stats.disponible || 0) - stats.verif_total)} biens sans ID Moteur Immo (non v{'\u00E9'}rifiables)</span>}
                 </div>
               </div>
             )
