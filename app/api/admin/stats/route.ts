@@ -48,14 +48,9 @@ export async function GET(req: NextRequest) {
     const now = new Date()
     const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
     const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    // Get current cycle: MAX verif_cycle_id across ALL biens (not just disponible)
-    const { data: maxCycleRow } = await supabaseAdmin
-      .from('biens')
-      .select('verif_cycle_id')
-      .not('moteurimmo_unique_id', 'is', null)
-      .order('verif_cycle_id', { ascending: false })
-      .limit(1)
-    const currentCycle = maxCycleRow?.[0]?.verif_cycle_id || 0
+    // Get current cycle from cron_config
+    const { data: cronStatut } = await supabaseAdmin.from('cron_config').select('params').eq('id', 'statut').single()
+    const currentCycle = (cronStatut?.params as any)?.cycle || 1
 
     const [r24, r7, e24, e7, v24, v7, vTotal, vCycleDone, vCycleExpired, vCyclePending] = await Promise.all([
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('created_at', h24),
@@ -65,11 +60,11 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('derniere_verif_statut', h24),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('derniere_verif_statut', d7),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).not('moteurimmo_unique_id', 'is', null),
-      // Biens already verified this cycle (have currentCycle)
-      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('verif_cycle_id', currentCycle),
+      // Biens already verified this cycle (cycle_id >= currentCycle)
+      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Toujours disponible').not('moteurimmo_unique_id', 'is', null).gte('verif_cycle_id', currentCycle),
       // Biens expired this cycle
-      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').eq('verif_cycle_id', currentCycle),
-      // Biens not yet verified this cycle (have older cycle_id)
+      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('verif_cycle_id', currentCycle),
+      // Biens not yet verified this cycle (cycle_id < currentCycle)
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Toujours disponible').not('moteurimmo_unique_id', 'is', null).lt('verif_cycle_id', currentCycle),
     ])
 

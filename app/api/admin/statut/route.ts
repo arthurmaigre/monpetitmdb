@@ -40,34 +40,32 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.MOTEURIMMO_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'MOTEURIMMO_API_KEY manquante' }, { status: 500 })
 
-  // Determine current cycle: max cycle_id in biens
-  const { data: maxCycleRow } = await supabaseAdmin
-    .from('biens')
-    .select('verif_cycle_id')
-    .not('moteurimmo_unique_id', 'is', null)
-    .order('verif_cycle_id', { ascending: false })
-    .limit(1)
-  const currentCycle = maxCycleRow?.[0]?.verif_cycle_id ?? 0
+  // Get current cycle from cron_config params
+  const { data: cronConfig } = await supabaseAdmin.from('cron_config').select('params').eq('id', 'statut').single()
+  const currentCycle = (cronConfig?.params as any)?.cycle || 1
 
-  // Fetch 75 biens with the oldest cycle_id (= not yet verified this cycle)
+  // Fetch 75 biens NOT YET verified in current cycle (cycle_id < currentCycle)
   const { data: biens, error: fetchErr } = await supabaseAdmin
     .from('biens')
     .select('id, moteurimmo_unique_id, verif_cycle_id')
     .eq('statut', 'Toujours disponible')
     .not('moteurimmo_unique_id', 'is', null)
-    .order('verif_cycle_id', { ascending: true })
+    .lt('verif_cycle_id', currentCycle)
     .order('derniere_verif_statut', { ascending: true, nullsFirst: true })
     .limit(75)
 
+  // If no biens left to verify — cycle complete, start next cycle
   if (fetchErr || !biens || biens.length === 0) {
-    const resultData = { checked: 0, expired: 0, errors: 0, mode: 'active', cycle: currentCycle }
-    await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'statut')
-    return NextResponse.json(resultData)
+    const nextCycle = currentCycle >= 3 ? 1 : currentCycle + 1
+    await supabaseAdmin.from('cron_config').update({
+      last_run: new Date().toISOString(),
+      last_result: { checked: 0, expired: 0, errors: 0, mode: 'active', cycle: currentCycle, cycle_complete: true },
+      params: { ...(cronConfig?.params || {}), cycle: nextCycle },
+    }).eq('id', 'statut')
+    return NextResponse.json({ checked: 0, expired: 0, errors: 0, mode: 'active', cycle: currentCycle, cycle_complete: true, next_cycle: nextCycle })
   }
 
-  // Check if all biens already have the current cycle — start new cycle
-  const allSameCycle = biens.every(b => b.verif_cycle_id === currentCycle)
-  const nextCycle = allSameCycle ? currentCycle + 1 : currentCycle
+  const nextCycle = currentCycle
 
   let checked = 0, expired = 0, errorCount = 0
 
