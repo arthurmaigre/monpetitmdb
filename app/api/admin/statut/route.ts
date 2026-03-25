@@ -88,30 +88,33 @@ export async function POST(req: NextRequest) {
     let expired = 0
     let errorCount = 0
 
-    // Process deleted ads in batches
-    const urls: string[] = deletedAds
-      .map((ad: { url?: string }) => ad.url)
-      .filter((url: string | undefined): url is string => !!url)
+    // Extract uniqueIds from deleted ads
+    const uniqueIds: string[] = deletedAds
+      .map((ad: { uniqueId?: string }) => ad.uniqueId)
+      .filter((id: string | undefined): id is string => !!id)
 
-    checked = urls.length
+    checked = uniqueIds.length
 
-    // Update in batches of 100
-    for (let i = 0; i < urls.length; i += 100) {
-      const batch = urls.slice(i, i + 100)
-      const { data: updated, error } = await supabaseAdmin
-        .from('biens')
-        .update({
-          statut: 'Annonce expirée',
-          derniere_verif_statut: new Date().toISOString(),
-        })
-        .in('url', batch)
-        .select('id')
+    // Update in batches of 50 (JSONB filter is heavier)
+    for (let i = 0; i < uniqueIds.length; i += 50) {
+      const batch = uniqueIds.slice(i, i + 50)
+      for (const uid of batch) {
+        const { data: updated, error } = await supabaseAdmin
+          .from('biens')
+          .update({
+            statut: 'Annonce expir\u00E9e',
+            derniere_verif_statut: new Date().toISOString(),
+          })
+          .filter('moteurimmo_data->>uniqueId', 'eq', uid)
+          .eq('statut', 'Toujours disponible')
+          .select('id')
 
-      if (error) {
-        console.error(`Statut update error batch ${i}:`, error.message)
-        errorCount++
-      } else {
-        expired += updated?.length || 0
+        if (error) {
+          console.error(`Statut update error for ${uid}:`, error.message)
+          errorCount++
+        } else {
+          expired += updated?.length || 0
+        }
       }
     }
 
