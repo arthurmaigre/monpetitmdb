@@ -210,6 +210,7 @@ export default function MesBiensPage() {
                 ))}
               </div>
             ) : (
+              <div style={{ overflowX: 'auto' }}>
               <table className="list-table">
                 <thead>
                   <tr>
@@ -218,16 +219,33 @@ export default function MesBiensPage() {
                     <th>Bien</th>
                     <th>Commune</th>
                     <th>Prix FAI</th>
-                    {activeTab !== 'Travaux lourds' && <th>Loyer</th>}
-                    {activeTab !== 'Travaux lourds' && <th>Rendement</th>}
-                    {activeTab === 'Travaux lourds' && <th>Score travaux</th>}
-                    {activeTab === 'Travaux lourds' && <th>DPE</th>}
-                    <th>+/- Value</th>
-                    <th></th>
+                    <th>Prix/m2</th>
+                    {activeTab === 'Travaux lourds' ? (
+                      <>
+                        <th>Score travaux</th>
+                        <th>Estimation travaux</th>
+                        <th>DPE</th>
+                        <th>{"Ann\u00E9e"}</th>
+                        <th>+/- Value</th>
+                      </>
+                    ) : (
+                      <>
+                        <th>Loyer<span style={{ display: 'block', fontSize: 10, fontWeight: 400, color: '#bfb2a6' }}>/mois</span></th>
+                        <th>Charges copro<span style={{ display: 'block', fontSize: 10, fontWeight: 400, color: '#bfb2a6' }}>/mois</span></th>
+                        <th>Taxe fonc.<span style={{ display: 'block', fontSize: 10, fontWeight: 400, color: '#bfb2a6' }}>/an</span></th>
+                        <th>Rendement brut</th>
+                        <th>+/- Value</th>
+                        <th>Locataire</th>
+                      </>
+                    )}
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBiens.map(bien => (
+                  {filteredBiens.map(bien => {
+                    const DPE_COLORS: Record<string, string> = { A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' }
+                    const budgetTravaux = bien.score_travaux && bien.surface ? ([200, 500, 800, 1200, 1800][bien.score_travaux - 1] || 0) * bien.surface : null
+                    return (
                     <tr key={bien.id}>
                       <td>
                         <button className="td-heart" onClick={async () => {
@@ -238,30 +256,38 @@ export default function MesBiensPage() {
                             body: JSON.stringify({ bien_id: bien.id })
                           })
                           if (res.ok) handleRemove(bien.id)
-                        }} aria-label={`Retirer ${bien.type_bien || 'ce bien'} de la watchlist`}>{'♥'}</button>
+                        }} aria-label={`Retirer ${bien.type_bien || 'ce bien'} de la watchlist`}>{'\u2665'}</button>
                       </td>
                       <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
                       <td style={{ fontWeight: 600 }}>{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</td>
                       <td style={{ fontWeight: 500 }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
                       <td style={{ fontWeight: 700 }}>{bien.prix_fai?.toLocaleString('fr-FR')} {'\u20AC'}</td>
-                      {activeTab !== 'Travaux lourds' && (
-                        <td>{bien.loyer ? `${bien.loyer} \u20AC/mois` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                      <td>{bien.prix_m2 ? `${Math.round(bien.prix_m2).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                      {activeTab === 'Travaux lourds' ? (
+                        <>
+                          <td>{bien.score_travaux ? <span style={{ fontWeight: 600, color: '#856404', background: '#fff3cd', padding: '4px 8px', borderRadius: '6px', fontSize: '12px' }}>{bien.score_travaux}/5</span> : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                          <td>{budgetTravaux ? <span style={{ fontWeight: 600, fontSize: '13px' }}>{Math.round(budgetTravaux).toLocaleString('fr-FR')} {'\u20AC'}</span> : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                          <td>{bien.dpe ? <span style={{ fontWeight: 700, fontSize: '12px', padding: '4px 8px', borderRadius: '6px', color: '#fff', background: DPE_COLORS[bien.dpe] || '#9a8a80' }}>{bien.dpe}</span> : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                          <td>{bien.annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                          <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
+                        </>
+                      ) : (
+                        <>
+                          <td>{bien.loyer ? `${bien.loyer} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                          <td>{bien.charges_copro ? `${bien.charges_copro} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                          <td>{bien.taxe_fonc_ann ? `${Math.round(bien.taxe_fonc_ann).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                          <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
+                          <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
+                          <td style={{ fontSize: '12px', color: bien.profil_locataire && bien.profil_locataire !== 'NC' ? '#1a1210' : '#c0b0a0', fontStyle: bien.profil_locataire && bien.profil_locataire !== 'NC' ? 'normal' : 'italic' }}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'NC'}</td>
+                        </>
                       )}
-                      {activeTab !== 'Travaux lourds' && (
-                        <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
-                      )}
-                      {activeTab === 'Travaux lourds' && (
-                        <td>{bien.score_travaux ? <span style={{ fontWeight: 600, color: '#856404', background: '#fff3cd', padding: '4px 8px', borderRadius: '6px', fontSize: '12px' }}>{bien.score_travaux}/5</span> : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
-                      )}
-                      {activeTab === 'Travaux lourds' && (
-                        <td>{bien.dpe ? <span style={{ fontWeight: 700, fontSize: '12px', padding: '4px 8px', borderRadius: '6px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[bien.dpe] || '#9a8a80' }}>{bien.dpe}</span> : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
-                      )}
-                      <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
                       <td><a href={`/biens/${bien.id}`} className="td-btn" aria-label={`Voir l'analyse de ${bien.type_bien || 'ce bien'}`}>Analyse</a></td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}
