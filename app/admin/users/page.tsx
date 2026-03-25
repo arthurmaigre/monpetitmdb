@@ -35,12 +35,17 @@ export default function AdminUsersPage() {
     setSaving(id)
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-    await fetch('/api/admin/users/' + id, {
+    const res = await fetch('/api/admin/users/' + id, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ [field]: value })
     })
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, [field]: value } : u))
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, [field]: value } : u))
+    } else {
+      const err = await res.json()
+      alert(`Erreur: ${err.error || 'Mise à jour échouée'} ${err.id ? '— id: ' + err.id : ''} ${err.details || ''}`)
+    }
     setSaving(null)
   }
 
