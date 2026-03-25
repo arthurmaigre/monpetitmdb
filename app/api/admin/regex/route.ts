@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { strategie, cursor: initialCursor } = body
     const startTime = Date.now()
-    const MAX_MS = 50000 // 50s max, leave margin for Vercel 60s timeout
+    const MAX_MS = 15000 // 15s max, leave margin for updates + cron-job.org 30s timeout
 
     if (strategie && !REGEX_CONFIGS[strategie]) {
       return NextResponse.json({ error: 'Stratégie invalide' }, { status: 400 })
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
         .is('regex_statut', null)
         .not('moteurimmo_data', 'is', null)
         .order('created_at', { ascending: true })
-        .limit(1000)
+        .limit(1500)
 
       if (strategie) query = query.eq('strategie_mdb', strategie)
       if (currentCursor) query = query.gt('created_at', currentCursor)
@@ -191,7 +191,12 @@ export async function POST(req: NextRequest) {
       for (const bien of biens) {
         const config = REGEX_CONFIGS[bien.strategie_mdb]
         if (!config) { idsValid.push(bien.id); continue }
-        const md = bien.moteurimmo_data as { title?: string; description?: string } | null
+        let md: { title?: string; description?: string } | null = null
+        try {
+          const raw = bien.moteurimmo_data
+          if (typeof raw === 'string') md = JSON.parse(raw)
+          else if (raw && typeof raw === 'object') md = raw as any
+        } catch { /* ignore */ }
         const text = [md?.title || '', md?.description || ''].join(' ')
         if (!testRegex(text, config)) {
           idsToMarkFP.push(bien.id)
