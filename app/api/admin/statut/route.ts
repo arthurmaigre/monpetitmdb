@@ -57,47 +57,52 @@ export async function POST(req: NextRequest) {
     // Default: 7 days ago
     const since = body.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // Call Moteur Immo deletedAds API
-    const resp = await fetch('https://moteurimmo.fr/api/deletedAds', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        types: ['sale'],
-        categories: ['house', 'flat', 'block'],
-        apiKey,
-        creationDateAfter: since,
-      }),
-    })
+    // Paginate through Moteur Immo deletedAds API
+    const allUniqueIds: string[] = []
+    let page = 1
 
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => 'Unknown error')
-      return NextResponse.json(
-        { error: `Moteur Immo API error: ${resp.status} ${errText}` },
-        { status: 502 }
-      )
+    while (page <= 200) {
+      const resp = await fetch('https://moteurimmo.fr/api/deletedAds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          types: ['sale'],
+          categories: ['house', 'flat', 'block'],
+          apiKey,
+          creationDateAfter: since,
+          page,
+          maxLength: 100,
+        }),
+      })
+
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => 'Unknown error')
+        return NextResponse.json(
+          { error: `Moteur Immo API error: ${resp.status} ${errText}` },
+          { status: 502 }
+        )
+      }
+
+      const data = await resp.json()
+      const deletedAds = data.ads || []
+      if (!Array.isArray(deletedAds) || deletedAds.length === 0) break
+
+      const ids = deletedAds
+        .map((ad: { uniqueId?: string }) => ad.uniqueId)
+        .filter((id: string | undefined): id is string => !!id)
+      allUniqueIds.push(...ids)
+
+      if (deletedAds.length < 100) break
+      page++
     }
 
-    const data = await resp.json()
-    const deletedAds = data.ads || data || []
-
-    if (!Array.isArray(deletedAds)) {
-      return NextResponse.json({ error: 'Format de réponse inattendu' }, { status: 502 })
-    }
-
-    let checked = 0
+    let checked = allUniqueIds.length
     let expired = 0
     let errorCount = 0
 
-    // Extract uniqueIds from deleted ads
-    const uniqueIds: string[] = deletedAds
-      .map((ad: { uniqueId?: string }) => ad.uniqueId)
-      .filter((id: string | undefined): id is string => !!id)
-
-    checked = uniqueIds.length
-
     // Match by moteurimmo_unique_id column (indexed) in batches of 100
-    for (let i = 0; i < uniqueIds.length; i += 100) {
-      const batch = uniqueIds.slice(i, i + 100)
+    for (let i = 0; i < allUniqueIds.length; i += 100) {
+      const batch = allUniqueIds.slice(i, i + 100)
       try {
         const { data: updated, error } = await supabaseAdmin
           .from('biens')
