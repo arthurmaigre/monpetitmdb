@@ -9,7 +9,7 @@ const STRATEGIES = [
   { value: 'Locataire en place', label: 'Locataire en place' },
   { value: 'Travaux lourds', label: 'Travaux lourds' },
   { value: 'Division', label: 'Division' },
-  { value: 'Decoupe', label: 'D\u00e9coupe' },
+  { value: 'D\u00e9coupe', label: 'D\u00e9coupe' },
 ]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -245,39 +245,46 @@ export default function AdminSourcingPage() {
 
     const since = new Date(ingestSince)
     const until = new Date(ingestUntil)
-    let sliceStart = new Date(since)
+    const strategiesToRun = ingestStrategy
+      ? [ingestStrategy]
+      : STRATEGIES.filter(s => s.value).map(s => s.value)
 
-    while (!ingestStopRef.current && sliceStart < until) {
-      const sliceEnd = new Date(sliceStart)
-      sliceEnd.setDate(sliceEnd.getDate() + 30)
-      if (sliceEnd > until) sliceEnd.setTime(until.getTime())
+    for (const strat of strategiesToRun) {
+      if (ingestStopRef.current) break
+      let sliceStart = new Date(since)
 
-      try {
-        const res: Response = await fetch('/api/admin/ingest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            strategie: ingestStrategy || undefined,
-            dateAfter: sliceStart.toISOString().slice(0, 10),
-            dateBefore: sliceEnd.toISOString().slice(0, 10),
-          }),
-        })
-        const data = await res.json()
-        setIngestStats(prev => ({
-          new: prev.new + (data.new || 0),
-          updated: prev.updated + (data.updated || 0),
-          errors: prev.errors + (data.errors || 0),
-          processed: prev.processed + (data.processed || 0),
-          total: data.total || prev.total,
-        }))
-        if (data.webhook_active !== undefined) setWebhookActive(data.webhook_active)
-      } catch {
-        setIngestStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-      }
+      while (!ingestStopRef.current && sliceStart < until) {
+        const sliceEnd = new Date(sliceStart)
+        sliceEnd.setDate(sliceEnd.getDate() + 30)
+        if (sliceEnd > until) sliceEnd.setTime(until.getTime())
 
-      sliceStart = new Date(sliceEnd)
-      if (!ingestStopRef.current && sliceStart < until) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        try {
+          const res: Response = await fetch('/api/admin/ingest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              strategie: strat,
+              dateAfter: sliceStart.toISOString().slice(0, 10),
+              dateBefore: sliceEnd.toISOString().slice(0, 10),
+            }),
+          })
+          const data = await res.json()
+          setIngestStats(prev => ({
+            new: prev.new + (data.new || 0),
+            updated: prev.updated + (data.updated || 0),
+            errors: prev.errors + (data.errors || 0),
+            processed: prev.processed + (data.processed || 0),
+            total: data.total || prev.total,
+          }))
+          if (data.webhook_active !== undefined) setWebhookActive(data.webhook_active)
+        } catch {
+          setIngestStats(prev => ({ ...prev, errors: prev.errors + 1 }))
+        }
+
+        sliceStart = new Date(sliceEnd)
+        if (!ingestStopRef.current && sliceStart < until) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
       }
     }
 
