@@ -1304,7 +1304,8 @@ export default function AdminSourcingPage() {
                                       const ce = stats.verif_cycle_expired || 0
                                       const cp = Math.min(100, Math.round(cd / ct * 100))
                                       const rem = Math.max(0, ct - cd)
-                                      const dLeft = (stats.verified_24h || 0) > 0 ? Math.ceil(rem / stats.verified_24h) : '?'
+                                      const perHour = (stats.verified_24h || 0) / 24
+                                      const dLeft = perHour > 0 ? Math.ceil(rem / perHour) : '?'
                                       return (
                                         <>
                                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9a8a80', marginBottom: 3 }}>
@@ -1316,8 +1317,8 @@ export default function AdminSourcingPage() {
                                           </div>
                                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                             <Pill color="#c0392b" bg="#fde0dc"><strong>{ce}</strong> {"expir\u00E9s"}</Pill>
-                                            <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(stats.verified_24h || 0)}</strong> /jour</Pill>
-                                            {rem > 0 && <Pill color="#9a8a80" bg="#f0ede8">~{dLeft}j</Pill>}
+                                            <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(stats.verified_24h || 0)}</strong> /24h</Pill>
+                                            {rem > 0 && <Pill color="#9a8a80" bg="#f0ede8">~{dLeft}h</Pill>}
                                             {cp >= 100 && <Pill color="#1e8449" bg="#d5f5e3">{'\u2713'} {"termin\u00E9"}</Pill>}
                                           </div>
                                         </>
