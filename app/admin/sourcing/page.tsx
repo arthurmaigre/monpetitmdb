@@ -983,132 +983,143 @@ export default function AdminSourcingPage() {
             <div className="src-section-title">{"Planification automatique"}</div>
           </div>
           <div className="src-section-desc">
-            Crons externes (cron-job.org) — activez/d{'\u00e9'}sactivez chaque t{'\u00e2'}che depuis la base.
+            Crons externes (cron-job.org) {'\u2014'} activez/d{'\u00e9'}sactivez chaque t{'\u00e2'}che depuis la base.
           </div>
           {cronConfigs.length === 0 ? (
             <p className="src-muted">Chargement de la config...</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {cronConfigs.map(cron => {
-                const cronColor = CRON_COLORS[cron.id] || '#9a8a80'
-                const lr = cron.last_result || {} as any
-                const hasError = lr.error || lr.errors > 0
-                const processed = lr.processed || lr.new || lr.total || 0
-                const errors = lr.errors || 0
+          ) : (() => {
+            const groups = [
+              { title: 'Moteur Immo', icon: '\uD83C\uDFE0', color: '#2a4a8a', ids: ['ingest', 'statut'] },
+              { title: 'Validation (Regex)', icon: '\uD83D\uDD0D', color: '#f0a830', ids: ['regex'] },
+              { title: 'IA (Claude Haiku)', icon: '\uD83E\uDDE0', color: '#1a7a40', ids: ['extraction', 'score_travaux'] },
+            ]
 
-                // Calcul progression pipeline
-                const progressMap: Record<string, { done: number; total: number }> = {
-                  regex: { done: stats.regex_done || 0, total: (stats.regex_done || 0) + (stats.regex_pending || 0) },
-                  extraction: { done: stats.extraction_done || 0, total: (stats.extraction_done || 0) + (stats.extraction_pending || 0) },
-                  score_travaux: { done: stats.score_done || 0, total: (stats.score_done || 0) + (stats.score_pending || 0) },
-                  statut: { done: stats.disponibles || 0, total: (stats.disponibles || 0) + (stats.expirees || 0) },
-                }
-                const progress = progressMap[cron.id]
-                const pctDone = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : null
+            const progressMap: Record<string, { done: number; total: number }> = {
+              regex: { done: stats.regex_done || 0, total: (stats.regex_done || 0) + (stats.regex_pending || 0) },
+              extraction: { done: stats.extraction_done || 0, total: (stats.extraction_done || 0) + (stats.extraction_pending || 0) },
+              score_travaux: { done: stats.score_done || 0, total: (stats.score_done || 0) + (stats.score_pending || 0) },
+              statut: { done: stats.disponibles || 0, total: (stats.disponibles || 0) + (stats.expirees || 0) },
+            }
 
-                return (
-                  <div key={cron.id} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    {/* Bloc gauche : config */}
-                    <div className="cron-card" style={{ borderLeftColor: cron.enabled ? cronColor : '#e8e2d8', flex: '1 1 240px', minWidth: 240 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1210', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+            function CronRow({ cron }: { cron: any }) {
+              const cronColor = CRON_COLORS[cron.id] || '#9a8a80'
+              const lr = cron.last_result || {} as any
+              const hasError = lr.error || lr.errors > 0
+              const processed = lr.processed || lr.new || lr.total || 0
+              const errors = lr.errors || 0
+              const progress = progressMap[cron.id]
+              const pctDone = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : null
+
+              return (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
+                  {/* Config */}
+                  <div style={{ flex: '1 1 220px', minWidth: 200 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#1a1210', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {CRON_LABELS[cron.id] || cron.id}
                         {pctDone !== null && (
-                          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: pctDone === 100 ? '#d5f5e3' : '#fef9e7', color: pctDone === 100 ? '#1e8449' : '#a06010' }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: pctDone === 100 ? '#d5f5e3' : '#fef9e7', color: pctDone === 100 ? '#1e8449' : '#a06010' }}>
                             {pctDone}%
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 12, color: '#9a8a80', marginBottom: 10 }}>
-                        {cronScheduleToFrench(cron.schedule)}
-                        <span style={{ marginLeft: 8, fontFamily: "'DM Sans', monospace", fontSize: 11, color: '#c0b8ae' }}>({cron.schedule})</span>
-                      </div>
-                      <label className="src-toggle">
-                        <input
-                          type="checkbox"
-                          checked={cron.enabled}
-                          onChange={() => updateCron(cron.id, { enabled: !cron.enabled })}
-                          disabled={cronSaving === cron.id}
-                        />
+                      <label className="src-toggle" style={{ fontSize: 11 }}>
+                        <input type="checkbox" checked={cron.enabled} onChange={() => updateCron(cron.id, { enabled: !cron.enabled })} disabled={cronSaving === cron.id} />
                         <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
-                        <span style={{ fontWeight: 600, color: cron.enabled ? '#1a7a40' : '#c0392b' }}>{cron.enabled ? 'Actif' : 'Inactif'}</span>
+                        <span style={{ fontWeight: 600, color: cron.enabled ? '#1a7a40' : '#c0392b', fontSize: 11 }}>{cron.enabled ? 'Actif' : 'Off'}</span>
                       </label>
-                      {cron.id === 'score_travaux' && (
-                        <div style={{ marginTop: 10 }}>
-                          <label className="src-toggle" style={{ fontSize: 12 }}>
-                            <input
-                              type="checkbox"
-                              checked={Boolean(cron.params?.withPhotos)}
-                              onChange={() => updateCron(cron.id, { params: { ...cron.params, withPhotos: !cron.params?.withPhotos } })}
-                              disabled={cronSaving === cron.id}
-                            />
-                            <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
-                            Analyser les photos (cron)
-                          </label>
-                        </div>
-                      )}
                     </div>
+                    <div style={{ fontSize: 11, color: '#9a8a80', marginBottom: 6 }}>
+                      {cronScheduleToFrench(cron.schedule)}
+                    </div>
+                    {cron.id === 'score_travaux' && (
+                      <label className="src-toggle" style={{ fontSize: 11, marginTop: 4 }}>
+                        <input type="checkbox" checked={Boolean(cron.params?.withPhotos)} onChange={() => updateCron(cron.id, { params: { ...cron.params, withPhotos: !cron.params?.withPhotos } })} disabled={cronSaving === cron.id} />
+                        <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
+                        <span style={{ fontSize: 11 }}>Photos</span>
+                      </label>
+                    )}
+                  </div>
 
-                    {/* Bloc droite : stats */}
-                    <div className="cron-card" style={{ borderLeftColor: cron.last_run ? (hasError ? '#e74c3c' : '#1a7a40') : '#e8e2d8', flex: '1 1 320px', minWidth: 280 }}>
-                      {cron.last_run ? (
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dernier run</span>
-                            {!hasError && processed > 0 && <Pill color="#1a7a40" bg="#d4f5e0">{'\u2713'} OK</Pill>}
-                            {hasError && <Pill color="#c0392b" bg="#fde0dc">{'\u2717'} Erreur</Pill>}
-                          </div>
-                          <div style={{ fontSize: 13, color: '#1a1210', marginBottom: 8 }}>
-                            <span style={{ fontWeight: 600 }}>{new Date(cron.last_run).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                  {/* Stats */}
+                  <div style={{ flex: '1 1 280px', minWidth: 240, background: '#faf8f5', borderRadius: 8, padding: '8px 12px', fontSize: 11 }}>
+                    {cron.last_run ? (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ color: '#1a1210' }}>
+                            <span style={{ fontWeight: 600 }}>{new Date(cron.last_run).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</span>
                             {' '}
                             <span style={{ color: '#9a8a80' }}>{new Date(cron.last_run).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                            <span style={{ color: '#c0b8ae', marginLeft: 8, fontSize: 11 }}>({timeAgo(cron.last_run)})</span>
+                            <span style={{ color: '#c0b8ae', marginLeft: 6 }}>({timeAgo(cron.last_run)})</span>
+                          </span>
+                          {!hasError && processed > 0 && <span style={{ color: '#1a7a40', fontWeight: 700 }}>{'\u2713'}</span>}
+                          {hasError && <span style={{ color: '#c0392b', fontWeight: 700 }}>{'\u2717'}</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: progress ? 6 : 0 }}>
+                          {processed > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{processed}</strong> {"trait\u00E9s"}</Pill>}
+                          {lr.new > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.new}</strong> nouv.</Pill>}
+                          {lr.updated > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.updated}</strong> maj</Pill>}
+                          {lr.loyer_found > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.loyer_found}</strong> loyers</Pill>}
+                          {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> profils</Pill>}
+                          {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scor\u00E9s"}</Pill>}
+                          {lr.faux_positifs > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.faux_positifs}</strong> faux pos.</Pill>}
+                          {lr.expired > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.expired}</strong> exp.</Pill>}
+                          {errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{errors}</strong> err.</Pill>}
+                          {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">off</Pill>}
+                        </div>
+                        {lr.error && (
+                          <div style={{ color: '#c0392b', background: '#fdedec', padding: '3px 6px', borderRadius: 4, marginBottom: 4 }}>
+                            {typeof lr.error === 'string' ? lr.error.slice(0, 80) : 'Erreur'}
                           </div>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                            {processed > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{processed}</strong> {"biens trait\u00E9s"}</Pill>}
-                            {lr.new > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.new}</strong> {"nouvelles annonces"}</Pill>}
-                            {lr.updated > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.updated}</strong> {"mis \u00E0 jour"}</Pill>}
-                            {lr.loyer_found > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.loyer_found}</strong> {"loyers extraits"}</Pill>}
-                            {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> {"profils trouv\u00E9s"}</Pill>}
-                            {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scores attribu\u00E9s"}</Pill>}
-                            {lr.faux_positifs > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.faux_positifs}</strong> {"faux positifs d\u00E9tect\u00E9s"}</Pill>}
-                            {lr.expired > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.expired}</strong> {"annonces expir\u00E9es"}</Pill>}
-                            {errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{errors}</strong> {"erreurs"}</Pill>}
-                            {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">{"Ignor\u00E9 (d\u00E9sactiv\u00E9)"}</Pill>}
-                          </div>
-                          {lr.error && (
-                            <div style={{ fontSize: 11, color: '#c0392b', background: '#fdedec', padding: '4px 8px', borderRadius: 6, marginBottom: 8 }}>
-                              {typeof lr.error === 'string' ? lr.error : JSON.stringify(lr.error)}
+                        )}
+                        {progress && progress.total > 0 && (
+                          <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9a8a80', marginBottom: 3 }}>
+                              <span>{fmt(progress.done)}/{fmt(progress.total)}</span>
+                              <span style={{ fontWeight: 700, color: pctDone === 100 ? '#1e8449' : '#a06010' }}>{pctDone}%</span>
                             </div>
-                          )}
-                          {progress && progress.total > 0 && (
-                            <>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9a8a80', marginBottom: 4 }}>
-                                <span>{fmt(progress.done)} / {fmt(progress.total)}</span>
-                                <span style={{ fontWeight: 700, color: pctDone === 100 ? '#1e8449' : '#a06010' }}>{pctDone}%</span>
+                            <div style={{ height: 4, borderRadius: 2, background: '#e8e2d8', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', borderRadius: 2, background: pctDone === 100 ? '#1e8449' : cronColor, width: `${pctDone}%`, transition: 'width 0.6s ease' }} />
+                            </div>
+                            {progress.total - progress.done > 0 && (cron.id === 'extraction' || cron.id === 'score_travaux') && (
+                              <div style={{ color: '#c0392b', marginTop: 3 }}>
+                                {fmt(progress.total - progress.done)} restants {'\u2014'} ~{Math.ceil((progress.total - progress.done) / 3600)} nuits
                               </div>
-                              <div style={{ height: 6, borderRadius: 3, background: '#f0ede8', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', borderRadius: 3, background: pctDone === 100 ? '#1e8449' : cronColor, width: `${pctDone}%`, transition: 'width 0.6s ease' }} />
-                              </div>
-                              {progress.total - progress.done > 0 && (
-                                <div style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>
-                                  {fmt(progress.total - progress.done)} en attente
-                                  {(cron.id === 'extraction' || cron.id === 'score_travaux') && ` \u2014 ~${Math.ceil((progress.total - progress.done) / 3600)} nuits`}
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 60 }}>
-                          <span style={{ fontSize: 12, color: '#c0b8ae', fontStyle: 'italic' }}>{"Jamais ex\u00E9cut\u00E9"}</span>
-                        </div>
-                      )}
-                    </div>
+                            )}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <span style={{ color: '#c0b8ae', fontStyle: 'italic' }}>{"Jamais ex\u00E9cut\u00E9"}</span>
+                    )}
                   </div>
-                )
-              })}
-            </div>
-          )}
+                </div>
+              )
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {groups.map(group => {
+                  const groupCrons = cronConfigs.filter((c: any) => group.ids.includes(c.id))
+                  if (groupCrons.length === 0) return null
+                  return (
+                    <div key={group.title}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: group.color, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>{group.icon}</span> {group.title}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {groupCrons.map((cron: any) => (
+                          <div key={cron.id} className="cron-card" style={{ borderLeftColor: CRON_COLORS[cron.id] || '#e8e2d8', padding: '12px 16px' }}>
+                            <CronRow cron={cron} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </Layout>
