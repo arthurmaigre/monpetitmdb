@@ -2040,7 +2040,7 @@ export default function FicheBienPage() {
                   )}
                   <div className="param-group">
                     <label className="param-label">Montant du projet (frais notaire inclus)</label>
-                    <input className="param-input" type="number" value={Math.round(montantProjet)} readOnly style={{ background: '#f0ede8', color: '#9a8a80' }} />
+                    <div className="param-input" style={{ background: '#f0ede8', color: '#1a1210', fontWeight: 700, fontSize: '16px' }}>{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
                     <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
                   </div>
                   <div className="param-group">
@@ -2051,7 +2051,7 @@ export default function FicheBienPage() {
                       <div className="slider-labels"><span>0 %</span><span>100 %</span></div>
                     </div>
                     <input className="param-input" type="number" value={apport} onChange={e => setApport(Number(e.target.value))} placeholder="Montant en €" />
-                    <span className="param-hint">Montant emprunte : {fmt(montantEmprunte)} €</span>
+                    <span className="param-hint">{"Montant emprunt\u00E9"} : {fmt(montantEmprunte)} {'\u20AC'}</span>
                   </div>
                   <div className="param-group">
                     <label className="param-label">Taux credit (%)</label>
