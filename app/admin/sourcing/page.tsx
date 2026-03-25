@@ -157,7 +157,12 @@ export default function AdminSourcingPage() {
   const [ingestUntil, setIngestUntil] = useState(new Date().toISOString().slice(0, 10))
   const [ingestRunning, setIngestRunning] = useState(false)
   const [ingestStats, setIngestStats] = useState({ new: 0, updated: 0, errors: 0, processed: 0, total: 0 })
-  const [ingestHistory, setIngestHistory] = useState<Array<{ date: string; time: string; strategie: string; new: number; updated: number; errors: number; totalApi: number; status: string }>>([])
+  const [ingestHistory, setIngestHistory] = useState<Array<{
+    startDate: string; endDate: string; strategies: string; dateRange: string;
+    totalNew: number; totalUpdated: number; totalErrors: number; totalApi: number;
+    calls: number; status: 'ok' | 'erreur' | 'arret'
+  }>>([])
+  const ingestSessionRef = useRef({ calls: 0, totalNew: 0, totalUpdated: 0, totalErrors: 0, totalApi: 0, strategies: new Set<string>(), startDate: '' })
   const [webhookActive, setWebhookActive] = useState(false)
   const ingestStopRef = useRef(false)
 
@@ -188,6 +193,11 @@ export default function AdminSourcingPage() {
   const [cronConfigs, setCronConfigs] = useState<Array<{ id: string; enabled: boolean; schedule: string; last_run: string | null; last_result: Record<string, unknown> | null; params: Record<string, unknown> }>>([])
   const [cronSaving, setCronSaving] = useState<string | null>(null)
 
+
+  // Load ingest history from localStorage
+  useEffect(() => {
+    try { const h = localStorage.getItem('mdb_ingest_history'); if (h) setIngestHistory(JSON.parse(h)) } catch {}
+  }, [])
 
   // Any batch running flag for auto-refresh
   const anyRunning = ingestRunning || regexRunning || extractRunning || scoreRunning || statutRunning
@@ -245,14 +255,20 @@ export default function AdminSourcingPage() {
     ingestStopRef.current = false
     setIngestStats({ new: 0, updated: 0, errors: 0, processed: 0, total: 0 })
 
+    const session = ingestSessionRef.current
+    session.calls = 0; session.totalNew = 0; session.totalUpdated = 0; session.totalErrors = 0; session.totalApi = 0
+    session.strategies = new Set()
+    session.startDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
     const since = new Date(ingestSince)
     const until = new Date(ingestUntil)
     const strategiesToRun = ingestStrategy
       ? [ingestStrategy]
       : STRATEGIES.filter(s => s.value).map(s => s.value)
+    let stopped = false
 
     for (const strat of strategiesToRun) {
-      if (ingestStopRef.current) break
+      if (ingestStopRef.current) { stopped = true; break }
       let sliceStart = new Date(since)
 
       while (!ingestStopRef.current && sliceStart < until) {
@@ -271,6 +287,12 @@ export default function AdminSourcingPage() {
             }),
           })
           const data = await res.json()
+          session.calls++
+          session.totalNew += data.new || 0
+          session.totalUpdated += data.updated || 0
+          session.totalErrors += data.errors || 0
+          session.totalApi += data.total_api || data.new || 0
+          session.strategies.add(strat)
           setIngestStats(prev => ({
             new: prev.new + (data.new || 0),
             updated: prev.updated + (data.updated || 0),
@@ -278,13 +300,11 @@ export default function AdminSourcingPage() {
             processed: prev.processed + (data.processed || 0),
             total: data.total || prev.total,
           }))
-          const now = new Date()
-          setIngestHistory(prev => [{ date: now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), strategie: strat, new: data.new || 0, updated: data.updated || 0, errors: data.errors || 0, totalApi: data.total_api || data.new || 0, status: res.ok ? 'ok' : 'erreur' }, ...prev].slice(0, 10))
           if (data.webhook_active !== undefined) setWebhookActive(data.webhook_active)
         } catch {
+          session.calls++
+          session.totalErrors++
           setIngestStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-          const now = new Date()
-          setIngestHistory(prev => [{ date: now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), strategie: strat, new: 0, updated: 0, errors: 1, totalApi: 0, status: 'erreur' }, ...prev].slice(0, 10))
         }
 
         sliceStart = new Date(sliceEnd)
@@ -292,7 +312,25 @@ export default function AdminSourcingPage() {
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       }
+      if (ingestStopRef.current) { stopped = true; break }
     }
+
+    // Save session summary
+    const endDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const status: 'ok' | 'erreur' | 'arret' = stopped ? 'arret' : session.totalErrors > 0 ? 'erreur' : 'ok'
+    const entry = {
+      startDate: session.startDate, endDate,
+      strategies: [...session.strategies].join(', ') || 'Aucune',
+      dateRange: `${ingestSince} \u2192 ${ingestUntil}`,
+      totalNew: session.totalNew, totalUpdated: session.totalUpdated,
+      totalErrors: session.totalErrors, totalApi: session.totalApi,
+      calls: session.calls, status,
+    }
+    setIngestHistory(prev => {
+      const updated = [entry, ...prev].slice(0, 10)
+      try { localStorage.setItem('mdb_ingest_history', JSON.stringify(updated)) } catch {}
+      return updated
+    })
 
     setIngestRunning(false)
     fetchStats()
@@ -820,32 +858,45 @@ export default function AdminSourcingPage() {
               </div>
             )}
 
-            {/* Historique des 5 derniers appels */}
+            {/* Historique des dernieres ingestions manuelles */}
             {ingestHistory.length > 0 && (
-              <div style={{ flex: '1 1 340px', background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '10px 14px', fontSize: 11 }}>
-                <div style={{ fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10, marginBottom: 8 }}>Historique des appels</div>
+              <div style={{ flex: '1 1 100%', background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '12px 16px', fontSize: 11 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>Historique des ingestions manuelles</span>
+                  <button onClick={() => { setIngestHistory([]); try { localStorage.removeItem('mdb_ingest_history') } catch {} }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#c0b8ae' }}>Effacer</button>
+                </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1.5px solid #ede8e0' }}>
-                      <th style={{ textAlign: 'left', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Date</th>
-                      <th style={{ textAlign: 'left', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Strat\u00E9gie"}</th>
-                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Re\u00E7us"}</th>
-                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Nouv.</th>
-                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9dup."}</th>
-                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Err.</th>
-                      <th style={{ textAlign: 'center', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}></th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Fin</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Strat\u00E9gies"}</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Appels</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Re\u00E7us"}</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Nouv.</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9dup."}</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Err.</th>
+                      <th style={{ textAlign: 'center', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Statut</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ingestHistory.map((h, i) => (
                       <tr key={i} style={{ borderBottom: i < ingestHistory.length - 1 ? '1px solid #f0ede8' : 'none' }}>
-                        <td style={{ padding: '4px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.date} {h.time}</td>
-                        <td style={{ padding: '4px', fontWeight: 600, color: '#1a1210' }}>{h.strategie}</td>
-                        <td style={{ padding: '4px', textAlign: 'right', color: '#2a4a8a' }}>{h.totalApi}</td>
-                        <td style={{ padding: '4px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{h.new > 0 ? `+${h.new}` : '0'}</td>
-                        <td style={{ padding: '4px', textAlign: 'right', color: '#9a8a80' }}>{h.updated}</td>
-                        <td style={{ padding: '4px', textAlign: 'right', color: h.errors > 0 ? '#c0392b' : '#9a8a80', fontWeight: h.errors > 0 ? 700 : 400 }}>{h.errors}</td>
-                        <td style={{ padding: '4px', textAlign: 'center', color: h.status === 'ok' ? '#1a7a40' : '#c0392b', fontWeight: 700 }}>{h.status === 'ok' ? '\u2713' : '\u2717'}</td>
+                        <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.startDate}</td>
+                        <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.endDate}</td>
+                        <td style={{ padding: '5px 6px', color: '#1a1210', fontSize: 10 }}>{h.dateRange}</td>
+                        <td style={{ padding: '5px 6px', fontWeight: 600, color: '#1a1210', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.strategies}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a' }}>{h.calls}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a' }}>{fmt(h.totalApi)}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{h.totalNew > 0 ? `+${fmt(h.totalNew)}` : '0'}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#9a8a80' }}>{fmt(h.totalUpdated)}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: h.totalErrors > 0 ? '#c0392b' : '#9a8a80', fontWeight: h.totalErrors > 0 ? 700 : 400 }}>{h.totalErrors}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'center' }}>
+                          {h.status === 'ok' && <span style={{ color: '#1a7a40', fontWeight: 700, background: '#d4f5e0', padding: '2px 8px', borderRadius: 6 }}>{'\u2713'} Termin{'\u00E9'}</span>}
+                          {h.status === 'erreur' && <span style={{ color: '#c0392b', fontWeight: 700, background: '#fde0dc', padding: '2px 8px', borderRadius: 6 }}>{'\u2717'} Erreurs</span>}
+                          {h.status === 'arret' && <span style={{ color: '#a06010', fontWeight: 700, background: '#fff8f0', padding: '2px 8px', borderRadius: 6 }}>{'\u25A0'} {"Arr\u00EAt\u00E9"}</span>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
