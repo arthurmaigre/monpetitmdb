@@ -15,6 +15,15 @@ const REGIME_OPTIONS = [
   { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
 ]
 
+function Tooltip({ text }: { text: string }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', marginLeft: 6, cursor: 'help' }} className="tooltip-wrap">
+      <span className="tooltip-icon">?</span>
+      <span className="tooltip-bubble">{text}</span>
+    </span>
+  )
+}
+
 export default function ParametresPage() {
   const [profile, setProfile] = useState<any>(null)
   const [plan, setPlan] = useState<string>('free')
@@ -111,6 +120,26 @@ export default function ParametresPage() {
         .profil-toast-error { background: #e74c3c; color: #fff; }
         @keyframes toastSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(16px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         .profil-error { background: #fdedec; color: #e74c3c; border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; }
+        .tooltip-icon {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 16px; height: 16px; border-radius: 50%; background: #e8e2d8;
+          font-size: 10px; font-weight: 700; color: #9a8a80; line-height: 1;
+          transition: background 150ms ease, color 150ms ease;
+        }
+        .tooltip-wrap:hover .tooltip-icon { background: #c0392b; color: #fff; }
+        .tooltip-bubble {
+          display: none; position: absolute; bottom: calc(100% + 8px); left: 50%;
+          transform: translateX(-50%); background: #1a1210; color: #fff;
+          font-size: 12px; font-weight: 400; line-height: 1.5; padding: 10px 14px;
+          border-radius: 10px; width: 260px; z-index: 50;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.2); text-transform: none; letter-spacing: 0;
+        }
+        .tooltip-bubble::after {
+          content: ''; position: absolute; top: 100%; left: 50%;
+          transform: translateX(-50%); border: 6px solid transparent;
+          border-top-color: #1a1210;
+        }
+        .tooltip-wrap:hover .tooltip-bubble { display: block; }
         @media (max-width: 768px) {
           .profil-wrap { padding: 0 16px; margin: 24px auto; }
           .profil-title { font-size: 24px; }
@@ -158,7 +187,7 @@ export default function ParametresPage() {
             <h2 className="profil-section-title">{"Fiscalit\u00E9"}</h2>
             <p className="profil-section-desc">{"Votre situation fiscale pour les simulations de rendement net."}</p>
             <div className="profil-field" style={{ marginBottom: '20px' }}>
-              <label className="profil-label" id="tmi-label">Tranche marginale d'imposition (TMI)</label>
+              <label className="profil-label" id="tmi-label">Tranche marginale d'imposition (TMI)<Tooltip text={"Votre taux d\u2019imposition le plus \u00E9lev\u00E9 sur vos revenus. Il d\u00E9termine combien d\u2019imp\u00F4t vous paierez sur vos loyers. Consultez votre dernier avis d\u2019imposition pour le conna\u00EEtre."} /></label>
               <div className="tmi-options" role="group" aria-labelledby="tmi-label">
                 {TMI_OPTIONS.map(t => (
                   <button key={t} type="button" className={`tmi-btn ${profile?.tmi === t ? 'active' : ''}`} onClick={() => update('tmi', t)} aria-pressed={profile?.tmi === t} aria-label={`TMI ${t} pourcent`}>{t} %</button>
@@ -166,7 +195,7 @@ export default function ParametresPage() {
               </div>
             </div>
             <div className="profil-field">
-              <label className="profil-label" htmlFor="regime-select">{"R\u00E9gime fiscal pr\u00E9f\u00E9r\u00E9"}</label>
+              <label className="profil-label" htmlFor="regime-select">{"R\u00E9gime fiscal pr\u00E9f\u00E9r\u00E9"}<Tooltip text={"Le r\u00E9gime fiscal d\u00E9termine comment vos revenus locatifs sont impos\u00E9s. Micro = forfait simple, R\u00E9el = d\u00E9duction des charges r\u00E9elles. LMNP = location meubl\u00E9e, Nu = location vide."} /></label>
               <select id="regime-select" className="profil-select" value={profile?.regime || 'nu_micro_foncier'} onChange={e => update('regime', e.target.value)} aria-label="Régime fiscal">
                 {REGIME_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
@@ -178,35 +207,35 @@ export default function ParametresPage() {
             <p className="profil-section-desc">{"Param\u00E8tres de cr\u00E9dit utilis\u00E9s pour calculer la mensualit\u00E9 et le cashflow."}</p>
             <div className="profil-grid">
               <div className="profil-field">
-                <label className="profil-label" htmlFor="apport-input">Apport ({'\u20AC'})</label>
+                <label className="profil-label" htmlFor="apport-input">Apport ({'\u20AC'})<Tooltip text={"La somme que vous investissez de votre poche, sans emprunt. Plus l\u2019apport est \u00E9lev\u00E9, moins vous empruntez et plus le cashflow est favorable."} /></label>
                 <input id="apport-input" className="profil-input" type="number" value={profile?.apport ?? ''} onChange={e => updateNum('apport', e.target.value)} aria-label="Montant de l'apport" />
                 <span className="profil-hint">Montant que vous pouvez investir</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="taux-credit-input">{"Taux cr\u00E9dit (%)"}</label>
+                <label className="profil-label" htmlFor="taux-credit-input">{"Taux cr\u00E9dit (%)"}<Tooltip text={"Le taux d\u2019int\u00E9r\u00EAt annuel de votre emprunt immobilier. En 2025-2026, les taux sont g\u00E9n\u00E9ralement entre 3% et 4% sur 20-25 ans."} /></label>
                 <input id="taux-credit-input" className="profil-input" type="number" step="0.01" value={profile?.taux_credit ?? ''} onChange={e => updateNum('taux_credit', e.target.value)} aria-label="Taux du cr\u00E9dit en pourcentage" />
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="taux-assurance-input">Taux assurance (%)</label>
+                <label className="profil-label" htmlFor="taux-assurance-input">Taux assurance (%)<Tooltip text={"L\u2019assurance emprunteur (ADI) couvre le remboursement du cr\u00E9dit en cas de d\u00E9c\u00E8s ou d\u2019invalidit\u00E9. Taux habituel : 0.10% \u00E0 0.50% selon votre \u00E2ge."} /></label>
                 <input id="taux-assurance-input" className="profil-input" type="number" step="0.01" value={profile?.taux_assurance ?? ''} onChange={e => updateNum('taux_assurance', e.target.value)} aria-label="Taux de l'assurance en pourcentage" />
                 <span className="profil-hint">{"Taux moyen ADI d\u00E9c\u00E8s-PTIA"}</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="duree-input">{"Dur\u00E9e (ans)"}</label>
+                <label className="profil-label" htmlFor="duree-input">{"Dur\u00E9e (ans)"}<Tooltip text={"La dur\u00E9e de votre cr\u00E9dit immobilier. Plus c\u2019est long, plus les mensualit\u00E9s sont basses (meilleur cashflow) mais plus vous payez d\u2019int\u00E9r\u00EAts au total."} /></label>
                 <input id="duree-input" className="profil-input" type="number" value={profile?.duree_ans ?? ''} onChange={e => updateNum('duree_ans', e.target.value)} aria-label={"Dur\u00E9e du cr\u00E9dit en ann\u00E9es"} />
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="frais-notaire-input">Frais de notaire (%)</label>
+                <label className="profil-label" htmlFor="frais-notaire-input">Frais de notaire (%)<Tooltip text={"Les frais d\u2019acquisition (improprement appel\u00E9s \u00AB frais de notaire \u00BB). ~7.5% dans l\u2019ancien, ~2.5% dans le neuf. Ils s\u2019ajoutent au prix d\u2019achat."} /></label>
                 <input id="frais-notaire-input" className="profil-input" type="number" step="0.1" value={profile?.frais_notaire ?? ''} onChange={e => updateNum('frais_notaire', e.target.value)} aria-label="Frais de notaire en pourcentage" />
                 <span className="profil-hint">~7.5% ancien, ~2.5% neuf</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="objectif-cashflow-input">Objectif cashflow brut (% du FAI)</label>
+                <label className="profil-label" htmlFor="objectif-cashflow-input">Objectif cashflow brut (% du FAI)<Tooltip text={"Le cashflow est la diff\u00E9rence entre le loyer re\u00E7u et les charges (cr\u00E9dit, charges, imp\u00F4ts). 0% = \u00E9quilibre (le loyer couvre tout). 5% = vous gagnez 5% du prix du bien par an en plus."} /></label>
                 <input id="objectif-cashflow-input" className="profil-input" type="number" step="0.1" value={profile?.objectif_cashflow ?? ''} onChange={e => updateNum('objectif_cashflow', e.target.value)} aria-label="Objectif de cashflow en pourcentage du prix FAI" />
                 <span className="profil-hint">0 = {"équilibre"} | 5 = +5% du prix FAI/an</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="objectif-pv-input">{"Objectif plus-value brute (%)"}</label>
+                <label className="profil-label" htmlFor="objectif-pv-input">{"Objectif plus-value brute (%)"}<Tooltip text={"La plus-value vis\u00E9e \u00E0 la revente, en pourcentage du co\u00FBt total (achat + notaire + travaux). Ex : 20% sur un bien \u00E0 100k\u20AC = objectif de revente \u00E0 120k\u20AC."} /></label>
                 <input id="objectif-pv-input" className="profil-input" type="number" step="1" value={profile?.objectif_pv ?? ''} onChange={e => updateNum('objectif_pv', e.target.value)} aria-label="Objectif de plus-value brute en pourcentage" />
                 <span className="profil-hint">{"PV brute vis\u00E9e sur le co\u00FBt total (achat + notaire + travaux)"}</span>
               </div>
@@ -218,32 +247,32 @@ export default function ParametresPage() {
             <p className="profil-section-desc">{"Ces charges sont int\u00e9gr\u00e9es automatiquement dans le calcul du cashflow net et la simulation fiscale."}</p>
             <div className="profil-grid">
               <div className="profil-field">
-                <label className="profil-label" htmlFor="pno-input">{"Assurance PNO (\u20AC/an)"}</label>
+                <label className="profil-label" htmlFor="pno-input">{"Assurance PNO (\u20AC/an)"}<Tooltip text={"Assurance Propri\u00E9taire Non Occupant. Obligatoire en copropri\u00E9t\u00E9, elle couvre les dommages au bien (d\u00E9g\u00E2t des eaux, incendie, etc.) quand vous n\u2019y habitez pas."} /></label>
                 <input id="pno-input" className="profil-input" type="number" placeholder={"200"} value={profile?.assurance_pno ?? ''} onChange={e => updateNum('assurance_pno', e.target.value)} aria-label="Assurance PNO en euros par an" />
                 <span className="profil-hint">{"Propri\u00e9taire Non Occupant \u2014 ~150 \u00e0 300 \u20AC/an"}</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="gestion-input">{"Frais de gestion locative (% des loyers)"}</label>
+                <label className="profil-label" htmlFor="gestion-input">{"Frais de gestion locative (% des loyers)"}<Tooltip text={"Si vous d\u00E9l\u00E9guez la gestion \u00E0 une agence (recherche de locataire, quittances, \u00E9tats des lieux), comptez 6 \u00E0 10% des loyers. 0% si vous g\u00E9rez vous-m\u00EAme."} /></label>
                 <input id="gestion-input" className="profil-input" type="number" step="0.5" placeholder={"8"} value={profile?.frais_gestion_pct ?? ''} onChange={e => updateNum('frais_gestion_pct', e.target.value)} aria-label="Frais de gestion locative en pourcentage des loyers" />
                 <span className="profil-hint">{"Agence ou gestionnaire \u2014 0% si gestion directe"}</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="comptable-input">{"Honoraires expert-comptable (\u20AC/an)"}</label>
+                <label className="profil-label" htmlFor="comptable-input">{"Honoraires expert-comptable (\u20AC/an)"}<Tooltip text={"N\u00E9cessaire en LMNP r\u00E9el et SCI IS pour la d\u00E9claration fiscale et le bilan comptable. Comptez 400 \u00E0 800\u20AC/an selon la complexit\u00E9."} /></label>
                 <input id="comptable-input" className="profil-input" type="number" placeholder={"600"} value={profile?.honoraires_comptable ?? ''} onChange={e => updateNum('honoraires_comptable', e.target.value)} aria-label="Honoraires expert-comptable en euros par an" />
                 <span className="profil-hint">{"Obligatoire en LMNP r\u00e9el et SCI IS"}</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="cfe-input">{"CFE (\u20AC/an)"}</label>
+                <label className="profil-label" htmlFor="cfe-input">{"CFE (\u20AC/an)"}<Tooltip text={"Cotisation Fonci\u00E8re des Entreprises. Un imp\u00F4t local d\u00FB par les loueurs meubl\u00E9s (LMNP/LMP). Le montant varie selon la commune, g\u00E9n\u00E9ralement 200 \u00E0 500\u20AC/an."} /></label>
                 <input id="cfe-input" className="profil-input" type="number" placeholder={"300"} value={profile?.cfe ?? ''} onChange={e => updateNum('cfe', e.target.value)} aria-label="CFE en euros par an" />
                 <span className="profil-hint">{"Cotisation Fonci\u00e8re des Entreprises \u2014 varie par commune"}</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="oga-input">{"Frais OGA/CGA (\u20AC/an)"}</label>
+                <label className="profil-label" htmlFor="oga-input">{"Frais OGA/CGA (\u20AC/an)"}<Tooltip text={"Organisme de Gestion Agr\u00E9\u00E9. Adh\u00E9rer \u00E0 un OGA \u00E9vite une majoration de 20% de vos revenus imposables en r\u00E9gime r\u00E9el. Co\u00FBt : ~130 \u00E0 200\u20AC/an."} /></label>
                 <input id="oga-input" className="profil-input" type="number" placeholder={"150"} value={profile?.frais_oga ?? ''} onChange={e => updateNum('frais_oga', e.target.value)} aria-label="Frais OGA CGA en euros par an" />
                 <span className="profil-hint">{"R\u00e9duction d\u2019imp\u00f4t 2/3 plafonn\u00e9 \u00e0 915 \u20AC/an"}</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="frais-bancaires-input">{"Frais bancaires (\u20AC)"}</label>
+                <label className="profil-label" htmlFor="frais-bancaires-input">{"Frais bancaires (\u20AC)"}<Tooltip text={"Frais de dossier bancaire + garantie (hypoth\u00E8que ou caution). Pay\u00E9s une seule fois \u00E0 l\u2019achat, ils sont r\u00E9partis sur la dur\u00E9e du cr\u00E9dit dans nos calculs."} /></label>
                 <input id="frais-bancaires-input" className="profil-input" type="number" placeholder={"2000"} value={profile?.frais_bancaires ?? ''} onChange={e => updateNum('frais_bancaires', e.target.value)} aria-label="Frais bancaires en euros" />
                 <span className="profil-hint">{"Frais de dossier + garantie \u2014 annualis\u00E9s sur la dur\u00E9e du cr\u00E9dit"}</span>
               </div>
