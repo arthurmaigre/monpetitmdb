@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .select()
     .maybeSingle()
 
-  if (error) return NextResponse.json({ error: error.message, details: JSON.stringify(error) }, { status: 500 })
-  if (!data) return NextResponse.json({ error: 'Profil non trouvé', id, updates }, { status: 404 })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!data) return NextResponse.json({ error: 'Profil non trouvé' }, { status: 404 })
   return NextResponse.json({ user: data })
 }

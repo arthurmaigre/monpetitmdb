@@ -44,7 +44,7 @@ export default function AdminUsersPage() {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, [field]: value } : u))
     } else {
       const err = await res.json()
-      alert(`Erreur: ${err.error || 'Mise à jour échouée'} ${err.id ? '— id: ' + err.id : ''} ${err.details || ''}`)
+      alert(`Erreur: ${err.error || 'Mise à jour échouée'}`)
     }
     setSaving(null)
   }
