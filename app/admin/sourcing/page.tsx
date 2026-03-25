@@ -960,6 +960,25 @@ export default function AdminSourcingPage() {
               <span style={{ color: '#9a8a80', marginLeft: 6 }}>{"expir\u00E9s total"}</span>
             </div>
           </div>
+          {stats.verif_total > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9a8a80', marginBottom: 4 }}>
+                <span>Cycle en cours : {fmt(stats.verif_done)} / {fmt(stats.verif_total)} {"v\u00E9rifi\u00E9s"}</span>
+                <span style={{ fontWeight: 700, color: stats.verif_done >= stats.verif_total ? '#1e8449' : '#2a4a8a' }}>
+                  {stats.verif_total > 0 ? Math.round(stats.verif_done / stats.verif_total * 100) : 0}%
+                </span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: '#f0ede8', overflow: 'hidden' }}>
+                <div style={{ height: '100%', borderRadius: 3, background: stats.verif_done >= stats.verif_total ? '#1e8449' : '#2a4a8a', width: `${Math.min(100, Math.round(stats.verif_done / stats.verif_total * 100))}%`, transition: 'width 0.6s ease' }} />
+              </div>
+              {stats.verif_oldest && (
+                <div style={{ fontSize: 11, color: '#9a8a80', marginTop: 4 }}>
+                  {"Plus ancienne v\u00E9rification : "}{new Date(stats.verif_oldest).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {stats.verif_total - stats.verif_done > 0 && ` \u2014 ${fmt(stats.verif_total - stats.verif_done)} restants`}
+                </div>
+              )}
+            </div>
+          )}
           <div className="src-row">
             <label style={{ fontSize: 13, color: '#9a8a80', display: 'flex', alignItems: 'center', gap: 6 }}>
               Depuis
