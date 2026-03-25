@@ -157,6 +157,7 @@ export default function AdminSourcingPage() {
   const [ingestUntil, setIngestUntil] = useState(new Date().toISOString().slice(0, 10))
   const [ingestRunning, setIngestRunning] = useState(false)
   const [ingestStats, setIngestStats] = useState({ new: 0, updated: 0, errors: 0, processed: 0, total: 0 })
+  const [ingestHistory, setIngestHistory] = useState<Array<{ date: string; time: string; strategie: string; new: number; updated: number; errors: number; totalApi: number; status: string }>>([])
   const [webhookActive, setWebhookActive] = useState(false)
   const ingestStopRef = useRef(false)
 
@@ -276,9 +277,13 @@ export default function AdminSourcingPage() {
             processed: prev.processed + (data.processed || 0),
             total: data.total || prev.total,
           }))
+          const now = new Date()
+          setIngestHistory(prev => [{ date: now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), strategie: strat, new: data.new || 0, updated: data.updated || 0, errors: data.errors || 0, totalApi: data.total_api || data.new || 0, status: res.ok ? 'ok' : 'erreur' }, ...prev].slice(0, 10))
           if (data.webhook_active !== undefined) setWebhookActive(data.webhook_active)
         } catch {
           setIngestStats(prev => ({ ...prev, errors: prev.errors + 1 }))
+          const now = new Date()
+          setIngestHistory(prev => [{ date: now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), strategie: strat, new: 0, updated: 0, errors: 1, totalApi: 0, status: 'erreur' }, ...prev].slice(0, 10))
         }
 
         sliceStart = new Date(sliceEnd)
@@ -777,17 +782,53 @@ export default function AdminSourcingPage() {
             <StatusDot active={webhookActive} />
             <span>{webhookActive ? 'Webhook actif' : 'Webhook inactif'}</span>
           </div>
-          {(ingestRunning || ingestStats.processed > 0) && (
-            <div className="progress-wrap">
-              {ingestRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Ingestion en cours...</div>}
-              {ingestStats.total > 0 && <ProgressBar value={ingestStats.processed} max={ingestStats.total} />}
-              <div className="src-stats-row">
-                <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(ingestStats.new)}</strong> nouveaux</Pill>
-                <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(ingestStats.updated)}</strong> mis {'\u00e0'} jour</Pill>
-                {ingestStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(ingestStats.errors)}</strong> erreurs</Pill>}
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 12 }}>
+            {/* Stats en cours */}
+            {(ingestRunning || ingestStats.processed > 0) && (
+              <div className="progress-wrap" style={{ flex: '1 1 300px' }}>
+                {ingestRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Ingestion en cours...</div>}
+                {ingestStats.total > 0 && <ProgressBar value={ingestStats.processed} max={ingestStats.total} />}
+                <div className="src-stats-row">
+                  <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(ingestStats.new)}</strong> nouveaux</Pill>
+                  <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(ingestStats.updated)}</strong> mis {'\u00e0'} jour</Pill>
+                  {ingestStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(ingestStats.errors)}</strong> erreurs</Pill>}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Historique des 5 derniers appels */}
+            {ingestHistory.length > 0 && (
+              <div style={{ flex: '1 1 340px', background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '10px 14px', fontSize: 11 }}>
+                <div style={{ fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10, marginBottom: 8 }}>Historique des appels</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1.5px solid #ede8e0' }}>
+                      <th style={{ textAlign: 'left', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Date</th>
+                      <th style={{ textAlign: 'left', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Strat\u00E9gie"}</th>
+                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Re\u00E7us"}</th>
+                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Nouv.</th>
+                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9dup."}</th>
+                      <th style={{ textAlign: 'right', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Err.</th>
+                      <th style={{ textAlign: 'center', padding: '3px 4px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ingestHistory.map((h, i) => (
+                      <tr key={i} style={{ borderBottom: i < ingestHistory.length - 1 ? '1px solid #f0ede8' : 'none' }}>
+                        <td style={{ padding: '4px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.date} {h.time}</td>
+                        <td style={{ padding: '4px', fontWeight: 600, color: '#1a1210' }}>{h.strategie}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', color: '#2a4a8a' }}>{h.totalApi}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{h.new > 0 ? `+${h.new}` : '0'}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', color: '#9a8a80' }}>{h.updated}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', color: h.errors > 0 ? '#c0392b' : '#9a8a80', fontWeight: h.errors > 0 ? 700 : 400 }}>{h.errors}</td>
+                        <td style={{ padding: '4px', textAlign: 'center', color: h.status === 'ok' ? '#1a7a40' : '#c0392b', fontWeight: 700 }}>{h.status === 'ok' ? '\u2713' : '\u2717'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ===== STEP 2: Regex Validation ===== */}
