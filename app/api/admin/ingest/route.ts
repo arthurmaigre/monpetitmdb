@@ -180,20 +180,33 @@ export async function GET(req: NextRequest) {
 
   const now = new Date()
   const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
-  const fakeReq = new NextRequest(req.url, {
-    method: 'POST',
-    headers: req.headers,
-    body: JSON.stringify({
-      dateAfter: twoDaysAgo.toISOString().slice(0, 10),
-      dateBefore: now.toISOString().slice(0, 10),
-    }),
-  })
-  const result = await POST(fakeReq)
+  const strategies = Object.keys(STRATEGY_CONFIGS)
+  const totals = { new: 0, updated: 0, errors: 0, processed: 0, total: 0 }
 
-  const resultData = await result.clone().json()
-  await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'ingest')
+  for (const strategie of strategies) {
+    const fakeReq = new NextRequest(req.url, {
+      method: 'POST',
+      headers: req.headers,
+      body: JSON.stringify({
+        strategie,
+        dateAfter: twoDaysAgo.toISOString().slice(0, 10),
+        dateBefore: now.toISOString().slice(0, 10),
+      }),
+    })
+    try {
+      const result = await POST(fakeReq)
+      const data = await result.json()
+      if (data.new) totals.new += data.new
+      if (data.updated) totals.updated += data.updated
+      if (data.errors) totals.errors += data.errors
+      if (data.processed) totals.processed += data.processed
+      if (data.total) totals.total += data.total
+    } catch { totals.errors++ }
+  }
 
-  return result
+  await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: totals }).eq('id', 'ingest')
+
+  return NextResponse.json(totals)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
