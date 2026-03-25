@@ -188,6 +188,7 @@ export default function AdminSourcingPage() {
   const [cronConfigs, setCronConfigs] = useState<Array<{ id: string; enabled: boolean; schedule: string; last_run: string | null; last_result: Record<string, unknown> | null; params: Record<string, unknown> }>>([])
   const [cronSaving, setCronSaving] = useState<string | null>(null)
 
+
   // Any batch running flag for auto-refresh
   const anyRunning = ingestRunning || regexRunning || extractRunning || scoreRunning || statutRunning
 
@@ -760,6 +761,18 @@ export default function AdminSourcingPage() {
             <StepNumber num={1} color="#2a4a8a" />
             <div className="src-section-title">Ingestion Moteur Immo</div>
           </div>
+          {(stats.added_24h !== undefined || stats.added_7d !== undefined) && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.added_24h)}</span>
+                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"biens ajout\u00E9s (24h)"}</span>
+              </div>
+              <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.added_7d)}</span>
+                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"biens ajout\u00E9s (7 jours)"}</span>
+              </div>
+            </div>
+          )}
           <div className="src-row">
             <select className="src-select" value={ingestStrategy} onChange={e => setIngestStrategy(e.target.value)} disabled={ingestRunning}>
               {STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -1010,6 +1023,18 @@ export default function AdminSourcingPage() {
             <StepNumber num={5} color="#9a8a80" />
             <div className="src-section-title">Statut Annonces</div>
           </div>
+          {(stats.expired_24h !== undefined || stats.expired_7d !== undefined) && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_24h)}</span>
+                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (24h)"}</span>
+              </div>
+              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_7d)}</span>
+                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (7 jours)"}</span>
+              </div>
+            </div>
+          )}
           <div className="src-row">
             <button className="src-btn src-btn-red" onClick={startStatut} disabled={statutRunning}>
               {statutRunning ? <><PulsingDot /><Spinner /> V{'\u00e9'}rification...</> : <>{'\u25B6'} V{'\u00e9'}rifier maintenant</>}
