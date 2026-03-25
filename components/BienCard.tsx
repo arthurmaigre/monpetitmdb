@@ -12,6 +12,7 @@ interface Props {
   inWatchlist?: boolean
   userToken?: string | null
   onWatchlistChange?: (bienId: string, added: boolean) => void
+  extraTitleRight?: React.ReactNode
 }
 
 function formatPrix(n: number) {
@@ -45,7 +46,7 @@ function ChevronRight() {
   )
 }
 
-export default function BienCard({ bien, inWatchlist = false, userToken, onWatchlistChange }: Props) {
+export default function BienCard({ bien, inWatchlist = false, userToken, onWatchlistChange, extraTitleRight }: Props) {
   const [isInWatchlist, setIsInWatchlist] = useState(inWatchlist)
   const [loading, setLoading] = useState(false)
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
@@ -258,21 +259,24 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
 
       {/* Content area */}
       <div style={{ padding: theme.spacing[4] }}>
-        <a
-          href={lienTitre}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            fontFamily: theme.fonts.display,
-            fontSize: theme.fontSizes.md,
-            fontWeight: 700,
-            color: theme.colors.ink,
-            textDecoration: 'none',
-            display: 'block',
-          }}
-        >
-          {bien.type_bien} {bien.nb_pieces} - {bien.surface} m2
-        </a>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+          <a
+            href={lienTitre}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontFamily: theme.fonts.display,
+              fontSize: theme.fontSizes.md,
+              fontWeight: 700,
+              color: theme.colors.ink,
+              textDecoration: 'none',
+              display: 'block',
+            }}
+          >
+            {bien.type_bien} {bien.nb_pieces} - {bien.surface} m2
+          </a>
+          {extraTitleRight}
+        </div>
 
         <div style={{
           display: 'flex', alignItems: 'center', gap: theme.spacing[2],

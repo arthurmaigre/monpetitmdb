@@ -322,19 +322,18 @@ export default function MesBiensPage() {
                 {filteredBiens.map(bien => {
                   const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || SUIVI_OPTIONS[0]
                   return (
-                  <div key={bien.id}>
-                    <BienCard
-                      bien={bien}
-                      inWatchlist={true}
-                      userToken={userToken}
-                      onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -8, paddingRight: 16, paddingBottom: 8 }}>
-                      <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg }}>
+                  <BienCard
+                    key={bien.id}
+                    bien={bien}
+                    inWatchlist={true}
+                    userToken={userToken}
+                    onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
+                    extraTitleRight={
+                      <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg, flexShrink: 0 }}>
                         {SUIVI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
-                    </div>
-                  </div>
+                    }
+                  />
                   )
                 })}
               </div>
