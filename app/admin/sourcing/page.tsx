@@ -1293,12 +1293,15 @@ export default function AdminSourcingPage() {
                                       <span style={{ color: '#c0b8ae', marginLeft: 6 }}>({timeAgo(cron.last_run)})</span>
                                     </div>
                                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                      {(lr.processed || lr.total || 0) > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.processed || lr.total}</strong> {"trait\u00E9s"}</Pill>}
+                                      {(lr.processed || lr.total || lr.checked || 0) > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.processed || lr.total || lr.checked}</strong> {"v\u00E9rifi\u00E9s"}</Pill>}
                                       {lr.new > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.new}</strong> nouv.</Pill>}
+                                      {lr.expired > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.expired}</strong> {"expir\u00E9s"}</Pill>}
                                       {lr.loyer_found > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.loyer_found}</strong> loyers</Pill>}
+                                      {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> profils</Pill>}
                                       {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scor\u00E9s"}</Pill>}
                                       {(lr.errors || 0) > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.errors}</strong> err.</Pill>}
                                       {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">off</Pill>}
+                                      {lr.mode === 'active' && lr.expired === 0 && lr.checked > 0 && <Pill color="#1a7a40" bg="#d4f5e0">tous actifs</Pill>}
                                     </div>
                                     {progress && progress.total > 0 && (
                                       <div style={{ marginTop: 6 }}>
