@@ -239,13 +239,44 @@ Label nav : "Conseils"
 ## Deploiement
 - **Auto-deploy** : git push → GitHub → Vercel auto-deploy (env vars dans Vercel Dashboard)
 - **Domaine prod** : `www.monpetitmdb.fr` (redirect `monpetitmdb.fr` → `www`)
-- **Crons Vercel** : desactives temporairement (plan Hobby = 1 cron/jour max)
+- **Crons** : cron-job.org (externe, gratuit, 30s timeout) — PAS de crons Vercel (plan Hobby incompatible)
+- **Workflow dev** : `npm run dev` → tester en local → un seul commit+push quand OK
 - Ne PAS utiliser `vercel --prod` manuellement — les auto-deploys suffisent
+
+## Crons (cron-job.org)
+Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monpetitmdb.fr/api/admin/...`
+
+### Moteur Immo — Ingestion (4 strategies × 2/jour)
+- `?strategie=Locataire+en+place&hours=12` — `0 3 * * *` et `0 15 * * *`
+- `?strategie=Travaux+lourds&hours=12` — idem
+- `?strategie=Division&hours=12` — idem
+- `?strategie=D%C3%A9coupe&hours=12` — idem
+
+### Moteur Immo — Verification statut
+- `/api/admin/statut` — `* * * * *` (toutes les minutes, 75 biens/appel)
+- Verifie chaque bien via `/api/ad/{uniqueId}`, marque "Annonce expiree" si `deletionDate`
+- Cycle 1→2→3→1 stocke dans `cron_config.params.cycle`
+- Colonne `verif_cycle_id` + `derniere_verif_statut` sur table `biens`
+- Colonne `moteurimmo_unique_id` (indexee) pour matching rapide
+
+### Validation Regex
+- `/api/admin/regex` — `*/2 * * * *` (temporaire, reduire a 2x/jour apres stock initial)
+- Analyse `moteurimmo_data` (title+description) avec regex par strategie
+- Parse double-string JSONB (`JSON.parse` du raw)
+- ~3 000 biens/appel en 17s, timeout 15s
+
+### IA Haiku — Extraction + Score
+- `/api/admin/extraction` — `*/2 4-12 * * *` (15 biens/appel)
+- `/api/admin/score-travaux` — `*/2 12-20 * * *` (15 biens/appel)
 
 ## Chat IA — Memo
 - Nom : **Memo** — assistant IA immobilier
 - Limites : Free 5 msg/jour, Pro 50 msg/jour, Expert illimite
 - Streaming Haiku, historique sessionStorage
+
+## Watchlist — Suivi pipeline MDB
+13 statuts : a_analyser → info_demandee → analyse_complete → offre_envoyee → en_negociation → visite → sous_compromis → acte_signe + 5 KO
+Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
 
 ## Commandes
 ```bash
