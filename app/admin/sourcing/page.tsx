@@ -188,15 +188,21 @@ export default function AdminSourcingPage() {
   // Statut annonces state
   const [statutRunning, setStatutRunning] = useState(false)
   const [statutStats, setStatutStats] = useState({ expired: 0, checked: 0, last_check: '' })
+  const [statutSince, setStatutSince] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
+  const [statutHistory, setStatutHistory] = useState<Array<{
+    startDate: string; endDate: string; period: string;
+    checked: number; expired: number; errors: number; status: 'ok' | 'erreur'
+  }>>([])
 
   // Cron config state
   const [cronConfigs, setCronConfigs] = useState<Array<{ id: string; enabled: boolean; schedule: string; last_run: string | null; last_result: Record<string, unknown> | null; params: Record<string, unknown> }>>([])
   const [cronSaving, setCronSaving] = useState<string | null>(null)
 
 
-  // Load ingest history from localStorage
+  // Load histories from localStorage
   useEffect(() => {
     try { const h = localStorage.getItem('mdb_ingest_history'); if (h) setIngestHistory(JSON.parse(h)) } catch {}
+    try { const h = localStorage.getItem('mdb_statut_history'); if (h) setStatutHistory(JSON.parse(h)) } catch {}
   }, [])
 
   // Any batch running flag for auto-refresh
@@ -450,18 +456,33 @@ export default function AdminSourcingPage() {
   async function startStatut() {
     if (!token) return
     setStatutRunning(true)
+    const startDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    let checked = 0, expired = 0, errors = 0
     try {
       const res: Response = await fetch('/api/admin/statut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ since: statutSince }),
       })
       const data = await res.json()
+      checked = data.checked || 0
+      expired = data.expired || 0
+      errors = data.errors || 0
       setStatutStats({
-        expired: data.expired || 0,
-        checked: data.checked || 0,
+        expired,
+        checked,
         last_check: new Date().toLocaleString('fr-FR'),
       })
-    } catch { /* ignore */ }
+    } catch {
+      errors = 1
+    }
+    const endDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const entry = { startDate, endDate, period: `depuis ${statutSince}`, checked, expired, errors, status: (errors > 0 ? 'erreur' : 'ok') as 'ok' | 'erreur' }
+    setStatutHistory(prev => {
+      const updated = [entry, ...prev].slice(0, 10)
+      try { localStorage.setItem('mdb_statut_history', JSON.stringify(updated)) } catch {}
+      return updated
+    })
     setStatutRunning(false)
     fetchStats()
   }
@@ -793,7 +814,12 @@ export default function AdminSourcingPage() {
           </div>
         </div>
 
-        {/* ===== STEP 1: Ingestion Moteur Immo ===== */}
+        {/* ==================== GROUPE: MOTEUR IMMO ==================== */}
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#2a4a8a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {'\uD83C\uDFE0'} Moteur Immo
+        </div>
+
+        {/* ===== Ingestion Moteur Immo ===== */}
         <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
           <div className="src-section-header">
             <StepNumber num={1} color="#2a4a8a" />
@@ -906,7 +932,91 @@ export default function AdminSourcingPage() {
           </div>
         </div>
 
-        {/* ===== STEP 2: Regex Validation ===== */}
+        {/* ===== Statut Annonces ===== */}
+        <div className="src-section" style={{ borderLeftColor: '#9a8a80' }}>
+          <div className="src-section-header">
+            <StepNumber num={2} color="#9a8a80" />
+            <div className="src-section-title">{"V\u00E9rification statut annonces"}</div>
+          </div>
+          {(stats.expired_24h !== undefined || stats.expired_7d !== undefined) && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_24h)}</span>
+                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (24h)"}</span>
+              </div>
+              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_7d)}</span>
+                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (7j)"}</span>
+              </div>
+              <div style={{ background: '#f0ede8', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+                <span style={{ fontWeight: 700, color: '#1a1210', fontSize: 16 }}>{fmt(stats.expirees)}</span>
+                <span style={{ color: '#9a8a80', marginLeft: 6 }}>{"expir\u00E9es total"}</span>
+              </div>
+            </div>
+          )}
+          <div className="src-row">
+            <label style={{ fontSize: 13, color: '#9a8a80', display: 'flex', alignItems: 'center', gap: 6 }}>
+              Depuis
+              <input type="date" className="src-input" value={statutSince} onChange={e => setStatutSince(e.target.value)} disabled={statutRunning} />
+            </label>
+            {!statutRunning ? (
+              <button className="src-btn src-btn-red" onClick={startStatut}>{'\u25B6'} {"V\u00E9rifier maintenant"}</button>
+            ) : (
+              <button className="src-btn src-btn-stop" disabled><PulsingDot /><Spinner /> {"V\u00E9rification..."}</button>
+            )}
+            {statutStats.last_check && <span className="src-muted">{"Derni\u00E8re v\u00E9rification : "}{statutStats.last_check}</span>}
+          </div>
+          {statutStats.checked > 0 && (
+            <div className="src-stats-row" style={{ marginTop: 8 }}>
+              <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(statutStats.checked)}</strong> {"v\u00E9rifi\u00E9s"}</Pill>
+              <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(statutStats.expired)}</strong> {"expir\u00E9s"}</Pill>
+            </div>
+          )}
+          {statutHistory.length > 0 && (
+            <div style={{ marginTop: 12, background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '12px 16px', fontSize: 11 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>{"Historique des v\u00E9rifications"}</span>
+                <button onClick={() => { setStatutHistory([]); try { localStorage.removeItem('mdb_statut_history') } catch {} }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#c0b8ae' }}>Effacer</button>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1.5px solid #ede8e0' }}>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Fin</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"V\u00E9rifi\u00E9s"}</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Expir\u00E9s"}</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Err.</th>
+                    <th style={{ textAlign: 'center', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statutHistory.map((h, i) => (
+                    <tr key={i} style={{ borderBottom: i < statutHistory.length - 1 ? '1px solid #f0ede8' : 'none' }}>
+                      <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.startDate}</td>
+                      <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.endDate}</td>
+                      <td style={{ padding: '5px 6px', color: '#1a1210', fontSize: 10 }}>{h.period}</td>
+                      <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a', fontWeight: 600 }}>{fmt(h.checked)}</td>
+                      <td style={{ padding: '5px 6px', textAlign: 'right', color: '#c0392b', fontWeight: 700 }}>{fmt(h.expired)}</td>
+                      <td style={{ padding: '5px 6px', textAlign: 'right', color: h.errors > 0 ? '#c0392b' : '#9a8a80' }}>{h.errors}</td>
+                      <td style={{ padding: '5px 6px', textAlign: 'center' }}>
+                        {h.status === 'ok' && <span style={{ color: '#1a7a40', fontWeight: 700, background: '#d4f5e0', padding: '2px 8px', borderRadius: 6 }}>{'\u2713'} OK</span>}
+                        {h.status === 'erreur' && <span style={{ color: '#c0392b', fontWeight: 700, background: '#fde0dc', padding: '2px 8px', borderRadius: 6 }}>{'\u2717'} Erreur</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* ==================== GROUPE: VALIDATION REGEX ==================== */}
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#f0a830', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {'\uD83D\uDD0D'} Validation (Regex)
+        </div>
+
+        {/* ===== Regex Validation ===== */}
         <div className="src-section" style={{ borderLeftColor: '#f0a830' }}>
           <div className="src-section-header">
             <StepNumber num={2} color="#f0a830" />
@@ -962,7 +1072,12 @@ export default function AdminSourcingPage() {
           )}
         </div>
 
-        {/* ===== STEP 3: Extraction données locatives ===== */}
+        {/* ==================== GROUPE: IA (CLAUDE HAIKU) ==================== */}
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#1a7a40', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {'\uD83E\uDDE0'} IA (Claude Haiku)
+        </div>
+
+        {/* ===== Extraction données locatives ===== */}
         <div className="src-section" style={{ borderLeftColor: '#1a7a40' }}>
           <div className="src-section-header">
             <StepNumber num={3} color="#1a7a40" />
@@ -1075,38 +1190,6 @@ export default function AdminSourcingPage() {
                 {scoreStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(scoreStats.errors)}</strong> erreurs</Pill>}
                 <Pill color="#a06010" bg="#fff8f0"><strong>~{scoreCost} {'\u20AC'}</strong> co{'\u00fb'}t</Pill>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* ===== STEP 5: Statut Annonces ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#9a8a80' }}>
-          <div className="src-section-header">
-            <StepNumber num={5} color="#9a8a80" />
-            <div className="src-section-title">Statut Annonces</div>
-          </div>
-          {(stats.expired_24h !== undefined || stats.expired_7d !== undefined) && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_24h)}</span>
-                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (24h)"}</span>
-              </div>
-              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_7d)}</span>
-                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (7 jours)"}</span>
-              </div>
-            </div>
-          )}
-          <div className="src-row">
-            <button className="src-btn src-btn-red" onClick={startStatut} disabled={statutRunning}>
-              {statutRunning ? <><PulsingDot /><Spinner /> V{'\u00e9'}rification...</> : <>{'\u25B6'} V{'\u00e9'}rifier maintenant</>}
-            </button>
-            {statutStats.last_check && <span className="src-muted">Derni{'\u00e8'}re v{'\u00e9'}rification : {statutStats.last_check}</span>}
-          </div>
-          {statutStats.checked > 0 && (
-            <div className="src-stats-row">
-              <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(statutStats.checked)}</strong> v{'\u00e9'}rifi{'\u00e9'}s</Pill>
-              <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(statutStats.expired)}</strong> expir{'\u00e9'}s</Pill>
             </div>
           )}
         </div>
