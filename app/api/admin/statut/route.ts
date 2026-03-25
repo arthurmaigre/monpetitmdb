@@ -95,26 +95,25 @@ export async function POST(req: NextRequest) {
 
     checked = uniqueIds.length
 
-    // Update in batches of 50 (JSONB filter is heavier)
-    for (let i = 0; i < uniqueIds.length; i += 50) {
-      const batch = uniqueIds.slice(i, i + 50)
-      for (const uid of batch) {
-        const { data: updated, error } = await supabaseAdmin
+    // Find matching biens by uniqueId using contains, then update by id
+    for (const uid of uniqueIds) {
+      try {
+        const { data: found } = await supabaseAdmin
           .from('biens')
-          .update({
-            statut: 'Annonce expir\u00E9e',
-            derniere_verif_statut: new Date().toISOString(),
-          })
-          .filter('moteurimmo_data->>uniqueId', 'eq', uid)
-          .eq('statut', 'Toujours disponible')
           .select('id')
+          .eq('statut', 'Toujours disponible')
+          .contains('moteurimmo_data', { uniqueId: uid })
+          .limit(1)
 
-        if (error) {
-          console.error(`Statut update error for ${uid}:`, error.message)
-          errorCount++
-        } else {
-          expired += updated?.length || 0
+        if (found && found.length > 0) {
+          const { error } = await supabaseAdmin
+            .from('biens')
+            .update({ statut: 'Annonce expir\u00E9e', derniere_verif_statut: new Date().toISOString() })
+            .eq('id', found[0].id)
+          if (error) { errorCount++ } else { expired++ }
         }
+      } catch {
+        errorCount++
       }
     }
 
