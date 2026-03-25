@@ -1,4 +1,5 @@
 import PricingCta from '@/components/PricingCta'
+import LandingHeader from '@/components/LandingHeader'
 
 export default function Home() {
   return (
@@ -212,10 +213,7 @@ export default function Home() {
             <a href="#how">{"Comment \u00E7a marche"}</a>
             <a href="#pricing">Tarifs</a>
           </nav>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <a href="/login" className="btn-o">Se connecter</a>
-            <a href="/register" className="btn-p">Commencer gratuitement</a>
-          </div>
+          <LandingHeader />
         </header>
 
         {/* HERO */}
