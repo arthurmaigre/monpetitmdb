@@ -7,6 +7,22 @@ import BienCard from '@/components/BienCard'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
 
+const SUIVI_OPTIONS = [
+  { value: 'a_analyser',       label: '\u00C0 analyser',        color: '#9a8a80', bg: '#f0ede8' },
+  { value: 'info_demandee',    label: 'Info demand\u00E9e',     color: '#3498db', bg: '#ebf5fb' },
+  { value: 'analyse_complete', label: 'Analyse compl\u00E8te',  color: '#2980b9', bg: '#d6eaf8' },
+  { value: 'offre_envoyee',    label: 'Offre envoy\u00E9e',     color: '#f39c12', bg: '#fef9e7' },
+  { value: 'en_negociation',   label: 'En n\u00E9gociation',    color: '#e67e22', bg: '#fdebd0' },
+  { value: 'visite',           label: 'Visite',                 color: '#8e44ad', bg: '#f4ecf7' },
+  { value: 'sous_compromis',   label: 'Sous compromis',         color: '#27ae60', bg: '#eafaf1' },
+  { value: 'acte_signe',       label: 'Acte sign\u00E9',        color: '#1e8449', bg: '#d5f5e3' },
+  { value: 'ko_pas_rentable',  label: 'KO - Pas rentable',      color: '#e74c3c', bg: '#fdedec' },
+  { value: 'ko_offre_refusee', label: 'KO - Offre refus\u00E9e',color: '#e74c3c', bg: '#fdedec' },
+  { value: 'ko_non_conforme',  label: 'KO - Non conforme',      color: '#e74c3c', bg: '#fdedec' },
+  { value: 'ko_vendu',         label: 'KO - Vendu',             color: '#e74c3c', bg: '#fdedec' },
+  { value: 'ko_autre',         label: 'KO - Autre',             color: '#e74c3c', bg: '#fdedec' },
+]
+
 export default function MesBiensPage() {
   const [biens, setBiens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -16,6 +32,7 @@ export default function MesBiensPage() {
   const [activeTab, setActiveTab] = useState('')
   const [error, setError] = useState('')
   const [plan, setPlan] = useState<string>('free')
+  const [suiviMap, setSuiviMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function load() {
@@ -36,6 +53,9 @@ export default function MesBiensPage() {
         const wData = await wRes.json()
         const items = wData.watchlist || []
         setWatchlistIds(new Set(items.map((w: any) => w.bien_id)))
+        const suiviInit: Record<string, string> = {}
+        items.forEach((w: any) => { suiviInit[w.bien_id] = w.suivi || 'a_analyser' })
+        setSuiviMap(suiviInit)
 
         if (items.length === 0) { setLoading(false); return }
 
@@ -65,6 +85,15 @@ export default function MesBiensPage() {
   // Onglets par strategie (seulement celles qui ont des biens)
   const strategies = [...new Set(biens.map(b => b.strategie_mdb).filter(Boolean))] as string[]
   const filteredBiens = activeTab ? biens.filter(b => b.strategie_mdb === activeTab) : biens
+
+  async function handleSuiviChange(bienId: string, newSuivi: string) {
+    setSuiviMap(prev => ({ ...prev, [bienId]: newSuivi }))
+    await fetch('/api/watchlist', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ bien_id: bienId, suivi: newSuivi })
+    })
+  }
 
   function handleRemove(bienId: string) {
     setBiens(prev => prev.filter(b => b.id !== bienId))
@@ -122,6 +151,10 @@ export default function MesBiensPage() {
         .list-thumb-empty { width: 72px; height: 52px; border-radius: 8px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; }
         .td-btn { display: inline-block; padding: 8px 16px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 150ms ease; }
         .td-btn:hover { opacity: 0.75; }
+        .suivi-select { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid #e8e2d8; cursor: pointer; outline: none; min-width: 130px; }
+        .suivi-select:focus { border-color: #c0392b; box-shadow: 0 0 0 2px rgba(192,57,43,0.1); }
+        .suivi-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; border: none; position: absolute; top: 8px; left: 8px; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,0.12); min-width: 110px; outline: none; }
+        .suivi-badge:focus { box-shadow: 0 0 0 2px rgba(192,57,43,0.2); }
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; color: #c0392b; transition: transform 150ms ease; }
         .td-heart:hover { transform: scale(1.2); }
         @media (max-width: 768px) {
@@ -197,17 +230,24 @@ export default function MesBiensPage() {
 
             {view === 'grid' ? (
               <div className="grid">
-                {filteredBiens.map(bien => (
-                  <BienCard
-                    key={bien.id}
-                    bien={bien}
-                    inWatchlist={true}
-                    userToken={userToken}
-                    onWatchlistChange={(bienId, added) => {
-                      if (!added) handleRemove(bienId)
-                    }}
-                  />
-                ))}
+                {filteredBiens.map(bien => {
+                  const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || SUIVI_OPTIONS[0]
+                  return (
+                  <div key={bien.id} style={{ position: 'relative' }}>
+                    <select className="suivi-badge" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg }}>
+                      {SUIVI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    <BienCard
+                      bien={bien}
+                      inWatchlist={true}
+                      userToken={userToken}
+                      onWatchlistChange={(bienId, added) => {
+                        if (!added) handleRemove(bienId)
+                      }}
+                    />
+                  </div>
+                  )
+                })}
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -215,6 +255,7 @@ export default function MesBiensPage() {
                 <thead>
                   <tr>
                     <th></th>
+                    <th>Suivi</th>
                     <th></th>
                     <th>Bien</th>
                     <th>Commune</th>
@@ -258,6 +299,11 @@ export default function MesBiensPage() {
                           if (res.ok) handleRemove(bien.id)
                         }} aria-label={`Retirer ${bien.type_bien || 'ce bien'} de la watchlist`}>{'\u2665'}</button>
                       </td>
+                      <td>{(() => { const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || SUIVI_OPTIONS[0]; return (
+                        <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg }}>
+                          {SUIVI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      ) })()}</td>
                       <td>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
                       <td style={{ fontWeight: 600 }}>{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</td>
                       <td style={{ fontWeight: 500 }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
