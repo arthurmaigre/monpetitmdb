@@ -852,7 +852,7 @@ export default function AdminSourcingPage() {
                 {ingestStats.total > 0 && <ProgressBar value={ingestStats.processed} max={ingestStats.total} />}
                 <div className="src-stats-row">
                   <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(ingestStats.new)}</strong> nouveaux</Pill>
-                  <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(ingestStats.updated)}</strong> mis {'\u00e0'} jour</Pill>
+                  <Pill color="#9a8a80" bg="#f0ede8"><strong>{fmt(ingestStats.updated)}</strong> {"d\u00E9j\u00E0 en base"}</Pill>
                   {ingestStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(ingestStats.errors)}</strong> erreurs</Pill>}
                 </div>
               </div>
