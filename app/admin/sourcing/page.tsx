@@ -961,21 +961,22 @@ export default function AdminSourcingPage() {
             </div>
           </div>
           {stats.verif_total > 0 && (() => {
-            const done = stats.verif_total - (stats.verif_not_done || 0)
-            const pct = stats.verif_total > 0 ? Math.round(done / stats.verif_total * 100) : 0
+            const pct = stats.verif_total > 0 ? Math.min(100, Math.round((stats.verified_7d || 0) / stats.verif_total * 100)) : 0
+            const remaining = Math.max(0, stats.verif_total - (stats.verified_7d || 0))
+            const daysLeft = (stats.verified_24h || 0) > 0 ? Math.ceil(remaining / stats.verified_24h) : '?'
             return (
               <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9a8a80', marginBottom: 4 }}>
-                  <span>{"V\u00E9rification : "}{fmt(done)} / {fmt(stats.verif_total)} biens Moteur Immo</span>
+                  <span>Cycle : {fmt(stats.verified_7d || 0)} / {fmt(stats.verif_total)}</span>
                   <span style={{ fontWeight: 700, color: pct >= 100 ? '#1e8449' : '#2a4a8a' }}>{pct}%</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: '#f0ede8', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 3, background: pct >= 100 ? '#1e8449' : '#2a4a8a', width: `${Math.min(100, pct)}%`, transition: 'width 0.6s ease' }} />
+                  <div style={{ height: '100%', borderRadius: 3, background: pct >= 100 ? '#1e8449' : '#2a4a8a', width: `${pct}%`, transition: 'width 0.6s ease' }} />
                 </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#9a8a80' }}>
-                  {stats.verif_oldest && <span>{"Cycle d\u00E9but\u00E9 le "}{new Date(stats.verif_oldest).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</span>}
-                  <span>{'\u2022'} <strong style={{ color: '#c0392b' }}>{fmt(stats.expiree || stats.expiree || 0)}</strong> {"expir\u00E9s trouv\u00E9s"}</span>
-                  {stats.verif_total < (stats.disponible || stats.disponible || 0) && <span>{'\u2022'} {fmt((stats.disponible || stats.disponible || 0) - stats.verif_total)} biens sans ID Moteur Immo (non v{'\u00E9'}rifiables)</span>}
+                <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#9a8a80', flexWrap: 'wrap' }}>
+                  <span><strong style={{ color: '#c0392b' }}>{fmt(stats.expired_7d || 0)}</strong> {"expir\u00E9s ce cycle"}</span>
+                  <span>{'\u2022'} <strong>{fmt(stats.verified_24h || 0)}</strong> /jour</span>
+                  {remaining > 0 && <span>{'\u2022'} ~{daysLeft} jour{typeof daysLeft === 'number' && daysLeft > 1 ? 's' : ''} restants</span>}
                 </div>
               </div>
             )

@@ -48,17 +48,16 @@ export async function GET(req: NextRequest) {
     const now = new Date()
     const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
     const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const [r24, r7, e24, e7, v24, v7, vTotal, vNotVerified, vOldest, vNewest] = await Promise.all([
+    const [r24, r7, e24, e7, v24, v7, vTotal, vOldest, vNewest] = await Promise.all([
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('created_at', h24),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('created_at', d7),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('derniere_verif_statut', h24),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('derniere_verif_statut', d7),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('derniere_verif_statut', h24),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('derniere_verif_statut', d7),
-      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Toujours disponible').not('moteurimmo_unique_id', 'is', null),
-      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Toujours disponible').not('moteurimmo_unique_id', 'is', null).is('derniere_verif_statut', null),
-      supabaseAdmin.from('biens').select('derniere_verif_statut').eq('statut', 'Toujours disponible').not('moteurimmo_unique_id', 'is', null).not('derniere_verif_statut', 'is', null).order('derniere_verif_statut', { ascending: true }).limit(1),
-      supabaseAdmin.from('biens').select('derniere_verif_statut').eq('statut', 'Toujours disponible').not('moteurimmo_unique_id', 'is', null).order('derniere_verif_statut', { ascending: false }).limit(1),
+      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).not('moteurimmo_unique_id', 'is', null),
+      supabaseAdmin.from('biens').select('derniere_verif_statut').not('moteurimmo_unique_id', 'is', null).order('derniere_verif_statut', { ascending: true, nullsFirst: true }).limit(1),
+      supabaseAdmin.from('biens').select('derniere_verif_statut').not('moteurimmo_unique_id', 'is', null).not('derniere_verif_statut', 'is', null).order('derniere_verif_statut', { ascending: false }).limit(1),
     ])
 
     return NextResponse.json({
@@ -70,7 +69,6 @@ export async function GET(req: NextRequest) {
       verified_24h: v24.count || 0,
       verified_7d: v7.count || 0,
       verif_total: vTotal.count || 0,
-      verif_not_done: vNotVerified.count || 0,
       verif_oldest: vOldest.data?.[0]?.derniere_verif_statut || null,
       verif_newest: vNewest.data?.[0]?.derniere_verif_statut || null,
     })
