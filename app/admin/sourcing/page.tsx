@@ -106,17 +106,44 @@ function timeAgo(dateStr: string): string {
 }
 
 function cronScheduleToFrench(schedule: string): string {
-  const mapping: Record<string, string> = {
-    '0 3 * * *': 'Tous les jours \u00e0 3h',
-    '0 4 * * *': 'Tous les jours \u00e0 4h',
-    '*/5 4-8 * * *': 'Toutes les 5 min de 4h \u00e0 8h',
-    '*/10 4-8 * * *': 'Toutes les 10 min de 4h \u00e0 8h',
-    '0 2 * * *': 'Tous les jours \u00e0 2h',
-    '0 5 * * *': 'Tous les jours \u00e0 5h',
-    '0 6 * * *': 'Tous les jours \u00e0 6h',
-    '0 1 * * *': 'Tous les jours \u00e0 1h',
+  const parts = schedule.split(' ')
+  if (parts.length !== 5) return schedule
+  const [min, hour, dom, month, dow] = parts
+  const JOURS: Record<string, string> = { '0': 'dimanche', '1': 'lundi', '2': 'mardi', '3': 'mercredi', '4': 'jeudi', '5': 'vendredi', '6': 'samedi', '7': 'dimanche' }
+
+  // Frequence
+  let freq = ''
+  if (min.startsWith('*/')) {
+    const interval = min.replace('*/', '')
+    freq = `Toutes les ${interval} min`
+  } else {
+    freq = `\u00C0 ${min} min`
   }
-  return mapping[schedule] || schedule
+
+  // Heure
+  let heureStr = ''
+  if (hour === '*') {
+    heureStr = ''
+  } else if (hour.includes('-')) {
+    const [from, to] = hour.split('-')
+    heureStr = ` de ${from}h \u00E0 ${to}h`
+  } else if (!min.startsWith('*/')) {
+    freq = ''
+    heureStr = `\u00C0 ${hour}h${min !== '0' ? min.padStart(2, '0') : ''}`
+  }
+
+  // Jour
+  let jourStr = ''
+  if (dow !== '*') {
+    jourStr = ` le ${JOURS[dow] || dow}`
+  } else if (dom !== '*') {
+    jourStr = ` le ${dom} du mois`
+  } else {
+    jourStr = freq ? '' : ', tous les jours'
+  }
+
+  const result = (freq + heureStr + jourStr).trim()
+  return result.charAt(0).toUpperCase() + result.slice(1)
 }
 
 export default function AdminSourcingPage() {
@@ -1037,16 +1064,16 @@ export default function AdminSourcingPage() {
                             <span style={{ color: '#c0b8ae', marginLeft: 8, fontSize: 11 }}>({timeAgo(cron.last_run)})</span>
                           </div>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                            {processed > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{processed}</strong> {"trait\u00E9s"}</Pill>}
-                            {lr.new > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.new}</strong> nouveaux</Pill>}
-                            {lr.updated > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.updated}</strong> {"maj"}</Pill>}
-                            {lr.loyer_found > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.loyer_found}</strong> loyers</Pill>}
-                            {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> profils</Pill>}
-                            {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scor\u00E9s"}</Pill>}
-                            {lr.faux_positifs > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.faux_positifs}</strong> faux pos.</Pill>}
-                            {lr.expired > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.expired}</strong> {"expir\u00E9s"}</Pill>}
-                            {errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{errors}</strong> err.</Pill>}
-                            {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">{"Ignor\u00E9"}</Pill>}
+                            {processed > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{processed}</strong> {"biens trait\u00E9s"}</Pill>}
+                            {lr.new > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.new}</strong> {"nouvelles annonces"}</Pill>}
+                            {lr.updated > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.updated}</strong> {"mis \u00E0 jour"}</Pill>}
+                            {lr.loyer_found > 0 && <Pill color="#1a7a40" bg="#d4f5e0"><strong>{lr.loyer_found}</strong> {"loyers extraits"}</Pill>}
+                            {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> {"profils trouv\u00E9s"}</Pill>}
+                            {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scores attribu\u00E9s"}</Pill>}
+                            {lr.faux_positifs > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.faux_positifs}</strong> {"faux positifs d\u00E9tect\u00E9s"}</Pill>}
+                            {lr.expired > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.expired}</strong> {"annonces expir\u00E9es"}</Pill>}
+                            {errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{errors}</strong> {"erreurs"}</Pill>}
+                            {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">{"Ignor\u00E9 (d\u00E9sactiv\u00E9)"}</Pill>}
                           </div>
                           {lr.error && (
                             <div style={{ fontSize: 11, color: '#c0392b', background: '#fdedec', padding: '4px 8px', borderRadius: 6, marginBottom: 8 }}>
