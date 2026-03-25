@@ -260,7 +260,7 @@ Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monp
 - Colonne `moteurimmo_unique_id` (indexee) pour matching rapide
 
 ### Validation Regex
-- `/api/admin/regex` — `*/2 * * * *` (temporaire, reduire a 2x/jour apres stock initial)
+- `/api/admin/regex` — `30 3 * * *` et `30 15 * * *` (2x/jour apres ingestion)
 - Analyse `moteurimmo_data` (title+description) avec regex par strategie
 - Parse double-string JSONB (`JSON.parse` du raw)
 - ~3 000 biens/appel en 17s, timeout 15s
@@ -277,6 +277,26 @@ Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monp
 ## Watchlist — Suivi pipeline MDB
 13 statuts : a_analyser → info_demandee → analyse_complete → offre_envoyee → en_negociation → visite → sous_compromis → acte_signe + 5 KO
 Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
+
+## Tracking & Analytics
+- **Google Tag Manager** : GTM-P2NK7FXK — installe dans layout.tsx
+- **Google Analytics 4** : configure via GTM
+- **Meta Pixel** : 804203415584341 — configure via GTM (tag HTML personnalise)
+- **Google Search Console** : domaine verifie, sitemap soumis
+- **Banniere cookie RGPD** : consentement avant chargement GTM/Pixel (localStorage `mdb_cookie_consent`)
+- Scripts GTM/Pixel charges uniquement si consent != 'refused'
+
+## SEO
+- `public/robots.txt` : autorise tout sauf /admin, /api, /editorial, /parametres, /mon-profil, /mes-biens, /auth
+- `app/sitemap.ts` : sitemap dynamique (pages statiques + articles blog publies)
+- Google Search Console configuree sur `www.monpetitmdb.fr`
+
+## Auth
+- **Google OAuth** : actif
+- **Facebook OAuth** : actif (Meta app Live, domaine verifie)
+- **Email/password** : actif avec confirmation email
+- Page `/privacy` : politique de confidentialite RGPD + suppression donnees
+- Callback client-side PKCE (`app/auth/callback/page.tsx`)
 
 ## Commandes
 ```bash
