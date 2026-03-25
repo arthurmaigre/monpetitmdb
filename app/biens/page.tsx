@@ -54,6 +54,7 @@ export default function BiensPage() {
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
+  const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
@@ -627,12 +628,7 @@ export default function BiensPage() {
                                 })
                               } else if (res.status === 403) {
                                 const data = await res.json()
-                                if (data.upgrade) {
-                                  const go = window.confirm(
-                                    `Vous avez atteint la limite de ${data.limit} biens en watchlist (plan ${data.plan}).\n\nPassez au plan sup\u00E9rieur pour sauvegarder plus de biens.`
-                                  )
-                                  if (go) window.location.href = '/mon-profil'
-                                }
+                                if (data.upgrade) setUpgradeMsg({ limit: data.limit, plan: data.plan })
                               }
                             }}
                             style={{ color: watchlistIds.has(bien.id) ? '#c0392b' : '#c0b0a0' }}
@@ -748,6 +744,67 @@ export default function BiensPage() {
           </>
         )}
       </div>
+
+      {/* Modal upgrade watchlist */}
+      {upgradeMsg && (
+        <div
+          onClick={() => setUpgradeMsg(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(26,18,16,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 20, padding: '40px 32px',
+              maxWidth: 380, width: '90%', textAlign: 'center',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            <div style={{
+              width: 48, height: 48, borderRadius: 12, background: 'rgba(192,57,43,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px',
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <h3 style={{
+              fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 700,
+              marginBottom: 12, color: '#1a1210',
+            }}>
+              Watchlist compl{'\u00E8'}te
+            </h3>
+            <p style={{ fontSize: 14, color: '#9a8a80', lineHeight: 1.6, marginBottom: 28 }}>
+              Vous avez atteint la limite de <strong style={{ color: '#1a1210' }}>{upgradeMsg.limit} biens</strong> pour le plan {upgradeMsg.plan}.
+              Passez au plan sup{'\u00E9'}rieur pour sauvegarder plus de biens.
+            </p>
+            <a
+              href="/mon-profil"
+              style={{
+                display: 'block', padding: '14px 24px', borderRadius: 10,
+                background: '#c0392b', color: '#fff', textDecoration: 'none',
+                fontSize: 15, fontWeight: 600, marginBottom: 12,
+                transition: 'opacity 150ms',
+              }}
+            >
+              Passer au plan sup{'\u00E9'}rieur
+            </a>
+            <button
+              onClick={() => setUpgradeMsg(null)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 13, color: '#9a8a80', fontFamily: "'DM Sans', sans-serif",
+                padding: '8px 16px',
+              }}
+            >
+              Plus tard
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
