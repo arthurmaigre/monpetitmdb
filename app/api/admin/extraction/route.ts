@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       .not('moteurimmo_data', 'is', null)
       .is('extraction_statut', null)
       .order('created_at', { ascending: true })
-      .limit(10)
+      .limit(15)
 
     if (currentCursor) query = query.gt('created_at', currentCursor)
 
