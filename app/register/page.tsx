@@ -48,7 +48,8 @@ export default function RegisterPage() {
     })
 
     if (error) {
-      setError(`[Inscription] ${error.message}`)
+      console.error('Signup error:', error.message)
+      setError('Erreur lors de la création du compte')
       setLoading(false)
     } else {
       setSuccess(true)
