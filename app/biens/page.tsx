@@ -782,7 +782,7 @@ export default function BiensPage() {
               Passez au plan {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'} pour sauvegarder plus de biens.
             </p>
             <a
-              href="/mon-profil"
+              href="/#pricing"
               style={{
                 display: 'block', padding: '14px 24px', borderRadius: 10,
                 background: '#c0392b', color: '#fff', textDecoration: 'none',
@@ -790,7 +790,7 @@ export default function BiensPage() {
                 transition: 'opacity 150ms',
               }}
             >
-              Passer au plan {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'}
+              Passez {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'}
             </a>
             <button
               onClick={() => setUpgradeMsg(null)}
