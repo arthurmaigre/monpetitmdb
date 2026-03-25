@@ -182,7 +182,7 @@ export async function GET(req: NextRequest) {
   const strategieParam = searchParams.get('strategie')
 
   const now = new Date()
-  const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+  const twoDaysAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000)
   const strategies = strategieParam && STRATEGY_CONFIGS[strategieParam] ? [strategieParam] : Object.keys(STRATEGY_CONFIGS)
   const totals = { new: 0, updated: 0, errors: 0, processed: 0, total: 0, strategie: strategieParam || 'toutes' }
 
