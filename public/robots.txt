@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /editorial/
+Disallow: /parametres/
+Disallow: /mon-profil/
+Disallow: /mes-biens/
+Disallow: /auth/
+
+Sitemap: https://www.monpetitmdb.fr/sitemap.xml
