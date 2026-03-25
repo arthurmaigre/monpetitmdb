@@ -146,6 +146,7 @@ function mapAdToBien(ad: MoteurImmoAd, strategie: string, metropoleMap: Map<stri
     longitude: ad.position?.[0] || null,
     latitude: ad.position?.[1] || null,
     rendement_brut: loyer && prix_fai ? Math.round((loyer * 12 / prix_fai) * 10000) / 10000 : null,
+    moteurimmo_unique_id: ad.uniqueId || null,
     moteurimmo_data: {
       uniqueId: ad.uniqueId,
       origin: ad.origin,

@@ -95,25 +95,24 @@ export async function POST(req: NextRequest) {
 
     checked = uniqueIds.length
 
-    // Find matching biens by uniqueId using contains, then update by id
-    for (const uid of uniqueIds) {
-      try {
-        const { data: found } = await supabaseAdmin
-          .from('biens')
-          .select('id')
-          .eq('statut', 'Toujours disponible')
-          .contains('moteurimmo_data', { uniqueId: uid })
-          .limit(1)
+    // Match by moteurimmo_unique_id column (indexed) in batches of 100
+    for (let i = 0; i < uniqueIds.length; i += 100) {
+      const batch = uniqueIds.slice(i, i + 100)
+      const { data: updated, error } = await supabaseAdmin
+        .from('biens')
+        .update({
+          statut: 'Annonce expir\u00E9e',
+          derniere_verif_statut: new Date().toISOString(),
+        })
+        .in('moteurimmo_unique_id', batch)
+        .eq('statut', 'Toujours disponible')
+        .select('id')
 
-        if (found && found.length > 0) {
-          const { error } = await supabaseAdmin
-            .from('biens')
-            .update({ statut: 'Annonce expir\u00E9e', derniere_verif_statut: new Date().toISOString() })
-            .eq('id', found[0].id)
-          if (error) { errorCount++ } else { expired++ }
-        }
-      } catch {
+      if (error) {
+        console.error(`Statut update error batch ${i}:`, error.message)
         errorCount++
+      } else {
+        expired += updated?.length || 0
       }
     }
 
