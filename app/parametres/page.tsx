@@ -60,6 +60,7 @@ export default function ParametresPage() {
   }
 
   function update(key: string, value: any) { setProfile((p: any) => ({ ...p, [key]: value })) }
+  function updateNum(key: string, raw: string) { update(key, raw === '' ? null : Number(raw)) }
 
   if (loading) return (
     <Layout>
@@ -154,8 +155,8 @@ export default function ParametresPage() {
         <form onSubmit={handleSave} style={isFree ? { filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const } : {}}>
 
           <div className="profil-section">
-            <h2 className="profil-section-title">Fiscalité</h2>
-            <p className="profil-section-desc">Votre situation fiscale pour les simulations de rendement net.</p>
+            <h2 className="profil-section-title">{"Fiscalit\u00E9"}</h2>
+            <p className="profil-section-desc">{"Votre situation fiscale pour les simulations de rendement net."}</p>
             <div className="profil-field" style={{ marginBottom: '20px' }}>
               <label className="profil-label" id="tmi-label">Tranche marginale d'imposition (TMI)</label>
               <div className="tmi-options" role="group" aria-labelledby="tmi-label">
@@ -165,7 +166,7 @@ export default function ParametresPage() {
               </div>
             </div>
             <div className="profil-field">
-              <label className="profil-label" htmlFor="regime-select">Régime fiscal préféré</label>
+              <label className="profil-label" htmlFor="regime-select">{"R\u00E9gime fiscal pr\u00E9f\u00E9r\u00E9"}</label>
               <select id="regime-select" className="profil-select" value={profile?.regime || 'nu_micro_foncier'} onChange={e => update('regime', e.target.value)} aria-label="Régime fiscal">
                 {REGIME_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
@@ -174,39 +175,39 @@ export default function ParametresPage() {
 
           <div className="profil-section">
             <h2 className="profil-section-title">Financement</h2>
-            <p className="profil-section-desc">Paramètres de crédit utilisés pour calculer la mensualité et le cashflow.</p>
+            <p className="profil-section-desc">{"Param\u00E8tres de cr\u00E9dit utilis\u00E9s pour calculer la mensualit\u00E9 et le cashflow."}</p>
             <div className="profil-grid">
               <div className="profil-field">
                 <label className="profil-label" htmlFor="apport-input">Apport ({'\u20AC'})</label>
-                <input id="apport-input" className="profil-input" type="number" value={profile?.apport ?? ''} onChange={e => update('apport', Number(e.target.value))} aria-label="Montant de l'apport" />
+                <input id="apport-input" className="profil-input" type="number" value={profile?.apport ?? ''} onChange={e => updateNum('apport', e.target.value)} aria-label="Montant de l'apport" />
                 <span className="profil-hint">Montant que vous pouvez investir</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="taux-credit-input">Taux crédit (%)</label>
-                <input id="taux-credit-input" className="profil-input" type="number" step="0.01" value={profile?.taux_credit || ''} onChange={e => update('taux_credit', Number(e.target.value))} aria-label="Taux du crédit en pourcentage" />
+                <label className="profil-label" htmlFor="taux-credit-input">{"Taux cr\u00E9dit (%)"}</label>
+                <input id="taux-credit-input" className="profil-input" type="number" step="0.01" value={profile?.taux_credit ?? ''} onChange={e => updateNum('taux_credit', e.target.value)} aria-label="Taux du cr\u00E9dit en pourcentage" />
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="taux-assurance-input">Taux assurance (%)</label>
-                <input id="taux-assurance-input" className="profil-input" type="number" step="0.01" value={profile?.taux_assurance ?? 0.3} onChange={e => update('taux_assurance', Number(e.target.value))} aria-label="Taux de l'assurance en pourcentage" />
-                <span className="profil-hint">Taux moyen ADI décès-PTIA</span>
+                <input id="taux-assurance-input" className="profil-input" type="number" step="0.01" value={profile?.taux_assurance ?? ''} onChange={e => updateNum('taux_assurance', e.target.value)} aria-label="Taux de l'assurance en pourcentage" />
+                <span className="profil-hint">{"Taux moyen ADI d\u00E9c\u00E8s-PTIA"}</span>
               </div>
               <div className="profil-field">
-                <label className="profil-label" htmlFor="duree-input">Durée (ans)</label>
-                <input id="duree-input" className="profil-input" type="number" value={profile?.duree_ans || ''} onChange={e => update('duree_ans', Number(e.target.value))} aria-label="Durée du crédit en années" />
+                <label className="profil-label" htmlFor="duree-input">{"Dur\u00E9e (ans)"}</label>
+                <input id="duree-input" className="profil-input" type="number" value={profile?.duree_ans ?? ''} onChange={e => updateNum('duree_ans', e.target.value)} aria-label={"Dur\u00E9e du cr\u00E9dit en ann\u00E9es"} />
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="frais-notaire-input">Frais de notaire (%)</label>
-                <input id="frais-notaire-input" className="profil-input" type="number" step="0.1" value={profile?.frais_notaire || ''} onChange={e => update('frais_notaire', Number(e.target.value))} aria-label="Frais de notaire en pourcentage" />
+                <input id="frais-notaire-input" className="profil-input" type="number" step="0.1" value={profile?.frais_notaire ?? ''} onChange={e => updateNum('frais_notaire', e.target.value)} aria-label="Frais de notaire en pourcentage" />
                 <span className="profil-hint">~7.5% ancien, ~2.5% neuf</span>
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="objectif-cashflow-input">Objectif cashflow brut (% du FAI)</label>
-                <input id="objectif-cashflow-input" className="profil-input" type="number" step="0.1" value={profile?.objectif_cashflow ?? 0} onChange={e => update('objectif_cashflow', Number(e.target.value))} aria-label="Objectif de cashflow en pourcentage du prix FAI" />
+                <input id="objectif-cashflow-input" className="profil-input" type="number" step="0.1" value={profile?.objectif_cashflow ?? ''} onChange={e => updateNum('objectif_cashflow', e.target.value)} aria-label="Objectif de cashflow en pourcentage du prix FAI" />
                 <span className="profil-hint">0 = {"équilibre"} | 5 = +5% du prix FAI/an</span>
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="objectif-pv-input">{"Objectif plus-value brute (%)"}</label>
-                <input id="objectif-pv-input" className="profil-input" type="number" step="1" value={profile?.objectif_pv ?? 20} onChange={e => update('objectif_pv', Number(e.target.value))} aria-label="Objectif de plus-value brute en pourcentage" />
+                <input id="objectif-pv-input" className="profil-input" type="number" step="1" value={profile?.objectif_pv ?? ''} onChange={e => updateNum('objectif_pv', e.target.value)} aria-label="Objectif de plus-value brute en pourcentage" />
                 <span className="profil-hint">{"PV brute vis\u00E9e sur le co\u00FBt total (achat + notaire + travaux)"}</span>
               </div>
             </div>
@@ -218,32 +219,32 @@ export default function ParametresPage() {
             <div className="profil-grid">
               <div className="profil-field">
                 <label className="profil-label" htmlFor="pno-input">{"Assurance PNO (\u20AC/an)"}</label>
-                <input id="pno-input" className="profil-input" type="number" placeholder={"200"} value={profile?.assurance_pno ?? ''} onChange={e => update('assurance_pno', Number(e.target.value))} aria-label="Assurance PNO en euros par an" />
+                <input id="pno-input" className="profil-input" type="number" placeholder={"200"} value={profile?.assurance_pno ?? ''} onChange={e => updateNum('assurance_pno', e.target.value)} aria-label="Assurance PNO en euros par an" />
                 <span className="profil-hint">{"Propri\u00e9taire Non Occupant \u2014 ~150 \u00e0 300 \u20AC/an"}</span>
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="gestion-input">{"Frais de gestion locative (% des loyers)"}</label>
-                <input id="gestion-input" className="profil-input" type="number" step="0.5" placeholder={"8"} value={profile?.frais_gestion_pct ?? ''} onChange={e => update('frais_gestion_pct', Number(e.target.value))} aria-label="Frais de gestion locative en pourcentage des loyers" />
+                <input id="gestion-input" className="profil-input" type="number" step="0.5" placeholder={"8"} value={profile?.frais_gestion_pct ?? ''} onChange={e => updateNum('frais_gestion_pct', e.target.value)} aria-label="Frais de gestion locative en pourcentage des loyers" />
                 <span className="profil-hint">{"Agence ou gestionnaire \u2014 0% si gestion directe"}</span>
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="comptable-input">{"Honoraires expert-comptable (\u20AC/an)"}</label>
-                <input id="comptable-input" className="profil-input" type="number" placeholder={"600"} value={profile?.honoraires_comptable ?? ''} onChange={e => update('honoraires_comptable', Number(e.target.value))} aria-label="Honoraires expert-comptable en euros par an" />
+                <input id="comptable-input" className="profil-input" type="number" placeholder={"600"} value={profile?.honoraires_comptable ?? ''} onChange={e => updateNum('honoraires_comptable', e.target.value)} aria-label="Honoraires expert-comptable en euros par an" />
                 <span className="profil-hint">{"Obligatoire en LMNP r\u00e9el et SCI IS"}</span>
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="cfe-input">{"CFE (\u20AC/an)"}</label>
-                <input id="cfe-input" className="profil-input" type="number" placeholder={"300"} value={profile?.cfe ?? ''} onChange={e => update('cfe', Number(e.target.value))} aria-label="CFE en euros par an" />
+                <input id="cfe-input" className="profil-input" type="number" placeholder={"300"} value={profile?.cfe ?? ''} onChange={e => updateNum('cfe', e.target.value)} aria-label="CFE en euros par an" />
                 <span className="profil-hint">{"Cotisation Fonci\u00e8re des Entreprises \u2014 varie par commune"}</span>
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="oga-input">{"Frais OGA/CGA (\u20AC/an)"}</label>
-                <input id="oga-input" className="profil-input" type="number" placeholder={"150"} value={profile?.frais_oga ?? ''} onChange={e => update('frais_oga', Number(e.target.value))} aria-label="Frais OGA CGA en euros par an" />
+                <input id="oga-input" className="profil-input" type="number" placeholder={"150"} value={profile?.frais_oga ?? ''} onChange={e => updateNum('frais_oga', e.target.value)} aria-label="Frais OGA CGA en euros par an" />
                 <span className="profil-hint">{"R\u00e9duction d\u2019imp\u00f4t 2/3 plafonn\u00e9 \u00e0 915 \u20AC/an"}</span>
               </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="frais-bancaires-input">{"Frais bancaires (\u20AC)"}</label>
-                <input id="frais-bancaires-input" className="profil-input" type="number" placeholder={"2000"} value={profile?.frais_bancaires ?? ''} onChange={e => update('frais_bancaires', Number(e.target.value))} aria-label="Frais bancaires en euros" />
+                <input id="frais-bancaires-input" className="profil-input" type="number" placeholder={"2000"} value={profile?.frais_bancaires ?? ''} onChange={e => updateNum('frais_bancaires', e.target.value)} aria-label="Frais bancaires en euros" />
                 <span className="profil-hint">{"Frais de dossier + garantie \u2014 annualis\u00E9s sur la dur\u00E9e du cr\u00E9dit"}</span>
               </div>
             </div>
@@ -251,7 +252,7 @@ export default function ParametresPage() {
 
           <div className="profil-section">
             <h2 className="profil-section-title">Budget travaux au m2</h2>
-            <p className="profil-section-desc">Ajustez le coût estimé par m2 pour chaque niveau de travaux.</p>
+            <p className="profil-section-desc">{"Ajustez le co\u00FBt estim\u00E9 par m2 pour chaque niveau de travaux."}</p>
             <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.6', marginBottom: '16px' }}>
               {"Chaque bien en stratégie Travaux lourds reçoit un score de 1 à 5 par notre IA, basé sur l'analyse des photos et de la description de l'annonce. Ce score reflète l'ampleur des travaux à prévoir."}
             </p>
@@ -270,11 +271,11 @@ export default function ParametresPage() {
                 </thead>
                 <tbody>
                   {[
-                    { score: '1', label: 'Rafraîchissement', desc: 'Peinture, sol, petites finitions', color: '#1a7a40', bg: '#d4f5e0' },
-                    { score: '2', label: 'Travaux légers', desc: 'Cuisine, salle de bain, électricité partielle', color: '#3a8a20', bg: '#e0f5d4' },
-                    { score: '3', label: 'Travaux moyens', desc: 'Rénovation complète intérieure, plomberie, électricité', color: '#a06010', bg: '#fff8f0' },
-                    { score: '4', label: 'Travaux lourds', desc: 'Reprise structure partielle, toiture, façade, redistribution', color: '#c0392b', bg: '#fde8e8' },
-                    { score: '5', label: 'Réhabilitation complète', desc: 'Ruine, tout à refaire : structure, charpente, planchers, réseaux', color: '#8b0000', bg: '#fde0e0' },
+                    { score: '1', label: 'Rafra\u00EEchissement', desc: 'Peinture, sol, petites finitions', color: '#1a7a40', bg: '#d4f5e0' },
+                    { score: '2', label: 'Travaux l\u00E9gers', desc: 'Cuisine, salle de bain, \u00E9lectricit\u00E9 partielle', color: '#3a8a20', bg: '#e0f5d4' },
+                    { score: '3', label: 'Travaux moyens', desc: 'R\u00E9novation compl\u00E8te int\u00E9rieure, plomberie, \u00E9lectricit\u00E9', color: '#a06010', bg: '#fff8f0' },
+                    { score: '4', label: 'Travaux lourds', desc: 'Reprise structure partielle, toiture, fa\u00E7ade, redistribution', color: '#c0392b', bg: '#fde8e8' },
+                    { score: '5', label: 'R\u00E9habilitation compl\u00E8te', desc: 'Ruine, tout \u00E0 refaire : structure, charpente, planchers, r\u00E9seaux', color: '#8b0000', bg: '#fde0e0' },
                   ].map(row => (
                     <tr key={row.score}>
                       <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8' }}>
