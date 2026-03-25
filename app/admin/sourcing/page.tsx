@@ -961,22 +961,26 @@ export default function AdminSourcingPage() {
             </div>
           </div>
           {stats.verif_total > 0 && (() => {
-            const pct = stats.verif_total > 0 ? Math.min(100, Math.round((stats.verified_7d || 0) / stats.verif_total * 100)) : 0
-            const remaining = Math.max(0, stats.verif_total - (stats.verified_7d || 0))
+            const cycleDone = stats.verif_cycle_done || 0
+            const cycleExpired = stats.verif_cycle_expired || 0
+            const total = stats.verif_total || 0
+            const pct = total > 0 ? Math.min(100, Math.round(cycleDone / total * 100)) : 0
+            const remaining = Math.max(0, total - cycleDone)
             const daysLeft = (stats.verified_24h || 0) > 0 ? Math.ceil(remaining / stats.verified_24h) : '?'
             return (
               <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9a8a80', marginBottom: 4 }}>
-                  <span>Cycle : {fmt(stats.verified_7d || 0)} / {fmt(stats.verif_total)}</span>
+                  <span>Cycle {stats.verif_cycle || 1} : {fmt(cycleDone)} / {fmt(total)} {"v\u00E9rifi\u00E9s"}</span>
                   <span style={{ fontWeight: 700, color: pct >= 100 ? '#1e8449' : '#2a4a8a' }}>{pct}%</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: '#f0ede8', overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 3, background: pct >= 100 ? '#1e8449' : '#2a4a8a', width: `${pct}%`, transition: 'width 0.6s ease' }} />
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#9a8a80', flexWrap: 'wrap' }}>
-                  <span><strong style={{ color: '#c0392b' }}>{fmt(stats.expired_7d || 0)}</strong> {"expir\u00E9s ce cycle"}</span>
+                  <span><strong style={{ color: '#c0392b' }}>{fmt(cycleExpired)}</strong> {"expir\u00E9s ce cycle"}</span>
                   <span>{'\u2022'} <strong>{fmt(stats.verified_24h || 0)}</strong> /jour</span>
                   {remaining > 0 && <span>{'\u2022'} ~{daysLeft} jour{typeof daysLeft === 'number' && daysLeft > 1 ? 's' : ''} restants</span>}
+                  {pct >= 100 && <span style={{ color: '#1e8449', fontWeight: 700 }}>{'\u2713'} Cycle termin{'\u00E9'}</span>}
                 </div>
               </div>
             )

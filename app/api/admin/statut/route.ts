@@ -40,20 +40,34 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.MOTEURIMMO_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'MOTEURIMMO_API_KEY manquante' }, { status: 500 })
 
-  // Fetch 25 oldest biens not checked recently
+  // Determine current cycle: max cycle_id in biens
+  const { data: maxCycleRow } = await supabaseAdmin
+    .from('biens')
+    .select('verif_cycle_id')
+    .not('moteurimmo_unique_id', 'is', null)
+    .order('verif_cycle_id', { ascending: false })
+    .limit(1)
+  const currentCycle = maxCycleRow?.[0]?.verif_cycle_id || 1
+
+  // Fetch 75 biens with the oldest cycle_id (= not yet verified this cycle)
   const { data: biens, error: fetchErr } = await supabaseAdmin
     .from('biens')
-    .select('id, moteurimmo_unique_id')
+    .select('id, moteurimmo_unique_id, verif_cycle_id')
     .eq('statut', 'Toujours disponible')
     .not('moteurimmo_unique_id', 'is', null)
+    .order('verif_cycle_id', { ascending: true })
     .order('derniere_verif_statut', { ascending: true, nullsFirst: true })
     .limit(75)
 
   if (fetchErr || !biens || biens.length === 0) {
-    const resultData = { checked: 0, expired: 0, errors: 0, mode: 'active' }
+    const resultData = { checked: 0, expired: 0, errors: 0, mode: 'active', cycle: currentCycle }
     await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'statut')
     return NextResponse.json(resultData)
   }
+
+  // Check if all biens already have the current cycle — start new cycle
+  const allSameCycle = biens.every(b => b.verif_cycle_id === currentCycle)
+  const nextCycle = allSameCycle ? currentCycle + 1 : currentCycle
 
   let checked = 0, expired = 0, errorCount = 0
 
@@ -67,15 +81,13 @@ export async function GET(req: NextRequest) {
       checked++
 
       if (ad?.deletionDate) {
-        // Annonce supprimee
         await supabaseAdmin.from('biens')
-          .update({ statut: 'Annonce expir\u00E9e', derniere_verif_statut: new Date().toISOString() })
+          .update({ statut: 'Annonce expir\u00E9e', derniere_verif_statut: new Date().toISOString(), verif_cycle_id: nextCycle })
           .eq('id', bien.id)
         expired++
       } else {
-        // Annonce encore active, update derniere_verif_statut
         await supabaseAdmin.from('biens')
-          .update({ derniere_verif_statut: new Date().toISOString() })
+          .update({ derniere_verif_statut: new Date().toISOString(), verif_cycle_id: nextCycle })
           .eq('id', bien.id)
       }
     } catch {
@@ -83,7 +95,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const resultData = { checked, expired, errors: errorCount, mode: 'active' }
+  const resultData = { checked, expired, errors: errorCount, mode: 'active', cycle: nextCycle }
   await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'statut')
 
   return NextResponse.json(resultData)
