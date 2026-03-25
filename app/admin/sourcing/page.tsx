@@ -866,7 +866,7 @@ export default function AdminSourcingPage() {
               <button className="src-btn src-btn-stop" onClick={() => { ingestStopRef.current = true }}>{'\u25A0'} Stop</button>
             )}
           </div>
-          <div className="src-webhook">
+          <div className="src-webhook" style={{ display: 'none' }}>
             <StatusDot active={webhookActive} />
             <span>{webhookActive ? 'Webhook actif' : 'Webhook inactif'}</span>
           </div>
