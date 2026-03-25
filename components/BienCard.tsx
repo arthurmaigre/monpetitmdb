@@ -425,7 +425,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
             </h3>
             <p style={{ fontSize: 14, color: theme.colors.muted, lineHeight: 1.6, marginBottom: 28 }}>
               Vous avez atteint la limite de <strong style={{ color: theme.colors.ink }}>{upgradeMsg.limit} biens</strong> pour le plan {upgradeMsg.plan}.
-              Passez au plan sup{'\u00E9'}rieur pour sauvegarder plus de biens.
+              Passez au plan {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'} pour sauvegarder plus de biens.
             </p>
             <a
               href="/mon-profil"
@@ -436,7 +436,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
                 transition: 'opacity 150ms',
               }}
             >
-              Passer au plan sup{'\u00E9'}rieur
+              Passer au plan {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'}
             </a>
             <button
               onClick={() => setUpgradeMsg(null)}

@@ -779,7 +779,7 @@ export default function BiensPage() {
             </h3>
             <p style={{ fontSize: 14, color: '#9a8a80', lineHeight: 1.6, marginBottom: 28 }}>
               Vous avez atteint la limite de <strong style={{ color: '#1a1210' }}>{upgradeMsg.limit} biens</strong> pour le plan {upgradeMsg.plan}.
-              Passez au plan sup{'\u00E9'}rieur pour sauvegarder plus de biens.
+              Passez au plan {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'} pour sauvegarder plus de biens.
             </p>
             <a
               href="/mon-profil"
@@ -790,7 +790,7 @@ export default function BiensPage() {
                 transition: 'opacity 150ms',
               }}
             >
-              Passer au plan sup{'\u00E9'}rieur
+              Passer au plan {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'}
             </a>
             <button
               onClick={() => setUpgradeMsg(null)}
