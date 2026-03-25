@@ -3,6 +3,9 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Mon Petit MDB',
   description: 'Investissement locatif intelligent',
+  other: {
+    'facebook-domain-verification': '18tkxn3dzwx80c8cqhlv8j0sli0hst',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
