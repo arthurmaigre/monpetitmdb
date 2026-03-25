@@ -625,6 +625,14 @@ export default function BiensPage() {
                                   isIn ? next.delete(bien.id) : next.add(bien.id)
                                   return next
                                 })
+                              } else if (res.status === 403) {
+                                const data = await res.json()
+                                if (data.upgrade) {
+                                  const go = window.confirm(
+                                    `Vous avez atteint la limite de ${data.limit} biens en watchlist (plan ${data.plan}).\n\nPassez au plan sup\u00E9rieur pour sauvegarder plus de biens.`
+                                  )
+                                  if (go) window.location.href = '/mon-profil'
+                                }
                               }
                             }}
                             style={{ color: watchlistIds.has(bien.id) ? '#c0392b' : '#c0b0a0' }}
