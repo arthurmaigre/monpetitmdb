@@ -98,21 +98,26 @@ export async function POST(req: NextRequest) {
     // Match by moteurimmo_unique_id column (indexed) in batches of 100
     for (let i = 0; i < uniqueIds.length; i += 100) {
       const batch = uniqueIds.slice(i, i + 100)
-      const { data: updated, error } = await supabaseAdmin
-        .from('biens')
-        .update({
-          statut: 'Annonce expir\u00E9e',
-          derniere_verif_statut: new Date().toISOString(),
-        })
-        .in('moteurimmo_unique_id', batch)
-        .eq('statut', 'Toujours disponible')
-        .select('id')
+      try {
+        const { data: updated, error } = await supabaseAdmin
+          .from('biens')
+          .update({
+            statut: 'Annonce expir\u00E9e',
+            derniere_verif_statut: new Date().toISOString(),
+          })
+          .in('moteurimmo_unique_id', batch)
+          .eq('statut', 'Toujours disponible')
+          .select('id')
 
-      if (error) {
-        console.error(`Statut update error batch ${i}:`, error.message)
+        if (error) {
+          console.error(`Statut update error batch ${i}:`, error.message)
+          errorCount++
+        } else {
+          expired += updated?.length || 0
+        }
+      } catch (e) {
+        console.error(`Statut batch ${i} exception:`, e)
         errorCount++
-      } else {
-        expired += updated?.length || 0
       }
     }
 
