@@ -9,8 +9,8 @@ Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 1 strategie, 
 ## Stack
 - **Frontend** : Next.js App Router, TypeScript — Vercel
 - **DB** : Supabase Pro (West EU / Ireland) — auth + tables + storage
-- **Auth** : Supabase Auth (email/password + OAuth Google + OAuth Facebook)
-- **Paiement** : Stripe Checkout + Customer Portal + Webhooks
+- **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
+- **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode test)
 - **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
 - **Sourcing API** : Moteur Immo (aggregateur 60+ plateformes) — module `moteurimmo_client.py`
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
@@ -42,7 +42,7 @@ monpetitmdb/
 │   │   ├── admin/stats/        # Stats dashboard (RPC admin_stats)
 │   │   ├── admin/cron-config/  # Config cron (GET/PUT)
 │   │   └── admin/estimation/   # Config estimateur (GET/PUT)
-│   ├── auth/callback/          # OAuth callback (Google, Facebook)
+│   ├── auth/callback/          # OAuth callback client-side (PKCE + implicit)
 │   ├── page.tsx                # Landing page (hero, strategies, pricing, screenshot)
 │   ├── admin/                  # Dashboard admin (index)
 │   ├── admin/biens/            # Admin gestion biens
@@ -67,7 +67,8 @@ monpetitmdb/
 │   ├── RendementBadge.tsx      # Badge rendement brut
 │   ├── MetroBadge.tsx
 │   ├── PricingCta.tsx          # Bouton pricing -> Stripe checkout
-│   ├── ChatWidget.tsx          # Chat IA flottant (Haiku, streaming, ouvert par defaut)
+│   ├── ChatWidget.tsx          # Chat IA "Memo" flottant (Haiku, streaming, ouvert par defaut)
+│   ├── LandingHeader.tsx       # Header landing page (detecte connexion)
 │   └── Layout.tsx              # Header (nav + dropdown user) + Footer
 ├── lib/
 │   ├── types.ts
@@ -234,6 +235,17 @@ Flag `--until` pour limiter la periode (ex: `--since 2022-01-01 --until 2025-01-
 Pipeline : Opus redige → Sonnet fact-checke → Unsplash photos
 Blog public : `/blog` (listing) + `/blog/[slug]` (article, police Lora)
 Label nav : "Conseils"
+
+## Deploiement
+- **Auto-deploy** : git push → GitHub → Vercel auto-deploy (env vars dans Vercel Dashboard)
+- **Domaine prod** : `www.monpetitmdb.fr` (redirect `monpetitmdb.fr` → `www`)
+- **Crons Vercel** : desactives temporairement (plan Hobby = 1 cron/jour max)
+- Ne PAS utiliser `vercel --prod` manuellement — les auto-deploys suffisent
+
+## Chat IA — Memo
+- Nom : **Memo** — assistant IA immobilier
+- Limites : Free 5 msg/jour, Pro 50 msg/jour, Expert illimite
+- Streaming Haiku, historique sessionStorage
 
 ## Commandes
 ```bash
