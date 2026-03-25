@@ -31,16 +31,62 @@ async function checkAdminOrCron(req: NextRequest): Promise<boolean> {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
+  const isAdmin = await checkAdminOrCron(req)
+  if (!isAdmin) return NextResponse.json({ error: 'Non autoris\u00E9' }, { status: 401 })
+
   const { data: config } = await supabaseAdmin.from('cron_config').select('enabled').eq('id', 'statut').single()
   if (config && !config.enabled) return NextResponse.json({ skipped: true, reason: 'cron disabled' })
 
-  const fakeReq = new NextRequest(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify({}) })
-  const result = await POST(fakeReq)
+  const apiKey = process.env.MOTEURIMMO_API_KEY
+  if (!apiKey) return NextResponse.json({ error: 'MOTEURIMMO_API_KEY manquante' }, { status: 500 })
 
-  const resultData = await result.clone().json()
+  // Fetch 25 oldest biens not checked recently
+  const { data: biens, error: fetchErr } = await supabaseAdmin
+    .from('biens')
+    .select('id, moteurimmo_unique_id')
+    .eq('statut', 'Toujours disponible')
+    .not('moteurimmo_unique_id', 'is', null)
+    .order('derniere_verif_statut', { ascending: true, nullsFirst: true })
+    .limit(25)
+
+  if (fetchErr || !biens || biens.length === 0) {
+    const resultData = { checked: 0, expired: 0, errors: 0, mode: 'active' }
+    await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'statut')
+    return NextResponse.json(resultData)
+  }
+
+  let checked = 0, expired = 0, errorCount = 0
+
+  for (const bien of biens) {
+    try {
+      const resp = await fetch(`https://moteurimmo.fr/api/ad/${bien.moteurimmo_unique_id}?apiKey=${apiKey}`)
+      if (!resp.ok) { errorCount++; continue }
+
+      const data = await resp.json()
+      const ad = data.ad
+      checked++
+
+      if (ad?.deletionDate) {
+        // Annonce supprimee
+        await supabaseAdmin.from('biens')
+          .update({ statut: 'Annonce expir\u00E9e', derniere_verif_statut: new Date().toISOString() })
+          .eq('id', bien.id)
+        expired++
+      } else {
+        // Annonce encore active, update derniere_verif_statut
+        await supabaseAdmin.from('biens')
+          .update({ derniere_verif_statut: new Date().toISOString() })
+          .eq('id', bien.id)
+      }
+    } catch {
+      errorCount++
+    }
+  }
+
+  const resultData = { checked, expired, errors: errorCount, mode: 'active' }
   await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'statut')
 
-  return result
+  return NextResponse.json(resultData)
 }
 
 export async function POST(req: NextRequest) {
