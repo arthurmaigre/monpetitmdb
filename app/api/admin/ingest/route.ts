@@ -180,9 +180,11 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const strategieParam = searchParams.get('strategie')
+  const hoursParam = searchParams.get('hours')
 
   const now = new Date()
-  const twoDaysAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000)
+  const hours = hoursParam ? Number(hoursParam) : 24
+  const twoDaysAgo = new Date(now.getTime() - hours * 60 * 60 * 1000)
   const strategies = strategieParam && STRATEGY_CONFIGS[strategieParam] ? [strategieParam] : Object.keys(STRATEGY_CONFIGS)
   const totals = { new: 0, updated: 0, errors: 0, processed: 0, total: 0, strategie: strategieParam || 'toutes' }
 
