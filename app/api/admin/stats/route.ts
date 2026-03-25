@@ -48,11 +48,13 @@ export async function GET(req: NextRequest) {
     const now = new Date()
     const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
     const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const [r24, r7, e24, e7] = await Promise.all([
+    const [r24, r7, e24, e7, v24, v7] = await Promise.all([
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('created_at', h24),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('created_at', d7),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('derniere_verif_statut', h24),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('derniere_verif_statut', d7),
+      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('derniere_verif_statut', h24),
+      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('derniere_verif_statut', d7),
     ])
 
     return NextResponse.json({
@@ -61,6 +63,8 @@ export async function GET(req: NextRequest) {
       added_7d: r7.count || 0,
       expired_24h: e24.count || 0,
       expired_7d: e7.count || 0,
+      verified_24h: v24.count || 0,
+      verified_7d: v7.count || 0,
     })
   } catch (err) {
     console.error('Stats error:', err)

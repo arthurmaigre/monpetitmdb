@@ -938,22 +938,28 @@ export default function AdminSourcingPage() {
             <StepNumber num={2} color="#9a8a80" />
             <div className="src-section-title">{"V\u00E9rification statut annonces"}</div>
           </div>
-          {(stats.expired_24h !== undefined || stats.expired_7d !== undefined) && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_24h)}</span>
-                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (24h)"}</span>
-              </div>
-              <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_7d)}</span>
-                <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9es (7j)"}</span>
-              </div>
-              <div style={{ background: '#f0ede8', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: '#1a1210', fontSize: 16 }}>{fmt(stats.expirees)}</span>
-                <span style={{ color: '#9a8a80', marginLeft: 6 }}>{"expir\u00E9es total"}</span>
-              </div>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+              <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.verified_24h)}</span>
+              <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"v\u00E9rifi\u00E9s (24h)"}</span>
             </div>
-          )}
+            <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+              <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.verified_7d)}</span>
+              <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"v\u00E9rifi\u00E9s (7j)"}</span>
+            </div>
+            <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+              <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_24h)}</span>
+              <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9s (24h)"}</span>
+            </div>
+            <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+              <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_7d)}</span>
+              <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9s (7j)"}</span>
+            </div>
+            <div style={{ background: '#f0ede8', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
+              <span style={{ fontWeight: 700, color: '#1a1210', fontSize: 16 }}>{fmt(stats.expirees)}</span>
+              <span style={{ color: '#9a8a80', marginLeft: 6 }}>{"expir\u00E9s total"}</span>
+            </div>
+          </div>
           <div className="src-row">
             <label style={{ fontSize: 13, color: '#9a8a80', display: 'flex', alignItems: 'center', gap: 6 }}>
               Depuis
