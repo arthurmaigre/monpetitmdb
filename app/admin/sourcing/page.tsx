@@ -980,9 +980,9 @@ export default function AdminSourcingPage() {
                 const pctDone = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : null
 
                 return (
-                  <div key={cron.id} className="cron-card" style={{ borderLeftColor: cron.enabled ? cronColor : '#e8e2d8', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                    {/* Gauche : nom, schedule, toggle, options */}
-                    <div style={{ flex: '1 1 240px', minWidth: 240 }}>
+                  <div key={cron.id} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    {/* Bloc gauche : config */}
+                    <div className="cron-card" style={{ borderLeftColor: cron.enabled ? cronColor : '#e8e2d8', flex: '1 1 240px', minWidth: 240 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1210', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                         {CRON_LABELS[cron.id] || cron.id}
                         {pctDone !== null && (
@@ -1021,10 +1021,10 @@ export default function AdminSourcingPage() {
                       )}
                     </div>
 
-                    {/* Droite : stats dernier run + progression */}
-                    <div style={{ flex: '1 1 320px', minWidth: 280 }}>
+                    {/* Bloc droite : stats */}
+                    <div className="cron-card" style={{ borderLeftColor: cron.last_run ? (hasError ? '#e74c3c' : '#1a7a40') : '#e8e2d8', flex: '1 1 320px', minWidth: 280 }}>
                       {cron.last_run ? (
-                        <div style={{ background: '#faf8f5', borderRadius: 10, padding: '12px 16px', height: '100%' }}>
+                        <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                             <span style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dernier run</span>
                             {!hasError && processed > 0 && <Pill color="#1a7a40" bg="#d4f5e0">{'\u2713'} OK</Pill>}
@@ -1072,7 +1072,7 @@ export default function AdminSourcingPage() {
                           )}
                         </div>
                       ) : (
-                        <div style={{ background: '#faf8f5', borderRadius: 10, padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 60 }}>
                           <span style={{ fontSize: 12, color: '#c0b8ae', fontStyle: 'italic' }}>{"Jamais ex\u00E9cut\u00E9"}</span>
                         </div>
                       )}
