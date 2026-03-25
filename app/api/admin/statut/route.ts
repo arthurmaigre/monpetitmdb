@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const allUniqueIds: string[] = []
     let page = 1
 
-    while (page <= 200) {
+    while (page <= 100) {
       const resp = await fetch('https://moteurimmo.fr/api/deletedAds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
