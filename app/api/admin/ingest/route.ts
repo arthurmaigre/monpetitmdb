@@ -307,31 +307,32 @@ export async function POST(req: NextRequest) {
         .filter(ad => ad.url)
         .map(ad => mapAdToBien(ad, strategie, metropoleMap))
 
+      // Check which URLs already exist
+      const urls = biens.map(b => b.url).filter(Boolean)
+      const { data: existing } = await supabaseAdmin
+        .from('biens')
+        .select('url')
+        .in('url', urls)
+      const existingUrls = new Set((existing || []).map((e: any) => e.url))
+
       for (const bien of biens) {
+        if (existingUrls.has(bien.url)) {
+          updatedCount++
+          continue
+        }
+
         const { error } = await supabaseAdmin
           .from('biens')
-          .upsert(bien, { onConflict: 'url' })
+          .insert(bien)
 
         if (error) {
-          // Handle 23505 unique violation by updating
           if (error.code === '23505') {
-            const { error: updateErr } = await supabaseAdmin
-              .from('biens')
-              .update(bien)
-              .eq('url', bien.url)
-            if (updateErr) {
-              console.error(`Update error for ${bien.url}: ${updateErr.message}`)
-              errorCount++
-            } else {
-              updatedCount++
-            }
+            updatedCount++
           } else {
             console.error(`Insert error for ${bien.url}: ${error.message}`)
             errorCount++
           }
         } else {
-          // Upsert succeeded — we can't easily distinguish new vs updated,
-          // so count as new (approximate)
           newCount++
         }
       }
