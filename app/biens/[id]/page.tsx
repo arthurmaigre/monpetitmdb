@@ -1309,7 +1309,8 @@ export default function FicheBienPage() {
   const [showLotsLocatif, setShowLotsLocatif] = useState(false)
   const [showCoutsCopro, setShowCoutsCopro] = useState(false)
   const [showReventeLots, setShowReventeLots] = useState(false)
-  const [coutCoproParLot, setCoutCoproParLot] = useState(4000)
+  const [coutGeometreParLot, setCoutGeometreParLot] = useState(1500)
+  const [coutReglementCoproParLot, setCoutReglementCoproParLot] = useState(2500)
   const [coutCompteursParLot, setCoutCompteursParLot] = useState(1500)
   const [coutTravauxGlobal, setCoutTravauxGlobal] = useState(0)
   const [prixReventeLots, setPrixReventeLots] = useState<Record<number, number>>({})
@@ -1922,7 +1923,7 @@ export default function FicheBienPage() {
                         }, 0)
                         const prixAchat = bien.prix_fai || 0
                         const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
-                        const coutCopro = (coutCoproParLot + coutCompteursParLot) * nbLotsEffectif
+                        const coutCopro = (coutGeometreParLot + coutReglementCoproParLot + coutCompteursParLot) * nbLotsEffectif
                         const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
                         const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisAgence
                         const tvaMarge = Math.round(Math.max(0, margeBrute) * 20 / 120)
@@ -2002,28 +2003,32 @@ export default function FicheBienPage() {
                 <span className="data-label">{"Taxe foncière"}</span>
                 <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
               </div>
-              <div className="data-item">
-                <span className="data-label">Profil locataire</span>
-                <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'Non communiqu\u00E9'}</span>
-              </div>
-              <div className="data-item">
-                <span className="data-label">Fin de bail</span>
-                <input
-                  type="date"
-                  defaultValue={bien.fin_bail && bien.fin_bail !== 'inconnu' && bien.fin_bail !== 'NC' ? bien.fin_bail.slice(0, 10) : ''}
-                  onBlur={async (e) => {
-                    const val = e.target.value
-                    if (!val || !userToken) return
-                    await fetch(`/api/biens/${bien.id}`, {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-                      body: JSON.stringify({ fin_bail: val })
-                    })
-                    bien.fin_bail = val
-                  }}
-                  style={{ padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none', width: '120px' }}
-                />
-              </div>
+              {!isIDR && (
+                <div className="data-item">
+                  <span className="data-label">Profil locataire</span>
+                  <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'Non communiqu\u00E9'}</span>
+                </div>
+              )}
+              {!isIDR && (
+                <div className="data-item">
+                  <span className="data-label">Fin de bail</span>
+                  <input
+                    type="date"
+                    defaultValue={bien.fin_bail && bien.fin_bail !== 'inconnu' && bien.fin_bail !== 'NC' ? bien.fin_bail.slice(0, 10) : ''}
+                    onBlur={async (e) => {
+                      const val = e.target.value
+                      if (!val || !userToken) return
+                      await fetch(`/api/biens/${bien.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+                        body: JSON.stringify({ fin_bail: val })
+                      })
+                      bien.fin_bail = val
+                    }}
+                    style={{ padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none', width: '120px' }}
+                  />
+                </div>
+              )}
               <div className="data-item">
                 <span className="data-label">Rendement brut</span>
                 <span className="data-value" style={{ color: '#c0392b' }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : 'NC'}</span>
@@ -2055,9 +2060,38 @@ export default function FicheBienPage() {
                         return (
                           <tr key={i}>
                             <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                            <td>{lot.type || 'NC'}</td>
-                            <td>{lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
-                            <td><span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span></td>
+                            <td>
+                              {lot.type ? lot.type : (
+                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
+                                  <option value="">NC</option>
+                                  <option value="Studio">Studio</option>
+                                  <option value="T1">T1</option>
+                                  <option value="T2">T2</option>
+                                  <option value="T3">T3</option>
+                                  <option value="T4">T4</option>
+                                  <option value="T5">T5</option>
+                                  <option value="Local commercial">Local commercial</option>
+                                  <option value="Garage">Garage</option>
+                                </select>
+                              )}
+                            </td>
+                            <td>
+                              {lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : (
+                                <input type="number" placeholder="0" style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', width: '70px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', textAlign: 'right' }} />
+                              )}
+                            </td>
+                            <td>
+                              {lot.etat ? (
+                                <span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span>
+                              ) : (
+                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
+                                  <option value="">NC</option>
+                                  <option value="loue">{"Lou\u00E9"}</option>
+                                  <option value="vacant">Vacant</option>
+                                  <option value="a_renover">{"\u00C0 r\u00E9nover"}</option>
+                                </select>
+                              )}
+                            </td>
                           </tr>
                         )
                       })}
@@ -2267,8 +2301,22 @@ export default function FicheBienPage() {
               {showCoutsCopro && (
                 <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px 12px', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>{"G\u00E9om\u00E8tre + r\u00E8glement copro"}</span>
-                    <input type="number" value={coutCoproParLot} onChange={e => setCoutCoproParLot(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
+                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>Nombre de lots</span>
+                    <input type="number" value={nbLotsEffectif} onChange={e => {
+                      const val = Number(e.target.value)
+                      if (val > 0 && userToken) {
+                        fetch(`/api/biens/${bien.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` }, body: JSON.stringify({ nb_lots: val }) })
+                        bien.nb_lots = val
+                      }
+                    }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '60px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
+                    <span style={{ color: '#7a6a60' }}>lots</span>
+
+                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>{"\u00C9tat descriptif (g\u00E9om\u00E8tre)"}</span>
+                    <input type="number" value={coutGeometreParLot} onChange={e => setCoutGeometreParLot(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
+                    <span style={{ color: '#7a6a60' }}>{'\u20AC'} / lot</span>
+
+                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>{"R\u00E8glement de copropri\u00E9t\u00E9"}</span>
+                    <input type="number" value={coutReglementCoproParLot} onChange={e => setCoutReglementCoproParLot(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
                     <span style={{ color: '#7a6a60' }}>{'\u20AC'} / lot</span>
 
                     <span style={{ color: '#7a6a60', fontWeight: 600 }}>Compteurs individuels</span>
@@ -2280,9 +2328,9 @@ export default function FicheBienPage() {
                     <span style={{ color: '#7a6a60' }}>{'\u20AC'} global</span>
                   </div>
                   <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e8e2d8' }}>
-                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{`(${coutCoproParLot.toLocaleString('fr-FR')} + ${coutCompteursParLot.toLocaleString('fr-FR')}) \u00D7 ${nbLotsEffectif} lots + ${coutTravauxGlobal.toLocaleString('fr-FR')} \u20AC`}</span>
+                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{`(${coutGeometreParLot.toLocaleString('fr-FR')} + ${coutReglementCoproParLot.toLocaleString('fr-FR')} + ${coutCompteursParLot.toLocaleString('fr-FR')}) \u00D7 ${nbLotsEffectif} lots + ${coutTravauxGlobal.toLocaleString('fr-FR')} \u20AC`}</span>
                     <span style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 800, color: '#a06010' }}>
-                      {((coutCoproParLot + coutCompteursParLot) * nbLotsEffectif + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
+                      {((coutGeometreParLot + coutReglementCoproParLot + coutCompteursParLot) * nbLotsEffectif + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
                     </span>
                   </div>
                 </div>
