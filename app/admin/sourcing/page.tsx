@@ -179,6 +179,11 @@ export default function AdminSourcingPage() {
   const [extractStats, setExtractStats] = useState({ processed: 0, total: 0, loyer_found: 0, profil_found: 0, errors: 0 })
   const extractStopRef = useRef(false)
 
+  // Extraction IDR state
+  const [idrRunning, setIdrRunning] = useState(false)
+  const [idrStats, setIdrStats] = useState({ processed: 0, total: 0, lots_found: 0, errors: 0 })
+  const idrStopRef = useRef(false)
+
   // Score travaux state
   const [scoreRunning, setScoreRunning] = useState(false)
   const [scoreWithPhotos, setScoreWithPhotos] = useState(false)
@@ -414,6 +419,41 @@ export default function AdminSourcingPage() {
     }
 
     setExtractRunning(false)
+    fetchStats()
+  }
+
+  // ---------- Extraction IDR (Immeuble de rapport) ----------
+  async function startExtractionIDR() {
+    if (!token) return
+    setIdrRunning(true)
+    idrStopRef.current = false
+    setIdrStats({ processed: 0, total: 0, lots_found: 0, errors: 0 })
+
+    let cursor: string | null = null
+    while (!idrStopRef.current) {
+      try {
+        const res: Response = await fetch('/api/admin/extraction-idr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ cursor }),
+        })
+        const data = await res.json()
+        setIdrStats(prev => ({
+          processed: prev.processed + (data.processed || 0),
+          total: data.remaining ? prev.processed + (data.processed || 0) + data.remaining : prev.total,
+          lots_found: prev.lots_found + (data.lots_found || 0),
+          errors: prev.errors + (data.errors || 0),
+        }))
+        cursor = data.next_cursor || null
+        if (!cursor || data.remaining === 0) break
+      } catch {
+        setIdrStats(prev => ({ ...prev, errors: prev.errors + 1 }))
+        break
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+
+    setIdrRunning(false)
     fetchStats()
   }
 
@@ -1135,6 +1175,46 @@ export default function AdminSourcingPage() {
                 <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(extractStats.profil_found)}</strong> profils</Pill>
                 {extractStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(extractStats.errors)}</strong> erreurs</Pill>}
                 <Pill color="#a06010" bg="#fff8f0"><strong>~{extractCost} {'\u20AC'}</strong> co{'\u00fb'}t estim{'\u00e9'}</Pill>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== STEP 3bis: Extraction IDR ===== */}
+        <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
+          <div className="src-section-header">
+            <StepNumber num={3.5} color="#2a4a8a" />
+            <div className="src-section-title">Extraction Immeuble de rapport (Haiku)</div>
+          </div>
+          <div className="src-section-desc">
+            {"Strat\u00E9gie : "}<strong>Immeuble de rapport</strong>{" uniquement. Extrait le d\u00E9tail des lots (type, surface, loyer, \u00E9tat locatif, DPE)."}
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {['Nb lots', 'Type/surface par lot', 'Loyer par lot', 'Etat locatif', 'Loyer total', 'Taxe fonci\u00E8re', 'Monopropri\u00E9t\u00E9'].map(f => (
+              <span key={f} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4ddf5', color: '#2a4a8a' }}>{f}</span>
+            ))}
+          </div>
+          <div className="src-row">
+            {!idrRunning ? (
+              <button className="src-btn src-btn-red" onClick={startExtractionIDR}>{'\u25B6'} Lancer</button>
+            ) : (
+              <button className="src-btn src-btn-stop" onClick={() => { idrStopRef.current = true }}>{'\u25A0'} Stop</button>
+            )}
+          </div>
+          {(idrRunning || idrStats.processed > 0) && (
+            <div className="progress-wrap">
+              {idrRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Extraction IDR en cours...</div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1210', minWidth: 100, fontFamily: "'Fraunces', serif" }}>
+                  {fmt(idrStats.processed)} / {fmt(idrStats.total || idrStats.processed)}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <ProgressBar value={idrStats.processed} max={idrStats.total || idrStats.processed || 1} color="#2a4a8a" />
+                </div>
+              </div>
+              <div className="src-stats-row">
+                <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(idrStats.lots_found)}</strong> lots extraits</Pill>
+                {idrStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(idrStats.errors)}</strong> erreurs</Pill>}
               </div>
             </div>
           )}
