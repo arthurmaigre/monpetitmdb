@@ -115,10 +115,6 @@ export async function GET(request: NextRequest) {
   if (score_travaux_min) {
     query = query.gte('score_travaux', Number(score_travaux_min))
     countQuery = countQuery.gte('score_travaux', Number(score_travaux_min))
-  } else if (strategie === 'Travaux lourds') {
-    // Par defaut, ne montrer que les biens avec un score IA pour Travaux lourds
-    query = query.gte('score_travaux', 1)
-    countQuery = countQuery.gte('score_travaux', 1)
   }
 
   query = query.range(from, from + limit - 1)
