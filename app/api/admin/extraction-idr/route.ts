@@ -209,29 +209,32 @@ export async function POST(req: NextRequest) {
           // Build update
           const update: Record<string, unknown> = { extraction_statut: 'ok', extraction_date: now }
 
-          // Stocker les lots dans lots_data (JSONB)
           const lots = parsed.lots as unknown[]
-          if (Array.isArray(lots) && lots.length > 0) {
-            update.lots_data = {
-              nb_lots: parsed.nb_lots || lots.length,
-              loyer_total_mensuel: parsed.loyer_total_mensuel || null,
-              loyer_total_annuel: parsed.loyer_total_annuel || null,
-              monopropriete: parsed.monopropriete ?? null,
-              compteurs_individuels: parsed.compteurs_individuels ?? null,
-              lots,
-            }
-            lotsFound++
-          }
+
+          // --- Données agrégées → colonnes ---
+          // Nb lots
+          const nbLots = parsed.nb_lots || (Array.isArray(lots) ? lots.length : null)
+          if (nbLots) update.nb_lots = nbLots
+
+          // Monopropriété & compteurs
+          if (parsed.monopropriete != null) update.monopropriete = parsed.monopropriete
+          if (parsed.compteurs_individuels != null) update.compteurs_individuels = parsed.compteurs_individuels
 
           // Taxe fonciere globale
           if (!bien.taxe_fonc_ann && parsed.taxe_fonc_ann != null) {
             update.taxe_fonc_ann = parsed.taxe_fonc_ann
           }
 
-          // Loyer total (somme) — stocker dans le champ loyer si pas deja renseigne
+          // Loyer total → colonne loyer
           if (!bien.loyer && parsed.loyer_total_mensuel && typeof parsed.loyer_total_mensuel === 'number') {
             update.loyer = parsed.loyer_total_mensuel
             update.type_loyer = 'HC'
+          }
+
+          // --- Données par lot → lots_data JSONB (tableau uniquement) ---
+          if (Array.isArray(lots) && lots.length > 0) {
+            update.lots_data = { lots }
+            lotsFound++
           }
 
           // Rendement brut global

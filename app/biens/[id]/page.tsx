@@ -1531,8 +1531,9 @@ export default function FicheBienPage() {
   const peutCalculer = bien.loyer && bien.prix_fai
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
   const isIDR = bien.strategie_mdb === 'Immeuble de rapport'
-  const lotsData = bien.lots_data as { nb_lots?: number; loyer_total_mensuel?: number; loyer_total_annuel?: number; monopropriete?: boolean; compteurs_individuels?: boolean; lots?: { type?: string; surface?: number; loyer?: number; type_loyer?: string; etat?: string; dpe?: string; etage?: string }[] } | null
+  const lotsData = bien.lots_data as { lots?: { type?: string; surface?: number; loyer?: number; type_loyer?: string; etat?: string; dpe?: string; etage?: string }[] } | null
   const lots = lotsData?.lots || []
+  const nbLotsEffectif = bien.nb_lots || lots.length
 
   const resultatFAI = peutCalculer ? calculerCashflow(
     { prix_fai: bien.prix_fai, loyer: bien.loyer, type_loyer: bien.type_loyer, charges_rec: bien.charges_rec || 0, charges_copro: bien.charges_copro || 0, taxe_fonc_ann: bien.taxe_fonc_ann || 0, surface: bien.surface },
@@ -1827,13 +1828,22 @@ export default function FicheBienPage() {
             </div>
           </div>
           {/* IDR : infos agrégées + tableau lots dépliable */}
-          {isIDR && lots.length > 0 && (
+          {isIDR && (
             <>
               <div className="data-grid" style={{ marginTop: '12px' }}>
                 <div className="data-subtitle">Immeuble</div>
-                <div className="data-item"><span className="data-label">Nb lots</span><span className="data-value">{lotsData?.nb_lots || lots.length}</span></div>
-                <div className="data-item"><span className="data-label">{"Monopropri\u00E9t\u00E9"}</span><span className="data-value" style={{ color: lotsData?.monopropriete ? '#1a7a40' : '#7a6a60' }}>{lotsData?.monopropriete === true ? 'Oui' : lotsData?.monopropriete === false ? 'Non' : 'NC'}</span></div>
-                <div className="data-item"><span className="data-label">Compteurs individuels</span><span className="data-value" style={{ color: lotsData?.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{lotsData?.compteurs_individuels === true ? 'Oui' : lotsData?.compteurs_individuels === false ? 'Non' : 'NC'}</span></div>
+                <div className="data-item">
+                  <span className="data-label">Nb lots</span>
+                  <CellEditable bien={bien} champ="nb_lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
+                </div>
+                <div className="data-item">
+                  <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
+                  <span className="data-value" style={{ color: bien.monopropriete ? '#1a7a40' : '#7a6a60' }}>{bien.monopropriete === true ? 'Oui' : bien.monopropriete === false ? 'Non' : 'NC'}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">Compteurs individuels</span>
+                  <span className="data-value" style={{ color: bien.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{bien.compteurs_individuels === true ? 'Oui' : bien.compteurs_individuels === false ? 'Non' : 'NC'}</span>
+                </div>
               </div>
               <div style={{ marginTop: '12px', textAlign: 'center' }}>
                 <button onClick={() => setShowLotsDetail(!showLotsDetail)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
@@ -1844,15 +1854,18 @@ export default function FicheBienPage() {
                 <table className="lots-table" style={{ marginTop: '12px' }}>
                   <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"\u00C9tage"}</th><th>DPE</th></tr></thead>
                   <tbody>
-                    {lots.map((lot, i) => (
-                      <tr key={i}>
-                        <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                        <td>{lot.type || 'NC'}</td>
-                        <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
-                        <td>{lot.etage || 'NC'}</td>
-                        <td>{lot.dpe || 'NC'}</td>
-                      </tr>
-                    ))}
+                    {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
+                      const lot = lots[i] || {}
+                      return (
+                        <tr key={i}>
+                          <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                          <td>{lot.type || 'NC'}</td>
+                          <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
+                          <td>{lot.etage || 'NC'}</td>
+                          <td>{lot.dpe || 'NC'}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
@@ -2023,8 +2036,8 @@ export default function FicheBienPage() {
             {isIDR && lots.length > 0 && (
               <>
                 <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', color: '#1a7a40', fontWeight: 600 }}>{lots.filter(l => l.etat === 'loue').length}/{lots.length} lots {"lou\u00E9s"}</span>
-                  {lotsData?.loyer_total_annuel && <span style={{ fontSize: '13px', color: '#7a6a60' }}>Loyer annuel : {lotsData.loyer_total_annuel.toLocaleString('fr-FR')} {'\u20AC'}</span>}
+                  <span style={{ fontSize: '13px', color: '#1a7a40', fontWeight: 600 }}>{lots.filter(l => l.etat === 'loue').length}/{nbLotsEffectif} lots {"lou\u00E9s"}</span>
+                  {bien.loyer && <span style={{ fontSize: '13px', color: '#7a6a60' }}>Loyer annuel : {(bien.loyer * 12).toLocaleString('fr-FR')} {'\u20AC'}</span>}
                 </div>
                 <div style={{ marginTop: '8px', textAlign: 'center' }}>
                   <button onClick={() => setShowLotsLocatif(!showLotsLocatif)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
@@ -2038,21 +2051,24 @@ export default function FicheBienPage() {
                   <table className="lots-table" style={{ marginTop: '12px' }}>
                     <thead><tr><th>Lot</th><th>Type</th><th>Loyer</th><th>{"\u00C9tat"}</th></tr></thead>
                     <tbody>
-                      {lots.map((lot, i) => (
-                        <tr key={i}>
-                          <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                          <td>{lot.type || 'NC'}</td>
-                          <td>{lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
-                          <td><span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span></td>
-                        </tr>
-                      ))}
+                      {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
+                        const lot = lots[i] || {}
+                        return (
+                          <tr key={i}>
+                            <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                            <td>{lot.type || 'NC'}</td>
+                            <td>{lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
+                            <td><span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span></td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 )}
                 {showCoutsCopro && (
                   <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
                     <div className="idr-param"><label>{"Cr\u00E9ation copro / lot"}</label><input type="number" value={coutCoproParLot} onChange={e => setCoutCoproParLot(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}</span></div>
-                    <div className="idr-param"><label>Compteurs / lot</label><input type="number" value={coutCompteursParLot} onChange={e => setCoutCompteursParLot(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}{lotsData?.compteurs_individuels ? " (d\u00E9j\u00E0 ind.)" : ''}</span></div>
+                    <div className="idr-param"><label>Compteurs / lot</label><input type="number" value={coutCompteursParLot} onChange={e => setCoutCompteursParLot(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}{bien.compteurs_individuels ? " (d\u00E9j\u00E0 ind.)" : ''}</span></div>
                     <div className="idr-param"><label>Travaux global</label><input type="number" value={coutTravauxGlobal} onChange={e => setCoutTravauxGlobal(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}</span></div>
                     <div style={{ marginTop: '8px', fontSize: '13px', fontWeight: 700, color: '#a06010' }}>
                       Total : {((coutCoproParLot + coutCompteursParLot) * lots.length + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
