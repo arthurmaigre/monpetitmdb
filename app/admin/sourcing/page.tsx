@@ -1201,7 +1201,7 @@ export default function AdminSourcingPage() {
                 <strong>{fmt(stats.idr_pending)}</strong> biens {'\u00e0'} traiter
               </span>
               <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
-                {"Co\u00fbt estim\u00e9 : ~"}{((stats.idr_pending || 0) * 0.003) < 1 ? ((stats.idr_pending || 0) * 0.003).toFixed(2) : Math.round((stats.idr_pending || 0) * 0.003)} {'\u20ac'} (Haiku)
+                {"Co\u00fbt estim\u00e9 : ~"}{((stats.idr_pending || 0) * 0.002) < 1 ? ((stats.idr_pending || 0) * 0.002).toFixed(2) : Math.round((stats.idr_pending || 0) * 0.002)} {'\u20ac'} (Haiku)
               </span>
             </div>
           )}
