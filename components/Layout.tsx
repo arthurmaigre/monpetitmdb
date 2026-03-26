@@ -61,10 +61,10 @@ export default function Layout({ children }: Props) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
       fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
-        .then(r => r.json())
-        .then(d => { if (d.watchlist) setWatchlistCount(d.watchlist.length) })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.watchlist) setWatchlistCount(d.watchlist.length) })
         .catch(() => {})
-    })
+    }).catch(() => {})
   }, [user, pathname])
 
   // Close menus on route change
