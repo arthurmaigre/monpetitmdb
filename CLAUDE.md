@@ -2,7 +2,7 @@
 
 ## Projet
 SaaS de sourcing immobilier pour investisseurs particuliers (methodologie marchand de biens).
-Strategies : **Locataire en place** / **Travaux lourds** / **Division (Immeuble de rapport)** / **Decoupe (Revente a la decoupe)**.
+Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Immeuble de rapport** (ex-Decoupe).
 Territoire : France entiere, 22 metropoles.
 Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 1 strategie, 2 regimes) / Expert 49€ (illimite, toutes strategies, tous regimes).
 
@@ -142,6 +142,10 @@ monpetitmdb/
 **Photos**
 - `photo_url` (URL externe plateforme), `photo_storage_path` (chemin bucket)
 
+**Immeuble de rapport**
+- `nb_lots` (int, editable), `monopropriete` (boolean), `compteurs_individuels` (boolean)
+- `lots_data` (JSONB) — tableau de lots : `{ lots: [{ type, surface, loyer, etat, dpe, etage }] }`
+
 **Moteur Immo**
 - `moteurimmo_data` (JSONB) — JSON brut complet
 
@@ -217,7 +221,8 @@ Pilotable depuis `/admin/sourcing` ou via Vercel Cron (automatique, sans PC).
 2. **Validation regex** : `/api/admin/regex` — filtre faux positifs par strategie, timestamp `regex_statut`/`regex_date`
 3. **Extraction donnees locatives** (Haiku) : `/api/admin/extraction` — Locataire en place uniquement, extrait loyer, charges, profil locataire, `nb_sdb`, `nb_chambres`. Timestamp `extraction_statut`/`extraction_date`. Cout ~1$/1000 biens.
 4. **Score travaux** (Haiku) : `/api/admin/score-travaux` — Travaux lourds uniquement, option analyse photos (3x plus cher). max_tokens 300, commentaire max 500 chars. Cout ~0.70$/1000 biens (texte), ~3$/1000 (photos).
-5. **Verification statut** : `/api/admin/statut` — marque les annonces retirees via API `deletedAds`
+5. **Extraction IDR** (Haiku) : `/api/admin/extraction-idr` — Immeuble de rapport uniquement. Extrait nb_lots, loyer par lot, type, surface, etat locatif, DPE, monopropriete, compteurs. Donnees agregees → colonnes (nb_lots, monopropriete, compteurs_individuels, loyer, taxe_fonc_ann), lots → `lots_data` JSONB.
+6. **Verification statut** : `/api/admin/statut` — marque les annonces retirees via API `deletedAds`
 6. **Estimation DVF batch** : POST /api/estimation/batch
 
 Profil locataire : Particulier | Etudiant | Senior | Famille | Colocation | Professionnel | Commercial + "depuis YYYY" ou "X ans". "NC" si non trouve.
@@ -370,4 +375,7 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 - **Admin conditionne** : lien Administration visible uniquement si `profiles.role = 'admin'`
 - **Pages avec sessionStorage** : utiliser `dynamic(() => import('./Client'), { ssr: false })` pour eviter hydration mismatch (ex: `/biens`)
 - **Index SQL** : `idx_biens_score_travaux` sur `score_travaux WHERE NOT NULL` — necessaire pour le filtre par defaut Travaux lourds
+- **IDR fiche bien** : lots dans blocs existants (caracteristiques, locatif, travaux, DVF). Pas de gros blocs separes. Pattern "bouton depliable" comme "Affiner le budget travaux".
+- **IDR regimes fiscaux** : pas de micro-foncier ni LMNP micro pour immeubles multi-lots. Utiliser `REGIMES_IDR`.
+- **IDR waterfall revente** : inclut frais notaire achat (7.5%), creation copro (geometre + reglement + compteurs × nb lots), frais agence revente, frais notaire revente (2.5% MdB), TVA marge (20/120), IS (15%/25%).
 - Clean avant scale : corriger les bugs avant d'etendre le perimetre

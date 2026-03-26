@@ -57,6 +57,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
   const lienTitre = bien.url ? bien.url : '/biens/' + bien.id
   const scoreTravaux = bien.score_travaux
   const isTravaux = bien.strategie_mdb === 'Travaux lourds'
+  const isIDR = bien.strategie_mdb === 'Immeuble de rapport'
   const imageAlt = `${bien.type_bien || 'Bien'} ${bien.nb_pieces || ''} - ${bien.ville || ''}`
 
   async function toggleWatchlist(e: React.MouseEvent) {
@@ -318,7 +319,26 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
           display: 'flex', gap: theme.spacing[2], flexWrap: 'wrap',
           marginBottom: theme.spacing[4],
         }}>
-          {isTravaux ? (
+          {isIDR ? (
+            <>
+              {(bien as any).nb_lots && (
+                <span style={pillStyle({ fontWeight: 700, background: '#d4ddf5', color: '#2a4a8a' })}>
+                  {(bien as any).nb_lots} lots
+                </span>
+              )}
+              {bien.loyer && (
+                <span style={pillStyle()}>{bien.loyer.toLocaleString('fr-FR')} {'\u20AC'}/mois</span>
+              )}
+              {bien.prix_m2 && (
+                <span style={pillStyle()}>
+                  {Math.round(Number(bien.prix_m2)).toLocaleString('fr-FR')} {'\u20AC'}/m{'\u00B2'}
+                </span>
+              )}
+              {(bien as any).monopropriete && (
+                <span style={pillStyle({ background: '#d4f5e0', color: '#1a7a40' })}>{"Monopropri\u00E9t\u00E9"}</span>
+              )}
+            </>
+          ) : isTravaux ? (
             <>
               {scoreTravaux ? (
                 <span style={pillStyle({

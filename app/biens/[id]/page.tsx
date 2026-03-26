@@ -188,6 +188,14 @@ const REGIMES = [
   { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
 ]
 
+const REGIMES_IDR = [
+  { value: 'nu_reel_foncier', label: 'Nu R\u00E9el foncier' },
+  { value: 'lmnp_reel_bic', label: 'LMNP R\u00E9el BIC' },
+  { value: 'lmp_reel_bic', label: 'LMP R\u00E9el BIC' },
+  { value: 'sci_is', label: "SCI \u00E0 l'IS" },
+  { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
+]
+
 function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate }: any) {
   const valeur = bien[champ]
   const statut = champsStatut[champ]
@@ -998,7 +1006,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean }) {
+function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode }) {
   const [estimation, setEstimation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -1285,6 +1293,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
           </button>
         </div>
       </div>
+      {extra}
     </div>
   )
 }
@@ -1403,7 +1412,7 @@ export default function FicheBienPage() {
           if (p.duree_ans != null) setDuree(p.duree_ans)
           if (p.frais_notaire != null) setFraisNotaire(p.frais_notaire)
           if (p.tmi != null) setTmi(p.tmi)
-          if (p.regime && REGIMES.some(r => r.value === p.regime)) setRegime(p.regime)
+          if (p.regime && [...REGIMES, ...REGIMES_IDR].some(r => r.value === p.regime)) setRegime(p.regime)
           if (p.objectif_cashflow != null) setObjectifCashflow(p.objectif_cashflow)
           if (p.objectif_pv != null) setObjectifPV(p.objectif_pv)
           if (p.budget_travaux_m2) setBudgetTravauxM2(p.budget_travaux_m2)
@@ -1638,7 +1647,8 @@ export default function FicheBienPage() {
         .slider { width: 100%; accent-color: #c0392b; cursor: pointer; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #b0a898; margin-top: 2px; }
         .val-blur { filter: blur(7px); user-select: none; pointer-events: none; }
-        .lots-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .lots-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .lots-table { width: 100%; border-collapse: collapse; margin-top: 12px; min-width: 400px; }
         .lots-table th { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; text-align: left; border-bottom: 2px solid #f0ede8; }
         .lots-table td { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #f0ede8; }
         .lots-table tr:last-child td { border-bottom: none; }
@@ -1852,7 +1862,7 @@ export default function FicheBienPage() {
                 </button>
               </div>
               {showLotsDetail && (
-                <table className="lots-table" style={{ marginTop: '12px' }}>
+                <div className="lots-table-wrap"><table className="lots-table" style={{ marginTop: '12px' }}>
                   <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"\u00C9tage"}</th><th>DPE</th></tr></thead>
                   <tbody>
                     {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
@@ -1868,7 +1878,7 @@ export default function FicheBienPage() {
                       )
                     })}
                   </tbody>
-                </table>
+                </table></div>
               )}
             </>
           )}
@@ -1887,63 +1897,78 @@ export default function FicheBienPage() {
                   {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/2 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
                 </div>
               )}
-              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} />
-              {/* IDR : Estimation revente par lot — intégré dans le bloc estimation */}
-              {isIDR && nbLotsEffectif > 0 && (
-                <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                  <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                    {showReventeLots ? "Masquer la revente par lot" : "Estimer la revente par lot"}
-                  </button>
-                  {showReventeLots && (
-                    <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px', border: '1px solid #f0ede8', textAlign: 'left' }}>
-                      <table className="lots-table">
-                        <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"Prix/m\u00B2"}</th><th>{"Prix revente"}</th></tr></thead>
-                        <tbody>
-                          {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
+              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked}
+                extra={isIDR && nbLotsEffectif > 0 ? (
+                  <div style={{ marginTop: '4px', textAlign: 'center' }}>
+                    <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                      {showReventeLots ? "Masquer la revente par lot" : "Estimer la revente par lot"}
+                    </button>
+                    {showReventeLots && (
+                      <div style={{ marginTop: '12px', background: '#f7f4f0', borderRadius: '10px', padding: '16px', border: '1px solid #e8e2d8', textAlign: 'left' }}>
+                        <div className="lots-table-wrap"><table className="lots-table">
+                          <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"Prix/m\u00B2"}</th><th>{"Prix revente"}</th></tr></thead>
+                          <tbody>
+                            {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
+                              const lot = lots[i] || {}
+                              const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                              const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
+                              return (
+                                <tr key={i}>
+                                  <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                                  <td>{lot.type || 'NC'}</td>
+                                  <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
+                                  <td style={{ color: '#7a6a60' }}>{prixM2DVF ? `${prixM2DVF.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
+                                  <td><input type="number" value={(prixReventeLots[i] !== undefined ? prixReventeLots[i] : prixEstime) || ''} onChange={e => setPrixReventeLots(prev => ({ ...prev, [i]: Number(e.target.value) }))} placeholder={prixEstime ? String(prixEstime) : '0'} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '110px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} /></td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table></div>
+                        <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                          <button onClick={() => {
+                            const pm2 = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                            if (!pm2) return
+                            const newPrix: Record<number, number> = {}
+                            Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).forEach((_, i) => {
+                              const lot = lots[i] || {}
+                              if (lot.surface) newPrix[i] = Math.round(lot.surface * pm2)
+                            })
+                            setPrixReventeLots(newPrix)
+                          }} style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: '#2a4a8a', background: '#f0f4ff', border: '1px solid #d4ddf5', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                            {"Appliquer l\u2019estimation DVF/m\u00B2 \u00E0 tous les lots"}
+                          </button>
+                        </div>
+                        {(() => {
+                          const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                          const totalRevente = Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).reduce<number>((sum, _, i) => {
                             const lot = lots[i] || {}
-                            const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
-                            const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
-                            return (
-                              <tr key={i}>
-                                <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                                <td>{lot.type || 'NC'}</td>
-                                <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
-                                <td style={{ color: '#7a6a60' }}>{prixM2DVF ? `${prixM2DVF.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
-                                <td><input type="number" value={(prixReventeLots[i] !== undefined ? prixReventeLots[i] : prixEstime) || ''} onChange={e => setPrixReventeLots(prev => ({ ...prev, [i]: Number(e.target.value) }))} placeholder={prixEstime ? String(prixEstime) : '0'} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '110px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} /></td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                      {(() => {
-                        const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
-                        const totalRevente = Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).reduce<number>((sum, _, i) => {
-                          const lot = lots[i] || {}
-                          return sum + (prixReventeLots[i] ?? (lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0))
-                        }, 0)
-                        const prixAchat = bien.prix_fai || 0
-                        const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
-                        const coutCopro = (coutGeometreParLot + coutReglementCoproParLot + coutCompteursParLot) * nbLotsEffectif
-                        const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
-                        const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisAgence
-                        const tvaMarge = Math.round(Math.max(0, margeBrute) * 20 / 120)
-                        const isBase = Math.max(0, margeBrute - tvaMarge)
-                        const isTotal = Math.round(Math.min(isBase, 42500) * 0.15 + Math.max(0, isBase - 42500) * 0.25)
-                        const margeNette = margeBrute - tvaMarge - isTotal
-                        return totalRevente > 0 ? (
-                          <div style={{ marginTop: '16px', borderTop: '1px solid #e8e2d8', paddingTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '13px' }}>
-                            <span style={{ color: '#7a6a60' }}>Revente totale</span><span style={{ textAlign: 'right', fontWeight: 600, color: '#1a7a40' }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                            <span style={{ color: '#7a6a60' }}>{"Co\u00FBts totaux"}</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence).toLocaleString('fr-FR')} {'\u20AC'}</span>
-                            <span style={{ color: '#7a6a60' }}>Marge brute</span><span style={{ textAlign: 'right', fontWeight: 700, color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                            <span style={{ color: '#7a6a60' }}>TVA marge + IS</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(tvaMarge + isTotal).toLocaleString('fr-FR')} {'\u20AC'}</span>
-                            <span style={{ fontWeight: 700 }}>Marge nette MdB</span><span style={{ textAlign: 'right', fontWeight: 800, fontSize: '15px', fontFamily: "'Fraunces', serif", color: margeNette >= 0 ? '#1a7a40' : '#c0392b' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                          </div>
-                        ) : null
-                      })()}
-                    </div>
-                  )}
-                </div>
-              )}
+                            return sum + (prixReventeLots[i] ?? (lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0))
+                          }, 0)
+                          const prixAchat = bien.prix_fai || 0
+                          const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
+                          const coutCopro = (coutGeometreParLot + coutReglementCoproParLot + coutCompteursParLot) * nbLotsEffectif
+                          const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
+                          const fraisNotaireRevente = Math.round(totalRevente * 2.5 / 100) // 2.5% MdB
+                          const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisAgence - fraisNotaireRevente
+                          const tvaMarge = Math.round(Math.max(0, margeBrute) * 20 / 120)
+                          const isBase = Math.max(0, margeBrute - tvaMarge)
+                          const isTotal = Math.round(Math.min(isBase, 42500) * 0.15 + Math.max(0, isBase - 42500) * 0.25)
+                          const margeNette = margeBrute - tvaMarge - isTotal
+                          return totalRevente > 0 ? (
+                            <div style={{ marginTop: '16px', borderTop: '1px solid #e8e2d8', paddingTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '13px' }}>
+                              <span style={{ color: '#7a6a60' }}>Revente totale</span><span style={{ textAlign: 'right', fontWeight: 600, color: '#1a7a40' }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                              <span style={{ color: '#7a6a60' }}>{"Co\u00FBts totaux"}</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence + fraisNotaireRevente).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                              <span style={{ color: '#7a6a60' }}>Marge brute</span><span style={{ textAlign: 'right', fontWeight: 700, color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                              <span style={{ color: '#7a6a60' }}>TVA marge + IS</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(tvaMarge + isTotal).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                              <span style={{ fontWeight: 700 }}>Marge nette MdB</span><span style={{ textAlign: 'right', fontWeight: 800, fontSize: '15px', fontFamily: "'Fraunces', serif", color: margeNette >= 0 ? '#1a7a40' : '#c0392b' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                            </div>
+                          ) : null
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                ) : undefined}
+              />
             </div>
           )
         })()}
@@ -2052,7 +2077,7 @@ export default function FicheBienPage() {
                   </button>
                 </div>
                 {showLotsLocatif && (
-                  <table className="lots-table" style={{ marginTop: '12px' }}>
+                  <div className="lots-table-wrap"><table className="lots-table" style={{ marginTop: '12px' }}>
                     <thead><tr><th>Lot</th><th>Type</th><th>Loyer</th><th>{"\u00C9tat"}</th></tr></thead>
                     <tbody>
                       {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
@@ -2096,7 +2121,7 @@ export default function FicheBienPage() {
                         )
                       })}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </>
             )}
@@ -2301,16 +2326,6 @@ export default function FicheBienPage() {
               {showCoutsCopro && (
                 <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px 12px', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>Nombre de lots</span>
-                    <input type="number" value={nbLotsEffectif} onChange={e => {
-                      const val = Number(e.target.value)
-                      if (val > 0 && userToken) {
-                        fetch(`/api/biens/${bien.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` }, body: JSON.stringify({ nb_lots: val }) })
-                        bien.nb_lots = val
-                      }
-                    }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '60px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
-                    <span style={{ color: '#7a6a60' }}>lots</span>
-
                     <span style={{ color: '#7a6a60', fontWeight: 600 }}>{"\u00C9tat descriptif (g\u00E9om\u00E8tre)"}</span>
                     <input type="number" value={coutGeometreParLot} onChange={e => setCoutGeometreParLot(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
                     <span style={{ color: '#7a6a60' }}>{'\u20AC'} / lot</span>
@@ -2447,7 +2462,7 @@ export default function FicheBienPage() {
                 <span style={{ fontSize: '13px', color: '#7a6a60' }}>Comparer avec :</span>
                 <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
                   {/* TODO: limit to 2 regimes for Pro — currently shows all regimes for both Pro and Expert */}
-                  {REGIMES.filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2487,8 +2502,8 @@ export default function FicheBienPage() {
                 </div>
               )}
               <div className="pnl-grid">
-                <PnlColonne titre={`${REGIMES.find(r => r.value === regime)?.label || regime} (votre regime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
-                <PnlColonne titre={REGIMES.find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre regime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
               </div>
             </div>
           </div>
