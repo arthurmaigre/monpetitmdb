@@ -1887,63 +1887,65 @@ export default function FicheBienPage() {
                 </div>
               )}
               <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} />
+              {/* IDR : Estimation revente par lot — intégré dans le bloc estimation */}
+              {isIDR && nbLotsEffectif > 0 && (
+                <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                  <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                    {showReventeLots ? "Masquer la revente par lot" : "Estimer la revente par lot"}
+                  </button>
+                  {showReventeLots && (
+                    <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px', border: '1px solid #f0ede8', textAlign: 'left' }}>
+                      <table className="lots-table">
+                        <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"Prix/m\u00B2"}</th><th>{"Prix revente"}</th></tr></thead>
+                        <tbody>
+                          {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
+                            const lot = lots[i] || {}
+                            const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                            const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
+                            return (
+                              <tr key={i}>
+                                <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                                <td>{lot.type || 'NC'}</td>
+                                <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
+                                <td style={{ color: '#7a6a60' }}>{prixM2DVF ? `${prixM2DVF.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
+                                <td><input type="number" value={(prixReventeLots[i] !== undefined ? prixReventeLots[i] : prixEstime) || ''} onChange={e => setPrixReventeLots(prev => ({ ...prev, [i]: Number(e.target.value) }))} placeholder={prixEstime ? String(prixEstime) : '0'} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '110px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} /></td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                      {(() => {
+                        const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                        const totalRevente = Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).reduce<number>((sum, _, i) => {
+                          const lot = lots[i] || {}
+                          return sum + (prixReventeLots[i] ?? (lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0))
+                        }, 0)
+                        const prixAchat = bien.prix_fai || 0
+                        const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
+                        const coutCopro = (coutCoproParLot + coutCompteursParLot) * nbLotsEffectif
+                        const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
+                        const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisAgence
+                        const tvaMarge = Math.round(Math.max(0, margeBrute) * 20 / 120)
+                        const isBase = Math.max(0, margeBrute - tvaMarge)
+                        const isTotal = Math.round(Math.min(isBase, 42500) * 0.15 + Math.max(0, isBase - 42500) * 0.25)
+                        const margeNette = margeBrute - tvaMarge - isTotal
+                        return totalRevente > 0 ? (
+                          <div style={{ marginTop: '16px', borderTop: '1px solid #e8e2d8', paddingTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '13px' }}>
+                            <span style={{ color: '#7a6a60' }}>Revente totale</span><span style={{ textAlign: 'right', fontWeight: 600, color: '#1a7a40' }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                            <span style={{ color: '#7a6a60' }}>{"Co\u00FBts totaux"}</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                            <span style={{ color: '#7a6a60' }}>Marge brute</span><span style={{ textAlign: 'right', fontWeight: 700, color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                            <span style={{ color: '#7a6a60' }}>TVA marge + IS</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(tvaMarge + isTotal).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                            <span style={{ fontWeight: 700 }}>Marge nette MdB</span><span style={{ textAlign: 'right', fontWeight: 800, fontSize: '15px', fontFamily: "'Fraunces', serif", color: margeNette >= 0 ? '#1a7a40' : '#c0392b' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                          </div>
+                        ) : null
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )
         })()}
-
-        {/* IDR : Estimation revente par lot dépliable */}
-        {isIDR && lots.length > 0 && (
-          <div style={{ marginTop: '-8px', marginBottom: '16px', textAlign: 'center' }}>
-            <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-              {showReventeLots ? "Masquer la revente par lot" : "Estimer la revente par lot"}
-            </button>
-            {showReventeLots && (
-              <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px', border: '1px solid #f0ede8', textAlign: 'left' }}>
-                <table className="lots-table">
-                  <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"Prix/m\u00B2"}</th><th>{"Prix revente"}</th></tr></thead>
-                  <tbody>
-                    {lots.map((lot, i) => {
-                      const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
-                      const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
-                      return (
-                        <tr key={i}>
-                          <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                          <td>{lot.type || 'NC'}</td>
-                          <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
-                          <td style={{ color: '#7a6a60' }}>{prixM2DVF ? `${prixM2DVF.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
-                          <td><input type="number" value={(prixReventeLots[i] !== undefined ? prixReventeLots[i] : prixEstime) || ''} onChange={e => setPrixReventeLots(prev => ({ ...prev, [i]: Number(e.target.value) }))} placeholder={prixEstime ? String(prixEstime) : '0'} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '110px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} /></td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {/* Mini waterfall */}
-                {(() => {
-                  const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
-                  const totalRevente = lots.reduce((sum, lot, i) => sum + (prixReventeLots[i] ?? (lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0)), 0)
-                  const prixAchat = bien.prix_fai || 0
-                  const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
-                  const coutCopro = (coutCoproParLot + coutCompteursParLot) * lots.length
-                  const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
-                  const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisAgence
-                  const tvaMarge = Math.round(Math.max(0, margeBrute) * 20 / 120)
-                  const isBase = Math.max(0, margeBrute - tvaMarge)
-                  const isTotal = Math.round(Math.min(isBase, 42500) * 0.15 + Math.max(0, isBase - 42500) * 0.25)
-                  const margeNette = margeBrute - tvaMarge - isTotal
-                  return totalRevente > 0 ? (
-                    <div style={{ marginTop: '16px', borderTop: '1px solid #e8e2d8', paddingTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
-                      <span style={{ color: '#7a6a60' }}>Revente totale</span><span style={{ textAlign: 'right', fontWeight: 600, color: '#1a7a40' }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                      <span style={{ color: '#7a6a60' }}>{"Co\u00FBts totaux"}</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence).toLocaleString('fr-FR')} {'\u20AC'}</span>
-                      <span style={{ color: '#7a6a60' }}>Marge brute</span><span style={{ textAlign: 'right', fontWeight: 700, color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                      <span style={{ color: '#7a6a60' }}>TVA marge + IS</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(tvaMarge + isTotal).toLocaleString('fr-FR')} {'\u20AC'}</span>
-                      <span style={{ fontWeight: 700 }}>Marge nette MdB</span><span style={{ textAlign: 'right', fontWeight: 800, fontSize: '15px', fontFamily: "'Fraunces', serif", color: margeNette >= 0 ? '#1a7a40' : '#c0392b' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                    </div>
-                  ) : null
-                })()}
-              </div>
-            )}
-          </div>
-        )}
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">
@@ -2043,9 +2045,6 @@ export default function FicheBienPage() {
                   <button onClick={() => setShowLotsLocatif(!showLotsLocatif)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                     {showLotsLocatif ? "Masquer" : "D\u00E9tail loyers par lot"}
                   </button>
-                  <button onClick={() => setShowCoutsCopro(!showCoutsCopro)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#a06010', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginLeft: '8px' }}>
-                    {showCoutsCopro ? "Masquer" : "Co\u00FBts copropri\u00E9t\u00E9"}
-                  </button>
                 </div>
                 {showLotsLocatif && (
                   <table className="lots-table" style={{ marginTop: '12px' }}>
@@ -2064,16 +2063,6 @@ export default function FicheBienPage() {
                       })}
                     </tbody>
                   </table>
-                )}
-                {showCoutsCopro && (
-                  <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
-                    <div className="idr-param"><label>{"Cr\u00E9ation copro / lot"}</label><input type="number" value={coutCoproParLot} onChange={e => setCoutCoproParLot(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}</span></div>
-                    <div className="idr-param"><label>Compteurs / lot</label><input type="number" value={coutCompteursParLot} onChange={e => setCoutCompteursParLot(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}{bien.compteurs_individuels ? " (d\u00E9j\u00E0 ind.)" : ''}</span></div>
-                    <div className="idr-param"><label>Travaux global</label><input type="number" value={coutTravauxGlobal} onChange={e => setCoutTravauxGlobal(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}</span></div>
-                    <div style={{ marginTop: '8px', fontSize: '13px', fontWeight: 700, color: '#a06010' }}>
-                      Total : {((coutCoproParLot + coutCompteursParLot) * lots.length + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
-                    </div>
-                  </div>
                 )}
               </>
             )}
@@ -2266,6 +2255,40 @@ export default function FicheBienPage() {
               </>
             )
           })()}
+
+          {/* IDR : Coûts création copropriété — intégré dans le bloc travaux */}
+          {isIDR && nbLotsEffectif > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                <button onClick={() => setShowCoutsCopro(!showCoutsCopro)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#a06010', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  {showCoutsCopro ? "Masquer les co\u00FBts copro" : "Estimer les co\u00FBts de cr\u00E9ation de copropri\u00E9t\u00E9"}
+                </button>
+              </div>
+              {showCoutsCopro && (
+                <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px 12px', alignItems: 'center', fontSize: '13px' }}>
+                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>{"G\u00E9om\u00E8tre + r\u00E8glement copro"}</span>
+                    <input type="number" value={coutCoproParLot} onChange={e => setCoutCoproParLot(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
+                    <span style={{ color: '#7a6a60' }}>{'\u20AC'} / lot</span>
+
+                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>Compteurs individuels</span>
+                    <input type="number" value={coutCompteursParLot} onChange={e => setCoutCompteursParLot(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
+                    <span style={{ color: '#7a6a60' }}>{'\u20AC'} / lot{bien.compteurs_individuels ? " (d\u00E9j\u00E0 ind.)" : ''}</span>
+
+                    <span style={{ color: '#7a6a60', fontWeight: 600 }}>Travaux divers</span>
+                    <input type="number" value={coutTravauxGlobal} onChange={e => setCoutTravauxGlobal(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
+                    <span style={{ color: '#7a6a60' }}>{'\u20AC'} global</span>
+                  </div>
+                  <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #e8e2d8' }}>
+                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{`(${coutCoproParLot.toLocaleString('fr-FR')} + ${coutCompteursParLot.toLocaleString('fr-FR')}) \u00D7 ${nbLotsEffectif} lots + ${coutTravauxGlobal.toLocaleString('fr-FR')} \u20AC`}</span>
+                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 800, color: '#a06010' }}>
+                      {((coutCoproParLot + coutCompteursParLot) * nbLotsEffectif + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div id="contact" className="section">
