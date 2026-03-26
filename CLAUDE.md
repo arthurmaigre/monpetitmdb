@@ -51,7 +51,7 @@ monpetitmdb/
 │   ├── admin/estimation/       # Admin config estimateur
 │   ├── admin/guide-fiscal/     # Reference fiscale 7 regimes (admin only)
 │   ├── biens/[id]/             # Fiche bien + PnlColonne 7 regimes + scenario revente
-│   ├── biens/                  # Liste biens avec filtres
+│   ├── biens/                  # Liste biens avec filtres (SSR desactive, BiensClient.tsx)
 │   ├── blog/                   # Listing articles publies
 │   ├── blog/[slug]/            # Page article individuelle
 │   ├── strategies/             # Page 4 strategies detaillees
@@ -368,4 +368,6 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 - **TVA sur marge MdB** : marge × 20/120 (TVA "en dedans", pas × 20%)
 - **profil_locataire = "NC"** : traite comme vide dans l'UI (Non communique en grise)
 - **Admin conditionne** : lien Administration visible uniquement si `profiles.role = 'admin'`
+- **Pages avec sessionStorage** : utiliser `dynamic(() => import('./Client'), { ssr: false })` pour eviter hydration mismatch (ex: `/biens`)
+- **Index SQL** : `idx_biens_score_travaux` sur `score_travaux WHERE NOT NULL` — necessaire pour le filtre par defaut Travaux lourds
 - Clean avant scale : corriger les bugs avant d'etendre le perimetre
