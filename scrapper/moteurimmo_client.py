@@ -48,15 +48,18 @@ STRATEGIES = {
     },
     "Division": {
         "keywords": [
-            "divisible",
             "possibilité de division",
             "division possible",
+            "potentiel de division",
             "diviser en",
             "créer des lots",
             "créer plusieurs logements",
+            "bien divisible",
+            "maison divisible",
+            "appartement divisible",
         ],
         "keywordsOperator": "or",
-        "categories": ["house", "flat", "block", "misc"],
+        "categories": ["house", "flat", "block"],
         "options": [],
     },
     "Immeuble de rapport": {

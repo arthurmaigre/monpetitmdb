@@ -93,16 +93,25 @@ const REGEX_CONFIGS: Record<string, RegexConfig> = {
   },
   'Division': {
     valid: [
-      /divis(ible|ion|er)/i,
+      /(appartement|maison|bien|propri[eé]t[eé]|logement|surface)\s+.{0,15}divisible/i,
+      /divisible\s+en\s+\d+\s*(lots?|logements?|appartements?|studios?)/i,
+      /possibilit[eé]\s+de\s+division/i,
+      /division\s+possible/i,
+      /potentiel\s+de\s+division/i,
+      /diviser\s+en\s+\d+/i,
       /cr[eé]er\s+(des\s+lots|\d+\s+logements|plusieurs\s+logements|deux\s+logements)/i,
+      /transformer\s+en\s+plusieurs\s+(lots?|logements?|appartements?)/i,
+      /id[eé]al\s+(pour\s+)?(la\s+)?division/i,
     ],
     exclude: [
       /non\s+divisible/i,
       /issu\s+d.une\s+division/i,
-      /divis[eé]e?\s+en\s+deux\s+(espaces?|parties?)/i,
+      /divis[eé]e?\s+en\s+deux\s+(espaces?|parties?|zones?)/i,
       /chambre\s+.{0,10}divisible/i,
-      /(pi[eè]ce|salon|s[eé]jour)\s+.{0,10}divisible/i,
-      /(jardin|cour)\s+.{0,15}divisible/i,
+      /(pi[eè]ce|salon|s[eé]jour|cuisine)\s+.{0,10}divisible/i,
+      /(jardin|cour|terrain|parcelle)\s+.{0,15}divisible/i,
+      /terrain\s+divisible/i,
+      /parcelle\s+divisible/i,
     ],
   },
   'Immeuble de rapport': {
@@ -170,7 +179,7 @@ export async function POST(req: NextRequest) {
     while (Date.now() - startTime < MAX_MS) {
       let query = supabaseAdmin
         .from('biens')
-        .select('id, created_at, strategie_mdb, moteurimmo_data')
+        .select('id, created_at, strategie_mdb, surface, moteurimmo_data')
         .eq('statut', 'Toujours disponible')
         .is('regex_statut', null)
         .not('moteurimmo_data', 'is', null)
@@ -191,13 +200,21 @@ export async function POST(req: NextRequest) {
       for (const bien of biens) {
         const config = REGEX_CONFIGS[bien.strategie_mdb]
         if (!config) { idsValid.push(bien.id); continue }
-        let md: { title?: string; description?: string } | null = null
+        let md: { title?: string; description?: string; surface?: number } | null = null
         try {
           const raw = bien.moteurimmo_data
           if (typeof raw === 'string') md = JSON.parse(raw)
           else if (raw && typeof raw === 'object') md = raw as any
         } catch { /* ignore */ }
         const text = [md?.title || '', md?.description || ''].join(' ')
+
+        // Division : exiger surface >= 80m² (un petit bien n'est pas divisible)
+        if (bien.strategie_mdb === 'Division' && bien.surface && bien.surface < 80) {
+          idsToMarkFP.push(bien.id)
+          totalFP++
+          continue
+        }
+
         if (!testRegex(text, config)) {
           idsToMarkFP.push(bien.id)
           totalFP++

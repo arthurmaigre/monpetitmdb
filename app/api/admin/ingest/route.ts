@@ -23,10 +23,11 @@ const STRATEGY_CONFIGS: Record<string, { keywords: string[]; categories: string[
   },
   'Division': {
     keywords: [
-      'divisible', 'possibilité de division', 'division possible',
+      'possibilité de division', 'division possible', 'potentiel de division',
       'diviser en', 'créer des lots', 'créer plusieurs logements',
+      'idéal division', 'bien divisible', 'maison divisible', 'appartement divisible',
     ],
-    categories: ['house', 'flat', 'block', 'misc'],
+    categories: ['house', 'flat', 'block'],
   },
   'Immeuble de rapport': {
     keywords: [

@@ -50,7 +50,7 @@ const STRATEGY_KEYWORDS: { strategie: string; patterns: RegExp[] }[] = [
   },
   {
     strategie: 'Division',
-    patterns: [/divis(ible|ion|er)/i, /cr[eé]er\s+(des\s+lots|plusieurs\s+logements)/i],
+    patterns: [/(appartement|maison|bien|propri[eé]t[eé])\s+.{0,15}divisible/i, /divisible\s+en\s+\d+/i, /possibilit[eé]\s+de\s+division/i, /division\s+possible/i, /potentiel\s+de\s+division/i, /id[eé]al\s+(pour\s+)?(la\s+)?division/i],
   },
   {
     strategie: 'Immeuble de rapport',
