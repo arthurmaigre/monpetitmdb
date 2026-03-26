@@ -105,7 +105,7 @@ const REGEX_CONFIGS: Record<string, RegexConfig> = {
       /(jardin|cour)\s+.{0,15}divisible/i,
     ],
   },
-  'Découpe': {
+  'Immeuble de rapport': {
     valid: [
       /immeuble\s+de\s+rapport/i,
       /monopropri[eé]t[eé]/i,

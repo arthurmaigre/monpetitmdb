@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     question: "Quelles sont les 4 strat\u00E9gies MDB\u00A0?",
-    answer: "Les 4 strat\u00E9gies sont\u00A0: Locataire en place (bien d\u00E9j\u00E0 lou\u00E9, rendement imm\u00E9diat), Travaux lourds (achat sous le march\u00E9 + r\u00E9novation), Division (transformation en immeuble de rapport) et D\u00E9coupe (revente \u00E0 la d\u00E9coupe lot par lot). Chaque strat\u00E9gie a ses propres crit\u00E8res de filtrage et d\u2019analyse."
+    answer: "Les 4 strat\u00E9gies sont\u00A0: Locataire en place (bien d\u00E9j\u00E0 lou\u00E9, rendement imm\u00E9diat), Travaux lourds (achat sous le march\u00E9 + r\u00E9novation), Division (grand bien divis\u00E9 en plusieurs lots) et Immeuble de rapport (achat d\u2019un immeuble entier, revente ou location lot par lot). Chaque strat\u00E9gie a ses propres crit\u00E8res de filtrage et d\u2019analyse."
   },
   {
     question: "Comment fonctionne l\u2019estimation DVF\u00A0?",

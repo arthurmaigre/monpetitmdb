@@ -28,7 +28,7 @@ const STRATEGY_CONFIGS: Record<string, { keywords: string[]; categories: string[
     ],
     categories: ['house', 'flat', 'block', 'misc'],
   },
-  'Découpe': {
+  'Immeuble de rapport': {
     keywords: [
       'immeuble de rapport', 'monopropriété', 'copropriété à créer',
       'pas de copropriété', 'hors copropriété',

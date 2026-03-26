@@ -53,7 +53,7 @@ const STRATEGY_KEYWORDS: { strategie: string; patterns: RegExp[] }[] = [
     patterns: [/divis(ible|ion|er)/i, /cr[eé]er\s+(des\s+lots|plusieurs\s+logements)/i],
   },
   {
-    strategie: 'Découpe',
+    strategie: 'Immeuble de rapport',
     patterns: [/immeuble\s+de\s+rapport/i, /monopropri[eé]t[eé]/i, /vent(e|u)\s+en\s+bloc/i],
   },
 ]

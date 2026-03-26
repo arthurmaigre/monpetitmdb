@@ -9,7 +9,7 @@ const STRATEGIES = [
   { value: 'Locataire en place', label: 'Locataire en place' },
   { value: 'Travaux lourds', label: 'Travaux lourds' },
   { value: 'Division', label: 'Division' },
-  { value: 'D\u00e9coupe', label: 'D\u00e9coupe' },
+  { value: 'Immeuble de rapport', label: 'Immeuble de rapport' },
 ]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -349,7 +349,7 @@ export default function AdminSourcingPage() {
     regexStopRef.current = false
     setRegexStats({ faux_positifs: 0, processed: 0, total: 0, last_run: '' })
 
-    const strats = regexStrategy ? [regexStrategy] : ['Locataire en place', 'Travaux lourds', 'Division', 'D\u00e9coupe']
+    const strats = regexStrategy ? [regexStrategy] : ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport']
     for (const strat of strats) {
       if (regexStopRef.current) break
       let cursor: string | null = null
@@ -539,7 +539,7 @@ export default function AdminSourcingPage() {
     { label: 'Locataire', value: stats.locataire || 0, color: '#2a4a8a' },
     { label: 'Travaux', value: stats.travaux || 0, color: '#a06010' },
     { label: 'Division', value: stats.division || 0, color: '#1a7a40' },
-    { label: 'D\u00e9coupe', value: stats.decoupe || 0, color: '#c0392b' },
+    { label: 'Imm. rapport', value: stats.decoupe || 0, color: '#c0392b' },
   ]
   const stratTotal = stratValues.reduce((s, v) => s + v.value, 0) || 1
 
@@ -1061,7 +1061,7 @@ export default function AdminSourcingPage() {
                 <span style={{ color: '#1a7a40' }}>{'\u2713'}</span> divisible, division possible, cr{'\u00e9'}er des lots, cr{'\u00e9'}er plusieurs logements<br/>
                 <span style={{ color: '#c0392b' }}>{'\u2717'}</span> non divisible, issu d{"'"}une division, chambre/pi{'\u00e8'}ce/salon/jardin divisible
               </div>
-              <div><strong style={{ color: '#2a4a8a' }}>D{'\u00e9'}coupe</strong><br/>
+              <div><strong style={{ color: '#2a4a8a' }}>Immeuble de rapport</strong><br/>
                 <span style={{ color: '#1a7a40' }}>{'\u2713'}</span> immeuble de rapport, monopropri{'\u00e9'}t{'\u00e9'}, copropri{'\u00e9'}t{'\u00e9'} {'\u00e0'} cr{'\u00e9'}er, vente en bloc, plusieurs appartements/logements/lots
               </div>
             </div>

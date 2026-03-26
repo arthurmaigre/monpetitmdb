@@ -181,8 +181,8 @@ export default function StrategiesPage() {
         <div className="strat-nav-inner">
           <button className={`strat-nav-btn ${activeSection === 's1' ? 'active' : ''}`} onClick={() => scrollToSection('s1')}>Locataire en place</button>
           <button className={`strat-nav-btn ${activeSection === 's2' ? 'active' : ''}`} onClick={() => scrollToSection('s2')}>Travaux lourds</button>
-          <button className={`strat-nav-btn ${activeSection === 's3' ? 'active' : ''}`} onClick={() => scrollToSection('s3')}>Immeuble de rapport</button>
-          <button className={`strat-nav-btn ${activeSection === 's4' ? 'active' : ''}`} onClick={() => scrollToSection('s4')}>{"Revente \u00E0 la d\u00E9coupe"}</button>
+          <button className={`strat-nav-btn ${activeSection === 's3' ? 'active' : ''}`} onClick={() => scrollToSection('s3')}>Division</button>
+          <button className={`strat-nav-btn ${activeSection === 's4' ? 'active' : ''}`} onClick={() => scrollToSection('s4')}>Immeuble de rapport</button>
         </div>
       </div>
 
@@ -384,7 +384,7 @@ export default function StrategiesPage() {
         <div className="strategy-block" id="s3">
           <div className="strategy-header">
             <div>
-              <div className="strategy-title">Immeuble de rapport</div>
+              <div className="strategy-title">Division</div>
               <div className="strategy-subtitle">{"Diviser pour multiplier les loyers"}</div>
             </div>
             <span className="strategy-badge">{"Avanc\u00E9"}</span>
@@ -458,14 +458,14 @@ export default function StrategiesPage() {
               </div>
             </div>
           </div>
-          <a href="/biens" className="strat-cta">{"Voir les biens Immeuble de rapport \u2192"}</a>
+          <a href="/biens" className="strat-cta">{"Voir les biens Division \u2192"}</a>
         </div>
 
         {/* STRATÉGIE 4 — DÉCOUPE */}
         <div className="strategy-block" id="s4">
           <div className="strategy-header">
             <div>
-              <div className="strategy-title">{"Revente \u00E0 la d\u00E9coupe"}</div>
+              <div className="strategy-title">Immeuble de rapport</div>
               <div className="strategy-subtitle">{"Acheter un immeuble entier, revendre lot par lot"}</div>
             </div>
             <span className="strategy-badge" style={{ background: '#f5e6e4', color: '#96281b', borderColor: '#e8ccc8' }}>Expert MDB</span>
@@ -536,7 +536,7 @@ export default function StrategiesPage() {
               </div>
             </div>
           </div>
-          <a href="/biens" className="strat-cta">{"Voir les biens Revente \u00E0 la d\u00E9coupe \u2192"}</a>
+          <a href="/biens" className="strat-cta">{"Voir les biens Immeuble de rapport \u2192"}</a>
         </div>
 
       </div>

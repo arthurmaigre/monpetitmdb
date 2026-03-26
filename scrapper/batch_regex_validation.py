@@ -91,8 +91,8 @@ STRATEGIES = {
     },
 }
 
-# Decoupe avec accent
-STRATEGIES["D\u00e9coupe"] = {
+# Immeuble de rapport (ex-Decoupe)
+STRATEGIES["Immeuble de rapport"] = {
     "valid": [
         r"immeuble\s+de\s+rapport",
         r"monopropri[eé]t[eé]",

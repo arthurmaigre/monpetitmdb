@@ -365,7 +365,7 @@ export default function Home() {
                 <div className="strat-icon">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8503a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 </div>
-                <div className="strat-name">{"D\u00E9coupe"}</div>
+                <div className="strat-name">Immeuble de rapport</div>
                 <p className="strat-desc">{"Achetez un immeuble entier en monopropri\u00E9t\u00E9 et revendez lot par lot. La m\u00E9thode des pros accessible \u00E0 tous."}</p>
                 <span className="strat-tag">{"M\u00E9thode MDB"}</span>
                 <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
@@ -674,7 +674,7 @@ export default function Home() {
                 <a href="/biens">Locataire en place</a>
                 <a href="/biens">Travaux lourds</a>
                 <a href="/biens">Division</a>
-                <a href="/biens">{"D\u00E9coupe"}</a>
+                <a href="/biens">Immeuble de rapport</a>
               </div>
               <div className="ft-col">
                 <h4>{"L\u00E9gal"}</h4>

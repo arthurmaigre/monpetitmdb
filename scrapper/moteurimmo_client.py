@@ -59,7 +59,7 @@ STRATEGIES = {
         "categories": ["house", "flat", "block", "misc"],
         "options": [],
     },
-    "Découpe": {
+    "Immeuble de rapport": {
         "keywords": [
             "immeuble de rapport",
             "monopropriété",
