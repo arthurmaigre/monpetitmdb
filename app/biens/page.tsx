@@ -24,27 +24,27 @@ function getSessionFilters() {
 }
 
 export default function BiensPage() {
+  const saved = useRef(typeof window !== 'undefined' ? getSessionFilters() : null)
   const [allBiens, setAllBiens] = useState<Bien[]>([])
   const [metropoles, setMetropoles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [view, setView] = useState<'grid' | 'list'>(saved.current?.view || 'grid')
   const [filtersOpen, setFiltersOpen] = useState(true)
-  const [strategie, setStrategie] = useState('')
-  const [metropole, setMetropole] = useState('Toutes')
-  const [ville, setVille] = useState('Toutes')
-  const [communeSearch, setCommuneSearch] = useState('')
+  const [strategie, setStrategie] = useState(saved.current?.strategie || '')
+  const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
+  const [ville, setVille] = useState(saved.current?.ville || 'Toutes')
+  const [communeSearch, setCommuneSearch] = useState(saved.current?.communeSearch || '')
   const [communeSuggestions, setCommuneSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(null)
+  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(saved.current?.selectedCommune || null)
   const communeTimeout = useRef<any>(null)
-  const [typeBien, setTypeBien] = useState('Tous')
-  const [prixMin, setPrixMin] = useState('')
-  const [prixMax, setPrixMax] = useState('')
-  const [rendMin, setRendMin] = useState('')
-  const [scoreTravauxMin, setScoreTravauxMin] = useState('')
-  const [tri, setTri] = useState('recent')
-  const [sessionRestored, setSessionRestored] = useState(false)
+  const [typeBien, setTypeBien] = useState(saved.current?.typeBien || 'Tous')
+  const [prixMin, setPrixMin] = useState(saved.current?.prixMin || '')
+  const [prixMax, setPrixMax] = useState(saved.current?.prixMax || '')
+  const [rendMin, setRendMin] = useState(saved.current?.rendMin || '')
+  const [scoreTravauxMin, setScoreTravauxMin] = useState(saved.current?.scoreTravauxMin || '')
+  const [tri, setTri] = useState(saved.current?.tri || 'recent')
   const [totalBiens, setTotalBiens] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -62,24 +62,6 @@ export default function BiensPage() {
   const [tableWidth, setTableWidth] = useState(0)
   const syncing = useRef(false)
 
-  // Restore filters from sessionStorage (client-side only, avoids hydration mismatch)
-  useEffect(() => {
-    const saved = getSessionFilters()
-    if (!saved) { setSessionRestored(true); return }
-    if (saved.strategie) setStrategie(saved.strategie)
-    if (saved.metropole) setMetropole(saved.metropole)
-    if (saved.ville) setVille(saved.ville)
-    if (saved.communeSearch) setCommuneSearch(saved.communeSearch)
-    if (saved.selectedCommune) setSelectedCommune(saved.selectedCommune)
-    if (saved.typeBien) setTypeBien(saved.typeBien)
-    if (saved.prixMin) setPrixMin(saved.prixMin)
-    if (saved.prixMax) setPrixMax(saved.prixMax)
-    if (saved.rendMin) setRendMin(saved.rendMin)
-    if (saved.scoreTravauxMin) setScoreTravauxMin(saved.scoreTravauxMin)
-    if (saved.tri) setTri(saved.tri)
-    if (saved.view) setView(saved.view)
-    setSessionRestored(true)
-  }, [])
 
   const syncScroll = useCallback((source: 'table' | 'float') => {
     if (syncing.current) return
@@ -161,7 +143,6 @@ export default function BiensPage() {
 
   // Charger les biens quand la strategie ou les filtres changent
   useEffect(() => {
-    if (!sessionRestored) return
     if (!strategie) { setAllBiens([]); setLoading(false); setTotalBiens(0); setHasMore(false); return }
     setLoading(true)
     setError(null)
@@ -176,7 +157,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [sessionRestored, strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
