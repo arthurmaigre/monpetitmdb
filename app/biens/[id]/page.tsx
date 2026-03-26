@@ -1305,6 +1305,10 @@ export default function FicheBienPage() {
   const [inWatchlist, setInWatchlist] = useState(false)
   const [showDetailTravaux, setShowDetailTravaux] = useState(false)
   // IDR states
+  const [showLotsDetail, setShowLotsDetail] = useState(false)
+  const [showLotsLocatif, setShowLotsLocatif] = useState(false)
+  const [showCoutsCopro, setShowCoutsCopro] = useState(false)
+  const [showReventeLots, setShowReventeLots] = useState(false)
   const [coutCoproParLot, setCoutCoproParLot] = useState(4000)
   const [coutCompteursParLot, setCoutCompteursParLot] = useState(1500)
   const [coutTravauxGlobal, setCoutTravauxGlobal] = useState(0)
@@ -1822,6 +1826,38 @@ export default function FicheBienPage() {
               <span className={`data-value ${!bien.type_chauffage ? 'nc' : ''}`}>{[bien.type_chauffage, bien.mode_chauffage].filter(Boolean).join(' / ') || 'NC'}</span>
             </div>
           </div>
+          {/* IDR : infos agrégées + tableau lots dépliable */}
+          {isIDR && lots.length > 0 && (
+            <>
+              <div className="data-grid" style={{ marginTop: '12px' }}>
+                <div className="data-subtitle">Immeuble</div>
+                <div className="data-item"><span className="data-label">Nb lots</span><span className="data-value">{lotsData?.nb_lots || lots.length}</span></div>
+                <div className="data-item"><span className="data-label">{"Monopropri\u00E9t\u00E9"}</span><span className="data-value" style={{ color: lotsData?.monopropriete ? '#1a7a40' : '#7a6a60' }}>{lotsData?.monopropriete === true ? 'Oui' : lotsData?.monopropriete === false ? 'Non' : 'NC'}</span></div>
+                <div className="data-item"><span className="data-label">Compteurs individuels</span><span className="data-value" style={{ color: lotsData?.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{lotsData?.compteurs_individuels === true ? 'Oui' : lotsData?.compteurs_individuels === false ? 'Non' : 'NC'}</span></div>
+              </div>
+              <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                <button onClick={() => setShowLotsDetail(!showLotsDetail)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  {showLotsDetail ? "Masquer le d\u00E9tail des lots" : "Voir le d\u00E9tail des lots"}
+                </button>
+              </div>
+              {showLotsDetail && (
+                <table className="lots-table" style={{ marginTop: '12px' }}>
+                  <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"\u00C9tage"}</th><th>DPE</th></tr></thead>
+                  <tbody>
+                    {lots.map((lot, i) => (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                        <td>{lot.type || 'NC'}</td>
+                        <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
+                        <td>{lot.etage || 'NC'}</td>
+                        <td>{lot.dpe || 'NC'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
         </div>
 
         {(() => {
@@ -1842,253 +1878,58 @@ export default function FicheBienPage() {
           )
         })()}
 
-        {/* ===== BLOC IDR : Caractéristiques lots + Données locatives + Coûts copro ===== */}
+        {/* IDR : Estimation revente par lot dépliable */}
         {isIDR && lots.length > 0 && (
-          <>
-            {/* Caractéristiques agrégées + tableau lots */}
-            <div className="section">
-              <h2 className="section-title">{"D\u00E9tail de l\u2019immeuble"}</h2>
-              <div className="data-grid">
-                <div className="data-item">
-                  <span className="data-label">Nombre de lots</span>
-                  <span className="data-value">{lotsData?.nb_lots || lots.length}</span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">Surface totale</span>
-                  <span className="data-value">{bien.surface ? `${bien.surface} m\u00B2` : 'NC'}</span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
-                  <span className="data-value" style={{ color: lotsData?.monopropriete ? '#1a7a40' : '#7a6a60' }}>
-                    {lotsData?.monopropriete === true ? 'Oui' : lotsData?.monopropriete === false ? 'Non' : 'NC'}
-                  </span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">Compteurs individuels</span>
-                  <span className="data-value" style={{ color: lotsData?.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>
-                    {lotsData?.compteurs_individuels === true ? 'Oui' : lotsData?.compteurs_individuels === false ? 'Non' : 'NC'}
-                  </span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">DPE</span>
-                  <span className={`data-value ${!bien.dpe ? 'nc' : ''}`}>{bien.dpe || 'NC'}</span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">{"Ann\u00E9e construction"}</span>
-                  <span className={`data-value ${!bien.annee_construction ? 'nc' : ''}`}>{bien.annee_construction || 'NC'}</span>
-                </div>
-              </div>
-
-              {/* Tableau lots — caractéristiques physiques */}
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginTop: '20px', marginBottom: '4px' }}>{"D\u00E9tail par lot"}</h3>
-              <table className="lots-table">
-                <thead>
-                  <tr>
-                    <th>Lot</th>
-                    <th>Type</th>
-                    <th>Surface</th>
-                    <th>{"\u00C9tage"}</th>
-                    <th>DPE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lots.map((lot, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                      <td>{lot.type || 'NC'}</td>
-                      <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
-                      <td>{lot.etage || 'NC'}</td>
-                      <td>{lot.dpe || 'NC'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Données locatives agrégées + par lot */}
-            <div className="section">
-              <h2 className="section-title">{"Donn\u00E9es locatives"}</h2>
-              <div className="data-grid">
-                <div className="data-item">
-                  <span className="data-label">Loyer total mensuel</span>
-                  <span className="data-value">{bien.loyer ? `${bien.loyer.toLocaleString('fr-FR')} \u20AC/mois` : 'NC'}</span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">Loyer annuel</span>
-                  <span className="data-value">{lotsData?.loyer_total_annuel ? `${lotsData.loyer_total_annuel.toLocaleString('fr-FR')} \u20AC` : bien.loyer ? `${(bien.loyer * 12).toLocaleString('fr-FR')} \u20AC` : 'NC'}</span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">{"Taxe fonci\u00E8re"}</span>
-                  <span className={`data-value ${!bien.taxe_fonc_ann ? 'nc' : ''}`}>{bien.taxe_fonc_ann ? `${bien.taxe_fonc_ann.toLocaleString('fr-FR')} \u20AC/an` : 'NC'}</span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">Rendement brut</span>
-                  <span className="data-value" style={{ color: '#c0392b' }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : 'NC'}</span>
-                </div>
-                <div className="data-item">
-                  <span className="data-label">Taux d{"'"}occupation</span>
-                  <span className="data-value" style={{ color: '#1a7a40' }}>
-                    {lots.filter(l => l.etat === 'loue').length}/{lots.length} lots {"lou\u00E9s"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tableau lots — données locatives */}
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginTop: '20px', marginBottom: '4px' }}>{"D\u00E9tail par lot"}</h3>
-              <table className="lots-table">
-                <thead>
-                  <tr>
-                    <th>Lot</th>
-                    <th>Type</th>
-                    <th>Loyer</th>
-                    <th>{"\u00C9tat"}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lots.map((lot, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                      <td>{lot.type || 'NC'}</td>
-                      <td>{lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
-                      <td>
-                        <span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>
-                          {lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Coûts création copropriété */}
-            <div className="section">
-              <h2 className="section-title">{"Co\u00FBts de cr\u00E9ation de copropri\u00E9t\u00E9"}</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div className="idr-param">
-                  <label>{"Cr\u00E9ation copro / lot"}</label>
-                  <input type="number" value={coutCoproParLot} onChange={e => setCoutCoproParLot(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>{'\u20AC'}</span>
-                </div>
-                <div className="idr-param">
-                  <label>Compteurs / lot</label>
-                  <input type="number" value={coutCompteursParLot} onChange={e => setCoutCompteursParLot(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>{'\u20AC'}{lotsData?.compteurs_individuels ? " (d\u00E9j\u00E0 individuels)" : ''}</span>
-                </div>
-                <div className="idr-param">
-                  <label>Travaux global</label>
-                  <input type="number" value={coutTravauxGlobal} onChange={e => setCoutTravauxGlobal(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>{'\u20AC'}</span>
-                </div>
-                <div className="idr-param">
-                  <label>Frais agence revente</label>
-                  <input type="number" step="0.5" value={fraisAgenceRevente} onChange={e => setFraisAgenceRevente(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
-                </div>
-              </div>
-              <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '12px', padding: '16px 20px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                      {"Co\u00FBt total estim\u00E9"}
+          <div style={{ marginTop: '-8px', marginBottom: '16px', textAlign: 'center' }}>
+            <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+              {showReventeLots ? "Masquer la revente par lot" : "Estimer la revente par lot"}
+            </button>
+            {showReventeLots && (
+              <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px', border: '1px solid #f0ede8', textAlign: 'left' }}>
+                <table className="lots-table">
+                  <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"Prix/m\u00B2"}</th><th>{"Prix revente"}</th></tr></thead>
+                  <tbody>
+                    {lots.map((lot, i) => {
+                      const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                      const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
+                      return (
+                        <tr key={i}>
+                          <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                          <td>{lot.type || 'NC'}</td>
+                          <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
+                          <td style={{ color: '#7a6a60' }}>{prixM2DVF ? `${prixM2DVF.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
+                          <td><input type="number" value={(prixReventeLots[i] !== undefined ? prixReventeLots[i] : prixEstime) || ''} onChange={e => setPrixReventeLots(prev => ({ ...prev, [i]: Number(e.target.value) }))} placeholder={prixEstime ? String(prixEstime) : '0'} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '110px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} /></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {/* Mini waterfall */}
+                {(() => {
+                  const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                  const totalRevente = lots.reduce((sum, lot, i) => sum + (prixReventeLots[i] ?? (lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0)), 0)
+                  const prixAchat = bien.prix_fai || 0
+                  const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
+                  const coutCopro = (coutCoproParLot + coutCompteursParLot) * lots.length
+                  const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
+                  const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisAgence
+                  const tvaMarge = Math.round(Math.max(0, margeBrute) * 20 / 120)
+                  const isBase = Math.max(0, margeBrute - tvaMarge)
+                  const isTotal = Math.round(Math.min(isBase, 42500) * 0.15 + Math.max(0, isBase - 42500) * 0.25)
+                  const margeNette = margeBrute - tvaMarge - isTotal
+                  return totalRevente > 0 ? (
+                    <div style={{ marginTop: '16px', borderTop: '1px solid #e8e2d8', paddingTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
+                      <span style={{ color: '#7a6a60' }}>Revente totale</span><span style={{ textAlign: 'right', fontWeight: 600, color: '#1a7a40' }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                      <span style={{ color: '#7a6a60' }}>{"Co\u00FBts totaux"}</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                      <span style={{ color: '#7a6a60' }}>Marge brute</span><span style={{ textAlign: 'right', fontWeight: 700, color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                      <span style={{ color: '#7a6a60' }}>TVA marge + IS</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(tvaMarge + isTotal).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                      <span style={{ fontWeight: 700 }}>Marge nette MdB</span><span style={{ textAlign: 'right', fontWeight: 800, fontSize: '15px', fontFamily: "'Fraunces', serif", color: margeNette >= 0 ? '#1a7a40' : '#c0392b' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</span>
                     </div>
-                    <div style={{ fontSize: '13px', color: '#7a6a60' }}>
-                      {`${coutCoproParLot.toLocaleString('fr-FR')} + ${coutCompteursParLot.toLocaleString('fr-FR')} \u20AC \u00D7 ${lots.length} lots + ${coutTravauxGlobal.toLocaleString('fr-FR')} \u20AC travaux`}
-                    </div>
-                  </div>
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }}>
-                    {((coutCoproParLot + coutCompteursParLot) * lots.length + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
-                  </div>
-                </div>
+                  ) : null
+                })()}
               </div>
-            </div>
-
-            {/* Estimation revente par lot + Waterfall */}
-            <div className="section">
-              <h2 className="section-title">{"Sc\u00E9nario revente \u00E0 la d\u00E9coupe"}</h2>
-              <p style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '16px' }}>
-                {"Estimation du prix de revente lot par lot. Ajustez les prix manuellement si n\u00E9cessaire."}
-              </p>
-
-              {/* Tableau prix par lot */}
-              <table className="lots-table">
-                <thead>
-                  <tr>
-                    <th>Lot</th>
-                    <th>Type</th>
-                    <th>Surface</th>
-                    <th>{"Prix/m\u00B2 estim\u00E9"}</th>
-                    <th>{"Prix revente (\u00E9ditable)"}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lots.map((lot, i) => {
-                    const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
-                    const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
-                    const prixRevente = prixReventeLots[i] ?? prixEstime
-                    return (
-                      <tr key={i}>
-                        <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                        <td>{lot.type || 'NC'}</td>
-                        <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
-                        <td style={{ color: '#7a6a60' }}>{prixM2DVF ? `${prixM2DVF.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
-                        <td>
-                          <input
-                            type="number"
-                            value={prixRevente || ''}
-                            onChange={e => setPrixReventeLots(prev => ({ ...prev, [i]: Number(e.target.value) }))}
-                            placeholder={prixEstime ? prixEstime.toLocaleString('fr-FR') : '0'}
-                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '130px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', textAlign: 'right' }}
-                          />
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-
-              {/* Waterfall */}
-              {(() => {
-                const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
-                const totalRevente = lots.reduce((sum, lot, i) => {
-                  const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
-                  return sum + (prixReventeLots[i] ?? prixEstime)
-                }, 0)
-                const prixAchat = bien.prix_fai || 0
-                const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
-                const coutCopro = (coutCoproParLot + coutCompteursParLot) * lots.length
-                const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
-                const totalCouts = prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence
-                const margeBrute = totalRevente - totalCouts
-                const tvaMarge = Math.round(margeBrute * 20 / 120)
-                const isBase = margeBrute - tvaMarge
-                const is15 = Math.min(isBase, 42500) * 0.15
-                const is25 = Math.max(0, isBase - 42500) * 0.25
-                const isTotal = Math.round(is15 + is25)
-                const margeNette = margeBrute - tvaMarge - isTotal
-
-                return totalRevente > 0 ? (
-                  <div style={{ marginTop: '20px' }}>
-                    <table className="results-table">
-                      <thead>
-                        <tr><th></th><th>Montant</th></tr>
-                      </thead>
-                      <tbody>
-                        <tr><td>Prix revente total ({lots.length} lots)</td><td style={{ color: '#1a7a40', fontWeight: 700 }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr><td>{"Prix d\u2019achat"}</td><td style={{ color: '#c0392b' }}>-{prixAchat.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr><td>Frais notaire achat ({fraisNotaire}%)</td><td style={{ color: '#c0392b' }}>-{fraisNotaireAchat.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr><td>{"Cr\u00E9ation copropri\u00E9t\u00E9 + compteurs"}</td><td style={{ color: '#c0392b' }}>-{coutCopro.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        {coutTravauxGlobal > 0 && <tr><td>Travaux</td><td style={{ color: '#c0392b' }}>-{coutTravauxGlobal.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>}
-                        <tr><td>Frais agence revente ({fraisAgenceRevente}%)</td><td style={{ color: '#c0392b' }}>-{fraisAgence.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr className="results-total"><td>Marge brute</td><td style={{ color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr style={{ height: '8px' }}><td colSpan={2}></td></tr>
-                        <tr><td>TVA sur marge (20/120)</td><td style={{ color: '#c0392b' }}>-{tvaMarge.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr><td>IS (15% / 25%)</td><td style={{ color: '#c0392b' }}>-{isTotal.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr className="results-total"><td>Marge nette MdB</td><td style={{ color: margeNette >= 0 ? '#1a7a40' : '#c0392b', fontFamily: "'Fraunces', serif", fontSize: '18px' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
-                        <tr><td>Rendement {"op\u00E9ration"}</td><td style={{ fontWeight: 700 }}>{prixAchat > 0 ? (margeNette / prixAchat * 100).toFixed(1) : '0'} %</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null
-              })()}
-            </div>
-          </>
+            )}
+          </div>
         )}
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
@@ -2178,6 +2019,48 @@ export default function FicheBienPage() {
               <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"Validé par 2+ utilisateurs — clic droit pour modifier"}</div>
             </div>
             {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
+            {/* IDR : taux occupation + loyers par lot dépliable */}
+            {isIDR && lots.length > 0 && (
+              <>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '13px', color: '#1a7a40', fontWeight: 600 }}>{lots.filter(l => l.etat === 'loue').length}/{lots.length} lots {"lou\u00E9s"}</span>
+                  {lotsData?.loyer_total_annuel && <span style={{ fontSize: '13px', color: '#7a6a60' }}>Loyer annuel : {lotsData.loyer_total_annuel.toLocaleString('fr-FR')} {'\u20AC'}</span>}
+                </div>
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                  <button onClick={() => setShowLotsLocatif(!showLotsLocatif)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                    {showLotsLocatif ? "Masquer" : "D\u00E9tail loyers par lot"}
+                  </button>
+                  <button onClick={() => setShowCoutsCopro(!showCoutsCopro)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#a06010', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginLeft: '8px' }}>
+                    {showCoutsCopro ? "Masquer" : "Co\u00FBts copropri\u00E9t\u00E9"}
+                  </button>
+                </div>
+                {showLotsLocatif && (
+                  <table className="lots-table" style={{ marginTop: '12px' }}>
+                    <thead><tr><th>Lot</th><th>Type</th><th>Loyer</th><th>{"\u00C9tat"}</th></tr></thead>
+                    <tbody>
+                      {lots.map((lot, i) => (
+                        <tr key={i}>
+                          <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                          <td>{lot.type || 'NC'}</td>
+                          <td>{lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
+                          <td><span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {showCoutsCopro && (
+                  <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
+                    <div className="idr-param"><label>{"Cr\u00E9ation copro / lot"}</label><input type="number" value={coutCoproParLot} onChange={e => setCoutCoproParLot(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}</span></div>
+                    <div className="idr-param"><label>Compteurs / lot</label><input type="number" value={coutCompteursParLot} onChange={e => setCoutCompteursParLot(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}{lotsData?.compteurs_individuels ? " (d\u00E9j\u00E0 ind.)" : ''}</span></div>
+                    <div className="idr-param"><label>Travaux global</label><input type="number" value={coutTravauxGlobal} onChange={e => setCoutTravauxGlobal(Number(e.target.value))} /><span style={{ fontSize: '12px', color: '#7a6a60' }}> {'\u20AC'}</span></div>
+                    <div style={{ marginTop: '8px', fontSize: '13px', fontWeight: 700, color: '#a06010' }}>
+                      Total : {((coutCoproParLot + coutCompteursParLot) * lots.length + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
