@@ -54,12 +54,12 @@ export default function AdminUsersPage() {
       <style>{`
         .admin-wrap { max-width: 1200px; margin: 48px auto; padding: 0 48px; }
         .admin-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; margin-bottom: 24px; }
-        .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #9a8a80; text-decoration: none; }
+        .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .table-wrap { background: #fff; border-radius: 16px; overflow: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         thead tr { background: #f7f4f0; border-bottom: 2px solid #ede8e0; }
-        th { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+        th { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
         tbody tr { border-bottom: 1px solid #f0ede8; transition: background 0.1s; }
         tbody tr:last-child { border-bottom: none; }
         tbody tr:hover { background: #faf8f5; }
@@ -73,7 +73,7 @@ export default function AdminUsersPage() {
         <h1 className="admin-title">Gestion des utilisateurs</h1>
 
         {loading ? (
-          <p style={{ color: '#9a8a80', padding: '40px', textAlign: 'center' }}>Chargement...</p>
+          <p style={{ color: '#7a6a60', padding: '40px', textAlign: 'center' }}>Chargement...</p>
         ) : (
           <div className="table-wrap">
             <table>
@@ -95,7 +95,7 @@ export default function AdminUsersPage() {
                     <td><select className="td-select" value={u.role || 'user'} onChange={e => updateUser(u.id, 'role', e.target.value)}>{ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}</select></td>
                     <td>{u.tmi} %</td>
                     <td>{u.regime}</td>
-                    <td style={{ color: '#9a8a80', fontSize: '12px' }}>{new Date(u.created_at).toLocaleDateString('fr-FR')}</td>
+                    <td style={{ color: '#7a6a60', fontSize: '12px' }}>{new Date(u.created_at).toLocaleDateString('fr-FR')}</td>
                   </tr>
                 ))}
               </tbody>

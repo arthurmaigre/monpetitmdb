@@ -28,16 +28,16 @@ export default function AdminPage() {
       <style>{`
         .admin-wrap { max-width: 1200px; margin: 48px auto; padding: 0 48px; }
         .admin-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; }
-        .admin-sub { font-size: 14px; color: #9a8a80; margin-bottom: 40px; }
+        .admin-sub { font-size: 14px; color: #7a6a60; margin-bottom: 40px; }
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
         .stat-card { background: #fff; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-        .stat-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-label { font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
         .stat-value { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 800; color: #1a1210; }
         .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .nav-card { background: #fff; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); text-decoration: none; color: #1a1210; transition: transform 0.15s, box-shadow 0.15s; display: block; }
         .nav-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
         .nav-card-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-        .nav-card-sub { font-size: 13px; color: #9a8a80; }
+        .nav-card-sub { font-size: 13px; color: #7a6a60; }
       `}</style>
 
       <div className="admin-wrap">

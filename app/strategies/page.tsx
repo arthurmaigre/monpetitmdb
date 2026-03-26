@@ -33,18 +33,18 @@ export default function StrategiesPage() {
         .strat-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #c0392b; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         .strat-eyebrow::before { content: ''; width: 24px; height: 2px; background: #c0392b; }
         .strat-intro h1 { font-family: 'Fraunces', serif; font-size: 52px; font-weight: 800; line-height: 1.08; letter-spacing: -0.03em; color: #1a1210; }
-        .strat-intro-right p { font-size: 17px; color: #9a8a80; line-height: 1.75; margin-bottom: 28px; }
+        .strat-intro-right p { font-size: 17px; color: #7a6a60; line-height: 1.75; margin-bottom: 28px; }
         .strat-intro-right p strong { color: #1a1210; font-weight: 600; }
         .intro-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .intro-stat { background: #fff; border: 1px solid #e8e2d8; border-radius: 12px; padding: 16px 20px; }
         .intro-stat-n { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; color: #1a1210; }
         .intro-stat-n span { color: #c0392b; }
-        .intro-stat-l { font-size: 12px; color: #9a8a80; margin-top: 2px; }
+        .intro-stat-l { font-size: 12px; color: #7a6a60; margin-top: 2px; }
 
         /* NAV */
         .strat-nav { border-top: 1px solid #e8e2d8; border-bottom: 1px solid #e8e2d8; background: #fff; position: sticky; top: 64px; z-index: 90; }
         .strat-nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 64px; display: flex; gap: 0; }
-        .strat-nav-btn { padding: 16px 24px; font-size: 14px; font-weight: 500; color: #9a8a80; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 150ms ease; margin-bottom: -1px; white-space: nowrap; }
+        .strat-nav-btn { padding: 16px 24px; font-size: 14px; font-weight: 500; color: #7a6a60; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 150ms ease; margin-bottom: -1px; white-space: nowrap; }
         .strat-nav-btn:hover { color: #1a1210; }
         .strat-nav-btn.active { color: #1a1210; font-weight: 600; border-bottom-color: #c0392b; }
 
@@ -55,8 +55,8 @@ export default function StrategiesPage() {
 
         .strategy-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px; gap: 20px; flex-wrap: wrap; }
         .strategy-title { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 800; letter-spacing: -0.02em; color: #1a1210; margin-bottom: 4px; }
-        .strategy-subtitle { font-size: 15px; color: #9a8a80; }
-        .strategy-badge { padding: 6px 16px; border-radius: 100px; font-size: 12px; font-weight: 600; white-space: nowrap; background: #f0ede8; color: #9a8a80; border: 1px solid #e8e2d8; }
+        .strategy-subtitle { font-size: 15px; color: #7a6a60; }
+        .strategy-badge { padding: 6px 16px; border-radius: 100px; font-size: 12px; font-weight: 600; white-space: nowrap; background: #f0ede8; color: #7a6a60; border: 1px solid #e8e2d8; }
 
         .strategy-body { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
 
@@ -66,11 +66,11 @@ export default function StrategiesPage() {
         /* METRICS */
         .metrics-row { display: flex; gap: 16px; margin-bottom: 32px; }
         .metric { background: #fff; border: 1px solid #e8e2d8; border-radius: 12px; padding: 16px 20px; flex: 1; }
-        .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #9a8a80; margin-bottom: 8px; }
+        .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #7a6a60; margin-bottom: 8px; }
         .metric-value { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 800; color: #1a1210; }
         .metric-value.positive { color: #1a7a40; }
         .metric-value.accent { color: #c0392b; }
-        .metric-sub { font-size: 11px; color: #9a8a80; margin-top: 2px; }
+        .metric-sub { font-size: 11px; color: #7a6a60; margin-top: 2px; }
 
         /* PROS/CONS */
         .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
@@ -100,11 +100,11 @@ export default function StrategiesPage() {
         /* FISCAL */
         .fiscal-block { background: #fff; border: 1px solid #e8e2d8; border-radius: 14px; padding: 28px; }
         .fiscal-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-        .fiscal-sub { font-size: 13px; color: #9a8a80; margin-bottom: 20px; }
+        .fiscal-sub { font-size: 13px; color: #7a6a60; margin-bottom: 20px; }
         .fiscal-regimes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
         .fiscal-regime { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1.5px solid #e8e2d8; background: #f7f4f0; color: #4a3f3b; }
         .fiscal-regime.highlight { background: #1a1210; color: #fff; border-color: #1a1210; }
-        .fiscal-note { font-size: 13px; color: #9a8a80; line-height: 1.65; padding-top: 16px; border-top: 1px solid #f0ede8; }
+        .fiscal-note { font-size: 13px; color: #7a6a60; line-height: 1.65; padding-top: 16px; border-top: 1px solid #f0ede8; }
         .fiscal-note strong { color: #1a1210; }
 
         /* CHECKLIST */
@@ -113,7 +113,7 @@ export default function StrategiesPage() {
         .checklist ul { list-style: none; }
         .checklist li { display: flex; gap: 12px; font-size: 13px; color: #4a3f3b; padding: 9px 0; border-bottom: 1px solid #f0ede8; line-height: 1.5; }
         .checklist li:last-child { border-bottom: none; }
-        .check-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; font-weight: 700; background: #f0ede8; color: #9a8a80; }
+        .check-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; font-weight: 700; background: #f0ede8; color: #7a6a60; }
         .checklist li strong { color: #1a1210; }
 
         /* CTA */

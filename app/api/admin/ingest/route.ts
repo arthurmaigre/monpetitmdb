@@ -67,6 +67,16 @@ async function checkAdminOrCron(req: NextRequest): Promise<boolean> {
 // Map Moteur Immo ad → bien row
 // ──────────────────────────────────────────────────────────────────────────────
 
+function mapTypeBien(category?: string): string | null {
+  if (!category) return null
+  const mapping: Record<string, string> = {
+    house: 'Maison', flat: 'Appartement', block: 'Immeuble',
+    land: 'Terrain', 'parking/garage/box': 'Parking',
+    office: 'Bureau', premises: 'Local', shop: 'Commerce', misc: 'Autre',
+  }
+  return mapping[category] || null
+}
+
 interface MoteurImmoAd {
   uniqueId?: string
   url?: string
@@ -75,11 +85,17 @@ interface MoteurImmoAd {
   title?: string
   description?: string
   publisher?: unknown
+  category?: string
   price?: number
   surface?: number
   rooms?: number
+  bedrooms?: number
   floor?: number
   energyGrade?: string
+  energyValue?: number
+  gasGrade?: string
+  constructionYear?: number
+  pricePerSquareMeter?: number
   rent?: number
   propertyCharges?: number
   propertyTax?: number
@@ -130,12 +146,17 @@ function mapAdToBien(ad: MoteurImmoAd, strategie: string, metropoleMap: Map<stri
     url: ad.url,
     strategie_mdb: strategie,
     statut: 'Toujours disponible',
+    type_bien: mapTypeBien(ad.category),
     prix_fai,
     surface,
     prix_m2: prix_fai && surface ? Math.round((prix_fai / surface) * 100) / 100 : null,
     nb_pieces: ad.rooms ? `T${ad.rooms}` : null,
+    nb_chambres: ad.bedrooms || null,
     etage: ad.floor !== undefined && ad.floor !== null ? (ad.floor === 0 ? 'RDC' : String(ad.floor)) : null,
+    annee_construction: ad.constructionYear || null,
     dpe: ad.energyGrade || null,
+    dpe_valeur: ad.energyValue || null,
+    ges: ad.gasGrade || null,
     loyer,
     charges_copro: ad.propertyCharges || null,
     taxe_fonc_ann: ad.propertyTax || null,

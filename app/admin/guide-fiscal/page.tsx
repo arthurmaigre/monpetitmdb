@@ -17,7 +17,7 @@ export default function GuideFiscalPage() {
           display: inline-block;
           margin-bottom: 24px;
           font-size: 13px;
-          color: #9a8a80;
+          color: #7a6a60;
           text-decoration: none;
         }
         .gf-back:hover { color: #1a1210; }
@@ -30,7 +30,7 @@ export default function GuideFiscalPage() {
         }
         .gf-page-subtitle {
           font-size: 15px;
-          color: #9a8a80;
+          color: #7a6a60;
           margin-bottom: 48px;
           line-height: 1.5;
         }
@@ -43,7 +43,7 @@ export default function GuideFiscalPage() {
           display: inline-block;
           font-size: 11px;
           font-weight: 700;
-          color: #9a8a80;
+          color: #7a6a60;
           text-transform: uppercase;
           letter-spacing: 0.1em;
           margin-bottom: 8px;

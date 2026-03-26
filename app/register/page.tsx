@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
@@ -11,6 +11,22 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [showPwd, setShowPwd] = useState(false)
+  const emailRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { emailRef.current?.focus() }, [])
+
+  function getPasswordStrength(pwd: string): { label: string; color: string; width: string } {
+    if (pwd.length === 0) return { label: '', color: '#e8e2d8', width: '0%' }
+    if (pwd.length < 8) return { label: 'Trop court', color: '#e74c3c', width: '25%' }
+    const hasUpper = /[A-Z]/.test(pwd)
+    const hasNumber = /[0-9]/.test(pwd)
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd)
+    const score = [hasUpper, hasNumber, hasSpecial, pwd.length >= 12].filter(Boolean).length
+    if (score <= 1) return { label: 'Faible', color: '#f39c12', width: '50%' }
+    if (score <= 2) return { label: 'Moyen', color: '#f39c12', width: '70%' }
+    return { label: 'Fort', color: '#27ae60', width: '100%' }
+  }
 
   async function handleOAuth(provider: 'google' | 'facebook') {
     setLoading(true)
@@ -62,9 +78,9 @@ export default function RegisterPage() {
         .auth-wrap { min-height: 70vh; display: flex; align-items: center; justify-content: center; }
         .auth-box { background: #fff; border-radius: 20px; padding: 48px; width: 100%; max-width: 440px; box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
         .auth-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
-        .auth-sub { font-size: 14px; color: #9a8a80; margin-bottom: 32px; }
+        .auth-sub { font-size: 14px; color: #7a6a60; margin-bottom: 32px; }
         .auth-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-        .auth-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.06em; text-transform: uppercase; }
+        .auth-label { font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.06em; text-transform: uppercase; }
         .auth-input {
           padding: 12px 16px; border-radius: 10px; border: 1.5px solid #e8e2d8;
           font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1210;
@@ -81,11 +97,11 @@ export default function RegisterPage() {
         .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .auth-error { background: #fde8e8; color: #a33; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
         .auth-success { background: #d4f5e0; color: #1a7a40; border-radius: 8px; padding: 16px; font-size: 14px; text-align: center; }
-        .auth-footer { text-align: center; margin-top: 24px; font-size: 13px; color: #9a8a80; }
+        .auth-footer { text-align: center; margin-top: 24px; font-size: 13px; color: #7a6a60; }
         .auth-footer a { color: #c0392b; font-weight: 600; text-decoration: none; }
         .auth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; }
         .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: #e8e2d8; }
-        .auth-divider span { font-size: 12px; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; }
+        .auth-divider span { font-size: 12px; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .oauth-btn {
           width: 100%; padding: 12px 16px; border-radius: 10px; border: 1.5px solid #e8e2d8;
           background: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
@@ -95,6 +111,13 @@ export default function RegisterPage() {
         .oauth-btn:hover { background: #faf8f5; border-color: #c0392b; }
         .oauth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .oauth-btn svg { width: 20px; height: 20px; flex-shrink: 0; position: absolute; left: 16px; }
+        .pwd-wrap { position: relative; }
+        .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #7a6a60; padding: 4px; display: flex; align-items: center; }
+        .pwd-toggle:hover { color: #1a1210; }
+        .pwd-strength { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+        .pwd-bar { flex: 1; height: 4px; background: #e8e2d8; border-radius: 2px; overflow: hidden; }
+        .pwd-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease, background 0.3s ease; }
+        .pwd-label { font-size: 11px; font-weight: 600; min-width: 60px; }
       `}</style>
 
       <div className="auth-wrap">
@@ -103,8 +126,13 @@ export default function RegisterPage() {
           <p className="auth-sub">Rejoignez Mon Petit MDB gratuitement</p>
 
           {success ? (
-            <div className="auth-success">
-              ✅ Compte créé ! Vérifiez votre email pour confirmer votre inscription.
+            <div className="auth-success" style={{ textAlign: 'left', padding: '24px' }}>
+              <div style={{ fontSize: '20px', marginBottom: '8px' }}>{'\u2705'}</div>
+              <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '8px', color: '#1a7a40' }}>{"Compte cr\u00E9\u00E9 avec succ\u00E8s !"}</div>
+              <p style={{ marginBottom: '16px' }}>{"V\u00E9rifiez votre bo\u00EEte email et cliquez sur le lien de confirmation pour activer votre compte."}</p>
+              <div style={{ fontSize: '13px', color: '#1a7a40', opacity: 0.8 }}>
+                {"Prochaines \u00E9tapes : explorez les biens, ajoutez vos favoris en watchlist, et configurez vos param\u00E8tres fiscaux."}
+              </div>
             </div>
           ) : (
             <>
@@ -126,42 +154,77 @@ export default function RegisterPage() {
                 <div className="auth-field">
                   <label className="auth-label">Email</label>
                   <input
+                    ref={emailRef}
                     className="auth-input"
                     type="email"
                     placeholder="vous@email.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                   />
+                  {email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
+                    <span style={{ fontSize: '11px', color: '#e74c3c' }}>Format email invalide</span>
+                  )}
                 </div>
 
                 <div className="auth-field">
                   <label className="auth-label">Mot de passe</label>
-                  <input
-                    className="auth-input"
-                    type="password"
-                    placeholder="8 caractères minimum"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="pwd-wrap">
+                    <input
+                      className="auth-input"
+                      type={showPwd ? 'text' : 'password'}
+                      placeholder={"8 caract\u00E8res minimum"}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      autoComplete="new-password"
+                      style={{ width: '100%', paddingRight: '40px' }}
+                    />
+                    <button type="button" className="pwd-toggle" onClick={() => setShowPwd(!showPwd)} aria-label={showPwd ? 'Masquer' : 'Afficher'}>
+                      {showPwd ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      )}
+                    </button>
+                  </div>
+                  {password && (() => {
+                    const s = getPasswordStrength(password)
+                    return (
+                      <div className="pwd-strength">
+                        <div className="pwd-bar"><div className="pwd-bar-fill" style={{ width: s.width, background: s.color }} /></div>
+                        <span className="pwd-label" style={{ color: s.color }}>{s.label}</span>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 <div className="auth-field">
                   <label className="auth-label">Confirmer le mot de passe</label>
                   <input
                     className="auth-input"
-                    type="password"
-                    placeholder="••••••••"
+                    type={showPwd ? 'text' : 'password'}
+                    placeholder={"••••••••"}
                     value={confirm}
                     onChange={e => setConfirm(e.target.value)}
                     required
+                    autoComplete="new-password"
                   />
+                  {confirm && password !== confirm && (
+                    <span style={{ fontSize: '11px', color: '#e74c3c' }}>Les mots de passe ne correspondent pas</span>
+                  )}
                 </div>
 
                 <button className="auth-btn" type="submit" disabled={loading}>
-                  {loading ? 'Création...' : 'Créer mon compte →'}
+                  {loading ? "Cr\u00E9ation..." : "Cr\u00E9er mon compte \u2192"}
                 </button>
+                <p style={{ fontSize: '11px', color: '#7a6a60', marginTop: '12px', lineHeight: 1.5, textAlign: 'center' }}>
+                  {"En cr\u00E9ant un compte, vous acceptez nos "}
+                  <a href="/cgu" style={{ color: '#c0392b', textDecoration: 'underline' }}>CGU</a>
+                  {" et notre "}
+                  <a href="/privacy" style={{ color: '#c0392b', textDecoration: 'underline' }}>{"politique de confidentialit\u00E9"}</a>.
+                </p>
               </form>
 
               <div className="auth-footer">

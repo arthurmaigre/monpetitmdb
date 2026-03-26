@@ -20,7 +20,7 @@ export default function NotFound() {
           Page introuvable
         </h1>
         <p style={{
-          fontSize: '15px', color: '#9a8a80', lineHeight: 1.6,
+          fontSize: '15px', color: '#7a6a60', lineHeight: 1.6,
           marginBottom: '32px',
         }}>
           La page que vous cherchez n'existe pas ou a été déplacée.

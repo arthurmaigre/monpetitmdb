@@ -514,13 +514,13 @@ export default function AdminSourcingPage() {
     regex: '#f0a830',
     extraction: '#1a7a40',
     score_travaux: '#a06010',
-    statut: '#9a8a80',
+    statut: '#7a6a60',
   }
 
   if (loading) {
     return (
       <Layout>
-        <div style={{ textAlign: 'center', padding: 80, color: '#9a8a80' }}>Chargement...</div>
+        <div style={{ textAlign: 'center', padding: 80, color: '#7a6a60' }}>Chargement...</div>
       </Layout>
     )
   }
@@ -549,10 +549,10 @@ export default function AdminSourcingPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
         .src-wrap { max-width: 1200px; margin: 48px auto; padding: 0 48px; font-family: 'DM Sans', sans-serif; }
-        .src-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; font-size: 13px; color: #9a8a80; text-decoration: none; transition: color 0.15s; }
+        .src-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; transition: color 0.15s; }
         .src-back:hover { color: #1a1210; }
         .src-title { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 800; color: #1a1210; margin-bottom: 8px; }
-        .src-subtitle { font-size: 14px; color: #9a8a80; margin-bottom: 32px; }
+        .src-subtitle { font-size: 14px; color: #7a6a60; margin-bottom: 32px; }
 
         .src-section {
           background: #fff; border-radius: 16px; padding: 28px 32px;
@@ -580,7 +580,7 @@ export default function AdminSourcingPage() {
         .stat-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
         .stat-value { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; color: #1a1210; }
         .stat-label {
-          font-size: 11px; color: #9a8a80; margin-top: 4px; font-weight: 600;
+          font-size: 11px; color: #7a6a60; margin-top: 4px; font-weight: 600;
           text-transform: uppercase; letter-spacing: 0.06em;
         }
 
@@ -595,7 +595,7 @@ export default function AdminSourcingPage() {
         }
         .quality-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .quality-value { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; }
-        .quality-label { font-size: 10px; color: #9a8a80; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
+        .quality-label { font-size: 10px; color: #7a6a60; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
 
         .divider { height: 1px; background: #e8e2d8; margin: 20px 0; }
 
@@ -623,7 +623,7 @@ export default function AdminSourcingPage() {
         .src-btn-stop:hover { opacity: 0.85; }
 
         .src-stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-        .src-muted { font-size: 12px; color: #9a8a80; }
+        .src-muted { font-size: 12px; color: #7a6a60; }
         .src-toggle { position: relative; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: #1a1210; }
         .src-toggle input { display: none; }
         .src-toggle-track { width: 40px; height: 22px; border-radius: 11px; background: #e8e2d8; transition: background 0.2s; position: relative; }
@@ -672,9 +672,9 @@ export default function AdminSourcingPage() {
 
           {/* Top stat cards with colored left borders */}
           <div className="stat-grid">
-            <div className="stat-card" style={{ borderLeftColor: '#9a8a80' }}>
+            <div className="stat-card" style={{ borderLeftColor: '#7a6a60' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="4" height="8" rx="1" fill="#9a8a80"/><rect x="8" y="6" width="4" height="12" rx="1" fill="#9a8a80"/><rect x="14" y="2" width="4" height="16" rx="1" fill="#9a8a80"/></svg>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="4" height="8" rx="1" fill="#7a6a60"/><rect x="8" y="6" width="4" height="12" rx="1" fill="#7a6a60"/><rect x="14" y="2" width="4" height="16" rx="1" fill="#7a6a60"/></svg>
                 <span className="stat-label" style={{ margin: 0 }}>Total biens</span>
               </div>
               <div className="stat-value">{fmt(stats.total)}</div>
@@ -705,7 +705,7 @@ export default function AdminSourcingPage() {
           <div className="divider" />
 
           {/* Strategy horizontal bar chart */}
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>R{'\u00e9'}partition par strat{'\u00e9'}gie</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>R{'\u00e9'}partition par strat{'\u00e9'}gie</div>
           <div className="strat-bar">
             {stratValues.map(s => (
               <div key={s.label} className="strat-bar-segment" style={{ width: `${(s.value / stratTotal) * 100}%`, background: s.color }}>
@@ -718,7 +718,7 @@ export default function AdminSourcingPage() {
               <div key={s.label} className="strat-legend-item">
                 <span className="strat-legend-dot" style={{ background: s.color }} />
                 <span style={{ fontWeight: 600 }}>{fmt(s.value)}</span>
-                <span style={{ color: '#9a8a80' }}>{s.label}</span>
+                <span style={{ color: '#7a6a60' }}>{s.label}</span>
               </div>
             ))}
           </div>
@@ -726,7 +726,7 @@ export default function AdminSourcingPage() {
           <div className="divider" />
 
           {/* Pipeline progress */}
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Pipeline de traitement</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Pipeline de traitement</div>
           <div className="stat-grid">
             {[
               { label: 'Regex', done: stats.regex_done || 0, pending: stats.regex_pending || 0, color: '#f0a830' },
@@ -749,7 +749,7 @@ export default function AdminSourcingPage() {
 
           {/* Quality — Locataire en place */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {"Qualit\u00e9 donn\u00e9es — Locataire en place"}
             </span>
             {stats.loc_completude != null && (
@@ -761,8 +761,8 @@ export default function AdminSourcingPage() {
               { label: 'Sans loyer', value: stats.loc_sans_loyer, color: '#c0392b' },
               { label: 'Sans charges copro', value: stats.loc_sans_charges, color: '#f0a830' },
               { label: 'Sans taxe fonc.', value: stats.loc_sans_taxe, color: '#f0a830' },
-              { label: 'Sans profil', value: stats.loc_sans_profil, color: '#9a8a80' },
-              { label: 'Sans fin bail', value: stats.loc_sans_bail, color: '#9a8a80' },
+              { label: 'Sans profil', value: stats.loc_sans_profil, color: '#7a6a60' },
+              { label: 'Sans fin bail', value: stats.loc_sans_bail, color: '#7a6a60' },
             ].map(s => (
               <div key={s.label} className="quality-item">
                 <div className="quality-value" style={{ color: s.color }}>{fmt(s.value)}</div>
@@ -775,7 +775,7 @@ export default function AdminSourcingPage() {
 
           {/* Quality — Travaux lourds */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {"Qualit\u00e9 donn\u00e9es — Travaux lourds"}
             </span>
             {stats.trav_completude != null && (
@@ -798,7 +798,7 @@ export default function AdminSourcingPage() {
           <div className="divider" />
 
           {/* General data quality */}
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>{"Donn\u00e9es g\u00e9n\u00e9rales (biens disponibles)"}</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>{"Donn\u00e9es g\u00e9n\u00e9rales (biens disponibles)"}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             {[
               { label: 'Sans prix', value: stats.sans_prix, color: '#c0392b' },
@@ -852,11 +852,11 @@ export default function AdminSourcingPage() {
             <select className="src-select" value={ingestStrategy} onChange={e => setIngestStrategy(e.target.value)} disabled={ingestRunning}>
               {STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
-            <label style={{ fontSize: 13, color: '#9a8a80', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 13, color: '#7a6a60', display: 'flex', alignItems: 'center', gap: 6 }}>
               Depuis
               <input type="date" className="src-input" value={ingestSince} onChange={e => setIngestSince(e.target.value)} disabled={ingestRunning} />
             </label>
-            <label style={{ fontSize: 13, color: '#9a8a80', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 13, color: '#7a6a60', display: 'flex', alignItems: 'center', gap: 6 }}>
               {"Jusqu'\u00e0"}
               <input type="date" className="src-input" value={ingestUntil} onChange={e => setIngestUntil(e.target.value)} disabled={ingestRunning} />
             </label>
@@ -878,7 +878,7 @@ export default function AdminSourcingPage() {
                 {ingestStats.total > 0 && <ProgressBar value={ingestStats.processed} max={ingestStats.total} />}
                 <div className="src-stats-row">
                   <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(ingestStats.new)}</strong> nouveaux</Pill>
-                  <Pill color="#9a8a80" bg="#f0ede8"><strong>{fmt(ingestStats.updated)}</strong> {"d\u00E9j\u00E0 en base"}</Pill>
+                  <Pill color="#7a6a60" bg="#f0ede8"><strong>{fmt(ingestStats.updated)}</strong> {"d\u00E9j\u00E0 en base"}</Pill>
                   {ingestStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(ingestStats.errors)}</strong> erreurs</Pill>}
                 </div>
               </div>
@@ -888,36 +888,36 @@ export default function AdminSourcingPage() {
             {ingestHistory.length > 0 && (
               <div style={{ flex: '1 1 100%', background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '12px 16px', fontSize: 11 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>Historique des ingestions manuelles</span>
+                  <span style={{ fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>Historique des ingestions manuelles</span>
                   <button onClick={() => { setIngestHistory([]); try { localStorage.removeItem('mdb_ingest_history') } catch {} }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#c0b8ae' }}>Effacer</button>
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1.5px solid #ede8e0' }}>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Fin</th>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Strat\u00E9gies"}</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Appels</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Re\u00E7us"}</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Nouv.</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9dup."}</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Err.</th>
-                      <th style={{ textAlign: 'center', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Statut</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Fin</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
+                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"Strat\u00E9gies"}</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Appels</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"Re\u00E7us"}</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Nouv.</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"D\u00E9dup."}</th>
+                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Err.</th>
+                      <th style={{ textAlign: 'center', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Statut</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ingestHistory.map((h, i) => (
                       <tr key={i} style={{ borderBottom: i < ingestHistory.length - 1 ? '1px solid #f0ede8' : 'none' }}>
-                        <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.startDate}</td>
-                        <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.endDate}</td>
+                        <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.startDate}</td>
+                        <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.endDate}</td>
                         <td style={{ padding: '5px 6px', color: '#1a1210', fontSize: 10 }}>{h.dateRange}</td>
                         <td style={{ padding: '5px 6px', fontWeight: 600, color: '#1a1210', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.strategies}</td>
                         <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a' }}>{h.calls}</td>
                         <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a' }}>{fmt(h.totalApi)}</td>
                         <td style={{ padding: '5px 6px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{h.totalNew > 0 ? `+${fmt(h.totalNew)}` : '0'}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#9a8a80' }}>{fmt(h.totalUpdated)}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'right', color: h.totalErrors > 0 ? '#c0392b' : '#9a8a80', fontWeight: h.totalErrors > 0 ? 700 : 400 }}>{h.totalErrors}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#7a6a60' }}>{fmt(h.totalUpdated)}</td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: h.totalErrors > 0 ? '#c0392b' : '#7a6a60', fontWeight: h.totalErrors > 0 ? 700 : 400 }}>{h.totalErrors}</td>
                         <td style={{ padding: '5px 6px', textAlign: 'center' }}>
                           {h.status === 'ok' && <span style={{ color: '#1a7a40', fontWeight: 700, background: '#d4f5e0', padding: '2px 8px', borderRadius: 6 }}>{'\u2713'} Termin{'\u00E9'}</span>}
                           {h.status === 'erreur' && <span style={{ color: '#c0392b', fontWeight: 700, background: '#fde0dc', padding: '2px 8px', borderRadius: 6 }}>{'\u2717'} Erreurs</span>}
@@ -933,9 +933,9 @@ export default function AdminSourcingPage() {
         </div>
 
         {/* ===== Statut Annonces ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#9a8a80' }}>
+        <div className="src-section" style={{ borderLeftColor: '#7a6a60' }}>
           <div className="src-section-header">
-            <StepNumber num={2} color="#9a8a80" />
+            <StepNumber num={2} color="#7a6a60" />
             <div className="src-section-title">{"V\u00E9rification statut annonces"}</div>
           </div>
           <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -957,11 +957,11 @@ export default function AdminSourcingPage() {
             </div>
             <div style={{ background: '#f0ede8', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
               <span style={{ fontWeight: 700, color: '#1a1210', fontSize: 16 }}>{fmt(stats.expiree)}</span>
-              <span style={{ color: '#9a8a80', marginLeft: 6 }}>{"expir\u00E9s total"}</span>
+              <span style={{ color: '#7a6a60', marginLeft: 6 }}>{"expir\u00E9s total"}</span>
             </div>
           </div>
           <div className="src-row">
-            <label style={{ fontSize: 13, color: '#9a8a80', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 13, color: '#7a6a60', display: 'flex', alignItems: 'center', gap: 6 }}>
               Depuis
               <input type="date" className="src-input" value={statutSince} onChange={e => setStatutSince(e.target.value)} disabled={statutRunning} />
             </label>
@@ -981,30 +981,30 @@ export default function AdminSourcingPage() {
           {statutHistory.length > 0 && (
             <div style={{ marginTop: 12, background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '12px 16px', fontSize: 11 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>{"Historique des v\u00E9rifications"}</span>
+                <span style={{ fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>{"Historique des v\u00E9rifications"}</span>
                 <button onClick={() => { setStatutHistory([]); try { localStorage.removeItem('mdb_statut_history') } catch {} }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#c0b8ae' }}>Effacer</button>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1.5px solid #ede8e0' }}>
-                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
-                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Fin</th>
-                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
-                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"V\u00E9rifi\u00E9s"}</th>
-                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>{"Expir\u00E9s"}</th>
-                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Err.</th>
-                    <th style={{ textAlign: 'center', padding: '4px 6px', color: '#9a8a80', fontSize: 10, fontWeight: 600 }}>Statut</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Fin</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"V\u00E9rifi\u00E9s"}</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"Expir\u00E9s"}</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Err.</th>
+                    <th style={{ textAlign: 'center', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Statut</th>
                   </tr>
                 </thead>
                 <tbody>
                   {statutHistory.map((h, i) => (
                     <tr key={i} style={{ borderBottom: i < statutHistory.length - 1 ? '1px solid #f0ede8' : 'none' }}>
-                      <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.startDate}</td>
-                      <td style={{ padding: '5px 6px', color: '#9a8a80', whiteSpace: 'nowrap' }}>{h.endDate}</td>
+                      <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.startDate}</td>
+                      <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.endDate}</td>
                       <td style={{ padding: '5px 6px', color: '#1a1210', fontSize: 10 }}>{h.period}</td>
                       <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a', fontWeight: 600 }}>{fmt(h.checked)}</td>
                       <td style={{ padding: '5px 6px', textAlign: 'right', color: '#c0392b', fontWeight: 700 }}>{fmt(h.expired)}</td>
-                      <td style={{ padding: '5px 6px', textAlign: 'right', color: h.errors > 0 ? '#c0392b' : '#9a8a80' }}>{h.errors}</td>
+                      <td style={{ padding: '5px 6px', textAlign: 'right', color: h.errors > 0 ? '#c0392b' : '#7a6a60' }}>{h.errors}</td>
                       <td style={{ padding: '5px 6px', textAlign: 'center' }}>
                         {h.status === 'ok' && <span style={{ color: '#1a7a40', fontWeight: 700, background: '#d4f5e0', padding: '2px 8px', borderRadius: 6 }}>{'\u2713'} OK</span>}
                         {h.status === 'erreur' && <span style={{ color: '#c0392b', fontWeight: 700, background: '#fde0dc', padding: '2px 8px', borderRadius: 6 }}>{'\u2717'} Erreur</span>}
@@ -1049,7 +1049,7 @@ export default function AdminSourcingPage() {
           </div>
           {regexShowKeywords && (
             <div style={{ marginTop: 12, background: '#faf8f5', borderRadius: 10, padding: '16px 20px', fontSize: 12, lineHeight: 1.8, border: '1px solid #e8e2d8' }}>
-              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Locataire en place</strong> <span style={{ color: '#9a8a80' }}>(valid{'\u00e9'} + exclu)</span><br/>
+              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Locataire en place</strong> <span style={{ color: '#7a6a60' }}>(valid{'\u00e9'} + exclu)</span><br/>
                 <span style={{ color: '#1a7a40' }}>{'\u2713'}</span> locataire en place, vendu lou{'\u00e9'}, bail en cours, loyer en place, occup{'\u00e9'} par locataire, lou{'\u00e9'} et occup{'\u00e9'}, vente occup{'\u00e9'}e, revenus locatifs, rendement locatif/brut/net, investissement locatif...<br/>
                 <span style={{ color: '#c0392b' }}>{'\u2717'}</span> pas/sans locataire, libre de toute occupation, non lou{'\u00e9'}, r{'\u00e9'}sidence g{'\u00e9'}r{'\u00e9'}e/services/senior
               </div>
@@ -1244,7 +1244,7 @@ export default function AdminSourcingPage() {
                       <span style={{ fontWeight: 600, color: cron.enabled ? '#1a7a40' : '#c0392b', fontSize: 11 }}>{cron.enabled ? 'Actif' : 'Off'}</span>
                     </label>
                   </div>
-                  <div style={{ fontSize: 11, color: '#9a8a80' }}>
+                  <div style={{ fontSize: 11, color: '#7a6a60' }}>
                     {cronScheduleToFrench(cron.schedule)}
                   </div>
                   {cron.id === 'score_travaux' && (
@@ -1270,7 +1270,7 @@ export default function AdminSourcingPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {groupCrons.map((cron: any) => {
-                          const cronColor = CRON_COLORS[cron.id] || '#9a8a80'
+                          const cronColor = CRON_COLORS[cron.id] || '#7a6a60'
                           const lr = cron.last_result || {} as any
                           const hasError = lr.error || lr.errors > 0
                           const progress = progressMap[cron.id]
@@ -1288,7 +1288,7 @@ export default function AdminSourcingPage() {
                                 {cron.last_run ? (
                                   <>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                                      <span style={{ fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>Dernier run</span>
+                                      <span style={{ fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>Dernier run</span>
                                       {!hasError && <span style={{ color: '#1a7a40', fontWeight: 700, fontSize: 13 }}>{'\u2713'}</span>}
                                       {hasError && <span style={{ color: '#c0392b', fontWeight: 700, fontSize: 13 }}>{'\u2717'}</span>}
                                     </div>
@@ -1308,17 +1308,17 @@ export default function AdminSourcingPage() {
                                       const dLeft = perHour > 0 ? Math.ceil(rem / perHour) : '?'
                                       return (
                                         <>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9a8a80', marginBottom: 3 }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#7a6a60', marginBottom: 3 }}>
                                             <span>Cycle {stats.verif_cycle || 1} : {fmt(cd)}/{fmt(ct)}</span>
                                             <span style={{ fontWeight: 700, color: cp >= 100 ? '#1e8449' : '#2a4a8a' }}>{cp}%</span>
                                           </div>
                                           <div style={{ height: 4, borderRadius: 2, background: '#f0ede8', overflow: 'hidden', marginBottom: 4 }}>
-                                            <div style={{ height: '100%', borderRadius: 2, background: cp >= 100 ? '#1e8449' : '#9a8a80', width: `${cp}%`, transition: 'width 0.6s ease' }} />
+                                            <div style={{ height: '100%', borderRadius: 2, background: cp >= 100 ? '#1e8449' : '#7a6a60', width: `${cp}%`, transition: 'width 0.6s ease' }} />
                                           </div>
                                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                             <Pill color="#c0392b" bg="#fde0dc"><strong>{ce}</strong> {"expir\u00E9s"}</Pill>
                                             <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(stats.verified_24h || 0)}</strong> /24h</Pill>
-                                            {rem > 0 && <Pill color="#9a8a80" bg="#f0ede8">~{dLeft}h</Pill>}
+                                            {rem > 0 && <Pill color="#7a6a60" bg="#f0ede8">~{dLeft}h</Pill>}
                                             {cp >= 100 && <Pill color="#1e8449" bg="#d5f5e3">{'\u2713'} {"termin\u00E9"}</Pill>}
                                           </div>
                                         </>
@@ -1333,11 +1333,11 @@ export default function AdminSourcingPage() {
                                           {lr.profil_found > 0 && <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{lr.profil_found}</strong> profils</Pill>}
                                           {lr.scored > 0 && <Pill color="#a06010" bg="#fff8f0"><strong>{lr.scored}</strong> {"scor\u00E9s"}</Pill>}
                                           {(lr.errors || 0) > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{lr.errors}</strong> err.</Pill>}
-                                          {lr.skipped && <Pill color="#9a8a80" bg="#f0ede8">off</Pill>}
+                                          {lr.skipped && <Pill color="#7a6a60" bg="#f0ede8">off</Pill>}
                                         </div>
                                         {progress && progress.total > 0 && (
                                           <div style={{ marginTop: 6 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9a8a80', marginBottom: 2 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#7a6a60', marginBottom: 2 }}>
                                               <span>{fmt(progress.done)}/{fmt(progress.total)}</span>
                                               <span style={{ fontWeight: 700, color: pctDone === 100 ? '#1e8449' : '#a06010' }}>{pctDone}%</span>
                                             </div>

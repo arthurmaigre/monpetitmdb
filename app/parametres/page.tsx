@@ -97,18 +97,18 @@ export default function ParametresPage() {
       <style>{`
         .profil-wrap { max-width: 720px; margin: 48px auto; padding: 0 24px; }
         .profil-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; color: #1a1210; }
-        .profil-sub { font-size: 16px; color: #9a8a80; margin-bottom: 40px; line-height: 1.5; }
+        .profil-sub { font-size: 16px; color: #7a6a60; margin-bottom: 40px; line-height: 1.5; }
         .profil-section { background: #fff; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .profil-section-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1210; margin-bottom: 8px; padding-bottom: 12px; border-bottom: 2px solid #e8e2d8; }
-        .profil-section-desc { font-size: 14px; color: #9a8a80; margin-bottom: 20px; }
+        .profil-section-desc { font-size: 14px; color: #7a6a60; margin-bottom: 20px; }
         .profil-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .profil-field { display: flex; flex-direction: column; gap: 4px; }
-        .profil-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.06em; text-transform: uppercase; }
+        .profil-label { font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.06em; text-transform: uppercase; }
         .profil-input, .profil-select { padding: 12px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1210; background: #faf8f5; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; }
         .profil-input:focus, .profil-select:focus { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192,57,43,0.1); }
         .profil-hint { font-size: 12px; color: #bfb2a6; margin-top: 4px; }
         .tmi-options { display: flex; gap: 8px; flex-wrap: wrap; }
-        .tmi-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #faf8f5; color: #9a8a80; }
+        .tmi-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #faf8f5; color: #7a6a60; }
         .tmi-btn:hover { border-color: #1a1210; color: #1a1210; background: #fff; }
         .tmi-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; box-shadow: 0 2px 8px rgba(26,18,16,0.2); }
         .save-btn { width: 100%; padding: 16px; border-radius: 12px; border: none; background: #c0392b; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: opacity 150ms ease, transform 150ms ease; }
@@ -123,7 +123,7 @@ export default function ParametresPage() {
         .tooltip-icon {
           display: inline-flex; align-items: center; justify-content: center;
           width: 16px; height: 16px; border-radius: 50%; background: #e8e2d8;
-          font-size: 10px; font-weight: 700; color: #9a8a80; line-height: 1;
+          font-size: 10px; font-weight: 700; color: #7a6a60; line-height: 1;
           transition: background 150ms ease, color 150ms ease;
         }
         .tooltip-wrap:hover .tooltip-icon { background: #c0392b; color: #fff; }
@@ -167,7 +167,7 @@ export default function ParametresPage() {
               <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1210', marginBottom: 4 }}>
                 {"Fonctionnalit\u00E9 r\u00E9serv\u00E9e au plan Pro"}
               </div>
-              <div style={{ fontSize: 13, color: '#9a8a80' }}>
+              <div style={{ fontSize: 13, color: '#7a6a60' }}>
                 {"Personnalisez vos param\u00E8tres fiscaux et de financement pour des analyses sur-mesure."}
               </div>
             </div>
@@ -292,10 +292,10 @@ export default function ParametresPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>Score</th>
-                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{"Niveau de travaux"}</th>
-                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{"Exemples"}</th>
-                    <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{`Budget \u20AC/m\u00B2`}</th>
+                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>Score</th>
+                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{"Niveau de travaux"}</th>
+                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{"Exemples"}</th>
+                    <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8e2d8' }}>{`Budget \u20AC/m\u00B2`}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -311,7 +311,7 @@ export default function ParametresPage() {
                         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', color: row.color, background: row.bg }}>{row.score}</span>
                       </td>
                       <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8', fontWeight: 600, fontSize: '13px', color: '#1a1210' }}>{row.label}</td>
-                      <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8', fontSize: '12px', color: '#9a8a80' }}>{row.desc}</td>
+                      <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8', fontSize: '12px', color: '#7a6a60' }}>{row.desc}</td>
                       <td style={{ padding: '12px', borderBottom: '1px solid #e8e2d8', textAlign: 'right' }}>
                         <input
                           className="profil-input"

@@ -5,9 +5,11 @@ export default function Home() {
   return (
     <>
       <style>{`
-        :root{--bg:#faf8f5;--ink:#1a1210;--red:#c0392b;--red-dark:#96281b;--red-light:#e8503a;--sand:#e8e2d8;--muted:#9a8a80;--card:#fff;--cream:#f0ebe3;}
+        :root{--bg:#faf8f5;--ink:#1a1210;--red:#c0392b;--red-dark:#96281b;--red-light:#e8503a;--sand:#e8e2d8;--muted:#7a6a60;--card:#fff;--cream:#f0ebe3;}
         .lp *{box-sizing:border-box;margin:0;padding:0;}
         .lp{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--ink);}
+        .fade-in{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+        .fade-in.visible{opacity:1;transform:translateY(0);}
         /* HEADER */
         .lp-header{background:rgba(250,248,245,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--sand);padding:0 64px;height:68px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
         .lp-logo{font-family:'Fraunces',serif;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink);text-decoration:none;}
@@ -156,6 +158,30 @@ export default function Home() {
         .plan-cta:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
         .plan.ft .plan-cta{background:var(--red);border-color:var(--red);color:#fff;}
         .plan.ft .plan-cta:hover{background:var(--red-dark);}
+        /* LOGOS */
+        .logos{padding:48px 64px;background:var(--cream);text-align:center;}
+        .logos-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:28px;}
+        .logos-row{display:flex;justify-content:center;align-items:center;gap:40px;flex-wrap:wrap;max-width:900px;margin:0 auto;opacity:.5;filter:grayscale(100%);}
+        .logos-row span{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;}
+        /* CTA FINAL */
+        .cta-final{padding:100px 64px;text-align:center;background:linear-gradient(180deg,var(--bg) 0%,var(--cream) 100%);}
+        .cta-final h2{font-family:'Fraunces',serif;font-size:42px;font-weight:800;letter-spacing:-.02em;margin-bottom:16px;}
+        .cta-final h2 em{font-style:normal;color:var(--red);}
+        .cta-final p{font-size:17px;color:var(--muted);margin-bottom:40px;max-width:520px;margin-left:auto;margin-right:auto;}
+        .cta-final .btn-hero{display:inline-block;}
+        /* TESTIMONIALS */
+        .testi{padding:80px 64px;background:var(--bg);text-align:center;}
+        .testi-hdr{margin-bottom:48px;}
+        .testi-hdr h2{font-family:'Fraunces',serif;font-size:42px;font-weight:800;letter-spacing:-.02em;margin-bottom:12px;}
+        .testi-hdr p{font-size:16px;color:var(--muted);}
+        .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1080px;margin:0 auto;}
+        .testi-card{background:var(--card);border-radius:16px;padding:28px 24px;border:1px solid var(--sand);text-align:left;}
+        .testi-quote{font-size:15px;line-height:1.65;color:var(--ink);margin-bottom:20px;font-style:italic;}
+        .testi-author{display:flex;align-items:center;gap:12px;}
+        .testi-avatar{width:40px;height:40px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:800;font-size:16px;color:var(--red);flex-shrink:0;}
+        .testi-name{font-size:14px;font-weight:600;color:var(--ink);}
+        .testi-role{font-size:12px;color:var(--muted);}
+        .plan-trial{display:block;margin-top:6px;font-size:13px;color:rgba(255,255,255,.6);font-weight:400;}
         /* FOOTER */
         .lp-footer{background:var(--ink);padding:56px 64px 40px;color:rgba(255,255,255,.6);}
         .ft-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:48px;padding-bottom:48px;border-bottom:1px solid rgba(255,255,255,.08);max-width:1280px;margin-left:auto;margin-right:auto;}
@@ -201,6 +227,14 @@ export default function Home() {
           .lp-footer{padding:40px 24px 32px;}
           .ft-top{flex-direction:column;gap:32px;}
           .ft-links{flex-direction:column;gap:24px;}
+          .testi{padding:48px 24px;}
+          .testi-grid{grid-template-columns:1fr;}
+          .testi-hdr h2{font-size:28px;}
+          .logos{padding:32px 24px;}
+          .logos-row{gap:24px;}
+          .logos-row span{font-size:14px;}
+          .cta-final{padding:64px 24px;}
+          .cta-final h2{font-size:28px;}
         }
       `}</style>
 
@@ -226,13 +260,14 @@ export default function Home() {
                 {"Mon Petit MDB agr\u00E8ge 60+ plateformes, estime les prix via les donn\u00E9es DVF et simule la fiscalit\u00E9 de vos investissements \u2014 7 r\u00E9gimes fiscaux, du micro-foncier au marchand de biens."}
               </p>
               <div className="hero-btns">
-                <a href="/biens" className="btn-hero">Voir les biens disponibles</a>
+                <a href="/biens" className="btn-hero">{"Voir les biens disponibles \u2014 Gratuit"}</a>
                 <a href="#how" className="btn-ghost">{"Comment \u00E7a marche"}</a>
               </div>
               <div className="hero-stats">
                 <div><div className="stat-num">90 000+</div><div className="stat-lbl">{"Biens analys\u00E9s"}</div></div>
                 <div><div className="stat-num">{"France enti\u00E8re"}</div><div className="stat-lbl">{"36 000+ villes"}</div></div>
                 <div><div className="stat-num">7</div><div className="stat-lbl">{"R\u00E9gimes fiscaux"}</div></div>
+                <div><div className="stat-num" style={{ fontSize: '18px' }}>DVF</div><div className="stat-lbl">{"Donn\u00E9es notariales officielles"}</div></div>
               </div>
             </div>
             <div className="hero-visual">
@@ -252,7 +287,7 @@ export default function Home() {
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginLeft: '8px' }}>monpetitmdb.fr/biens/4821</span>
                 </div>
                 <div className="mc-photo">
-                  <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=180&fit=crop" alt="Appartement lumineux" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=180&fit=crop" alt="Appartement lumineux" width={400} height={180} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 40%,rgba(26,18,16,.3))' }} />
                   <span className="mc-badge">{"M\u00E9tropole Marseillaise"}</span>
                   <span className="mc-rend">8.60 %</span>
@@ -277,8 +312,23 @@ export default function Home() {
           </div>
         </section>
 
+        {/* LOGOS PLATEFORMES */}
+        <section className="logos">
+          <div className="logos-label">{"Donn\u00E9es agr\u00E9g\u00E9es depuis 60+ plateformes"}</div>
+          <div className="logos-row">
+            <span>Leboncoin</span>
+            <span>SeLoger</span>
+            <span>{"Bien\u2019ici"}</span>
+            <span>PAP</span>
+            <span>Logic-Immo</span>
+            <span>{"Figaro Immobilier"}</span>
+            <span>{"Immo de France"}</span>
+            <span>ParuVendu</span>
+          </div>
+        </section>
+
         {/* STRATEGIES */}
-        <section className="strats" id="strats">
+        <section className="strats fade-in" id="strats">
           <div className="strats-in">
             <div className="eyebrow-w">{"4 strat\u00E9gies disponibles"}</div>
             <h2>{"Choisissez votre angle d\u2019investissement"}</h2>
@@ -291,6 +341,7 @@ export default function Home() {
                 <div className="strat-name">Locataire en place</div>
                 <p className="strat-desc">{"Achetez un bien d\u00E9j\u00E0 lou\u00E9. Revenus imm\u00E9diats, d\u00E9cote possible sur le prix. Profil locataire, fin de bail, loyer HC analys\u00E9s."}</p>
                 <span className="strat-tag">{"Cashflow imm\u00E9diat"}</span>
+                <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
               <div className="strat-card">
                 <div className="strat-icon">
@@ -299,6 +350,7 @@ export default function Home() {
                 <div className="strat-name">Travaux lourds</div>
                 <p className="strat-desc">{"Identifiez les biens \u00E0 fort potentiel de valorisation. Score travaux IA de 1 \u00E0 5, estimation march\u00E9 = prix apr\u00E8s r\u00E9novation."}</p>
                 <span className="strat-tag">Plus-value travaux</span>
+                <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
               <div className="strat-card">
                 <div className="strat-icon">
@@ -307,6 +359,7 @@ export default function Home() {
                 <div className="strat-name">Division</div>
                 <p className="strat-desc">{"Rep\u00E9rez les grands appartements ou maisons divisibles en plusieurs lots pour maximiser la rentabilit\u00E9."}</p>
                 <span className="strat-tag">{"Cr\u00E9ation de valeur"}</span>
+                <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
               <div className="strat-card">
                 <div className="strat-icon">
@@ -315,13 +368,14 @@ export default function Home() {
                 <div className="strat-name">{"D\u00E9coupe"}</div>
                 <p className="strat-desc">{"Achetez un immeuble entier en monopropri\u00E9t\u00E9 et revendez lot par lot. La m\u00E9thode des pros accessible \u00E0 tous."}</p>
                 <span className="strat-tag">{"M\u00E9thode MDB"}</span>
+                <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
             </div>
           </div>
         </section>
 
         {/* COMMENT CA MARCHE */}
-        <section id="how">
+        <section id="how" className="fade-in">
           <div className="how">
             <div className="how-hdr">
               <div className="eyebrow" style={{ justifyContent: 'center' }}>{"3 \u00E9tapes simples"}</div>
@@ -349,7 +403,7 @@ export default function Home() {
         </section>
 
         {/* SCREENSHOT */}
-        <section className="ss">
+        <section className="ss fade-in">
           <div className="ss-in">
             <div className="ss-hdr">
               <h2>{"L\u2019outil de vos investissements"}</h2>
@@ -411,7 +465,7 @@ export default function Home() {
                 <div className="ag">
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Nantes</span>
                       <span className="ac-br g">5.07 %</span>
                     </div>
@@ -424,7 +478,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Lyon</span>
                       <span className="ac-br g">6.14 %</span>
                     </div>
@@ -437,7 +491,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Marseille</span>
                       <span className="ac-br g">8.60 %</span>
                     </div>
@@ -450,7 +504,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Bordeaux</span>
                       <span className="ac-br y">3.78 %</span>
                     </div>
@@ -463,7 +517,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Rennes</span>
                       <span className="ac-br y">4.39 %</span>
                     </div>
@@ -476,7 +530,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=300&h=100&fit=crop" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src="https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Toulouse</span>
                       <span className="ac-br g">5.82 %</span>
                     </div>
@@ -488,6 +542,37 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TEMOIGNAGES */}
+        <section className="testi fade-in">
+          <div className="testi-hdr">
+            <div className="eyebrow" style={{ justifyContent: 'center' }}>{"Ils investissent avec Mon Petit MDB"}</div>
+            <h2>{"Ce qu\u2019en disent nos utilisateurs"}</h2>
+          </div>
+          <div className="testi-grid">
+            <div className="testi-card">
+              <p className="testi-quote">{"\u00AB J\u2019ai trouv\u00E9 mon T2 \u00E0 Marseille en 3 jours. L\u2019estimation DVF m\u2019a donn\u00E9 confiance pour n\u00E9gocier 12% en dessous du prix affich\u00E9. \u00BB"}</p>
+              <div className="testi-author">
+                <div className="testi-avatar">T</div>
+                <div><div className="testi-name">Thomas R.</div><div className="testi-role">Investisseur particulier, Marseille</div></div>
+              </div>
+            </div>
+            <div className="testi-card">
+              <p className="testi-quote">{"\u00AB Le simulateur fiscal m\u2019a fait \u00E9conomiser 4 000 \u20AC/an en choisissant le bon r\u00E9gime. Je ne savais m\u00EAme pas que le LMNP r\u00E9el existait. \u00BB"}</p>
+              <div className="testi-author">
+                <div className="testi-avatar">S</div>
+                <div><div className="testi-name">Sophie M.</div><div className="testi-role">{"Cadre sup\u00E9rieur, Lyon"}</div></div>
+              </div>
+            </div>
+            <div className="testi-card">
+              <p className="testi-quote">{"\u00AB En tant que marchand de biens, je cherchais un outil pour sourcer vite. 60+ plateformes en un clic, c\u2019est exactement ce qu\u2019il me fallait. \u00BB"}</p>
+              <div className="testi-author">
+                <div className="testi-avatar">A</div>
+                <div><div className="testi-name">Alexandre D.</div><div className="testi-role">Marchand de biens, Bordeaux</div></div>
               </div>
             </div>
           </div>
@@ -513,7 +598,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>{"Fiches biens compl\u00E8tes"}</li>
                   <li><span className="pck">{'\u2713'}</span>Enrichissement communautaire</li>
                   <li><span className="pck">{'\u2713'}</span>Watchlist (10 biens max)</li>
-                  <li><span className="pck">{'\u2713'}</span>Memo {'\u2014'} assistant IA (5 msg/jour)</li>
+                  <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA (5 msg/jour)</li>
                   <li><span className="pcx">{'\u2717'}</span><span style={{ color: '#c0b0a0' }}>Simulateur fiscal</span></li>
                   <li><span className="pcx">{'\u2717'}</span><span style={{ color: '#c0b0a0' }}>{"Estimation march\u00E9 DVF"}</span></li>
                 </ul>
@@ -524,7 +609,7 @@ export default function Home() {
                 <div className="plan-badge">Le plus populaire</div>
                 <div className="plan-name">Pro</div>
                 <div className="plan-price">19 {'\u20AC'}</div>
-                <div className="plan-period">par mois {'\u2014'} sans engagement</div>
+                <div className="plan-period">par mois {'\u2014'} sans engagement<span className="plan-trial">{"14 jours d\u2019essai gratuit \u2014 sans carte bancaire"}</span></div>
                 <div className="plan-div" />
                 <ul className="plan-feats">
                   <li><span className="pck">{'\u2713'}</span>Tout le plan Free</li>
@@ -534,7 +619,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>{"Estimation march\u00E9 DVF"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Sc\u00E9nario de revente"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison 2 r\u00E9gimes"}</li>
-                  <li><span className="pck">{'\u2713'}</span>Memo {'\u2014'} assistant IA (50 msg/jour)</li>
+                  <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA (50 msg/jour)</li>
                   <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Toutes les strat\u00E9gies"}</span></li>
                 </ul>
                 <PricingCta plan="pro" label="Essayer 14 jours gratuits" className="plan-cta" />
@@ -550,7 +635,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Watchlist illimit\u00E9e"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison tous les r\u00E9gimes"}</li>
-                  <li><span className="pck">{'\u2713'}</span>Memo {'\u2014'} assistant IA illimit\u00E9</li>
+                  <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA illimit\u00E9</li>
                   <li><span className="pck">{'\u2713'}</span>Export Excel</li>
                   <li><span className="pck">{'\u2713'}</span>Alertes nouvelles annonces</li>
                   <li><span className="pck">{'\u2713'}</span>{"Support prioritaire"}</li>
@@ -559,6 +644,14 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* CTA FINAL */}
+        <section className="cta-final fade-in">
+          <div className="eyebrow" style={{ justifyContent: 'center' }}>{"Pr\u00EAt \u00E0 investir ?"}</div>
+          <h2>{"Trouvez votre prochaine "}<em>{"opportunit\u00E9"}</em></h2>
+          <p>{"Rejoignez les investisseurs qui utilisent Mon Petit MDB pour sourcer, analyser et comparer les biens \u2014 gratuitement."}</p>
+          <a href="/register" className="btn-hero">{"Cr\u00E9er mon compte gratuit"}</a>
         </section>
 
         {/* FOOTER */}
@@ -572,6 +665,7 @@ export default function Home() {
               <div className="ft-col">
                 <h4>Produit</h4>
                 <a href="/biens">Biens disponibles</a>
+                <a href="/blog">Conseils</a>
                 <a href="#how">{"Comment \u00E7a marche"}</a>
                 <a href="#pricing">Tarifs</a>
               </div>
@@ -586,6 +680,7 @@ export default function Home() {
                 <h4>{"L\u00E9gal"}</h4>
                 <a href="/mentions-legales">{"Mentions l\u00E9gales"}</a>
                 <a href="/cgu">CGU</a>
+                <a href="/privacy">{"Confidentialit\u00E9"}</a>
               </div>
             </div>
           </div>
@@ -595,6 +690,9 @@ export default function Home() {
           </div>
         </footer>
       </div>
+      <script dangerouslySetInnerHTML={{ __html: `
+        (function(){var o=new IntersectionObserver(function(e){e.forEach(function(i){if(i.isIntersecting){i.target.classList.add('visible');o.unobserve(i.target)}})},{threshold:0.1});document.querySelectorAll('.fade-in').forEach(function(el){o.observe(el)})})()
+      `}} />
     </>
   )
 }

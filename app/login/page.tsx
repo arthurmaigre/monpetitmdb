@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
@@ -9,6 +9,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPwd, setShowPwd] = useState(false)
+  const emailRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { emailRef.current?.focus() }, [])
 
   async function handleOAuth(provider: 'google' | 'facebook') {
     setLoading(true)
@@ -44,9 +48,9 @@ export default function LoginPage() {
         .auth-wrap { min-height: 70vh; display: flex; align-items: center; justify-content: center; }
         .auth-box { background: #fff; border-radius: 20px; padding: 48px; width: 100%; max-width: 440px; box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
         .auth-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
-        .auth-sub { font-size: 14px; color: #9a8a80; margin-bottom: 32px; }
+        .auth-sub { font-size: 14px; color: #7a6a60; margin-bottom: 32px; }
         .auth-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-        .auth-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.06em; text-transform: uppercase; }
+        .auth-label { font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.06em; text-transform: uppercase; }
         .auth-input {
           padding: 12px 16px; border-radius: 10px; border: 1.5px solid #e8e2d8;
           font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1210;
@@ -62,11 +66,11 @@ export default function LoginPage() {
         .auth-btn:hover { opacity: 0.8; }
         .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .auth-error { background: #fde8e8; color: #a33; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
-        .auth-footer { text-align: center; margin-top: 24px; font-size: 13px; color: #9a8a80; }
+        .auth-footer { text-align: center; margin-top: 24px; font-size: 13px; color: #7a6a60; }
         .auth-footer a { color: #c0392b; font-weight: 600; text-decoration: none; }
         .auth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; }
         .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: #e8e2d8; }
-        .auth-divider span { font-size: 12px; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; }
+        .auth-divider span { font-size: 12px; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .oauth-btn {
           width: 100%; padding: 12px 16px; border-radius: 10px; border: 1.5px solid #e8e2d8;
           background: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
@@ -78,6 +82,9 @@ export default function LoginPage() {
         .oauth-btn:hover { background: #faf8f5; border-color: #c0392b; }
         .oauth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .oauth-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .pwd-wrap { position: relative; }
+        .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #7a6a60; padding: 4px; display: flex; align-items: center; }
+        .pwd-toggle:hover { color: #1a1210; }
       `}</style>
 
       <div className="auth-wrap">
@@ -103,34 +110,59 @@ export default function LoginPage() {
             <div className="auth-field">
               <label className="auth-label">Email</label>
               <input
+                ref={emailRef}
                 className="auth-input"
                 type="email"
                 placeholder="vous@email.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                autoComplete="email"
               />
             </div>
 
             <div className="auth-field">
               <label className="auth-label">Mot de passe</label>
-              <input
-                className="auth-input"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
+              <div className="pwd-wrap">
+                <input
+                  className="auth-input"
+                  type={showPwd ? 'text' : 'password'}
+                  placeholder={"••••••••"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  style={{ width: '100%', paddingRight: '40px' }}
+                />
+                <button type="button" className="pwd-toggle" onClick={() => setShowPwd(!showPwd)} aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>
+                  {showPwd ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             <button className="auth-btn" type="submit" disabled={loading}>
-              {loading ? 'Connexion...' : 'Se connecter →'}
+              {loading ? 'Connexion...' : "Se connecter \u2192"}
             </button>
+            <div style={{ textAlign: 'right', marginTop: '8px' }}>
+              <a href="#" onClick={async (e) => {
+                e.preventDefault()
+                if (!email) { setError('Entrez votre email pour recevoir le lien de réinitialisation'); return }
+                const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback` })
+                if (error) setError(error.message)
+                else setError('')
+                alert('Si ce compte existe, un email de réinitialisation a été envoyé.')
+              }} style={{ fontSize: '13px', color: '#c0392b', textDecoration: 'none' }}>
+                {"Mot de passe oubli\u00E9 ?"}
+              </a>
+            </div>
           </form>
 
           <div className="auth-footer">
-            Pas encore de compte ? <a href="/register">Créer un compte</a>
+            {"Pas encore de compte ? "}<a href="/register">{"Cr\u00E9er un compte"}</a>
           </div>
         </div>
       </div>

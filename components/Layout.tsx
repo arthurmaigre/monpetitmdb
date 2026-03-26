@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
 import { theme } from '@/lib/theme'
-import ChatWidget from '@/components/ChatWidget'
+
+const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false })
 
 interface Props {
   children: React.ReactNode
@@ -16,6 +18,7 @@ export default function Layout({ children }: Props) {
   const [userPlan, setUserPlan] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [watchlistCount, setWatchlistCount] = useState(0)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -51,6 +54,18 @@ export default function Layout({ children }: Props) {
         .catch(() => {})
     })
   }, [user])
+
+  // Load watchlist count
+  useEffect(() => {
+    if (!user) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then(r => r.json())
+        .then(d => { if (d.watchlist) setWatchlistCount(d.watchlist.length) })
+        .catch(() => {})
+    })
+  }, [user, pathname])
 
   // Close menus on route change
   useEffect(() => {
@@ -140,7 +155,7 @@ export default function Layout({ children }: Props) {
           align-items: center;
         }
         .mdb-nav-link {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
           color: ${theme.colors.muted};
           text-decoration: none;
@@ -152,7 +167,7 @@ export default function Layout({ children }: Props) {
         .mdb-nav-link[aria-current="page"] { color: ${theme.colors.ink}; background: rgba(0,0,0,0.06); /* theme.colors.ink 6% */ font-weight: 600; }
 
         .nav-watchlist {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
           color: ${theme.colors.muted};
           text-decoration: none;
@@ -174,7 +189,7 @@ export default function Layout({ children }: Props) {
           border-radius: 8px;
           border: 1.5px solid ${theme.colors.sand};
           font-family: ${theme.fonts.body};
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
           color: ${theme.colors.ink};
           background: transparent;
@@ -217,7 +232,7 @@ export default function Layout({ children }: Props) {
         .user-dropdown.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
         .user-dropdown-item {
           display: flex; align-items: center; gap: 10px;
-          padding: 10px 16px; font-size: 13px; font-weight: 500;
+          padding: 12px 16px; font-size: 14px; font-weight: 500; min-height: 44px;
           color: ${theme.colors.ink}; text-decoration: none;
           transition: background 150ms ease; border: none;
           background: none; width: 100%; cursor: pointer;
@@ -289,9 +304,10 @@ export default function Layout({ children }: Props) {
         .mdb-drawer-close:hover { background: rgba(0,0,0,0.04); }
         .mdb-drawer .mdb-nav-link,
         .mdb-drawer .nav-watchlist {
-          padding: 12px 16px;
+          padding: 14px 16px;
           font-size: 15px;
           border-radius: 8px;
+          min-height: 44px;
         }
         .mdb-drawer .mdb-nav-sep {
           width: 100%;
@@ -363,7 +379,7 @@ export default function Layout({ children }: Props) {
           margin-bottom: 4px;
         }
         .mdb-footer-link {
-          font-size: 13px;
+          font-size: 14px;
           color: ${theme.colors.muted};
           text-decoration: none;
           transition: color 150ms ease;
@@ -428,6 +444,17 @@ export default function Layout({ children }: Props) {
       `}</style>
 
       <div style={{ fontFamily: theme.fonts.body, background: theme.colors.bg, minHeight: '100vh' }}>
+        {/* Skip to content */}
+        <a href="#main-content" style={{
+          position: 'absolute', top: '-100px', left: '16px', zIndex: 9999,
+          background: theme.colors.primary, color: '#fff', padding: '8px 16px',
+          borderRadius: theme.radii.sm, fontSize: theme.fontSizes.base, fontWeight: 600,
+          textDecoration: 'none', transition: 'top 150ms ease',
+        }} onFocus={e => { (e.currentTarget as HTMLElement).style.top = '8px' }}
+           onBlur={e => { (e.currentTarget as HTMLElement).style.top = '-100px' }}
+        >
+          Aller au contenu
+        </a>
         <header className="mdb-header" role="banner">
           <a href="/" className="mdb-logo" aria-label="Mon Petit MDB - Accueil">Mon Petit <span>MDB</span></a>
 
@@ -466,13 +493,22 @@ export default function Layout({ children }: Props) {
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                   </svg>
                   Watchlist
+                  {watchlistCount > 0 && (
+                    <span style={{
+                      background: theme.colors.primary, color: '#fff', borderRadius: '10px',
+                      padding: '1px 6px', fontSize: '10px', fontWeight: 700, minWidth: '18px',
+                      textAlign: 'center', lineHeight: '16px',
+                    }}>
+                      {watchlistCount}
+                    </span>
+                  )}
                 </a>
                 <div className="user-pill-wrap">
                   <button className="user-pill" onClick={() => setUserMenuOpen(!userMenuOpen)} aria-expanded={userMenuOpen} aria-haspopup="true">
                     <span className="user-email">{user.email}</span>
                     <span className="user-avatar" aria-hidden="true">{(user.email || '?')[0].toUpperCase()}</span>
                   </button>
-                  <div className={`user-dropdown ${userMenuOpen ? 'open' : ''}`}>
+                  <div className={`user-dropdown ${userMenuOpen ? 'open' : ''}`} role="menu">
                     <a href="/mon-profil" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       Mon Profil
@@ -586,7 +622,7 @@ export default function Layout({ children }: Props) {
           )}
         </nav>
 
-        <main role="main">{children}</main>
+        <main id="main-content" role="main">{children}</main>
 
         <footer className="mdb-footer" role="contentinfo">
           <div className="mdb-footer-inner">
@@ -623,6 +659,26 @@ export default function Layout({ children }: Props) {
         </footer>
 
         <ChatWidget plan={userPlan as any} />
+
+        {/* Scroll to top */}
+        <button
+          id="scroll-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Retour en haut"
+          style={{
+            position: 'fixed', bottom: 90, right: 24,
+            width: 40, height: 40, borderRadius: '50%',
+            background: theme.colors.ink, color: '#fff', border: 'none',
+            cursor: 'pointer', display: 'none', alignItems: 'center', justifyContent: 'center',
+            boxShadow: theme.shadows.card, zIndex: 99, transition: `opacity ${theme.transitions.fast}`,
+            fontSize: 18,
+          }}
+        >
+          {'\u2191'}
+        </button>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){var b=document.getElementById('scroll-top');if(!b)return;window.addEventListener('scroll',function(){b.style.display=window.scrollY>600?'flex':'none'})})()
+        `}} />
       </div>
     </>
   )

@@ -1,4 +1,10 @@
 import Layout from '@/components/Layout'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: "Politique de confidentialit\u00E9",
+  description: "Politique de confidentialit\u00E9 RGPD de Mon Petit MDB.",
+}
 
 export default function PrivacyPage() {
   return (
@@ -6,7 +12,7 @@ export default function PrivacyPage() {
       <style>{`
         .privacy-wrap { max-width: 780px; margin: 48px auto; padding: 0 24px; }
         .privacy-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; color: #1a1210; }
-        .privacy-date { font-size: 14px; color: #9a8a80; margin-bottom: 40px; }
+        .privacy-date { font-size: 14px; color: #7a6a60; margin-bottom: 40px; }
         .privacy-section { margin-bottom: 32px; }
         .privacy-section h2 { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1210; margin-bottom: 12px; }
         .privacy-section p, .privacy-section li { font-size: 15px; color: #555; line-height: 1.7; margin-bottom: 8px; }

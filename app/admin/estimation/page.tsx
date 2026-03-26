@@ -8,7 +8,7 @@ function Section({ title, description, children }: { title: string, description?
   return (
     <div style={{ background: '#fff', borderRadius: '16px', padding: '28px 32px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
       <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 700, color: '#1a1210', marginBottom: '8px' }}>{title}</h2>
-      {description && <p style={{ fontSize: '13px', color: '#9a8a80', lineHeight: '1.6', marginBottom: '20px' }}>{description}</p>}
+      {description && <p style={{ fontSize: '13px', color: '#7a6a60', lineHeight: '1.6', marginBottom: '20px' }}>{description}</p>}
       {children}
     </div>
   )
@@ -31,7 +31,7 @@ function ParamRow({ label, description, value, onChange, type = 'number', step =
           onFocus={e => e.target.style.borderColor = '#c0392b'}
           onBlur={e => e.target.style.borderColor = '#e8e2d8'}
         />
-        {suffix && <span style={{ fontSize: '12px', color: '#9a8a80' }}>{suffix}</span>}
+        {suffix && <span style={{ fontSize: '12px', color: '#7a6a60' }}>{suffix}</span>}
       </div>
     </div>
   )
@@ -157,7 +157,7 @@ export default function AdminEstimationPage() {
     setSaving(false)
   }
 
-  if (loading) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#9a8a80' }}>Chargement...</p></Layout>
+  if (loading) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#7a6a60' }}>Chargement...</p></Layout>
 
   const c = config?.correcteurs || {}
 
@@ -166,19 +166,19 @@ export default function AdminEstimationPage() {
       <style>{`
         .estim-wrap { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
         .estim-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; }
-        .estim-sub { font-size: 14px; color: #9a8a80; margin-bottom: 32px; line-height: 1.6; }
+        .estim-sub { font-size: 14px; color: #7a6a60; margin-bottom: 32px; line-height: 1.6; }
         .save-bar { position: sticky; bottom: 0; background: rgba(242,236,228,0.96); backdrop-filter: blur(12px); border-top: 1px solid #e8e2d8; padding: 16px 0; display: flex; align-items: center; gap: 12px; justify-content: flex-end; z-index: 10; }
         .save-btn { padding: 12px 32px; border-radius: 10px; border: none; background: #c0392b; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
         .save-btn:hover { opacity: 0.85; }
         .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .method-block { background: #f7f4f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
-        .method-title { font-size: 12px; font-weight: 700; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .method-title { font-size: 12px; font-weight: 700; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
         .method-text { font-size: 13px; color: #555; line-height: 1.6; }
         .method-formula { font-family: 'SF Mono', 'Fira Code', monospace; background: #1a1210; color: #e8e2d8; padding: 12px 16px; border-radius: 8px; font-size: 12px; line-height: 1.6; margin: 10px 0; overflow-x: auto; }
       `}</style>
 
       <div className="estim-wrap">
-        <a href="/admin" style={{ fontSize: '13px', color: '#9a8a80', textDecoration: 'none', display: 'inline-block', marginBottom: '24px' }}>{"← Retour admin"}</a>
+        <a href="/admin" style={{ fontSize: '13px', color: '#7a6a60', textDecoration: 'none', display: 'inline-block', marginBottom: '24px' }}>{"← Retour admin"}</a>
         <h1 className="estim-title">{"Moteur d'estimation DVF"}</h1>
         <p className="estim-sub">
           {"Configuration compl\u00e8te de la m\u00e9thode d'estimation immobili\u00e8re. Tous les param\u00e8tres sont modifiables et appliqu\u00e9s en temps r\u00e9el sur les nouvelles estimations."}
@@ -282,7 +282,7 @@ export default function AdminEstimationPage() {
             step="1"
           />
           <div style={{ marginTop: '12px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#9a8a80', marginBottom: '8px' }}>{"ÉTAPES DU RAYON"}</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '8px' }}>{"ÉTAPES DU RAYON"}</div>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               {(config?.rayons_recherche?.etapes_metres_approx || [55, 110, 220, 330, 550, 770, 1100]).map((m: number, i: number) => (
                 <div key={i} style={{ background: '#faf8f5', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>
@@ -475,7 +475,7 @@ export default function AdminEstimationPage() {
                   onFocus={e => e.target.style.borderColor = '#c0392b'}
                   onBlur={e => e.target.style.borderColor = '#e8e2d8'}
                 />
-                <span style={{ fontSize: '12px', color: '#9a8a80' }}>%</span>
+                <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
               </div>
             )
           })}

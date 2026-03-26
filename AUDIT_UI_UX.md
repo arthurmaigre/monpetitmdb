@@ -1,304 +1,600 @@
-# Mon Petit MDB — Audit UI/UX complet
+# Mon Petit MDB — Audit UI/UX Professionnel
 
-## 1. DESIGN SYSTEM & COHERENCE GLOBALE
+> Date : 2026-03-26
+> Scope : site public (landing, listing, fiche bien, blog, auth, profil)
+> Methode : inspection code + design system + heuristiques Nielsen + WCAG 2.1 AA
 
-### 1.1 Typographie
-- [ ] Hierarchie claire : H1 > H2 > H3 > body > caption (jamais plus de 5 niveaux)
-- [ ] Tailles cohérentes sur toutes les pages (pas de 13px ici et 14px là pour le meme role)
-- [ ] Poids de police standardisés : 400 (body), 500 (label), 600 (semi-bold), 700 (titre), 800 (hero)
-- [ ] Line-height cohérent : 1.2 titres, 1.5 body, 1.7 texte long
-- [ ] Letter-spacing : négatif sur les gros titres (-0.02em), légèrement positif sur les labels uppercase (0.06em)
-- [ ] Pas de texte orphelin (un mot seul sur la dernière ligne d'un paragraphe)
-- [ ] Pas de mélange serif/sans-serif incohérent (Fraunces = titres, DM Sans = UI)
+---
 
-### 1.2 Couleurs
-- [ ] Toutes les couleurs viennent de theme.ts — zéro couleur hardcodée
-- [ ] Contraste WCAG AA minimum (4.5:1 texte, 3:1 grands textes)
-- [ ] Palette limitée : primary (rouge), ink (noir), muted (gris), sand (bordure), bg (beige), success (vert), warning (orange)
-- [ ] Pas plus de 2 couleurs vives par écran (rouge + vert OK, rouge + vert + orange + bleu = chaos)
-- [ ] Couleurs sémantiques : rouge = danger/prix, vert = positif/gain, orange = attention, gris = neutre
-- [ ] Texte secondaire toujours en muted (#9a8a80), jamais en gris pur (#999)
-- [ ] Hover states cohérents : même delta de luminosité partout
+## SYNTHESE EXECUTIVE
+
+| Categorie | Score | Commentaire |
+|-----------|-------|-------------|
+| Design System | 5/10 | Theme.ts existe mais peu respecte — couleurs hardcodees partout |
+| Landing Page | 7/10 | Hero solide, pricing clair, mais screenshot statique et pas de social proof reel |
+| Listing Biens | 6/10 | Filtres complets, mais responsive insuffisant et UX mobile degradee |
+| Fiche Bien | 6/10 | Contenu riche, mais surcharge visuelle et loading states absents |
+| Accessibilite | 3/10 | Aucune strategie ARIA, pas de focus management, contraste limite |
+| Responsive | 4/10 | Desktop OK, mobile casse sur plusieurs composants critiques |
+| Performance | 6/10 | Lazy loading images OK, mais pas de skeleton screens ni SSR optimise |
+| Coherence | 4/10 | 3+ styles de boutons, 3+ styles d'inputs, pas de composants partages |
+
+**Priorite #1** : Composants UI partages (Button, Input, Card, Modal)
+**Priorite #2** : Responsive mobile (50%+ du trafic immo est mobile)
+**Priorite #3** : Accessibilite minimum (clavier + screen reader basics)
+
+---
+
+## 1. DESIGN SYSTEM — COHERENCE GLOBALE
+
+### 1.1 Couleurs — Derive du theme
+
+**Constat** : `theme.ts` definit une palette propre, mais la majorite du code l'ignore.
+
+| Fichier | Probleme |
+|---------|----------|
+| `page.tsx` (landing) | CSS vars `var(--red)`, `var(--ink)` — pas liees a `theme.ts` |
+| `ChatWidget.tsx` | Hardcode `#1a1210`, `#faf8f5`, `#c0392b` au lieu de `theme.colors` |
+| `LandingHeader.tsx` | Utilise `var(--muted)`, `var(--sand)` — non synchronise avec theme |
+| `login/page.tsx`, `register/page.tsx` | Hardcode `#9a8a80`, `#fde8e8`, `#faf8f5` |
+| `Layout.tsx` | Mix `rgba(0,0,0,0.04)` au lieu de couleurs semantiques |
+
+- [ ] **P1** Unifier toutes les couleurs via `theme.ts` — supprimer tout hardcode hex/rgba
+- [ ] **P1** Synchroniser les CSS vars de `page.tsx` avec `theme.colors`
+- [ ] **P2** Ajouter des couleurs semantiques manquantes : `buttonPrimary`, `inputBorder`, `inputFocus`
+- [ ] **P3** Documenter la palette avec un styleguide minimal (`/admin/styleguide`)
+
+### 1.2 Typographie
+
+**Constat** : 2 familles (Fraunces display, DM Sans body) — bon choix. Mais les tailles derivent.
+
+| Endroit | Taille | Devrait etre |
+|---------|--------|-------------|
+| ChatWidget messages | `13.5px` | `14px` (theme.fontSizes.base) |
+| Nav links Layout | `13px` | `14px` (theme.fontSizes.base) |
+| Landing hero h1 | `60px` | OK (hors theme, specifique landing) |
+| BienCard prix | inline `fontSize` variable | Standardiser via theme |
+
+- [ ] **P2** Standardiser toutes les tailles texte sur `theme.fontSizes` (xs/sm/base/md/lg/xl)
+- [ ] **P2** Line-height : imposer 1.15 titres, 1.5 body, 1.65 texte long — partout
+- [ ] **P3** Letter-spacing : negatif sur Fraunces gros (-0.02em), neutre sur DM Sans
 
 ### 1.3 Espacements
-- [ ] Grille de 4px ou 8px stricte (pas de 7px, 13px, 17px random)
-- [ ] Espacement vertical entre sections : 32px ou 48px (pas de mix)
-- [ ] Padding intérieur des cartes : 16px, 20px ou 24px (un seul par type de carte)
-- [ ] Marges entre les éléments de formulaire : identiques partout (12px ou 16px)
-- [ ] Gap dans les flex/grid : standardisé (8px petit, 16px moyen, 24px grand)
-- [ ] Padding horizontal des pages : identique partout (48px desktop, 24px mobile)
+
+**Constat** : Grille 4px/8px dans `theme.spacing` — respectee dans BienCard, ignoree ailleurs.
+
+- [ ] **P2** Auditer tous les `padding`/`margin`/`gap` inline et les aligner sur la grille 4px
+- [ ] **P2** Standardiser : padding cartes = `20px`, gap grille = `16px`, sections = `48px`/`64px`
+- [ ] **P3** Supprimer les valeurs impaires (13px, 17px, 7px) dans les inline styles
 
 ### 1.4 Bordures & Ombres
-- [ ] Border-radius cohérent : 4px (badges), 8px (boutons), 12px (cartes), 16px (sections)
-- [ ] Bordure couleur unique : sand (#e8e2d8) partout, pas de mélanges
-- [ ] Ombres limitées : card (subtile), hover (prononcée), dropdown (moyenne)
-- [ ] Pas d'ombre + bordure sur le même élément (choisir l'un ou l'autre)
+
+- [ ] **P2** Border-radius : `8px` boutons, `12px` cartes, `16px` sections, `20px` hero cards — respecter partout
+- [ ] **P3** Bordure unique `sand` (#e8e2d8) — certains composants utilisent `#f0ede8` ou `rgba` a la place
+- [ ] **P3** Ne jamais combiner ombre + bordure sur le meme element
 
 ### 1.5 Iconographie
-- [ ] Style cohérent (outline OU filled, pas de mélange)
-- [ ] Taille cohérente (16px inline, 20px bouton, 24px navigation)
-- [ ] Pas d'emojis dans l'UI de production (OK pour les prototypes, pas pour le site final)
-- [ ] Icônes alignées verticalement avec le texte adjacent
 
-## 2. HEADER / NAVIGATION
+**Constat** : SVG inline dans la landing (strategies), pas de librairie d'icones centralisee.
 
-### 2.1 Structure
-- [ ] Logo cliquable → retour accueil
-- [ ] Navigation principale visible sans hover (pas de hamburger sur desktop)
-- [ ] Indicateur de page active (souligné, background, bold)
-- [ ] Sticky header avec backdrop-filter blur
-- [ ] Hauteur fixe (56px) cohérente sur toutes les pages
-- [ ] Pas de CLS (Cumulative Layout Shift) au chargement du header
+- [ ] **P3** Choisir un style : outline partout (coherent avec les SVG actuels)
+- [ ] **P3** Tailles standard : 16px inline, 20px bouton, 24px navigation
+- [ ] **P2** Pas d'emojis dans l'UI de production (ChatWidget utilise des emojis pour le bot — acceptable pour Memo uniquement)
 
-### 2.2 Responsive
-- [ ] Hamburger menu sur mobile (< 768px)
-- [ ] Logo réduit sur mobile (texte court ou icône seule)
-- [ ] Menu mobile : overlay plein écran ou drawer latéral
-- [ ] Bouton connexion accessible sur mobile
+---
 
-### 2.3 Éléments
-- [ ] Avatar utilisateur avec initiale (pas juste l'email)
-- [ ] Notification badge sur la watchlist (nombre de biens)
-- [ ] Transition smooth entre états connecté/déconnecté
-- [ ] Dropdown profil propre (déconnexion, profil, admin si admin)
+## 2. COMPOSANTS UI — MANQUE DE LIBRAIRIE PARTAGEE
 
-## 3. LANDING PAGE / ACCUEIL
+### 2.1 Boutons — 5+ variantes non standardisees
 
-### 3.1 Hero Section
-- [ ] Titre accrocheur (proposition de valeur en 1 phrase)
-- [ ] Sous-titre explicatif (2 lignes max)
-- [ ] CTA principal visible (contraste fort, taille généreuse)
-- [ ] CTA secondaire (ex: "Voir une démo")
-- [ ] Image/illustration pertinente (pas de stock photo générique)
-- [ ] Espacement généreux (80px+ au-dessus et en-dessous)
+| Composant | Style | Couleur |
+|-----------|-------|---------|
+| Landing `.btn-hero` | Rouge bold + shadow | `#c0392b` |
+| Landing `.btn-ghost` | Outline sand | transparent |
+| Auth `.auth-btn` | Dark solid | `#1a1210` |
+| BienCard upgrade modal | Rouge | `#c0392b` |
+| ChatWidget send | Rouge conditionnel | `#c0392b` / `#e8e2d8` |
+| PricingCta | Herite du parent `.plan-cta` | variable |
 
-### 3.2 Social Proof
-- [ ] Nombre de biens sourcés ("91 000+ biens analysés")
-- [ ] Nombre de plateformes ("60+ plateformes")
-- [ ] Logos des plateformes sourcées (LBC, SeLoger, Bienici...)
-- [ ] Témoignages utilisateurs (même fictifs au début)
+- [ ] **P1** Creer `<Button variant="primary|secondary|ghost|danger" size="sm|md|lg" />` dans `components/ui/`
+- [ ] **P1** Tous les boutons doivent avoir : `min-height: 44px` (touch target), `cursor: pointer`, transition, focus-visible outline
 
-### 3.3 Features
-- [ ] 3-4 blocs features max (pas de liste à la Prévert)
-- [ ] Icône + titre + description courte par feature
-- [ ] Alternance gauche/droite ou grille régulière
-- [ ] Captures d'écran de l'app dans les features
+### 2.2 Inputs — 3+ styles differents
 
-### 3.4 Pricing
-- [ ] 3 plans max côte à côte
-- [ ] Plan recommandé mis en avant (bordure, badge "Populaire")
-- [ ] Prix clair (mensuel, HT/TTC)
-- [ ] Liste de features par plan avec check/cross
-- [ ] CTA par plan
+| Endroit | Style |
+|---------|-------|
+| Auth pages `.auth-input` | Background `#faf8f5`, border sand |
+| Biens list `CellEditable` | Inline styles, border conditionnelle |
+| Commune search | Input generique, pas de style visible |
+| Parametres | Encore different |
 
-### 3.5 CTA Final
-- [ ] Section de conclusion avec CTA fort
-- [ ] Rappel de la proposition de valeur
-- [ ] Urgence ou rareté si pertinent
+- [ ] **P1** Creer `<Input variant="default|search|inline-edit" />` dans `components/ui/`
+- [ ] **P2** Labels toujours au-dessus de l'input, jamais a gauche
+- [ ] **P2** Placeholder = exemple de valeur, pas une explication
+- [ ] **P2** Focus ring visible sur tous les inputs (accessibilite clavier)
 
-## 4. PAGE BIENS (LISTING)
+### 2.3 Modals — Pas de composant partage
+
+**Constat** : BienCard a un modal inline pour la watchlist, ChatWidget a un drawer/panel. Aucun ne partage de logique.
+
+- [ ] **P2** Creer `<Modal>` avec : overlay, Escape pour fermer, focus trap, click-outside, animation
+- [ ] **P2** Variantes : `modal` (centree), `drawer` (laterale), `sheet` (mobile bottom)
+
+### 2.4 Cards
+
+- [ ] **P2** Creer `<Card>` avec : padding, border, radius, hover shadow — standardise depuis theme
+- [ ] **P3** Variante `<Card elevated>` pour les hover states
+
+---
+
+## 3. LANDING PAGE (`app/page.tsx`)
+
+### 3.1 Hero — Bon mais ameliorable
+
+**Points forts** : Titre accrocheur, proposition de valeur claire, CTA visible, stats en social proof.
+
+| Check | Statut | Detail |
+|-------|--------|--------|
+| Titre accrocheur | OK | "Investissez comme un marchand de biens" |
+| Sous-titre | OK | Clair, 2 lignes |
+| CTA principal | OK | "Voir les biens disponibles" — bon verbe d'action |
+| CTA secondaire | OK | "Comment ca marche" — ancre interne |
+| Visual hero | MOYEN | Carte fictive animee — correcte mais pas screenshot reel |
+| Stats | OK | 90 000+ biens, France entiere, 7 regimes |
+
+- [ ] **P2** Ajouter un vrai screenshot de l'app (pas juste un mockup CSS) pour la credibilite
+- [ ] **P3** Hero visual masquee sur tablette (`display: none` a 1024px) — montrer une version simplifiee plutot que rien
+- [ ] **P3** Considerer un badge "Gratuit" ou "Sans CB" sur le CTA pour reduire la friction
+
+### 3.2 Social Proof — Insuffisant
+
+**Constat** : Chiffres OK (90 000+ biens, 60+ plateformes) mais pas de temoignages, pas de logos.
+
+- [ ] **P1** Ajouter une barre de logos des plateformes sourcees (LBC, SeLoger, Bienici, PAP, Logic-Immo...)
+- [ ] **P2** Ajouter 2-3 temoignages (meme reconstitues au debut) avec photo, nom, metier
+- [ ] **P3** Ajouter un badge "Donnees DVF officielles" pour la credibilite data
+
+### 3.3 Section Strategies — Bonne
+
+- [ ] **OK** 4 cartes claires, icones, tags — bien structure
+- [ ] **P3** Ajouter un lien "En savoir plus" sur chaque carte vers `/strategies`
+
+### 3.4 Section "Comment ca marche" — Bonne
+
+- [ ] **OK** 3 etapes numerotees, timeline visuelle
+- [ ] **P3** Ajouter des micro-illustrations ou screenshots dans chaque etape
+
+### 3.5 Section Screenshot — Ameliorable
+
+**Constat** : Mockup statique en CSS/HTML dans la page. Pas interactif, pas de vraies donnees.
+
+- [ ] **P2** Remplacer par un vrai screenshot de l'app (image statique ou video courte)
+- [ ] **P3** Ajouter des annotations (fleches, bulles) pointant les features cles
+- [ ] **P3** Animation au scroll (fade-in) pour dynamiser
+
+### 3.6 Pricing — Bon
+
+| Check | Statut |
+|-------|--------|
+| 3 plans cote a cote | OK |
+| Plan Pro mis en avant | OK (fond noir, badge "Le plus populaire") |
+| Prix clair | OK (0/19/49 EUR/mois) |
+| Features listees check/cross | OK |
+| CTA par plan | OK |
+
+- [ ] **P2** Ajouter "14 jours gratuits" de facon plus visible sur le plan Pro (pas juste dans le bouton)
+- [ ] **P3** Ajouter un toggle mensuel/annuel si tarif annuel prevu
+- [ ] **P3** Feature "Memo — assistant IA" merite un tooltip explicatif pour les nouveaux visiteurs
+
+### 3.7 CTA Final — Manquant
+
+- [ ] **P1** Ajouter une section finale avant le footer : "Pret a investir ?" + CTA + rappel proposition de valeur
+
+### 3.8 Footer — Correct
+
+- [ ] **OK** Logo, liens produit/strategies/legal, copyright
+- [ ] **P3** Ajouter lien vers `/blog` (Conseils)
+- [ ] **P3** Ajouter lien vers `/privacy` (politique de confidentialite)
+- [ ] **P3** Ajouter liens reseaux sociaux si existants
+
+---
+
+## 4. PAGE BIENS (LISTING) — `app/biens/page.tsx`
 
 ### 4.1 Filtres
-- [ ] Barre de filtres sticky ou facilement accessible
-- [ ] Filtres visuellement groupés par catégorie
-- [ ] Reset des filtres en un clic
-- [ ] Compteur de résultats mis à jour en temps réel
-- [ ] États actifs des filtres clairement visibles
-- [ ] Pas de filtre qui retourne 0 résultat sans avertissement
 
-### 4.2 Cartes biens (grille)
-- [ ] Photo de bonne qualité, ratio cohérent (16:9 ou 4:3)
-- [ ] Placeholder élégant si pas de photo (pas juste "Pas de photo" en texte)
-- [ ] Infos essentielles visibles sans clic : prix, surface, pièces, ville, rendement
-- [ ] Badge stratégie visible
-- [ ] Badge +/- value visible
-- [ ] Bouton watchlist (coeur) accessible sans gêner le clic sur la carte
-- [ ] Hover subtil (élévation + ombre, pas de changement brutal)
-- [ ] Carrousel photo fluide (pas de lag, pas de flash blanc entre photos)
+- [ ] **OK** Barre de filtres complete (strategie, localisation, type, prix, rendement, tri)
+- [ ] **OK** Compteur de resultats en temps reel
+- [ ] **P2** Ajouter un bouton "Reinitialiser les filtres" visible quand des filtres sont actifs
+- [ ] **P2** Etats actifs des filtres : badge/chip avec le nombre de filtres actifs
+- [ ] **P3** Filtres collapses en drawer sur mobile (actuellement la barre deborde)
 
-### 4.3 Liste biens
-- [ ] Tableau aligné, colonnes de largeur cohérente
-- [ ] En-têtes fixes lors du scroll vertical
-- [ ] Lignes hover subtiles
-- [ ] Données manquantes affichées en gris italique "NC" (pas vide)
-- [ ] Actions (voir, watchlist) toujours visibles sans scroll horizontal
+### 4.2 Cartes Biens (`BienCard.tsx`)
 
-### 4.4 Scroll infini
-- [ ] Indicateur de chargement en bas (spinner, pas "Chargement...")
-- [ ] Smooth scroll, pas de saut
-- [ ] Compteur "X affichés sur Y" toujours visible
-- [ ] Retour en haut de page facile
+**Points forts** : Skeleton loading photo, badge strategie, badge rendement/plus-value, watchlist coeur.
 
-### 4.5 Empty states
-- [ ] Message clair quand aucun résultat
-- [ ] Suggestion d'action (élargir les filtres, changer de stratégie)
-- [ ] Illustration ou icône, pas juste du texte
+| Check | Statut |
+|-------|--------|
+| Photo avec lazy loading | OK (skeleton shimmer) |
+| Photo placeholder si absente | OK ("Photo indisponible" avec icone) |
+| Carrousel photo | OK (fleches) |
+| Infos essentielles visibles | OK (prix, surface, pieces, ville, rdt) |
+| Badge strategie | OK |
+| Badge plus-value | OK (vert/rouge) |
+| Bouton watchlist | OK (coeur, loading state) |
+| Hover subtil | OK (elevation + shadow) |
 
-## 5. FICHE BIEN (DETAIL)
+- [ ] **P1** Responsive : largeur fixe, casse sur mobile — passer en width 100% avec grid auto-fill
+- [ ] **P2** Carrousel photo : ajouter support clavier (fleches gauche/droite)
+- [ ] **P2** Aria-label sur le bouton coeur ("Ajouter a la watchlist" / "Retirer de la watchlist")
+- [ ] **P3** Ajouter DPE badge directement sur la carte
 
-### 5.1 Hero
-- [ ] Photo principale grande, qualité maximale
-- [ ] Carrousel de photos fluide avec compteur
-- [ ] Infos clés visibles immédiatement : prix, surface, pièces, ville, DPE
-- [ ] Badges stratégie + statut
-- [ ] Bouton watchlist
-- [ ] Liens vers les plateformes (logos)
+### 4.3 Vue Liste
 
-### 5.2 Données du bien
-- [ ] Grille de données alignée et cohérente
-- [ ] Labels en uppercase léger, valeurs en font plus grande
-- [ ] Données manquantes : "NC" avec style dédié (gris, italic)
-- [ ] Regroupement logique : Identité, Caractéristiques, Locatif, Travaux
-- [ ] Champs enrichissables mis en avant (jaune/vert selon validation)
+- [ ] **P2** Colonnes trop serrees sur tablette — rendre certaines colonnes optionnelles
+- [ ] **P2** Donnees manquantes affichees en gris italic "NC" — verifier la coherence partout
+- [ ] **P3** En-tetes de colonnes fixes au scroll (sticky thead)
+
+### 4.4 Pagination / Scroll
+
+- [ ] **OK** Scroll infini avec indicateur de chargement
+- [ ] **P3** Ajouter un compteur "X affiches sur Y total"
+- [ ] **P3** Bouton "Retour en haut" visible apres scroll
+
+### 4.5 Empty States
+
+- [ ] **P2** Message "Aucun bien ne correspond" existe mais manque d'illustration
+- [ ] **P2** Ajouter une suggestion d'action ("Elargissez vos filtres" / "Essayez une autre strategie")
+
+---
+
+## 5. FICHE BIEN (`app/biens/[id]/page.tsx`)
+
+### 5.1 Hero / Photos
+
+- [ ] **P2** Carrousel fluide avec compteur (ex: "3/12")
+- [ ] **P2** Photos en plein ecran sur mobile (tap to fullscreen)
+- [ ] **P3** Zoom sur hover desktop (lens effect)
+
+### 5.2 Donnees du bien
+
+- [ ] **OK** Grille de donnees structuree (identite, locatif, travaux, NLP)
+- [ ] **P2** Cellules editables : le clic droit pour modifier n'est pas intuitif — ajouter un picto "crayon" visible
+- [ ] **P2** Donnees "NC" : style gris italic coherent partout
+- [ ] **P3** Regrouper visuellement avec des sous-titres de section
 
 ### 5.3 Estimation DVF
-- [ ] Affichage clair du prix estimé vs prix FAI
-- [ ] Barre visuelle de la fourchette (prix bas → estimé → prix haut)
-- [ ] Confiance (A/B/C/D) avec code couleur
-- [ ] Correcteurs listés avec badges colorés
-- [ ] Nombre de comparables et rayon
-- [ ] Bouton recalculer
 
-### 5.4 Simulateur fiscal
-- [ ] Inputs avec labels clairs et unités (€, %, ans)
-- [ ] Sliders pour apport et durée (pas juste des inputs)
-- [ ] Résultats calculés en temps réel (pas de bouton "calculer")
-- [ ] Deux colonnes comparatives bien alignées
-- [ ] Chiffres négatifs en rouge, positifs en vert
-- [ ] Section revente intégrée avec waterfall clair
+- [ ] **P2** Barre visuelle prix FAI vs estimation (representation graphique de l'ecart)
+- [ ] **P2** Confiance (A/B/C/D) avec code couleur + tooltip explicatif
+- [ ] **P3** Correcteurs listes avec badges colores (DPE, etage, parking...)
 
-### 5.5 Contact vendeur
-- [ ] Message pré-rédigé intelligent
-- [ ] Bouton copier le message
-- [ ] Lien direct vers la plateforme d'origine
-- [ ] Statut du contact (envoyé, répondu, etc.)
+### 5.4 Simulateur Fiscal (PnlColonne)
 
-### 5.6 Navigation
-- [ ] Bouton retour qui conserve les filtres et la position scroll
-- [ ] Navigation entre biens (précédent/suivant) si possible
-- [ ] Breadcrumb : Biens > Locataire en place > Nantes > Ce bien
+- [ ] **OK** 7 regimes calcules en temps reel
+- [ ] **P2** Chiffres negatifs en rouge, positifs en vert — verifier la coherence
+- [ ] **P2** Scenario revente avec waterfall clair
+- [ ] **P3** Ajouter un mini-graphique (bar chart) pour la comparaison regimes
 
-## 6. WATCHLIST
+### 5.5 Navigation
 
-- [ ] Onglets par stratégie (comme fait)
-- [ ] Même qualité visuelle que la page biens
-- [ ] Pouvoir retirer un bien facilement (pas de confirmation pour le coeur)
-- [ ] Empty state encourageant ("Explorez les biens pour commencer")
-- [ ] Export possible (CSV, PDF) — même si payant
+- [ ] **P2** Bouton retour qui conserve les filtres et la position scroll
+- [ ] **P3** Breadcrumb : Biens > [Strategie] > [Ville] > Ce bien
+- [ ] **P3** Navigation prev/next entre biens si possible
 
-## 7. MON PROFIL
+### 5.6 Loading / Error States
 
-- [ ] Formulaire clair avec sections (Fiscal, Financement, Budget travaux)
-- [ ] Sauvegarde automatique ou bouton sauvegarder visible
-- [ ] Feedback de sauvegarde (toast "Profil mis à jour")
-- [ ] Explication de chaque champ (tooltip ou sous-label)
-- [ ] Valeurs par défaut intelligentes pour les nouveaux utilisateurs
+- [ ] **P1** MANQUANT : pas de loading state pendant le fetch des donnees du bien
+- [ ] **P1** MANQUANT : pas d'error boundary si le fetch echoue — page blanche
+- [ ] **P2** Ajouter un skeleton screen pour le chargement initial
 
-## 8. EDITORIAL / BLOG
+---
 
-- [ ] Liste d'articles avec image cover, titre, date, catégorie
-- [ ] Article en pleine largeur, typographie soignée (Lora)
-- [ ] Temps de lecture estimé
-- [ ] Partage social (LinkedIn, Twitter, copier le lien)
-- [ ] Articles liés en fin d'article ("Vous aimerez aussi")
-- [ ] Auteur avec avatar et bio courte
-- [ ] Table des matières flottante pour les articles longs
+## 6. WATCHLIST (`app/mes-biens/page.tsx`)
 
-## 9. FOOTER
+- [ ] **OK** Onglets par strategie
+- [ ] **OK** Pipeline MDB avec 13 statuts de suivi
+- [ ] **P2** Empty state encourageant ("Explorez les biens pour constituer votre watchlist")
+- [ ] **P3** Export CSV/PDF (meme reserve aux plans payants)
+- [ ] **P3** Drag & drop pour reordonner les biens dans un statut
 
-- [ ] Logo + baseline
-- [ ] Liens rapides : Biens, Blog, Tarifs, Contact, CGV, Mentions légales
-- [ ] Réseaux sociaux (icônes)
-- [ ] Newsletter (email input + bouton)
-- [ ] Copyright avec année dynamique
-- [ ] Pas trop chargé (max 4 colonnes)
-- [ ] Couleur de fond différente du body (légèrement plus sombre ou plus clair)
+---
 
-## 10. RESPONSIVE / MOBILE
+## 7. AUTH (LOGIN / REGISTER)
 
-### 10.1 Breakpoints
-- [ ] Mobile : < 640px
-- [ ] Tablette : 640px - 1024px
-- [ ] Desktop : > 1024px
-- [ ] Pas de scroll horizontal sur aucun device
+### 7.1 Login
 
-### 10.2 Mobile spécifique
-- [ ] Grille biens en 1 colonne
-- [ ] Filtres dans un drawer/modal (pas inline)
-- [ ] Simulateur fiscal scrollable (pas de colonnes côte à côte)
-- [ ] Photos bien en plein écran
-- [ ] Boutons assez grands (min 44px de hauteur)
-- [ ] Texte lisible sans zoom (min 16px body)
-- [ ] Pas de hover effects sur mobile (utiliser tap)
+- [ ] **OK** Email + password avec OAuth Google/Facebook
+- [ ] **P2** Focus automatique sur le champ email au chargement
+- [ ] **P2** Afficher/masquer le mot de passe (icone oeil)
+- [ ] **P3** "Mot de passe oublie ?" — lien visible
 
-## 11. PERFORMANCE & TECHNIQUE
+### 7.2 Register
 
-- [ ] Images optimisées (WebP, lazy loading)
-- [ ] Pas de layout shift au chargement (CLS < 0.1)
-- [ ] First Contentful Paint < 1.5s
-- [ ] Fonts préchargées (preload)
-- [ ] Metadata SEO sur chaque page (title, description, og:image)
-- [ ] Favicon correct (toutes tailles)
-- [ ] 404 personnalisée
-- [ ] Sitemap.xml généré
-- [ ] robots.txt configuré
+- [ ] **OK** Meme layout que login + message succes post-inscription
+- [ ] **P2** Validation en temps reel du format email
+- [ ] **P2** Indicateur de force du mot de passe
+- [ ] **P3** Mention RGPD + lien vers politique de confidentialite sous le bouton
 
-## 12. MICRO-INTERACTIONS & DETAILS
+---
 
-### 12.1 Transitions
-- [ ] Toutes les transitions : 150ms ease (rapide) ou 300ms ease (visible)
-- [ ] Pas de transition > 500ms (sensation de lenteur)
-- [ ] Hover sur boutons : changement de background, pas juste opacité
-- [ ] Hover sur cartes : élévation subtile (translateY -2px + ombre)
-- [ ] Focus visible sur tous les éléments interactifs (accessibilité clavier)
+## 8. CHAT IA — MEMO (`ChatWidget.tsx`)
 
-### 12.2 Loading states
-- [ ] Skeleton screens au lieu de spinners (sauf overlay modal)
-- [ ] Boutons disabled pendant le chargement avec spinner intégré
-- [ ] Progress bar pour les opérations longues
-- [ ] Optimistic UI quand possible (watchlist toggle instantané)
+| Check | Statut |
+|-------|--------|
+| Streaming | OK |
+| Historique session | OK (sessionStorage) |
+| Limite quotidienne | OK (Free 5, Pro 50, Expert illimite) |
+| Mobile responsive | PARTIEL (modal 70vh — clavier masque l'input) |
 
-### 12.3 Feedback utilisateur
-- [ ] Toast notifications pour les actions (sauvegardé, ajouté, erreur)
-- [ ] Position : bottom-right, durée 3s, dismissible
-- [ ] Couleurs : vert succès, rouge erreur, orange avertissement
-- [ ] Pas plus d'un toast à la fois
+- [ ] **P2** Mobile : quand le clavier s'ouvre, l'input doit rester visible (ajuster `vh` dynamiquement)
+- [ ] **P2** Limite quotidienne : afficher le compteur restant avant d'envoyer, pas apres le refus
+- [ ] **P2** Ajouter `role="dialog"` et focus trap quand le panel est ouvert
+- [ ] **P3** Indication visuelle "Memo reflechit..." pendant le streaming (pas juste des points)
+- [ ] **P3** Historique : avertir que les messages sont perdus a la fermeture de l'onglet
 
-### 12.4 Formulaires
-- [ ] Labels toujours au-dessus de l'input (pas à gauche)
-- [ ] Placeholder = exemple, pas explication (l'explication c'est le label)
-- [ ] Validation en temps réel (pas juste à la soumission)
-- [ ] Messages d'erreur sous le champ, en rouge, texte explicite
-- [ ] Champs obligatoires marqués (astérisque ou mention)
-- [ ] Tab order logique
-- [ ] Autofocus sur le premier champ
+---
 
-### 12.5 Textes & Copies
-- [ ] Zéro faute d'orthographe
-- [ ] Ton cohérent (vouvoiement OU tutoiement, pas les deux)
-- [ ] Boutons avec verbes d'action ("Voir l'analyse" pas "Analyse")
-- [ ] Messages d'erreur humains ("Oups, quelque chose a planté" pas "Error 500")
-- [ ] Texte vide encourageant, pas juste "Aucun résultat"
+## 9. BLOG / EDITORIAL
 
-## 13. PAGES MANQUANTES
+- [ ] **OK** Listing articles avec cover, titre, date
+- [ ] **OK** Article en Lora, pleine largeur
+- [ ] **P2** Ajouter le temps de lecture estime (nb mots / 200)
+- [ ] **P2** Boutons de partage (LinkedIn, X, copier le lien)
+- [ ] **P3** Articles lies en fin d'article ("A lire aussi")
+- [ ] **P3** Table des matieres flottante pour les articles longs
 
-- [ ] Landing page / Accueil
-- [ ] Page tarifs
-- [ ] Page "Comment ça marche"
-- [ ] Page blog publique (articles publiés)
-- [ ] Page 404
-- [ ] Page CGV / Mentions légales
-- [ ] Page contact
+---
 
-## 14. CHECKLIST PRE-LANCEMENT
+## 10. HEADER / NAVIGATION (`Layout.tsx`)
 
-- [ ] Test sur Chrome, Firefox, Safari, Edge
-- [ ] Test sur iPhone (Safari), Android (Chrome)
+### 10.1 Desktop
+
+- [ ] **OK** Sticky header avec backdrop-filter blur
+- [ ] **OK** Logo cliquable → accueil
+- [ ] **OK** Nav principale visible
+- [ ] **OK** Dropdown profil (profil, parametres, watchlist, admin si admin, deconnexion)
+
+- [ ] **P2** Indicateur de page active dans la nav (souligné ou background change)
+- [ ] **P2** Dropdown : ajouter `role="menu"` et `role="menuitem"` pour l'accessibilite
+- [ ] **P3** Badge notification sur la watchlist (nombre de biens)
+
+### 10.2 Mobile
+
+- [ ] **P1** Navigation `display: none` sur mobile — AUCUN menu hamburger visible. L'utilisateur mobile n'a aucune navigation.
+- [ ] **P1** Creer un hamburger menu ou un bottom navigation bar pour mobile
+- [ ] **P2** Bouton connexion/inscription accessible sur mobile
+
+---
+
+## 11. FOOTER
+
+- [ ] **OK** Logo + baseline, liens produit/strategies/legal, copyright
+- [ ] **P3** Ajouter lien Blog (Conseils), Privacy, Contact
+- [ ] **P3** Icones reseaux sociaux si pertinent
+- [ ] **P3** Couleur de fond differente du body — deja OK (ink/dark)
+
+---
+
+## 12. RESPONSIVE / MOBILE
+
+### 12.1 Breakpoints actuels
+
+```
+@media (max-width: 1024px)  → tablette (hero visual masque, grille 2 cols)
+@media (max-width: 768px)   → mobile (nav masquee, grille 1 col, padding reduit)
+```
+
+### 12.2 Problemes critiques mobile
+
+| Page | Probleme | Severite |
+|------|----------|----------|
+| Toutes | Pas de menu hamburger, navigation inaccessible | CRITIQUE |
+| Biens listing | Barre de filtres deborde horizontalement | HAUTE |
+| BienCard | Largeur fixe, ne s'adapte pas au viewport | HAUTE |
+| Fiche bien | Simulateur fiscal 2 colonnes non scrollable | MOYENNE |
+| ChatWidget | Input masque par le clavier iOS/Android | MOYENNE |
+| Landing | Hero visual disparait completement sur tablette | BASSE |
+
+- [ ] **P1** Menu hamburger fonctionnel sur mobile (< 768px)
+- [ ] **P1** Filtres dans un drawer/bottom-sheet sur mobile
+- [ ] **P1** BienCard en `width: 100%` sur mobile (1 colonne)
+- [ ] **P2** Simulateur fiscal : colonnes en stack vertical sur mobile
+- [ ] **P2** Touch targets : tous les boutons min `44px` de hauteur (iOS HIG)
+- [ ] **P2** Texte lisible sans zoom : body min `16px` sur mobile
+- [ ] **P3** Pas d'effets hover sur mobile (remplacer par tap/active states)
+
+---
+
+## 13. ACCESSIBILITE (WCAG 2.1 AA)
+
+### 13.1 Audit
+
+| Critere | Statut | Detail |
+|---------|--------|--------|
+| Contraste texte | PARTIEL | `muted` (#9a8a80) sur `bg` (#faf8f5) = ratio 3.0:1 — insuffisant pour texte normal (besoin 4.5:1) |
+| Focus visible | ABSENT | Aucun `outline` visible au focus clavier sur boutons et liens |
+| ARIA landmarks | ABSENT | Pas de `role="main"`, `role="navigation"`, `role="banner"` |
+| ARIA labels | ABSENT | Boutons icones (coeur, fleches carrousel) sans label textuel |
+| Alt text images | PARTIEL | Landing = alt vides (`alt=""`), BienCard = alt dynamique OK |
+| Keyboard nav | PARTIEL | Tab fonctionne mais pas de focus trap dans modals/dropdowns |
+| Skip to content | ABSENT | Pas de lien "Aller au contenu" pour les lecteurs d'ecran |
+
+- [ ] **P1** Focus visible : ajouter `outline: 2px solid var(--red); outline-offset: 2px` sur `:focus-visible`
+- [ ] **P1** Contraste : assombrir `muted` a #7a6a60 pour atteindre 4.5:1 minimum
+- [ ] **P1** ARIA labels sur tous les boutons icones (coeur, carrousel, fermer, menu)
+- [ ] **P2** Landmarks : `<main>`, `<nav>`, `<header>`, `<footer>` semantiques
+- [ ] **P2** Skip-to-content link en haut de page
+- [ ] **P2** Focus trap dans les modals et dropdowns
+- [ ] **P3** `prefers-reduced-motion` : desactiver les animations CSS pour les utilisateurs sensibles
+
+---
+
+## 14. PERFORMANCE & TECHNIQUE
+
+| Metrique | Cible | Statut |
+|----------|-------|--------|
+| LCP (Largest Contentful Paint) | < 2.5s | A mesurer |
+| FID (First Input Delay) | < 100ms | A mesurer |
+| CLS (Cumulative Layout Shift) | < 0.1 | RISQUE — pas de dimensions fixes sur les images |
+| FCP (First Contentful Paint) | < 1.8s | A mesurer |
+
+- [ ] **P2** Images : ajouter `width`/`height` ou `aspect-ratio` pour eviter le CLS
+- [ ] **P2** Fonts : `<link rel="preload">` pour Fraunces et DM Sans (critique pour LCP)
+- [ ] **P2** Metadata SEO : verifier `title`, `description`, `og:image` sur chaque page
+- [ ] **P3** `next/image` au lieu de `<img>` natif pour l'optimisation automatique (WebP, lazy, srcset)
+- [ ] **P3** Bundle splitting : verifier que ChatWidget est lazy-loaded (pas charge si pas visible)
+
+---
+
+## 15. MICRO-INTERACTIONS & DETAILS
+
+### 15.1 Transitions
+
+- [ ] **OK** Hover boutons : changement de background avec transition 150ms
+- [ ] **OK** Hover cartes : elevation translateY(-2px) + shadow
+- [ ] **P3** Ajouter une micro-animation au toggle watchlist (scale bounce du coeur)
+- [ ] **P3** Smooth scroll sur les ancres internes (#strats, #how, #pricing) — actuellement saut instantane
+
+### 15.2 Loading States
+
+| Composant | Skeleton | Spinner | Optimistic UI |
+|-----------|----------|---------|---------------|
+| BienCard photo | OK | - | - |
+| Biens listing | OK | OK | - |
+| Watchlist toggle | - | OK (opacity) | Non |
+| Fiche bien | ABSENT | ABSENT | - |
+| Chat envoi msg | - | OK (dots) | - |
+
+- [ ] **P1** Fiche bien : ajouter skeleton screen au chargement
+- [ ] **P2** Watchlist toggle : optimistic UI (coeur change immediatement, rollback si erreur)
+- [ ] **P3** Toast notifications pour actions (ajoute/retire de la watchlist, profil sauvegarde)
+
+### 15.3 Feedback Utilisateur
+
+- [ ] **P2** Toast system : bottom-right, 3s, vert succes / rouge erreur / orange warning
+- [ ] **P2** Messages d'erreur humains ("Impossible de charger ce bien" plutot que ecran blanc)
+- [ ] **P3** Confirmation de copie du lien (share) avec toast
+
+### 15.4 Formulaires
+
+- [ ] **P2** Validation temps reel (email format, mot de passe force)
+- [ ] **P2** Messages d'erreur sous le champ concerne, en rouge, texte explicite
+- [ ] **P2** Champs obligatoires marques (asterisque rouge)
+- [ ] **P3** Tab order logique (tester avec Tab sur toutes les pages)
+
+### 15.5 Textes & Copies
+
+- [ ] **P2** Verifier le ton : vouvoiement coherent partout (pas de melange tu/vous)
+- [ ] **P2** Boutons avec verbes d'action ("Voir l'analyse" pas "Analyse")
+- [ ] **P3** Relecture orthographe complete (aria-label "precedente" mal accentue dans BienCard)
+- [ ] **P3** Messages d'erreur empathiques ("Oups, ce bien n'est plus disponible" pas "Error 404")
+
+---
+
+## 16. PAGES MANQUANTES OU INCOMPLETES
+
+| Page | Statut | Priorite |
+|------|--------|----------|
+| Landing page | OK | - |
+| Listing biens | OK | - |
+| Fiche bien | OK | - |
+| Blog listing + article | OK | - |
+| Strategies | OK | - |
+| Auth (login/register) | OK | - |
+| Watchlist (mes-biens) | OK | - |
+| Profil + parametres | OK | - |
+| CGU + Mentions legales | OK | - |
+| Privacy (RGPD) | OK | - |
+| 404 personnalisee | OK | - |
+| Page "Tarifs" standalone | MANQUANTE | P3 (integree dans la landing) |
+| Page "Contact" | MANQUANTE | P2 |
+| Page "FAQ" | MANQUANTE | P3 |
+| Sitemap.xml | OK | - |
+| Robots.txt | OK | - |
+
+---
+
+## 17. PAYWALL & CONVERSION
+
+### 17.1 Experience Free User
+
+| Point de friction | Statut | Amelioration |
+|-------------------|--------|-------------|
+| Fiches biens : chiffres floutes | OK (`.val-blur`) | - |
+| Bandeau CTA "Passez Pro" par bloc | OK | Rendre plus engageant avec un argument par bloc |
+| 2 analyses completes offertes | OK | Afficher le compteur ("1/2 analyses restantes") |
+| Watchlist limitee a 10 | OK + modal si depassement | - |
+| Chat limite 5 msg/jour | OK mais pas de compteur visible | Afficher "3/5 messages restants" |
+
+- [ ] **P1** Afficher les compteurs de limites (analyses, messages, watchlist) de facon proactive
+- [ ] **P2** CTA de conversion contextuels : "Debloquez l'estimation DVF" plutot que generique "Passez Pro"
+- [ ] **P3** Page de resultat apres inscription : guider le nouveau user ("Voici vos prochaines etapes")
+
+### 17.2 Onboarding First-Time User
+
+- [ ] **P1** Apres inscription : rediriger vers les biens avec un message de bienvenue
+- [ ] **P2** Tutoriel leger (3 tooltips) au premier login : filtres, fiche bien, watchlist
+- [ ] **P3** Email de bienvenue avec guide rapide
+
+---
+
+## 18. CHECKLIST PRE-LANCEMENT
+
+### Tests navigateurs
+- [ ] Chrome (desktop + Android)
+- [ ] Safari (macOS + iPhone)
+- [ ] Firefox (desktop)
+- [ ] Edge (desktop)
+
+### Tests UX
+- [ ] Parcours complet : inscription → filtres → fiche bien → watchlist → profil
 - [ ] Test avec un compte neuf (first-time user experience)
-- [ ] Test avec beaucoup de données (scroll, pagination)
-- [ ] Test avec zéro donnée (empty states)
-- [ ] Test de vitesse (Lighthouse score > 90)
-- [ ] Test accessibilité (Wave, axe)
-- [ ] Relecture de tous les textes
-- [ ] Vérification de tous les liens
-- [ ] Backup base de données
+- [ ] Test avec beaucoup de donnees (10 000+ biens, scroll, pagination)
+- [ ] Test avec zero donnee (empty states sur toutes les pages)
+- [ ] Test paywall : experience Free vs Pro vs Expert
+
+### Tests performance
+- [ ] Lighthouse score > 80 (Performance, Accessibility, Best Practices, SEO)
+- [ ] Pas de layout shift visible au chargement
+- [ ] Images toutes lazy-loaded sauf hero
+
+### Tests accessibilite
+- [ ] Navigation complete au clavier (Tab + Enter + Escape)
+- [ ] Screen reader (NVDA ou VoiceOver) : parcours principal lisible
+- [ ] Zoom 200% : rien ne deborde
+
+### Verification finale
+- [ ] Tous les liens fonctionnent (pas de 404)
+- [ ] Tous les textes relus (0 faute)
+- [ ] Variables d'environnement en production OK
+- [ ] Stripe en mode Live (pas Test)
+- [ ] Analytics et Pixel charges correctement (avec consent cookie)
+
+---
+
+## PLAN D'ACTION RECOMMANDE
+
+### Sprint 1 — Fondations (1 semaine)
+1. Composants `<Button>`, `<Input>`, `<Modal>` partages
+2. Menu hamburger mobile
+3. Focus visible + ARIA labels de base
+4. Loading state / error boundary sur fiche bien
+
+### Sprint 2 — Conversion (1 semaine)
+1. CTA final landing page
+2. Barre logos plateformes (social proof)
+3. Compteurs de limites visibles (analyses, messages, watchlist)
+4. Onboarding premier login
+
+### Sprint 3 — Polish (1 semaine)
+1. Responsive mobile complet (filtres drawer, cartes pleine largeur)
+2. Toast notifications
+3. Contraste WCAG AA (assombrir muted)
+4. Performance (next/image, font preload, skeleton screens)
+
+### Sprint 4 — Extras (1 semaine)
+1. Temoignages landing page
+2. Page Contact
+3. Partage social blog
+4. Smooth scroll + micro-animations

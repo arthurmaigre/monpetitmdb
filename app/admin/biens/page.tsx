@@ -54,11 +54,11 @@ export default function AdminBiensPage() {
         .admin-filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         .admin-search { padding: 9px 14px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; width: 220px; }
         .admin-select { padding: 9px 14px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; }
-        .admin-count { font-size: 13px; color: #9a8a80; }
+        .admin-count { font-size: 13px; color: #7a6a60; }
         .table-wrap { background: #fff; border-radius: 16px; overflow: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         thead tr { background: #f7f4f0; border-bottom: 2px solid #ede8e0; }
-        th { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+        th { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
         tbody tr { border-bottom: 1px solid #f0ede8; transition: background 0.1s; }
         tbody tr:last-child { border-bottom: none; }
         tbody tr:hover { background: #faf8f5; }
@@ -67,7 +67,7 @@ export default function AdminBiensPage() {
         .td-input:focus { border-color: #c0392b; }
         .td-select { padding: 6px 10px; border-radius: 7px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; }
         .saving { opacity: 0.5; }
-        .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #9a8a80; text-decoration: none; }
+        .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .nc { color: #c0392b; font-style: italic; font-size: 11px; }
       `}</style>
@@ -88,7 +88,7 @@ export default function AdminBiensPage() {
         </div>
 
         {loading ? (
-          <p style={{ color: '#9a8a80', padding: '40px', textAlign: 'center' }}>Chargement...</p>
+          <p style={{ color: '#7a6a60', padding: '40px', textAlign: 'center' }}>Chargement...</p>
         ) : (
           <div className="table-wrap">
             <table>
@@ -110,7 +110,7 @@ export default function AdminBiensPage() {
               <tbody>
                 {filtered.map(bien => (
                   <tr key={bien.id} className={saving === bien.id ? 'saving' : ''}>
-                    <td style={{ fontFamily: 'monospace', fontSize: '11px', color: '#9a8a80' }}>{bien.id}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '11px', color: '#7a6a60' }}>{bien.id}</td>
                     <td style={{ fontWeight: 500 }}>{bien.ville}</td>
                     <td>{bien.type_bien} {bien.nb_pieces}</td>
                     <td style={{ fontWeight: 600 }}>{bien.prix_fai ? bien.prix_fai.toLocaleString('fr-FR') + ' \u20AC' : '-'}</td>

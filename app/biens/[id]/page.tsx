@@ -20,6 +20,7 @@ function getPhotos(bien: any): string[] {
 
 function PhotoCarousel({ bien }: { bien: any }) {
   const [idx, setIdx] = useState(0)
+  const [fullscreen, setFullscreen] = useState(false)
   const photos = getPhotos(bien)
 
   if (photos.length === 0) return <div className="fiche-photo-empty">Pas de photo</div>
@@ -28,8 +29,35 @@ function PhotoCarousel({ bien }: { bien: any }) {
   const next = () => setIdx(i => i < photos.length - 1 ? i + 1 : 0)
 
   return (
-    <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
-      <img src={photos[idx]} alt="" className="fiche-photo" />
+    <div
+      tabIndex={0}
+      onKeyDown={e => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }
+        if (e.key === 'ArrowRight') { e.preventDefault(); next() }
+      }}
+      aria-label={`Photo ${idx + 1} sur ${photos.length}`}
+      style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}
+    >
+      <img src={photos[idx]} alt="" className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in' }} />
+      {/* Fullscreen overlay */}
+      {fullscreen && (
+        <div onClick={() => setFullscreen(false)} style={{
+          position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.9)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out',
+        }}>
+          <img src={photos[idx]} alt="" style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', borderRadius: '8px' }} />
+          <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', color: '#fff', fontSize: '14px', fontWeight: 600 }}>
+            {idx + 1} / {photos.length}
+          </div>
+          <button onClick={e => { e.stopPropagation(); setFullscreen(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: '24px', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'\u00D7'}</button>
+          {photos.length > 1 && (
+            <>
+              <button onClick={e => { e.stopPropagation(); prev() }} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: '24px', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>{'<'}</button>
+              <button onClick={e => { e.stopPropagation(); next() }} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: '24px', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>{'>'}</button>
+            </>
+          )}
+        </div>
+      )}
       {photos.length > 1 && (
         <>
           <button onClick={prev} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'<'}</button>
@@ -117,11 +145,11 @@ function PlatformLinks({ bien }: { bien: any }) {
 
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px', alignItems: 'center' }}>
-      <span style={{ fontSize: '11px', color: '#9a8a80', marginRight: '4px' }}>Voir sur :</span>
+      <span style={{ fontSize: '11px', color: '#7a6a60', marginRight: '4px' }}>Voir sur :</span>
       {uniqueLinks.map((l, i) => {
         const platform = PLATFORM_LOGOS[l.origin]
         const name = platform?.name || l.origin
-        const color = platform?.color || '#9a8a80'
+        const color = platform?.color || '#7a6a60'
         const abbrev = platform?.abbrev || l.origin.slice(0, 3).toUpperCase()
         return (
           <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
@@ -192,7 +220,7 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
           title="Clic droit pour modifier">{valeur}{suffix}</span>
         {showMenu && (
           <div ref={menuRef} style={{ position: 'fixed', top: menuPos.y, left: menuPos.x, background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '8px', zIndex: 1000, minWidth: '220px' }}>
-            <div style={{ fontSize: '12px', color: '#9a8a80', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>Valide par 2+ utilisateurs</div>
+            <div style={{ fontSize: '12px', color: '#7a6a60', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>Valide par 2+ utilisateurs</div>
             <button onClick={() => { setShowMenu(false); if (window.confirm('Cette donnee a ete validee par plusieurs utilisateurs. Etes-vous sur de vouloir la modifier ?')) setForceEdit(true) }}
               style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#c0392b', textAlign: 'left', borderRadius: '6px', fontFamily: 'DM Sans, sans-serif' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#fff8f7')}
@@ -214,7 +242,16 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
     )
   }
 
-  return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}{suffix}</span>
+  return (
+    <span style={{ fontWeight: 600, color: '#1a1210', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'text' }}
+      title={"Cliquez pour modifier"}
+    >
+      {valeur}{suffix}
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c0b0a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+        <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+      </svg>
+    </span>
+  )
 }
 
 function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
@@ -250,7 +287,7 @@ function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
           title="Clic droit pour modifier">{valeur}</span>
         {showMenu && (
           <div style={{ position: 'fixed', top: menuPos.y, left: menuPos.x, background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '8px', zIndex: 1000, minWidth: '220px' }}>
-            <div style={{ fontSize: '12px', color: '#9a8a80', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>Valide par 2+ utilisateurs</div>
+            <div style={{ fontSize: '12px', color: '#7a6a60', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>Valide par 2+ utilisateurs</div>
             <button onClick={() => { setShowMenu(false); if (window.confirm('Cette donnee a ete validee par plusieurs utilisateurs. Etes-vous sur de vouloir la modifier ?')) setForceEdit(true) }}
               style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#c0392b', textAlign: 'left', borderRadius: '6px', fontFamily: 'DM Sans, sans-serif' }}>
               Modifier quand meme
@@ -524,7 +561,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   }
 
   function SectionLabel({ label }: { label: string }) {
-    return <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '20px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #f0ede8' }}>{label}</div>
+    return <div style={{ fontSize: '11px', fontWeight: 700, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '20px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #f0ede8' }}>{label}</div>
   }
 
   return (
@@ -585,7 +622,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
       <div style={{ marginTop: 'auto' }}>
       {hasLoyer && !isTravauxLourds && (
         <div style={{ paddingTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
-          <div style={{ fontSize: '11px', color: '#9a8a80', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cashflow net</div>
+          <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cashflow net</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowNetMensuel >= 0 ? '#1a7a40' : '#c0392b' }}>
               {cashflowNetMensuel >= 0 ? '+' : ''}{fmt(cashflowNetMensuel)} {'\u20AC'}/mois
@@ -667,7 +704,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
 
           {/* BILAN FINAL */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', background: profitNet >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '16px' }}>
-            <div style={{ fontSize: '11px', color: '#9a8a80', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}
             </div>
             {cashflowCumule !== 0 && (
@@ -860,7 +897,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   }
 
   const statutColors: Record<string, { bg: string, color: string, label: string }> = {
-    brouillon: { bg: '#f0ede8', color: '#9a8a80', label: 'Brouillon' },
+    brouillon: { bg: '#f0ede8', color: '#7a6a60', label: 'Brouillon' },
     envoye: { bg: '#fff3e0', color: '#e65100', label: 'Envoy\u00e9' },
     repondu: { bg: '#d4f5e0', color: '#1a7a40', label: 'R\u00e9pondu' },
   }
@@ -893,7 +930,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
     <div style={{ background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '14px', padding: '24px', marginTop: '8px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a1210', margin: 0 }}>Message au vendeur</h3>
-        <button onClick={() => setOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', color: '#9a8a80' }}>x</button>
+        <button onClick={() => setOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', color: '#7a6a60' }}>x</button>
       </div>
 
       {champsManquants.length > 0 && (
@@ -929,7 +966,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
               padding: '10px 20px', borderRadius: '10px',
               border: '1.5px solid #e8e2d8', background: '#fff',
               fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 500,
-              color: '#9a8a80', cursor: 'pointer'
+              color: '#7a6a60', cursor: 'pointer'
             }}>
               Sauvegarder brouillon
             </button>
@@ -1019,7 +1056,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
     return (
       <div className="section">
         <h2 className="section-title">{"Estimation marché DVF"}</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#9a8a80', fontSize: '13px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7a6a60', fontSize: '13px' }}>
           <div style={{ width: '16px', height: '16px', border: '2px solid #e8e2d8', borderTop: '2px solid #c0392b', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
           {"Analyse des transactions en cours..."}
         </div>
@@ -1072,14 +1109,14 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
             background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
             textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
           }}>
-            {"Passez Pro"}
+            {"D\u00E9bloquer \u2192"}
           </a>
         </div>
       )}
 
       {/* --- Adresse pour affiner le géocodage --- */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '10px 16px', background: '#faf8f5', borderRadius: '8px', fontSize: '13px' }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9a8a80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         {adresseEdit ? (
           <>
             <input
@@ -1099,7 +1136,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
             </button>
             <button
               onClick={() => { setAdresseEdit(false); setAdresse(adresseInitiale || '') }}
-              style={{ padding: '6px 10px', borderRadius: '6px', background: 'none', border: '1px solid #e8e2d8', fontSize: '12px', color: '#9a8a80', cursor: 'pointer' }}
+              style={{ padding: '6px 10px', borderRadius: '6px', background: 'none', border: '1px solid #e8e2d8', fontSize: '12px', color: '#7a6a60', cursor: 'pointer' }}
             >
               Annuler
             </button>
@@ -1111,7 +1148,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
             </span>
             <button
               onClick={() => setAdresseEdit(true)}
-              style={{ padding: '4px 10px', borderRadius: '6px', background: 'none', border: '1px solid #e8e2d8', fontSize: '11px', fontWeight: 600, color: '#9a8a80', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '4px 10px', borderRadius: '6px', background: 'none', border: '1px solid #e8e2d8', fontSize: '11px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               Modifier
             </button>
@@ -1124,9 +1161,9 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 
         {/* Colonne gauche : Prix FAI */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9"}</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9"}</div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210' }}>{fmt(prixFai)} {'\u20AC'}</div>
-          {surface ? <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}>{fmt(Math.round(prixFai / surface))} {'\u20AC'}/m{'\u00B2'}</div> : null}
+          {surface ? <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px' }}>{fmt(Math.round(prixFai / surface))} {'\u20AC'}/m{'\u00B2'}</div> : null}
         </div>
 
         {/* Colonne centrale : Ecart */}
@@ -1139,18 +1176,18 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
               <V>{ecart > 0 ? '+' : ''}{ecart}%</V>
             </div>
           </div>
-          <div style={{ fontSize: '11px', color: '#9a8a80', marginTop: '6px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', color: '#7a6a60', marginTop: '6px', textAlign: 'center' }}>
             {ecartPositif ? 'Au-dessus du marché' : 'En dessous du marché'}
           </div>
         </div>
 
         {/* Colonne droite : Estimation */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             {isAjuste ? "Mon estimation" : "Estimation march\u00E9"}
           </div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210' }}><V>{fmt(prixActuel)} {'\u20AC'}</V></div>
-          <div style={{ fontSize: '12px', color: '#9a8a80', marginTop: '4px' }}><V>{fmt(prixM2Actuel)} {'\u20AC'}/m{"²"}</V></div>
+          <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px' }}><V>{fmt(prixM2Actuel)} {'\u20AC'}/m{"²"}</V></div>
           {isAjuste && !isFree && (
             <div style={{ fontSize: '11px', color: '#b0a898', marginTop: '4px' }}>
               DVF : {fmt(estimation.prix_total)} {'\u20AC'}
@@ -1163,7 +1200,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
       {/* --- Fourchette de prix + curseur integre --- */}
       <div style={{ background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: '#9a8a80' }}>Fourchette</span>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60' }}>Fourchette</span>
           <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: conf.bg, color: conf.color }}>
             Confiance {estimation.confiance} (<V>{"±"}{estimation.marge_pct}%</V>)
           </span>
@@ -1206,7 +1243,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#b0a898', marginTop: '8px' }}>
           <span><V>{fmt(estimation.prix_bas)} {'\u20AC'}</V></span>
-          <span style={{ color: '#9a8a80', fontWeight: 500 }}><V>{fmt(estimation.prix_total)} {'\u20AC'}</V></span>
+          <span style={{ color: '#7a6a60', fontWeight: 500 }}><V>{fmt(estimation.prix_total)} {'\u20AC'}</V></span>
           <span><V>{fmt(estimation.prix_haut)} {'\u20AC'}</V></span>
         </div>
       </div>
@@ -1220,7 +1257,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         {estimation.corrections && estimation.corrections.length > 0 && (
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{"Correcteurs appliqués"}</div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{"Correcteurs appliqués"}</div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {estimation.corrections.map((c: any, i: number) => (
                 <span key={i} style={{
@@ -1242,7 +1279,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
           <button
             onClick={() => loadEstimation(true)}
             disabled={loading}
-            style={{ marginTop: '8px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: '#9a8a80', background: '#f5f2ed', border: '1px solid #e8e2d8', borderRadius: '6px', cursor: 'pointer' }}
+            style={{ marginTop: '8px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: '#7a6a60', background: '#f5f2ed', border: '1px solid #e8e2d8', borderRadius: '6px', cursor: 'pointer' }}
           >
             {loading ? 'Recalcul...' : 'Recalculer'}
           </button>
@@ -1257,10 +1294,12 @@ export default function FicheBienPage() {
   const id = params.id as string
   const [bien, setBien] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [profil, setProfil] = useState<any>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
   const [freeAnalysesLeft, setFreeAnalysesLeft] = useState<number>(0)
+  const [freeAnalysesUsed, setFreeAnalysesUsed] = useState<number>(0)
   const [champsStatut, setChampsStatut] = useState<Record<string, { valeur: string, statut: 'jaune' | 'vert' }>>({})
   const [scorePerso, setScorePerso] = useState<number | null>(null)
   const [inWatchlist, setInWatchlist] = useState(false)
@@ -1311,11 +1350,13 @@ export default function FicheBienPage() {
 
   useEffect(() => {
     async function load() {
+      try {
       const [bienRes, editsRes, sessionRes] = await Promise.all([
         fetch(`/api/biens/${id}`),
         fetch(`/api/biens/${id}/edits`),
         supabase.auth.getSession()
       ])
+      if (!bienRes.ok) { setFetchError(true); setLoading(false); return }
       const bienData = await bienRes.json()
       const editsData = await editsRes.json()
       setBien(bienData.bien)
@@ -1342,7 +1383,8 @@ export default function FicheBienPage() {
                   localStorage.setItem(KEY, JSON.stringify(viewed))
                 }
                 setFreeAnalysesLeft(viewed.includes(id) ? 1 : 0)
-              } catch { setFreeAnalysesLeft(0) }
+                setFreeAnalysesUsed(viewed.length)
+              } catch { setFreeAnalysesLeft(0); setFreeAnalysesUsed(0) }
             }
           }
           if (p.apport != null) setApport(p.apport)
@@ -1364,6 +1406,7 @@ export default function FicheBienPage() {
         if (wItem?.score_travaux_perso) setScorePerso(wItem.score_travaux_perso)
       }
       setLoading(false)
+      } catch (err) { setFetchError(true); setLoading(false) }
     }
     load()
   }, [id])
@@ -1426,14 +1469,55 @@ export default function FicheBienPage() {
 
   if (loading) return (
     <Layout>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px', gap: '16px' }}>
-        <div style={{ width: '32px', height: '32px', border: '3px solid #e8e2d8', borderTop: '3px solid #c0392b', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <p style={{ color: '#9a8a80', fontSize: '14px', margin: 0 }}>Chargement du bien...</p>
+      <style>{`
+        @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+        .sk { background: linear-gradient(90deg, #ede8e0 25%, #f7f4f0 50%, #ede8e0 75%); background-size: 800px 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+      `}</style>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 48px' }}>
+        {/* Photo skeleton */}
+        <div className="sk" style={{ width: '100%', aspectRatio: '16/9', borderRadius: '16px', marginBottom: '24px' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Title */}
+            <div className="sk" style={{ width: '60%', height: '28px' }} />
+            {/* Subtitle */}
+            <div className="sk" style={{ width: '40%', height: '16px' }} />
+            {/* Tags */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="sk" style={{ width: '120px', height: '24px', borderRadius: '20px' }} />
+              <div className="sk" style={{ width: '100px', height: '24px', borderRadius: '20px' }} />
+            </div>
+            {/* Prix */}
+            <div className="sk" style={{ width: '180px', height: '36px' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Data grid skeleton */}
+            {[...Array(6)].map((_, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div className="sk" style={{ width: '35%', height: '16px' }} />
+                <div className="sk" style={{ width: '25%', height: '16px' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Estimation skeleton */}
+        <div className="sk" style={{ width: '100%', height: '120px', borderRadius: '12px', marginTop: '32px' }} />
+        {/* Fiscal skeleton */}
+        <div className="sk" style={{ width: '100%', height: '200px', borderRadius: '12px', marginTop: '24px' }} />
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </Layout>
   )
-  if (!bien) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#9a8a80' }}>Bien introuvable</p></Layout>
+  if (fetchError) return (
+    <Layout>
+      <div style={{ textAlign: 'center', padding: '80px 24px' }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>{'\u26A0'}</div>
+        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>{"Impossible de charger ce bien"}</h2>
+        <p style={{ color: '#7a6a60', marginBottom: '24px' }}>{"V\u00E9rifiez votre connexion ou r\u00E9essayez dans quelques instants."}</p>
+        <button onClick={() => { setFetchError(false); setLoading(true); window.location.reload() }} style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"R\u00E9essayer"}</button>
+      </div>
+    </Layout>
+  )
+  if (!bien) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#7a6a60' }}>Bien introuvable</p></Layout>
 
   const peutCalculer = bien.loyer && bien.prix_fai
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
@@ -1498,20 +1582,20 @@ export default function FicheBienPage() {
         .pnl-tooltip-wrap .pnl-tooltip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1a1210; }
         .pnl-tooltip-wrap:hover .pnl-tooltip-text { display: block; }
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
-        .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #9a8a80; text-decoration: none; }
+        .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
         .fiche-photo { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 16px; }
         .fiche-photo-empty { width: 100%; aspect-ratio: 16/9; border-radius: 16px; background: #ede8e0; display: flex; align-items: center; justify-content: center; color: #b0a898; }
         .fiche-info { display: flex; flex-direction: column; gap: 14px; }
         .fiche-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 800; color: #1a1210; }
-        .fiche-sub { font-size: 14px; color: #9a8a80; margin-top: -8px; }
+        .fiche-sub { font-size: 14px; color: #7a6a60; margin-top: -8px; }
         .fiche-tags { display: flex; gap: 8px; flex-wrap: wrap; }
-        .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #f0ede8; color: #9a8a80; }
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #f0ede8; color: #7a6a60; }
         .tag-strat { background: #d4ddf5; color: #2a4a8a; }
         .tag-statut { background: #d4f5e0; color: #1a7a40; }
         .prix-bloc { display: flex; flex-direction: column; gap: 3px; }
-        .prix-label { font-size: 11px; font-weight: 600; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; }
+        .prix-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .prix-fai { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 800; color: #c0392b; }
         .prix-cible-val { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: #1a1210; }
         .ecart-badge { display: inline-block; margin-top: 2px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
@@ -1522,25 +1606,26 @@ export default function FicheBienPage() {
         .section { background: #fff; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 24px; }
         .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #1a1210; }
         .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .data-subtitle { grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 8px; border-top: 1px solid #e8e2d8; margin-top: 4px; }
         .data-item { display: flex; flex-direction: column; gap: 6px; }
-        .data-label { font-size: 11px; font-weight: 600; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; }
+        .data-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .data-value { font-size: 14px; font-weight: 600; color: #1a1210; }
-        .data-value.nc { color: #c0b0a0; font-style: italic; font-weight: 400; font-size: 13px; }
+        .data-value.nc { color: #7a6a60; font-style: italic; font-weight: 400; }
         .simu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
         .param-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
-        .param-label { font-size: 11px; font-weight: 600; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; }
+        .param-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .param-input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #faf8f5; color: #1a1210; outline: none; width: 100%; box-sizing: border-box; }
         .param-input:focus { border-color: #c0392b; }
         .param-hint { font-size: 11px; color: #b0a898; }
         .toggle-row { display: flex; gap: 8px; }
-        .toggle-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; background: #faf8f5; color: #9a8a80; transition: all 0.15s; }
+        .toggle-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; background: #faf8f5; color: #7a6a60; transition: all 0.15s; }
         .toggle-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
         .slider-wrap { padding: 4px 0; }
         .slider { width: 100%; accent-color: #c0392b; cursor: pointer; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #b0a898; margin-top: 2px; }
         .val-blur { filter: blur(7px); user-select: none; pointer-events: none; }
         .results-table { width: 100%; border-collapse: collapse; }
-        .results-table thead th { font-size: 11px; font-weight: 600; color: #9a8a80; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; text-align: right; border-bottom: 2px solid #f0ede8; }
+        .results-table thead th { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; text-align: right; border-bottom: 2px solid #f0ede8; }
         .results-table thead th:first-child { text-align: left; }
         .results-table tbody tr { border-bottom: 1px solid #f0ede8; }
         .results-table tbody td { padding: 10px 12px; font-size: 14px; text-align: right; }
@@ -1549,13 +1634,13 @@ export default function FicheBienPage() {
         .cashflow-row td:not(:first-child) { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; }
         .pnl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
         .nc-warning { background: #fff8f0; border: 1.5px solid #f0d090; border-radius: 12px; padding: 16px 20px; color: #a06010; font-size: 13px; }
-        .profil-bar { background: #f7f4f0; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #9a8a80; margin-top: 16px; }
+        .profil-bar { background: #f7f4f0; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #7a6a60; margin-top: 16px; }
         .legende { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
-        .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9a8a80; }
+        .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #7a6a60; }
         .legende-dot { width: 10px; height: 10px; border-radius: 50%; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #9a8a80; margin-bottom: 20px; }
-        .breadcrumb a { color: #9a8a80; text-decoration: none; }
+        .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #7a6a60; margin-bottom: 20px; }
+        .breadcrumb a { color: #7a6a60; text-decoration: none; }
         .breadcrumb a:hover { color: #1a1210; }
         .breadcrumb .sep { color: #d0c8be; }
         @media (max-width: 767px) { .fiche-wrap { padding: 16px; } .hero-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } }
@@ -1574,16 +1659,16 @@ export default function FicheBienPage() {
           <PhotoCarousel bien={bien} />
 
           <div className="fiche-info">
-            <h1 className="fiche-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</h1>
+            <h1 className="fiche-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</h1>
             <p className="fiche-sub">{bien.quartier ? `${bien.quartier} - ` : ''}{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</p>
             <div className="fiche-tags">
               {bien.strategie_mdb && <span className="tag tag-strat">{bien.strategie_mdb}</span>}
               {bien.statut && <span className="tag tag-statut">{bien.statut}</span>}
-              {bien.prix_m2 && <span className="tag">{fmt(bien.prix_m2)} €/m2</span>}
+              {bien.prix_m2 && <span className="tag">{fmt(bien.prix_m2)} {'\u20AC'}/m{'\u00B2'}</span>}
             </div>
             <div className="prix-bloc">
               <span className="prix-label">Prix FAI</span>
-              <span className="prix-fai">{fmt(bien.prix_fai)} €</span>
+              <span className="prix-fai">{fmt(bien.prix_fai)} {'\u20AC'}</span>
               {/* Prix cible avec dropdown */}
               {(prixCibleCashflow || prixCiblePV) && (
                 <>
@@ -1592,7 +1677,7 @@ export default function FicheBienPage() {
                       <select
                         value={modeCible}
                         onChange={e => setModeCible(e.target.value as 'cashflow' | 'pv')}
-                        style={{ fontSize: '11px', fontWeight: 600, color: '#9a8a80', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px', padding: '2px 6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                        style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px', padding: '2px 6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
                       >
                         <option value="cashflow">{`Prix cible (Objectif ${objectifCashflow}% Cash Flow Brut)`}</option>
                         <option value="pv">{`Prix cible (Objectif ${objectifPV}% PV Brute)`}</option>
@@ -1645,7 +1730,7 @@ export default function FicheBienPage() {
               <button onClick={toggleWatchlist} style={{
                 display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
                 borderRadius: '10px', border: inWatchlist ? '2px solid #c0392b' : '2px solid #e8e2d8',
-                background: inWatchlist ? '#fde8e8' : '#fff', color: inWatchlist ? '#c0392b' : '#9a8a80',
+                background: inWatchlist ? '#fde8e8' : '#fff', color: inWatchlist ? '#c0392b' : '#7a6a60',
                 fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
                 transition: 'all 0.15s', alignSelf: 'flex-start', marginTop: '4px'
               }}>
@@ -1668,12 +1753,13 @@ export default function FicheBienPage() {
               const creationDate = mi?.creationDate
               if (!creationDate) return null
               const formatted = new Date(creationDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-              return <span style={{ fontSize: '12px', color: '#9a8a80' }}>{"En ligne depuis le "}{formatted}</span>
+              return <span style={{ fontSize: '12px', color: '#7a6a60' }}>{"En ligne depuis le "}{formatted}</span>
             })()}
           </div>
           <div className="data-grid">
+            <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>
             <div className="data-item">
-              <span className="data-label">{"Année de construction"}</span>
+              <span className="data-label">{"Ann\u00E9e de construction"}</span>
               <span className={`data-value ${!bien.annee_construction ? 'nc' : ''}`}>{bien.annee_construction || 'NC'}</span>
             </div>
             <div className="data-item">
@@ -1682,7 +1768,7 @@ export default function FicheBienPage() {
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff',
-                  background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#9a8a80'
+                  background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60'
                 }}>{bien.dpe}</span>
               ) : <span className="data-value nc">NC</span>}
             </div>
@@ -1729,7 +1815,7 @@ export default function FicheBienPage() {
                   borderRadius: 10, padding: '10px 16px', marginBottom: 16,
                   fontSize: 13, color: '#1a7a40', fontWeight: 500
                 }}>
-                  {"\u2728 Analyse compl\u00E8te offerte \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !"}
+                  {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/2 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
                 </div>
               )}
               <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} />
@@ -1840,7 +1926,7 @@ export default function FicheBienPage() {
                 background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
                 textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
               }}>
-                {"Passez Pro"}
+                {"D\u00E9bloquer \u2192"}
               </a>
             </div>
           )}
@@ -1862,7 +1948,7 @@ export default function FicheBienPage() {
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>{bien.score_travaux}/5</span>
               </div>
             ) : (
-              <div style={{ fontSize: '13px', color: '#9a8a80', marginBottom: '8px' }}>Aucun score IA disponible</div>
+              <div style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '8px' }}>Aucun score IA disponible</div>
             )}
             {bien.score_commentaire && (
               <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#555', lineHeight: '1.5', fontStyle: 'italic', marginBottom: '12px' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
@@ -1909,7 +1995,7 @@ export default function FicheBienPage() {
                       <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
                         {hasDetail ? "Budget travaux (par poste)" : "Estimation budget travaux"}
                       </div>
-                      <div style={{ fontSize: '13px', color: '#9a8a80' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
+                      <div style={{ fontSize: '13px', color: '#7a6a60' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
                         {hasDetail
                           ? `${Math.round(totalAffiche / bien.surface)} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`
                           : `${budgetM2} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2 (${scorePerso ? 'mon estimation' : 'score IA'} ${scoreUtilise}/5)`}
@@ -1924,7 +2010,7 @@ export default function FicheBienPage() {
                 <div style={{ marginTop: '12px', textAlign: 'center' }}>
                   <button onClick={() => setShowDetailTravaux(!showDetailTravaux)} style={{
                     background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px',
-                    padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#9a8a80',
+                    padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60',
                     cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
                   }}>
                     {showDetailTravaux ? 'Masquer le d\u00E9tail' : 'Affiner le budget travaux'}
@@ -2044,13 +2130,13 @@ export default function FicheBienPage() {
                     <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
                   </div>
                   <div className="param-group">
-                    <label className="param-label">Apport — {apportPct} % du projet ({fmt(apport)} €)</label>
+                    <label className="param-label">Apport — {apportPct} % du projet ({fmt(apport)} {'\u20AC'})</label>
                     <div className="slider-wrap">
                       <input type="range" className="slider" min={0} max={100} step={0.5} value={apportPct}
                         onChange={e => { const pct = Number(e.target.value); setApport(Math.round(montantProjet * pct / 100)) }} />
                       <div className="slider-labels"><span>0 %</span><span>100 %</span></div>
                     </div>
-                    <input className="param-input" type="number" value={apport} onChange={e => setApport(Number(e.target.value))} placeholder="Montant en €" />
+                    <input className="param-input" type="number" value={apport} onChange={e => setApport(Number(e.target.value))} placeholder={"Montant en \u20AC"} />
                     <span className="param-hint">{"Montant emprunt\u00E9"} : {fmt(montantEmprunte)} {'\u20AC'}</span>
                   </div>
                   <div className="param-group">
@@ -2081,26 +2167,26 @@ export default function FicheBienPage() {
                     <tbody>
                       <tr>
                         <td>Mensualite credit</td>
-                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteCredit)} €</td>
-                        <td style={{ color: '#c0392b' }}>{fmt(mensualiteCredit * 12)} €</td>
+                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteCredit)} {'\u20AC'}</td>
+                        <td style={{ color: '#c0392b' }}>{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
                       </tr>
                       <tr>
                         <td>Mensualite assurance</td>
-                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteAss)} €</td>
-                        <td style={{ color: '#c0392b' }}>{fmt(mensualiteAss * 12)} €</td>
+                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteAss)} {'\u20AC'}</td>
+                        <td style={{ color: '#c0392b' }}>{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
                       </tr>
                       <tr className="results-total">
                         <td>Total mensualite</td>
-                        <td style={{ color: '#c0392b', fontWeight: 700 }}>{fmt(mensualiteTotale)} €</td>
-                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteTotale * 12)} €</td>
+                        <td style={{ color: '#c0392b', fontWeight: 700 }}>{fmt(mensualiteTotale)} {'\u20AC'}</td>
+                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteTotale * 12)} {'\u20AC'}</td>
                       </tr>
                       {peutCalculer && !isTravauxLourds && (
                         <>
                           <tr style={{ height: '12px' }}><td colSpan={3}></td></tr>
                           <tr className="cashflow-row">
                             <td style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>Cashflow brut</td>
-                            <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} €</td>
-                            <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b', fontSize: '16px' }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} €</td>
+                            <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}</td>
+                            <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b', fontSize: '16px' }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}</td>
                           </tr>
                         </>
                       )}
@@ -2120,31 +2206,31 @@ export default function FicheBienPage() {
             <h2 className="section-title">Analyse Fiscale</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#9a8a80' }}>Comparer avec :</span>
+                <span style={{ fontSize: '13px', color: '#7a6a60' }}>Comparer avec :</span>
                 <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
                   {/* TODO: limit to 2 regimes for Pro — currently shows all regimes for both Pro and Expert */}
                   {REGIMES.filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#9a8a80' }}>{"D\u00E9tention :"}</span>
+                <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"D\u00E9tention :"}</span>
                 {[1, 2, 3, 4, 5].map(d => (
                   <button key={d} onClick={() => setDureeRevente(d)} style={{
                     padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                     border: dureeRevente === d ? '2px solid #c0392b' : '1.5px solid #e8e2d8',
                     background: dureeRevente === d ? '#fde8e8' : '#faf8f5',
-                    color: dureeRevente === d ? '#c0392b' : '#9a8a80',
+                    color: dureeRevente === d ? '#c0392b' : '#7a6a60',
                   }}>
                     {d} an{d > 1 ? 's' : ''}
                   </button>
                 ))}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '13px', color: '#9a8a80' }}>Frais agence revente :</span>
+                <span style={{ fontSize: '13px', color: '#7a6a60' }}>Frais agence revente :</span>
                 <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
                   onChange={e => setFraisAgenceRevente(Number(e.target.value))}
                   className="param-input" style={{ width: '60px', textAlign: 'right' }} />
-                <span style={{ fontSize: '12px', color: '#9a8a80' }}>%</span>
+                <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
               </div>
             </div>
             <div>
@@ -2158,7 +2244,7 @@ export default function FicheBienPage() {
                     background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
                     textDecoration: 'none', fontFamily: "'DM Sans', sans-serif"
                   }}>
-                    {"Passez Pro"}
+                    {"D\u00E9bloquer \u2192"}
                   </a>
                 </div>
               )}

@@ -76,21 +76,21 @@ export default function CookieBanner() {
           color: #1a1210;
         }
         .cookie-desc {
-          font-size: 12px; color: #9a8a80; line-height: 1.5; margin-bottom: 16px;
+          font-size: 12px; color: #7a6a60; line-height: 1.5; margin-bottom: 16px;
         }
         .cookie-desc a { color: #c0392b; text-decoration: underline; font-weight: 500; }
         .cookie-btns { display: flex; gap: 10px; }
         .cookie-btn-accept {
-          flex: 1; padding: 10px 16px; border-radius: 8px; border: none;
+          flex: 1; padding: 12px 16px; border-radius: 8px; border: none; min-height: 44px;
           background: #c0392b; color: #fff; font-family: 'DM Sans', sans-serif;
           font-size: 13px; font-weight: 600; cursor: pointer;
           transition: background 150ms ease;
         }
         .cookie-btn-accept:hover { background: #96281b; }
         .cookie-btn-refuse {
-          flex: 1; padding: 10px 16px; border-radius: 8px;
+          flex: 1; padding: 12px 16px; border-radius: 8px; min-height: 44px;
           border: 1.5px solid #e8e2d8; background: transparent;
-          color: #9a8a80; font-family: 'DM Sans', sans-serif;
+          color: #7a6a60; font-family: 'DM Sans', sans-serif;
           font-size: 13px; font-weight: 500; cursor: pointer;
           transition: border-color 150ms ease, color 150ms ease;
         }

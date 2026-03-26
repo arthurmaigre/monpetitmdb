@@ -64,18 +64,30 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
     e.stopPropagation()
     if (!userToken) { window.location.href = '/login'; return }
     setLoading(true)
-    const method = isInWatchlist ? 'DELETE' : 'POST'
-    const res = await fetch('/api/watchlist', {
-      method,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-      body: JSON.stringify({ bien_id: bien.id })
-    })
-    if (res.ok) {
-      setIsInWatchlist(!isInWatchlist)
-      onWatchlistChange?.(bien.id, !isInWatchlist)
-    } else if (res.status === 403) {
-      const data = await res.json()
-      if (data.upgrade) setUpgradeMsg({ limit: data.limit, plan: data.plan })
+    const prevState = isInWatchlist
+    // Optimistic update: toggle immediately
+    setIsInWatchlist(!prevState)
+    const method = prevState ? 'DELETE' : 'POST'
+    try {
+      const res = await fetch('/api/watchlist', {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify({ bien_id: bien.id })
+      })
+      if (res.ok) {
+        onWatchlistChange?.(bien.id, !prevState)
+      } else if (res.status === 403) {
+        // Rollback on limit reached
+        setIsInWatchlist(prevState)
+        const data = await res.json()
+        if (data.upgrade) setUpgradeMsg({ limit: data.limit, plan: data.plan })
+      } else {
+        // Rollback on any other error
+        setIsInWatchlist(prevState)
+      }
+    } catch {
+      // Rollback on network error
+      setIsInWatchlist(prevState)
     }
     setLoading(false)
   }
@@ -119,7 +131,14 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = '' }}
     >
       {/* Photo area */}
-      <div style={{ height: '196px', background: theme.colors.bgHover, overflow: 'hidden', position: 'relative' }}>
+      <div
+        tabIndex={photos.length > 1 ? 0 : undefined}
+        onKeyDown={photos.length > 1 ? (e) => {
+          if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrevPhoto(e as any) }
+          if (e.key === 'ArrowRight') { e.preventDefault(); handleNextPhoto(e as any) }
+        } : undefined}
+        aria-label={photos.length > 1 ? `Photo ${photoIdx + 1} sur ${photos.length}` : undefined}
+        style={{ height: '196px', background: theme.colors.bgHover, overflow: 'hidden', position: 'relative' }}>
         {photos.length > 0 ? (
           <>
             {/* Shimmer skeleton while loading */}
@@ -148,6 +167,8 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
               <img
                 src={photos[photoIdx]}
                 alt={imageAlt}
+                width={400}
+                height={196}
                 onLoad={() => setImgLoaded(true)}
                 onError={() => setImgError(true)}
                 style={{
@@ -181,7 +202,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
           <>
             <button
               onClick={handlePrevPhoto}
-              aria-label="Photo precedente"
+              aria-label={"Photo pr\u00E9c\u00E9dente"}
               style={{
                 position: 'absolute', left: theme.spacing[2], top: '50%', transform: 'translateY(-50%)',
                 background: 'rgba(0,0,0,0.4)', color: theme.colors.card, border: 'none', borderRadius: '50%',
@@ -205,21 +226,13 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
             >
               <ChevronRight />
             </button>
-            {/* Dots */}
+            {/* Photo counter */}
             <div style={{
               position: 'absolute', bottom: theme.spacing[2], left: '50%', transform: 'translateX(-50%)',
-              display: 'flex', gap: theme.spacing[1],
+              background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: '10px',
+              padding: '2px 8px', fontSize: '11px', fontWeight: 600,
             }}>
-              {photos.slice(0, 6).map((_, i) => (
-                <div key={i} style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  background: i === photoIdx ? theme.colors.card : 'rgba(255,255,255,0.4)',
-                  transition: `background ${theme.transitions.fast}`,
-                }} />
-              ))}
-              {photos.length > 6 && (
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }} />
-              )}
+              {photoIdx + 1}/{photos.length}
             </div>
           </>
         )}
@@ -240,7 +253,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
         <button
           onClick={toggleWatchlist}
           disabled={loading}
-          aria-label={isInWatchlist ? 'Retirer de la watchlist' : 'Ajouter a la watchlist'}
+          aria-label={isInWatchlist ? 'Retirer de la watchlist' : "Ajouter \u00E0 la watchlist"}
           style={{
             position: 'absolute', bottom: theme.spacing[3], right: theme.spacing[3],
             background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: '50%',
@@ -251,6 +264,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
             transition: `all ${theme.transitions.fast}`,
             opacity: loading ? 0.6 : 1,
             color: isInWatchlist ? theme.colors.primary : theme.colors.textTertiary,
+            animation: isInWatchlist ? 'heart-bounce 0.4s ease' : 'none',
           }}
         >
           {isInWatchlist ? '\u2665' : '\u2661'}
@@ -273,7 +287,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
               display: 'block',
             }}
           >
-            {bien.type_bien} {bien.nb_pieces} - {bien.surface} m2
+            {bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}
           </a>
           {extraTitleRight}
         </div>
@@ -321,7 +335,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
               )}
               {bien.prix_m2 && (
                 <span style={pillStyle()}>
-                  {Number(bien.prix_m2).toLocaleString('fr-FR')} {'\u20AC'}/m2
+                  {Math.round(Number(bien.prix_m2)).toLocaleString('fr-FR')} {'\u20AC'}/m{'\u00B2'}
                 </span>
               )}
               {(bien as any).dpe && (
@@ -342,7 +356,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
               }
               {bien.prix_m2 && (
                 <span style={pillStyle()}>
-                  {Number(bien.prix_m2).toLocaleString('fr-FR')} {'\u20AC'}/m2
+                  {Math.round(Number(bien.prix_m2)).toLocaleString('fr-FR')} {'\u20AC'}/m{'\u00B2'}
                 </span>
               )}
               {(bien as any).dpe && (
@@ -389,6 +403,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
 
       {/* Shimmer keyframe - injected once via style tag */}
       <style>{`
+        @keyframes heart-bounce { 0% { transform: scale(1); } 30% { transform: scale(1.3); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
         @keyframes shimmer {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }

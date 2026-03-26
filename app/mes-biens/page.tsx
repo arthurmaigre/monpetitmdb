@@ -14,7 +14,7 @@ function formatPrix(n: number) {
 }
 
 const SUIVI_OPTIONS = [
-  { value: 'a_analyser',       label: '\u00C0 analyser',        color: '#9a8a80', bg: '#f0ede8' },
+  { value: 'a_analyser',       label: '\u00C0 analyser',        color: '#7a6a60', bg: '#f0ede8' },
   { value: 'info_demandee',    label: 'Info demand\u00E9e',     color: '#3498db', bg: '#ebf5fb' },
   { value: 'analyse_complete', label: 'Analyse compl\u00E8te',  color: '#2980b9', bg: '#d6eaf8' },
   { value: 'offre_envoyee',    label: 'Offre envoy\u00E9e',     color: '#f39c12', bg: '#fef9e7' },
@@ -205,20 +205,20 @@ export default function MesBiensPage() {
         .mes-biens-wrap { max-width: 1600px; margin: 0 auto; padding: 32px 48px; }
         .mes-biens-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
         .mes-biens-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; color: #1a1210; }
-        .mes-biens-sub { font-size: 16px; color: #9a8a80; margin-top: 4px; }
+        .mes-biens-sub { font-size: 16px; color: #7a6a60; margin-top: 4px; }
         .view-toggle { display: flex; gap: 4px; }
-        .view-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease; background: transparent; color: #9a8a80; }
+        .view-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease; background: transparent; color: #7a6a60; }
         .view-btn:hover { border-color: #1a1210; color: #1a1210; }
         .view-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
         .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
-        .tab { padding: 8px 20px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #fff; color: #9a8a80; display: flex; align-items: center; gap: 8px; }
+        .tab { padding: 8px 20px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #fff; color: #7a6a60; display: flex; align-items: center; gap: 8px; }
         .tab:hover { border-color: #1a1210; color: #1a1210; }
         .tab.active { background: #1a1210; color: #fff; border-color: #1a1210; }
         .tab-count { background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 8px; font-size: 12px; }
         .tab.active .tab-count { background: rgba(255,255,255,0.2); }
-        .tab:not(.active) .tab-count { background: #f0ede8; color: #9a8a80; }
+        .tab:not(.active) .tab-count { background: #f0ede8; color: #7a6a60; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 20px; }
-        .empty-state { text-align: center; padding: 80px 40px; color: #9a8a80; background: #fff; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .empty-state { text-align: center; padding: 80px 40px; color: #7a6a60; background: #fff; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .empty-state h3 { font-family: 'Fraunces', serif; font-size: 24px; color: #1a1210; margin-bottom: 8px; }
         .empty-link { display: inline-block; margin-top: 16px; padding: 12px 24px; background: #c0392b; color: #fff; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; transition: opacity 150ms ease; }
         .empty-link:hover { opacity: 0.85; }
@@ -229,7 +229,7 @@ export default function MesBiensPage() {
         .floating-scroll-inner { height: 1px; pointer-events: none; }
         .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
         .list-table thead tr { background: #f7f4f0; }
-        .list-table thead th { padding: 12px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
+        .list-table thead th { padding: 12px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
         .list-table thead th span { display: block; font-size: 10px; font-weight: 400; color: #b0a898; letter-spacing: 0; text-transform: none; margin-top: 2px; height: 14px; }
         .list-table tbody tr { transition: background 150ms ease; }
         .list-table tbody tr:hover { background: #faf8f5; }
@@ -248,7 +248,7 @@ export default function MesBiensPage() {
         .td-btn-contact:hover { opacity: 0.75; }
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 150ms ease; color: #c0392b; }
         .td-heart:hover { transform: scale(1.2); }
-        .edit-hint { font-size: 12px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
+        .edit-hint { font-size: 12px; color: #7a6a60; margin-bottom: 12px; font-style: italic; }
         .suivi-select { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid #e8e2d8; cursor: pointer; outline: none; min-width: 130px; }
         .suivi-select:focus { border-color: #c0392b; box-shadow: 0 0 0 2px rgba(192,57,43,0.1); }
         @media (max-width: 768px) {
@@ -267,7 +267,7 @@ export default function MesBiensPage() {
               <span style={{
                 display: 'inline-block', padding: '4px 12px', borderRadius: 20,
                 background: isAtLimit && !isExpert ? 'rgba(192,57,43,0.1)' : '#f0ede8',
-                color: isAtLimit && !isExpert ? '#c0392b' : '#9a8a80',
+                color: isAtLimit && !isExpert ? '#c0392b' : '#7a6a60',
                 fontSize: 13, fontWeight: 600, marginLeft: 12, verticalAlign: 'middle'
               }}>
                 {isExpert ? `${biens.length} biens` : `${biens.length} / ${watchlistLimit}`}
@@ -283,9 +283,30 @@ export default function MesBiensPage() {
               </p>
             )}
           </div>
-          <div className="view-toggle" role="group" aria-label="Mode d'affichage">
-            <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
-            <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {biens.length > 0 && (
+              <button
+                onClick={() => {
+                  const headers = ['Type', 'Ville', 'Surface', 'Prix FAI', 'Prix/m2', 'Loyer', 'Rendement', 'Strategie', 'URL']
+                  const rows = biens.map((b: any) => [
+                    b.type_bien || '', b.ville || '', b.surface || '', b.prix_fai || '', b.prix_m2 ? Math.round(b.prix_m2) : '',
+                    b.loyer || '', b.rendement_brut ? `${(b.rendement_brut * 100).toFixed(1)}%` : '', b.strategie_mdb || '', b.url || ''
+                  ])
+                  const csv = [headers, ...rows].map(r => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+                  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a'); a.href = url; a.download = 'watchlist.csv'; a.click()
+                  URL.revokeObjectURL(url)
+                }}
+                style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: '#fff', fontSize: '12px', fontWeight: 600, color: '#1a1210', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
+              >
+                {"Exporter CSV \u2193"}
+              </button>
+            )}
+            <div className="view-toggle" role="group" aria-label="Mode d'affichage">
+              <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
+              <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
+            </div>
           </div>
         </div>
 
@@ -293,9 +314,12 @@ export default function MesBiensPage() {
 
         {biens.length === 0 ? (
           <div className="empty-state">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ marginBottom: '16px', opacity: 0.5 }}>
+              <path d="M44.84 12.61a13.5 13.5 0 0 0-12.84 4.06 13.5 13.5 0 0 0-12.84-4.06 13.5 13.5 0 0 0 0 19.1L32 49.23l12.84-17.52a13.5 13.5 0 0 0 0-19.1z" stroke="#c0392b" strokeWidth="2.5" fill="none"/>
+            </svg>
             <h3>Votre watchlist est vide</h3>
-            <p>Ajoutez des biens en cliquant sur le coeur depuis le listing.</p>
-            <a href="/biens" className="empty-link">Voir les biens disponibles</a>
+            <p>{"Explorez les biens et cliquez sur le \u2764 pour constituer votre s\u00E9lection."}</p>
+            <a href="/biens" className="empty-link">{"Explorer les biens disponibles \u2192"}</a>
           </div>
         ) : (
           <>
@@ -313,7 +337,7 @@ export default function MesBiensPage() {
               </div>
             )}
 
-            <p style={{ fontSize: '14px', color: '#9a8a80', marginBottom: '16px' }}>
+            <p style={{ fontSize: '14px', color: '#7a6a60', marginBottom: '16px' }}>
               <strong style={{ color: '#1a1210' }}>{filteredBiens.length}</strong> bien{filteredBiens.length > 1 ? 's' : ''} {activeTab && `\u2014 ${activeTab}`}
             </p>
 
@@ -392,7 +416,7 @@ export default function MesBiensPage() {
                         </td>
                         <td className="sticky-col" style={{ left: '170px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
                         <td className="sticky-col" style={{ left: '250px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
-                          <span className="td-bien-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</span>
+                          <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
@@ -426,7 +450,7 @@ export default function MesBiensPage() {
                                 ) : resultat && resultat.prix_cible >= bien.prix_fai ? null : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                               </td>
                             )}
-                            <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
+                            <td style={{ color: '#7a6a60' }}>{bien.prix_m2 ? `${Math.round(bien.prix_m2).toLocaleString('fr-FR')} \u20AC` : '-'}</td>
                             {!isLocataire ? (
                               <>
                                 <td>
@@ -450,11 +474,11 @@ export default function MesBiensPage() {
                                     <span style={{
                                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                       width: '28px', height: '28px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', color: '#fff',
-                                      background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[bien.dpe] || '#9a8a80'
+                                      background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[bien.dpe] || '#7a6a60'
                                     }}>{bien.dpe}</span>
                                   ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}
                                 </td>
-                                <td style={{ color: '#9a8a80' }}>{bien.annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                                <td style={{ color: '#7a6a60' }}>{bien.annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
                               </>
                             ) : (
@@ -469,13 +493,13 @@ export default function MesBiensPage() {
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
                                   {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>
-                                <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : '-'}</td>
+                                <td style={{ color: '#7a6a60', fontSize: '12px' }}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : '-'}</td>
                               </>
                             )}
                           </>
                         })()}
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <a href={`/biens/${bien.id}`} className="td-btn">Analyse</a>
+                          <a href={`/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
                           {' '}
                           <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{"R\u00E9cup\u00E9rer les donn\u00E9es"}</a>
                         </td>

@@ -140,7 +140,7 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
         .mdb-cw-panel::-webkit-scrollbar { width: 4px; }
         .mdb-cw-panel::-webkit-scrollbar-track { background: transparent; }
         .mdb-cw-panel::-webkit-scrollbar-thumb { background: #e8e2d8; border-radius: 4px; }
-        @media (max-width: 767px) { .mdb-cw-container { width: 100% !important; right: 0 !important; bottom: 0 !important; border-radius: 16px 16px 0 0 !important; height: 70vh !important; } }
+        @media (max-width: 767px) { .mdb-cw-container { width: 100% !important; right: 0 !important; bottom: 0 !important; border-radius: 16px 16px 0 0 !important; height: 70dvh !important; max-height: calc(100vh - 56px) !important; } }
       `}</style>
 
       {/* Bulle flottante */}
@@ -166,6 +166,10 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
       {open && (
         <div
           className="mdb-cw-container"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Assistant IA Memo"
+          onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}
           style={{
             position: 'fixed', bottom: 24, right: 24,
             width: 340, height: 500,
@@ -193,6 +197,7 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
                 Assistant IA immobilier
               </div>
+              <div style={{ fontSize: 10, color: '#b0a898', marginTop: 2 }}>{"Historique de session uniquement"}</div>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -226,11 +231,11 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
                   </div>
                 )}
                 <div style={{
-                  maxWidth: '78%', padding: '10px 14px', fontSize: 13.5, lineHeight: 1.6,
+                  maxWidth: '78%', padding: '10px 14px', fontSize: 14, lineHeight: 1.6,
                   whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                   ...(msg.role === 'user'
                     ? { background: '#1a1210', color: '#fff', borderRadius: '14px 14px 4px 14px' }
-                    : { background: '#fff', color: '#1a1210', border: '1px solid #ede8e0', borderRadius: '4px 14px 14px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }
+                    : { background: '#fff', color: '#1a1210', border: '1px solid #e8e2d8', borderRadius: '4px 14px 14px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }
                   ),
                 }}>
                   {msg.content}
@@ -247,7 +252,7 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                 </div>
                 <div style={{
-                  background: '#fff', border: '1px solid #ede8e0', borderRadius: '4px 14px 14px 14px',
+                  background: '#fff', border: '1px solid #e8e2d8', borderRadius: '4px 14px 14px 14px',
                   padding: '12px 16px', display: 'flex', gap: 4, alignItems: 'center',
                 }}>
                   {[0, 1, 2].map(idx => (
@@ -256,6 +261,7 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
                       animation: 'mdb-dot-pulse 1.4s infinite ease-in-out', animationDelay: `${idx * 0.2}s`,
                     }} />
                   ))}
+                  <span style={{ fontSize: 12, color: '#7a6a60', marginLeft: 6 }}>{"Memo r\u00E9fl\u00E9chit..."}</span>
                 </div>
               </div>
             )}
@@ -263,9 +269,22 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Compteur messages restants */}
+          {plan !== 'expert' && getDailyLimit(plan) !== Infinity && (
+            <div style={{
+              padding: '4px 14px', background: getDailyCount() >= getDailyLimit(plan) - 1 ? '#fde8e8' : '#f7f4f0',
+              fontSize: 11, color: getDailyCount() >= getDailyLimit(plan) - 1 ? '#c0392b' : '#7a6a60',
+              textAlign: 'center', flexShrink: 0,
+            }}>
+              {getDailyLimit(plan) - getDailyCount() <= 0
+                ? "Limite atteinte"
+                : `${getDailyLimit(plan) - getDailyCount()}/${getDailyLimit(plan)} messages restants aujourd\u2019hui`}
+            </div>
+          )}
+
           {/* Input */}
           <div style={{
-            padding: '12px 14px', borderTop: '1px solid #ede8e0', background: '#fff',
+            padding: '12px 14px', borderTop: '1px solid #e8e2d8', background: '#fff',
             display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0,
           }}>
             <input
@@ -278,12 +297,12 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
               disabled={loading}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 12,
-                border: '1.5px solid #ede8e0', fontSize: 13.5, fontFamily: "'DM Sans', sans-serif",
+                border: '1.5px solid #e8e2d8', fontSize: 14, fontFamily: "'DM Sans', sans-serif",
                 background: '#faf8f5', color: '#1a1210', outline: 'none',
                 transition: 'border-color 150ms ease',
               }}
               onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#c0392b' }}
-              onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#ede8e0' }}
+              onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e8e2d8' }}
             />
             <button
               onClick={sendMessage}

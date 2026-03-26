@@ -73,7 +73,7 @@ export default function AuthCallbackPage() {
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: "'DM Sans', sans-serif",
-      color: '#9a8a80'
+      color: '#7a6a60'
     }}>
       Connexion en cours...
     </div>

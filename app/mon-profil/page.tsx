@@ -184,19 +184,19 @@ export default function MonProfilPage() {
       <style>{`
         .mp-wrap { max-width: 720px; margin: 48px auto; padding: 0 24px; }
         .mp-title { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; color: #1a1210; }
-        .mp-sub { font-size: 16px; color: #9a8a80; margin-bottom: 40px; line-height: 1.5; }
+        .mp-sub { font-size: 16px; color: #7a6a60; margin-bottom: 40px; line-height: 1.5; }
         .mp-section { background: #fff; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .mp-section-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1210; margin-bottom: 8px; padding-bottom: 12px; border-bottom: 2px solid #e8e2d8; }
-        .mp-section-desc { font-size: 14px; color: #9a8a80; margin-bottom: 20px; }
+        .mp-section-desc { font-size: 14px; color: #7a6a60; margin-bottom: 20px; }
         .mp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .mp-field { display: flex; flex-direction: column; gap: 4px; }
         .mp-field-full { display: flex; flex-direction: column; gap: 4px; grid-column: 1 / -1; }
-        .mp-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.06em; text-transform: uppercase; }
+        .mp-label { font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.06em; text-transform: uppercase; }
         .mp-input { padding: 12px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1210; background: #faf8f5; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; }
         .mp-input:focus { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192,57,43,0.1); }
-        .mp-input:disabled { background: #f0ede8; color: #9a8a80; cursor: not-allowed; }
+        .mp-input:disabled { background: #f0ede8; color: #7a6a60; cursor: not-allowed; }
         .mp-hint { font-size: 12px; color: #bfb2a6; margin-top: 4px; }
-        .mp-toggle { padding: 8px 20px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #faf8f5; color: #9a8a80; }
+        .mp-toggle { padding: 8px 20px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 150ms ease; background: #faf8f5; color: #7a6a60; }
         .mp-toggle:hover { border-color: #1a1210; color: #1a1210; }
         .mp-toggle.active { background: #1a1210; color: #fff; border-color: #1a1210; }
         .mp-btn { width: 100%; padding: 14px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 150ms ease; margin-top: 8px; }
@@ -324,11 +324,11 @@ export default function MonProfilPage() {
             <span style={{
               padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' as const,
               background: plan === 'expert' ? 'rgba(192,57,43,0.12)' : plan === 'pro' ? 'rgba(26,122,64,0.1)' : '#f0ede8',
-              color: plan === 'expert' ? '#c0392b' : plan === 'pro' ? '#1a7a40' : '#9a8a80',
+              color: plan === 'expert' ? '#c0392b' : plan === 'pro' ? '#1a7a40' : '#7a6a60',
             }}>
               {plan === 'expert' ? 'Expert' : plan === 'pro' ? 'Pro' : 'Free'}
             </span>
-            <span style={{ fontSize: 14, color: '#9a8a80' }}>
+            <span style={{ fontSize: 14, color: '#7a6a60' }}>
               {plan === 'expert' ? `49 ${'\u20AC'}/mois` : plan === 'pro' ? `19 ${'\u20AC'}/mois` : 'Gratuit'}
             </span>
           </div>
@@ -337,8 +337,8 @@ export default function MonProfilPage() {
             <div className="mp-plans-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={{ background: '#faf8f5', borderRadius: 12, padding: 20, border: '1.5px solid #e8e2d8' }}>
                 <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Pro</div>
-                <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, marginBottom: 4 }}>19 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: '#9a8a80' }}>/mois</span></div>
-                <div style={{ fontSize: 13, color: '#9a8a80', marginBottom: 16 }}>{"Simulateur fiscal, estimation DVF, sc\u00E9nario de revente"}</div>
+                <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, marginBottom: 4 }}>19 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: '#7a6a60' }}>/mois</span></div>
+                <div style={{ fontSize: 13, color: '#7a6a60', marginBottom: 16 }}>{"Simulateur fiscal, estimation DVF, sc\u00E9nario de revente"}</div>
                 <button className="mp-btn mp-btn-primary" onClick={() => handleUpgrade('pro')} disabled={loadingStripe} style={{ marginTop: 0 }}>
                   {loadingStripe ? 'Redirection...' : 'Passer au Pro'}
                 </button>

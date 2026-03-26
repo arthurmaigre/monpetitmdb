@@ -5,6 +5,16 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 // Options mapping (shared with ingest)
 // ──────────────────────────────────────────────────────────────────────────────
 
+function mapTypeBien(category?: string): string | null {
+  if (!category) return null
+  const mapping: Record<string, string> = {
+    house: 'Maison', flat: 'Appartement', block: 'Immeuble',
+    land: 'Terrain', 'parking/garage/box': 'Parking',
+    office: 'Bureau', premises: 'Local', shop: 'Commerce', misc: 'Autre',
+  }
+  return mapping[category] || null
+}
+
 function mapOptionsToFields(options: string[] | undefined) {
   const fields: Record<string, unknown> = {}
   if (!options) return fields
@@ -94,12 +104,17 @@ export async function POST(req: NextRequest) {
       url: ad.url,
       strategie_mdb: strategie,
       statut: 'Toujours disponible',
+      type_bien: mapTypeBien(ad.category),
       prix_fai,
       surface,
       prix_m2: prix_fai && surface ? Math.round((prix_fai / surface) * 100) / 100 : null,
       nb_pieces: ad.rooms ? `T${ad.rooms}` : null,
+      nb_chambres: ad.bedrooms || null,
       etage: ad.floor !== undefined && ad.floor !== null ? (ad.floor === 0 ? 'RDC' : String(ad.floor)) : null,
+      annee_construction: ad.constructionYear || null,
       dpe: ad.energyGrade || null,
+      dpe_valeur: ad.energyValue || null,
+      ges: ad.gasGrade || null,
       loyer,
       charges_copro: ad.propertyCharges || null,
       taxe_fonc_ann: ad.propertyTax || null,
@@ -114,6 +129,7 @@ export async function POST(req: NextRequest) {
         uniqueId: ad.uniqueId,
         origin: ad.origin,
         adId: ad.adId,
+        category: ad.category,
         title: ad.title,
         description: ad.description,
         publisher: ad.publisher,

@@ -4,7 +4,7 @@ export const theme = {
     ink:        '#1a1210',   // noir principal
     bg:         '#f2ece4',   // fond beige
     card:       '#ffffff',   // fond cartes
-    muted:      '#9a8a80',   // texte secondaire
+    muted:      '#7a6a60',   // texte secondaire (WCAG AA 4.5:1 sur #faf8f5)
     sand:       '#e8e2d8',   // bordures
     sandLight:  '#f7f4f0',   // fond inputs
 
@@ -20,11 +20,24 @@ export const theme = {
     bgCard:   '#ffffff',
     bgInput:  '#f7f4f0',
     bgHover:  '#ede7dd',
+    bgLanding: '#faf8f5',
+    cream:    '#f0ebe3',
 
     // Text variants
     textPrimary:   '#1a1210',
-    textSecondary: '#9a8a80',
+    textSecondary: '#7a6a60',
     textTertiary:  '#bfb2a6',
+
+    // Button variants
+    buttonPrimary:     '#c0392b',
+    buttonPrimaryHover:'#96281b',
+    buttonDark:        '#1a1210',
+    buttonDarkHover:   '#2a2220',
+
+    // Input variants
+    inputBorder:  '#e8e2d8',
+    inputFocus:   '#c0392b',
+    inputBg:      '#f7f4f0',
   },
   fonts: {
     display: "'Fraunces', serif",

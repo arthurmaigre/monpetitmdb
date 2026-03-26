@@ -32,7 +32,7 @@ async function checkAdminOrCron(req: NextRequest): Promise<boolean> {
 // ──────────────────────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `Extrais les donnees locatives de cette annonce immobiliere. UNE SEULE LIGNE JSON.
-{"loyer":number|null,"type_loyer":"HC"|"CC"|null,"charges_recup":number|null,"charges_copro":number|null,"taxe_fonc_ann":number|null,"fin_bail":"YYYY-MM-DD"|"indefini"|null,"type_bail":"nu"|"meuble"|"commercial"|"pre-89"|null,"profil_locataire":"TYPE | depuis YYYY"|"TYPE | X ans"|null}
+{"loyer":number|null,"type_loyer":"HC"|"CC"|null,"charges_recup":number|null,"charges_copro":number|null,"taxe_fonc_ann":number|null,"fin_bail":"YYYY-MM-DD"|"indefini"|null,"type_bail":"nu"|"meuble"|"commercial"|"pre-89"|null,"profil_locataire":"TYPE | depuis YYYY"|"TYPE | X ans"|null,"nb_sdb":number|null,"nb_chambres":number|null}
 
 REGLES LOYER :
 - loyer : le montant du loyer mensuel tel que mentionne dans l annonce (ne pas le modifier)
@@ -52,7 +52,11 @@ REGLES BAIL :
 
 REGLES PROFIL :
 - TYPE EXACTEMENT parmi : Particulier, Etudiant, Senior, Famille, Colocation, Professionnel, Commercial
-- Anciennete : "depuis YYYY" ou "X ans". Si inconnue = null pour tout le champ profil_locataire.`
+- Anciennete : "depuis YYYY" ou "X ans". Si inconnue = null pour tout le champ profil_locataire.
+
+REGLES PIECES :
+- nb_sdb : nombre de salles de bain + salles d eau. Compter chaque salle de bain, salle d eau, salle de douche mentionnee. null si non mentionne.
+- nb_chambres : nombre de chambres. null si non mentionne. Ne pas compter le salon ni le sejour.`
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Parse AI JSON response
@@ -128,7 +132,7 @@ export async function POST(req: NextRequest) {
     while (Date.now() - startTime < MAX_MS) {
     let query = supabaseAdmin
       .from('biens')
-      .select('id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, moteurimmo_data')
+      .select('id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data')
       .eq('strategie_mdb', 'Locataire en place')
       .eq('statut', 'Toujours disponible')
       .not('moteurimmo_data', 'is', null)
@@ -206,6 +210,14 @@ export async function POST(req: NextRequest) {
         // Bail
         if (!bien.fin_bail && parsed.fin_bail != null) {
           update.fin_bail = parsed.fin_bail
+        }
+
+        // Pieces
+        if (parsed.nb_sdb != null && typeof parsed.nb_sdb === 'number') {
+          update.nb_sdb = parsed.nb_sdb
+        }
+        if (parsed.nb_chambres != null && typeof parsed.nb_chambres === 'number') {
+          update.nb_chambres = parsed.nb_chambres
         }
 
         // Profil locataire

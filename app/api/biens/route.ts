@@ -111,6 +111,16 @@ export async function GET(request: NextRequest) {
   if (rendement_min) { query = query.gte('rendement_brut', Number(rendement_min) / 100); countQuery = countQuery.gte('rendement_brut', Number(rendement_min) / 100) }
   if (type_bien) { query = query.eq('type_bien', type_bien); countQuery = countQuery.eq('type_bien', type_bien) }
 
+  const score_travaux_min = searchParams.get('score_travaux_min')
+  if (score_travaux_min) {
+    query = query.gte('score_travaux', Number(score_travaux_min))
+    countQuery = countQuery.gte('score_travaux', Number(score_travaux_min))
+  } else if (strategie === 'Travaux lourds') {
+    // Par defaut, ne montrer que les biens avec un score IA pour Travaux lourds
+    query = query.not('score_travaux', 'is', null)
+    countQuery = countQuery.not('score_travaux', 'is', null)
+  }
+
   query = query.range(from, from + limit - 1)
 
   const [{ data, error }, { count: totalCount }] = await Promise.all([query, countQuery])

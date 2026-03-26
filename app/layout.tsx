@@ -2,8 +2,23 @@ import type { Metadata } from 'next'
 import CookieBanner from '@/components/CookieBanner'
 
 export const metadata: Metadata = {
-  title: 'Mon Petit MDB',
-  description: 'Investissement locatif intelligent',
+  title: {
+    default: 'Mon Petit MDB — Sourcing immobilier pour investisseurs',
+    template: '%s | Mon Petit MDB',
+  },
+  description: 'Sourcez, analysez et comparez les biens immobiliers avec la m\u00E9thodologie marchand de biens. 90 000+ biens, 60+ plateformes, 7 r\u00E9gimes fiscaux.',
+  openGraph: {
+    title: 'Mon Petit MDB — Sourcing immobilier pour investisseurs',
+    description: 'La m\u00E9thodologie marchand de biens accessible \u00E0 tous. Estimation DVF, simulation fiscale, 4 strat\u00E9gies d\u2019investissement.',
+    siteName: 'Mon Petit MDB',
+    locale: 'fr_FR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Mon Petit MDB',
+    description: 'Sourcing immobilier intelligent pour investisseurs particuliers.',
+  },
   other: {
     'facebook-domain-verification': '18tkxn3dzwx80c8cqhlv8j0sli0hst',
   },
@@ -11,8 +26,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" style={{ scrollBehavior: 'smooth' }}>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: `
           var c=localStorage.getItem('mdb_cookie_consent');
@@ -26,6 +43,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body>
+        <style>{`
+          body { font-size: 16px; line-height: 1.5; }
+          @media (min-width: 768px) { body { font-size: 14px; } }
+          h1, h2, h3, h4, h5, h6 { line-height: 1.15; }
+          p { line-height: 1.5; }
+          *:focus-visible {
+            outline: 2px solid #c0392b;
+            outline-offset: 2px;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+              animation-duration: 0.01ms !important;
+              transition-duration: 0.01ms !important;
+            }
+          }
+          @media (hover: none) {
+            * { -webkit-tap-highlight-color: rgba(192,57,43,0.1); }
+          }
+        `}</style>
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-P2NK7FXK" height="0" width="0" style={{ display: 'none', visibility: 'hidden' }} /></noscript>
         {children}
         <CookieBanner />

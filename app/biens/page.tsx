@@ -8,7 +8,7 @@ import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien } from '@/lib/types'
-import { TYPES_BIEN, TRIS } from '@/lib/constants'
+import { TYPES_BIEN, TRIS, TRIS_TRAVAUX } from '@/lib/constants'
 import { calculerCashflow } from '@/lib/calculs'
 
 function formatPrix(n: number) {
@@ -30,6 +30,7 @@ export default function BiensPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<'grid' | 'list'>(saved.current?.view || 'grid')
+  const [filtersOpen, setFiltersOpen] = useState(true)
   const [strategie, setStrategie] = useState(saved.current?.strategie || '')
   const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
   const [ville, setVille] = useState(saved.current?.ville || 'Toutes')
@@ -129,8 +130,15 @@ export default function BiensPage() {
     if (prixMin) params.set('prix_min', prixMin)
     if (prixMax) params.set('prix_max', prixMax)
     if (rendMin) params.set('rendement_min', rendMin)
+    if (scoreTravauxMin) params.set('score_travaux_min', scoreTravauxMin)
     return `/api/biens?${params.toString()}`
   }
+
+  // Adapter le tri par defaut selon la strategie
+  useEffect(() => {
+    if (strategie === 'Travaux lourds') setTri('prixm2_asc')
+    else if (tri === 'prixm2_asc' || tri === 'prixm2_desc' || tri === 'score_desc') setTri('recent')
+  }, [strategie])
 
   // Charger les biens quand la strategie ou les filtres changent
   useEffect(() => {
@@ -138,7 +146,6 @@ export default function BiensPage() {
     setLoading(true)
     setError(null)
     setCurrentPage(1)
-    setScoreTravauxMin('')
     scrollRestored.current = false
     fetch(buildApiUrl(1))
       .then(r => { if (!r.ok) throw new Error('Erreur serveur'); return r.json() })
@@ -149,7 +156,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -273,6 +280,9 @@ export default function BiensPage() {
       const pvB = (b.estimation_prix_total || 0) - (b.prix_fai || 0)
       return pvA - pvB
     }
+    if (tri === 'prixm2_asc') return (a.prix_m2 || 0) - (b.prix_m2 || 0)
+    if (tri === 'prixm2_desc') return (b.prix_m2 || 0) - (a.prix_m2 || 0)
+    if (tri === 'score_desc') return ((b as any).score_travaux || 0) - ((a as any).score_travaux || 0)
     return 0
   })
 
@@ -323,7 +333,7 @@ export default function BiensPage() {
         .main { max-width: 1600px; margin: 0 auto; padding: 32px 48px; box-sizing: border-box; }
         .filter-bar { background: #fff; border-radius: 16px; padding: 16px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { display: flex; flex-direction: column; gap: 4px; }
-        .filter-label { font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; }
+        .filter-label { font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; }
         .filter-bar select, .filter-bar input { padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #f7f4f0; color: #1a1210; outline: none; transition: border-color 150ms ease; }
         .filter-bar select:focus, .filter-bar input:focus { border-color: #c0392b; }
         .filter-bar select.required { border-color: #c0392b; background: #fff8f7; }
@@ -333,9 +343,9 @@ export default function BiensPage() {
         .view-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease; background: transparent; color: #888; }
         .view-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
         .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .results-count { font-size: 14px; color: #9a8a80; }
+        .results-count { font-size: 14px; color: #7a6a60; }
         .results-count strong { color: #1a1210; font-weight: 600; }
-        .empty-state { text-align: center; padding: 80px 40px; color: #9a8a80; }
+        .empty-state { text-align: center; padding: 80px 40px; color: #7a6a60; }
         .empty-state h3 { font-family: 'Fraunces', serif; font-size: 22px; color: #1a1210; margin-bottom: 8px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 24px; }
         .list-wrap { position: relative; overflow-x: scroll; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
@@ -343,8 +353,9 @@ export default function BiensPage() {
         .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 16px; max-width: 1504px; margin: 0 auto; }
         .floating-scroll-inner { height: 1px; pointer-events: none; }
         .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
+        .list-table thead { position: sticky; top: 56px; z-index: 5; }
         .list-table thead tr { background: #f7f4f0; }
-        .list-table thead th { padding: 12px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #9a8a80; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
+        .list-table thead th { padding: 12px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
         .list-table thead th span { display: block; font-size: 10px; font-weight: 400; color: #b0a898; letter-spacing: 0; text-transform: none; margin-top: 2px; height: 14px; }
         .list-table tbody tr { transition: background 150ms ease; }
         .list-table tbody tr:hover { background: #faf8f5; }
@@ -364,18 +375,18 @@ export default function BiensPage() {
         .td-btn-contact:hover { opacity: 0.75; }
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 150ms ease; }
         .td-heart:hover { transform: scale(1.2); }
-        .edit-hint { font-size: 12px; color: #9a8a80; margin-bottom: 12px; font-style: italic; }
+        .edit-hint { font-size: 12px; color: #7a6a60; margin-bottom: 12px; font-style: italic; }
         .commune-wrap { position: relative; flex: 1; display: flex; }
         .commune-input { padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #f7f4f0; color: #1a1210; outline: none; transition: border-color 150ms ease; min-width: 280px; width: auto; flex: 1; }
         .commune-input:focus { border-color: #c0392b; }
-        .commune-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: #9a8a80; padding: 2px 6px; }
+        .commune-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: #7a6a60; padding: 2px 6px; }
         .commune-clear:hover { color: #c0392b; }
         .commune-dropdown { position: absolute; top: 100%; left: 0; min-width: 100%; width: max-content; max-width: 450px; background: #fff; border: 1.5px solid #e8e2d8; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 20; max-height: 240px; overflow-y: auto; margin-top: 4px; }
         .commune-item { padding: 8px 12px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ede8; transition: background 150ms ease; }
         .commune-item:last-child { border-bottom: none; }
         .commune-item:hover { background: #faf8f5; }
         .commune-item-name { font-weight: 500; color: #1a1210; }
-        .commune-item-cp { font-size: 12px; color: #9a8a80; font-weight: 600; }
+        .commune-item-cp { font-size: 12px; color: #7a6a60; font-weight: 600; }
         .commune-item-metro { font-size: 12px; color: #b0a898; }
 
         /* Skeleton loader */
@@ -392,9 +403,12 @@ export default function BiensPage() {
         .spinner { width: 24px; height: 24px; border: 3px solid #e8e2d8; border-top-color: #c0392b; border-radius: 50%; animation: spin 0.6s linear infinite; }
 
         /* Responsive: Mobile (< 640px) */
+        .filter-toggle { display: none; width: 100%; padding: 12px 16px; border-radius: 12px; border: 1.5px solid #e8e2d8; background: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: #1a1210; cursor: pointer; margin-bottom: 12px; min-height: 44px; text-align: left; }
         @media (max-width: 639px) {
+          .filter-toggle { display: flex; align-items: center; justify-content: space-between; }
           .main { padding: 16px; }
           .filter-bar { flex-direction: column; gap: 12px; padding: 12px 16px; border-radius: 12px; }
+          .filter-bar.collapsed { display: none; }
           .filter-sep { display: none; }
           .view-toggle { margin-left: 0; justify-content: stretch; width: 100%; }
           .view-toggle .view-btn { flex: 1; text-align: center; }
@@ -413,6 +427,7 @@ export default function BiensPage() {
           .grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
           .commune-input { width: 240px; }
           .floating-scroll { left: 32px; right: 32px; }
+          .col-optional { display: none; }
         }
 
         /* Responsive: Desktop (>= 1024px) */
@@ -422,7 +437,11 @@ export default function BiensPage() {
       `}</style>
 
       <div className="main">
-        <div className="filter-bar">
+        <button className="filter-toggle" onClick={() => setFiltersOpen(!filtersOpen)}>
+          <span>{filtersOpen ? "Masquer les filtres" : "Afficher les filtres"}</span>
+          <span style={{ fontSize: '18px', transition: 'transform 150ms ease', transform: filtersOpen ? 'rotate(180deg)' : 'rotate(0)' }}>{'\u25B2'}</span>
+        </button>
+        <div className={`filter-bar ${!filtersOpen ? 'collapsed' : ''}`}>
           <div className="filter-group">
             <label className="filter-label">Strategie MDB</label>
             <select value={strategie} onChange={e => setStrategie(e.target.value)} className={!strategie ? 'required' : ''}>
@@ -494,20 +513,36 @@ export default function BiensPage() {
           <div className="filter-group">
             <label className="filter-label">Trier par</label>
             <select value={tri} onChange={e => setTri(e.target.value)}>
-              {TRIS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {(strategie === 'Travaux lourds' ? TRIS_TRAVAUX : TRIS).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <div className="view-toggle">
             <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
             <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
           </div>
+          {(prixMin || prixMax || rendMin || scoreTravauxMin || typeBien !== 'Tous' || selectedCommune) && (
+            <button
+              onClick={() => {
+                setPrixMin(''); setPrixMax(''); setRendMin(''); setScoreTravauxMin('')
+                setTypeBien('Tous'); clearCommune()
+              }}
+              style={{
+                background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px',
+                padding: '6px 14px', fontSize: '12px', fontWeight: 600, color: '#c0392b',
+                cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif",
+                transition: 'all 150ms ease',
+              }}
+            >
+              {"\u2717 R\u00E9initialiser les filtres"}
+            </button>
+          )}
         </div>
 
         {!strategie ? (
           <div className="empty-state">
             <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ marginBottom: '16px', opacity: 0.6 }}>
-              <rect x="8" y="12" width="48" height="40" rx="6" stroke="#9a8a80" strokeWidth="2.5" fill="none"/>
-              <path d="M8 24h48M24 24v28M40 24v28" stroke="#9a8a80" strokeWidth="2" strokeLinecap="round"/>
+              <rect x="8" y="12" width="48" height="40" rx="6" stroke="#7a6a60" strokeWidth="2.5" fill="none"/>
+              <path d="M8 24h48M24 24v28M40 24v28" stroke="#7a6a60" strokeWidth="2" strokeLinecap="round"/>
               <circle cx="32" cy="18" r="3" fill="#c0392b"/>
             </svg>
             <h3>Choisissez une stratégie pour commencer</h3>
@@ -523,6 +558,23 @@ export default function BiensPage() {
                 {metropole !== 'Toutes' && <> - {metropole}</>}
                 {ville !== 'Toutes' && <> - {ville}</>}
                 {typeBien !== 'Tous' && <> - {typeBien}</>}
+                {(() => {
+                  const count = [
+                    strategie,
+                    metropole !== 'Toutes' ? metropole : '',
+                    selectedCommune,
+                    typeBien !== 'Tous' ? typeBien : '',
+                    prixMin,
+                    prixMax,
+                    rendMin,
+                    scoreTravauxMin,
+                  ].filter(Boolean).length
+                  return count > 0 ? (
+                    <span style={{ marginLeft: '8px', background: '#c0392b', color: '#fff', borderRadius: '10px', padding: '2px 8px', fontSize: '11px', fontWeight: 600 }}>
+                      {count} filtre{count > 1 ? 's' : ''} actif{count > 1 ? 's' : ''}
+                    </span>
+                  ) : null
+                })()}
               </p>
             </div>
 
@@ -546,6 +598,22 @@ export default function BiensPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="empty-state">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ marginBottom: '16px', opacity: 0.5 }}>
+                  <circle cx="28" cy="28" r="20" stroke="#7a6a60" strokeWidth="2.5" fill="none"/>
+                  <line x1="42" y1="42" x2="56" y2="56" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round"/>
+                  <line x1="22" y1="28" x2="34" y2="28" stroke="#c0392b" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <h3>{"Aucun bien ne correspond \u00E0 vos crit\u00E8res"}</h3>
+                <p style={{ marginBottom: '24px' }}>{"Essayez d\u2019\u00E9largir vos filtres ou de changer de localisation."}</p>
+                <button
+                  onClick={() => { setPrixMin(''); setPrixMax(''); setRendMin(''); setScoreTravauxMin(''); setTypeBien('Tous'); clearCommune() }}
+                  style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {"\u00C9largir les filtres"}
+                </button>
               </div>
             ) : view === 'grid' ? (
               <div className="grid">
@@ -576,7 +644,7 @@ export default function BiensPage() {
                       <th className="sticky-col-head" style={{ left: '40px', width: '80px', minWidth: '80px' }}><span></span></th>
                       <th className="sticky-col-head" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
                       <th>Commune<span></span></th>
-                      <th>Métropole<span></span></th>
+                      <th className="col-optional">{"M\u00E9tropole"}<span></span></th>
                       <th>Prix FAI<span></span></th>
                       {strategie !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
                       {strategie !== 'Travaux lourds' && <th>Écart<span></span></th>}
@@ -592,8 +660,8 @@ export default function BiensPage() {
                       ) : (
                         <>
                           <th>Loyer<span>/mois</span></th>
-                          <th>Type loyer<span></span></th>
-                          <th>Charges récup.<span>/mois</span></th>
+                          <th className="col-optional">Type loyer<span></span></th>
+                          <th className="col-optional">{"Charges r\u00E9cup."}<span>/mois</span></th>
                           <th>Charges copro<span>/mois</span></th>
                           <th>Taxe foncière<span>/an</span></th>
                           <th>Rendement brut<span></span></th>
@@ -632,17 +700,17 @@ export default function BiensPage() {
                               }
                             }}
                             style={{ color: watchlistIds.has(bien.id) ? '#c0392b' : '#c0b0a0' }}
-                            title={watchlistIds.has(bien.id) ? 'Retirer' : 'Ajouter a la watchlist'}>
+                            title={watchlistIds.has(bien.id) ? 'Retirer' : "Ajouter \u00E0 la watchlist"}>
                             {watchlistIds.has(bien.id) ? '♥' : '♡'}
                           </button>
                         </td>
                         <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
                         <td className="sticky-col" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
-                          <span className="td-bien-title">{bien.type_bien} {bien.nb_pieces} - {bien.surface} m2</span>
+                          <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{(bien as any).code_postal ? ` - ${(bien as any).code_postal}` : ''}</td>
-                        <td><MetroBadge metropole={bien.metropole} /></td>
+                        <td className="col-optional"><MetroBadge metropole={bien.metropole} /></td>
                         {(() => {
                           const peutCalculer = bien.loyer && bien.prix_fai
                           const resultat = peutCalculer ? calculerCashflow(
@@ -672,7 +740,7 @@ export default function BiensPage() {
                                 ) : resultat && resultat.prix_cible >= bien.prix_fai ? null : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                               </td>
                             )}
-                            <td style={{ color: '#9a8a80' }}>{bien.prix_m2 ? `${bien.prix_m2.toLocaleString('fr-FR')} \u20AC` : '-'}</td>
+                            <td style={{ color: '#7a6a60' }}>{bien.prix_m2 ? `${Math.round(bien.prix_m2).toLocaleString('fr-FR')} \u20AC` : '-'}</td>
                             {!isLocataire ? (
                               <>
                                 <td>
@@ -696,18 +764,18 @@ export default function BiensPage() {
                                     <span style={{
                                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                       width: '28px', height: '28px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', color: '#fff',
-                                      background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[(bien as any).dpe] || '#9a8a80'
+                                      background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as any)[(bien as any).dpe] || '#7a6a60'
                                     }}>{(bien as any).dpe}</span>
                                   ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}
                                 </td>
-                                <td style={{ color: '#9a8a80' }}>{(bien as any).annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
+                                <td style={{ color: '#7a6a60' }}>{(bien as any).annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                               </>
                             ) : (
                               <>
                                 <td><CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} /></td>
-                                <td><CellTypeLoyer bien={bien} /></td>
-                                <td><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
+                                <td className="col-optional"><CellTypeLoyer bien={bien} /></td>
+                                <td className="col-optional"><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
                                 <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
                                 <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
@@ -715,13 +783,13 @@ export default function BiensPage() {
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
                                   {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
                                 </td>
-                                <td style={{ color: '#9a8a80', fontSize: '12px' }}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : '-'}</td>
+                                <td style={{ color: '#7a6a60', fontSize: '12px' }}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : '-'}</td>
                               </>
                             )}
                           </>
                         })()}
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <a href={`/biens/${bien.id}`} className="td-btn">Analyse</a>
+                          <a href={`/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
                           {' '}
                           <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">Récupérer les données</a>
                         </td>
@@ -777,7 +845,7 @@ export default function BiensPage() {
             }}>
               Watchlist compl{'\u00E8'}te
             </h3>
-            <p style={{ fontSize: 14, color: '#9a8a80', lineHeight: 1.6, marginBottom: 28 }}>
+            <p style={{ fontSize: 14, color: '#7a6a60', lineHeight: 1.6, marginBottom: 28 }}>
               Vous avez atteint la limite de <strong style={{ color: '#1a1210' }}>{upgradeMsg.limit} biens</strong> pour le plan {upgradeMsg.plan}.
               Passez au plan {upgradeMsg.plan === 'free' ? 'Pro' : 'Expert'} pour sauvegarder plus de biens.
             </p>
@@ -796,7 +864,7 @@ export default function BiensPage() {
               onClick={() => setUpgradeMsg(null)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 13, color: '#9a8a80', fontFamily: "'DM Sans', sans-serif",
+                fontSize: 13, color: '#7a6a60', fontFamily: "'DM Sans', sans-serif",
                 padding: '8px 16px',
               }}
             >

@@ -60,6 +60,9 @@ monpetitmdb/
 │   ├── mon-profil/             # Donnees personnelles + facturation + upgrade Stripe
 │   ├── parametres/             # Fiscalite, financement, charges recurrentes, budget travaux
 │   ├── login/ + register/      # Auth (email + OAuth Google/Facebook)
+│   ├── contact/                # Page contact (formulaire)
+│   ├── faq/                    # FAQ 8 questions accordion
+│   ├── tarifs/                 # Redirect vers /#pricing
 │   ├── cgu/ + mentions-legales/ + not-found.tsx
 ├── components/
 │   ├── BienCard.tsx            # Carte bien (grille)
@@ -69,7 +72,14 @@ monpetitmdb/
 │   ├── PricingCta.tsx          # Bouton pricing -> Stripe checkout
 │   ├── ChatWidget.tsx          # Chat IA "Memo" flottant (Haiku, streaming, ouvert par defaut)
 │   ├── LandingHeader.tsx       # Header landing page (detecte connexion)
-│   └── Layout.tsx              # Header (nav + dropdown user) + Footer
+│   ├── Layout.tsx              # Header (nav + dropdown user) + Footer
+│   └── ui/                     # Composants UI partages
+│       ├── Button.tsx          # Bouton (primary/secondary/ghost/danger, sm/md/lg)
+│       ├── Input.tsx           # Input (default/search/inline, label, hint, error, suffix)
+│       ├── Modal.tsx           # Modal (focus trap, Escape, overlay, 3 variants)
+│       ├── Card.tsx            # Card (padding, border, hover shadow)
+│       ├── Toast.tsx           # Toast notifications (success/error/warning, 3s auto-dismiss)
+│       └── index.ts            # Re-exports
 ├── lib/
 │   ├── types.ts
 │   ├── constants.ts
@@ -203,10 +213,10 @@ Comparaison 2 regimes cote a cote
 
 Pilotable depuis `/admin/sourcing` ou via Vercel Cron (automatique, sans PC).
 
-1. **Ingestion Moteur Immo** : API route `/api/admin/ingest` (micro-batch 30j) + webhook `/api/moteurimmo/webhook`
+1. **Ingestion Moteur Immo** : API route `/api/admin/ingest` (micro-batch 30j) + webhook `/api/moteurimmo/webhook`. Mappe `category`→`type_bien`, `bedrooms`→`nb_chambres`, `constructionYear`→`annee_construction`, `energyValue`→`dpe_valeur`, `gasGrade`→`ges`.
 2. **Validation regex** : `/api/admin/regex` — filtre faux positifs par strategie, timestamp `regex_statut`/`regex_date`
-3. **Extraction donnees locatives** (Haiku) : `/api/admin/extraction` — Locataire en place uniquement, timestamp `extraction_statut`/`extraction_date`. Cout ~1$/1000 biens.
-4. **Score travaux** (Haiku) : `/api/admin/score-travaux` — Travaux lourds uniquement, option analyse photos (3x plus cher). Cout ~0.70$/1000 biens (texte), ~3$/1000 (photos).
+3. **Extraction donnees locatives** (Haiku) : `/api/admin/extraction` — Locataire en place uniquement, extrait loyer, charges, profil locataire, `nb_sdb`, `nb_chambres`. Timestamp `extraction_statut`/`extraction_date`. Cout ~1$/1000 biens.
+4. **Score travaux** (Haiku) : `/api/admin/score-travaux` — Travaux lourds uniquement, option analyse photos (3x plus cher). max_tokens 300, commentaire max 500 chars. Cout ~0.70$/1000 biens (texte), ~3$/1000 (photos).
 5. **Verification statut** : `/api/admin/statut` — marque les annonces retirees via API `deletedAds`
 6. **Estimation DVF batch** : POST /api/estimation/batch
 

@@ -18,8 +18,19 @@ export const TRIS = [
   { label: 'Rendement \u2191',  value: 'rendement_asc' },
   { label: 'Prix \u2191',       value: 'prix_asc' },
   { label: 'Prix \u2193',       value: 'prix_desc' },
+  { label: 'Prix/m\u00B2 \u2191', value: 'prixm2_asc' },
+  { label: 'Prix/m\u00B2 \u2193', value: 'prixm2_desc' },
   { label: 'Plus-value \u2193', value: 'plusvalue_desc' },
   { label: 'Plus-value \u2191', value: 'plusvalue_asc' },
+]
+
+export const TRIS_TRAVAUX = [
+  { label: 'Plus r\u00E9cents', value: 'recent' },
+  { label: 'Prix \u2191',       value: 'prix_asc' },
+  { label: 'Prix \u2193',       value: 'prix_desc' },
+  { label: 'Prix/m\u00B2 \u2191', value: 'prixm2_asc' },
+  { label: 'Prix/m\u00B2 \u2193', value: 'prixm2_desc' },
+  { label: 'Score travaux \u2193', value: 'score_desc' },
 ]
 
 export const STRATEGIE_LABELS: Record<string, string> = {
