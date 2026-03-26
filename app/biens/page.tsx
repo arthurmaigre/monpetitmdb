@@ -24,27 +24,27 @@ function getSessionFilters() {
 }
 
 export default function BiensPage() {
-  const saved = useRef(typeof window !== 'undefined' ? getSessionFilters() : null)
   const [allBiens, setAllBiens] = useState<Bien[]>([])
   const [metropoles, setMetropoles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [view, setView] = useState<'grid' | 'list'>(saved.current?.view || 'grid')
+  const [view, setView] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(true)
-  const [strategie, setStrategie] = useState(saved.current?.strategie || '')
-  const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
-  const [ville, setVille] = useState(saved.current?.ville || 'Toutes')
-  const [communeSearch, setCommuneSearch] = useState(saved.current?.communeSearch || '')
+  const [strategie, setStrategie] = useState('')
+  const [metropole, setMetropole] = useState('Toutes')
+  const [ville, setVille] = useState('Toutes')
+  const [communeSearch, setCommuneSearch] = useState('')
   const [communeSuggestions, setCommuneSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(saved.current?.selectedCommune || null)
+  const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(null)
   const communeTimeout = useRef<any>(null)
-  const [typeBien, setTypeBien] = useState(saved.current?.typeBien || 'Tous')
-  const [prixMin, setPrixMin] = useState(saved.current?.prixMin || '')
-  const [prixMax, setPrixMax] = useState(saved.current?.prixMax || '')
-  const [rendMin, setRendMin] = useState(saved.current?.rendMin || '')
-  const [scoreTravauxMin, setScoreTravauxMin] = useState(saved.current?.scoreTravauxMin || '')
-  const [tri, setTri] = useState(saved.current?.tri || 'recent')
+  const [typeBien, setTypeBien] = useState('Tous')
+  const [prixMin, setPrixMin] = useState('')
+  const [prixMax, setPrixMax] = useState('')
+  const [rendMin, setRendMin] = useState('')
+  const [scoreTravauxMin, setScoreTravauxMin] = useState('')
+  const [tri, setTri] = useState('recent')
+  const mounted = useRef(false)
   const [totalBiens, setTotalBiens] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -62,6 +62,25 @@ export default function BiensPage() {
   const [tableWidth, setTableWidth] = useState(0)
   const syncing = useRef(false)
 
+  // Restore session filters (client-only, after mount)
+  useEffect(() => {
+    const s = getSessionFilters()
+    if (!s) { mounted.current = true; return }
+    // Batch all state updates — React 18 batches these in useEffect
+    if (s.view) setView(s.view)
+    if (s.strategie) setStrategie(s.strategie)
+    if (s.metropole) setMetropole(s.metropole)
+    if (s.ville) setVille(s.ville)
+    if (s.communeSearch) setCommuneSearch(s.communeSearch)
+    if (s.selectedCommune) setSelectedCommune(s.selectedCommune)
+    if (s.typeBien) setTypeBien(s.typeBien)
+    if (s.prixMin) setPrixMin(s.prixMin)
+    if (s.prixMax) setPrixMax(s.prixMax)
+    if (s.rendMin) setRendMin(s.rendMin)
+    if (s.scoreTravauxMin) setScoreTravauxMin(s.scoreTravauxMin)
+    if (s.tri) setTri(s.tri)
+    mounted.current = true
+  }, [])
 
   const syncScroll = useCallback((source: 'table' | 'float') => {
     if (syncing.current) return
