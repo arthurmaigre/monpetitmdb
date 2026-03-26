@@ -44,7 +44,7 @@ export default function BiensPage() {
   const [rendMin, setRendMin] = useState('')
   const [scoreTravauxMin, setScoreTravauxMin] = useState('')
   const [tri, setTri] = useState('recent')
-  const sessionRestored = useRef(false)
+  const [sessionRestored, setSessionRestored] = useState(false)
   const [totalBiens, setTotalBiens] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -65,7 +65,7 @@ export default function BiensPage() {
   // Restore filters from sessionStorage (client-side only, avoids hydration mismatch)
   useEffect(() => {
     const saved = getSessionFilters()
-    if (!saved) { sessionRestored.current = true; return }
+    if (!saved) { setSessionRestored(true); return }
     if (saved.strategie) setStrategie(saved.strategie)
     if (saved.metropole) setMetropole(saved.metropole)
     if (saved.ville) setVille(saved.ville)
@@ -78,7 +78,7 @@ export default function BiensPage() {
     if (saved.scoreTravauxMin) setScoreTravauxMin(saved.scoreTravauxMin)
     if (saved.tri) setTri(saved.tri)
     if (saved.view) setView(saved.view)
-    sessionRestored.current = true
+    setSessionRestored(true)
   }, [])
 
   const syncScroll = useCallback((source: 'table' | 'float') => {
@@ -161,6 +161,7 @@ export default function BiensPage() {
 
   // Charger les biens quand la strategie ou les filtres changent
   useEffect(() => {
+    if (!sessionRestored) return
     if (!strategie) { setAllBiens([]); setLoading(false); setTotalBiens(0); setHasMore(false); return }
     setLoading(true)
     setError(null)
@@ -175,7 +176,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin])
+  }, [sessionRestored, strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
