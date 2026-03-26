@@ -1304,6 +1304,11 @@ export default function FicheBienPage() {
   const [scorePerso, setScorePerso] = useState<number | null>(null)
   const [inWatchlist, setInWatchlist] = useState(false)
   const [showDetailTravaux, setShowDetailTravaux] = useState(false)
+  // IDR states
+  const [coutCoproParLot, setCoutCoproParLot] = useState(4000)
+  const [coutCompteursParLot, setCoutCompteursParLot] = useState(1500)
+  const [coutTravauxGlobal, setCoutTravauxGlobal] = useState(0)
+  const [prixReventeLots, setPrixReventeLots] = useState<Record<number, number>>({})
   const POSTES_TRAVAUX: { id: string, label: string, prixM2: number, mode: 'surface' | 'forfait', qteDefaut: number, type: 'entretien' | 'amelioration' | 'construction' }[] = [
     // Entretien (deductible nu reel)
     { id: 'peinture', label: 'Peinture', prixM2: 20, mode: 'surface', qteDefaut: 0, type: 'entretien' },
@@ -1521,6 +1526,9 @@ export default function FicheBienPage() {
 
   const peutCalculer = bien.loyer && bien.prix_fai
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
+  const isIDR = bien.strategie_mdb === 'Immeuble de rapport'
+  const lotsData = bien.lots_data as { nb_lots?: number; loyer_total_mensuel?: number; loyer_total_annuel?: number; monopropriete?: boolean; compteurs_individuels?: boolean; lots?: { type?: string; surface?: number; loyer?: number; type_loyer?: string; etat?: string; dpe?: string; etage?: string }[] } | null
+  const lots = lotsData?.lots || []
 
   const resultatFAI = peutCalculer ? calculerCashflow(
     { prix_fai: bien.prix_fai, loyer: bien.loyer, type_loyer: bien.type_loyer, charges_rec: bien.charges_rec || 0, charges_copro: bien.charges_copro || 0, taxe_fonc_ann: bien.taxe_fonc_ann || 0, surface: bien.surface },
@@ -1624,6 +1632,17 @@ export default function FicheBienPage() {
         .slider { width: 100%; accent-color: #c0392b; cursor: pointer; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #b0a898; margin-top: 2px; }
         .val-blur { filter: blur(7px); user-select: none; pointer-events: none; }
+        .lots-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .lots-table th { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; text-align: left; border-bottom: 2px solid #f0ede8; }
+        .lots-table td { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #f0ede8; }
+        .lots-table tr:last-child td { border-bottom: none; }
+        .lot-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .lot-loue { background: #d4f5e0; color: #1a7a40; }
+        .lot-vacant { background: #fff8f0; color: #a06010; }
+        .lot-renover { background: #fde8e8; color: #c0392b; }
+        .idr-param { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .idr-param label { font-size: 12px; font-weight: 600; color: #7a6a60; min-width: 180px; }
+        .idr-param input { padding: 6px 10px; border-radius: 6px; border: 1.5px solid #e8e2d8; font-size: 13px; width: 120px; font-family: 'DM Sans', sans-serif; background: #faf8f5; }
         .results-table { width: 100%; border-collapse: collapse; }
         .results-table thead th { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; text-align: right; border-bottom: 2px solid #f0ede8; }
         .results-table thead th:first-child { text-align: left; }
@@ -1822,6 +1841,255 @@ export default function FicheBienPage() {
             </div>
           )
         })()}
+
+        {/* ===== BLOC IDR : Caractéristiques lots + Données locatives + Coûts copro ===== */}
+        {isIDR && lots.length > 0 && (
+          <>
+            {/* Caractéristiques agrégées + tableau lots */}
+            <div className="section">
+              <h2 className="section-title">{"D\u00E9tail de l\u2019immeuble"}</h2>
+              <div className="data-grid">
+                <div className="data-item">
+                  <span className="data-label">Nombre de lots</span>
+                  <span className="data-value">{lotsData?.nb_lots || lots.length}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">Surface totale</span>
+                  <span className="data-value">{bien.surface ? `${bien.surface} m\u00B2` : 'NC'}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
+                  <span className="data-value" style={{ color: lotsData?.monopropriete ? '#1a7a40' : '#7a6a60' }}>
+                    {lotsData?.monopropriete === true ? 'Oui' : lotsData?.monopropriete === false ? 'Non' : 'NC'}
+                  </span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">Compteurs individuels</span>
+                  <span className="data-value" style={{ color: lotsData?.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>
+                    {lotsData?.compteurs_individuels === true ? 'Oui' : lotsData?.compteurs_individuels === false ? 'Non' : 'NC'}
+                  </span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">DPE</span>
+                  <span className={`data-value ${!bien.dpe ? 'nc' : ''}`}>{bien.dpe || 'NC'}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">{"Ann\u00E9e construction"}</span>
+                  <span className={`data-value ${!bien.annee_construction ? 'nc' : ''}`}>{bien.annee_construction || 'NC'}</span>
+                </div>
+              </div>
+
+              {/* Tableau lots — caractéristiques physiques */}
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginTop: '20px', marginBottom: '4px' }}>{"D\u00E9tail par lot"}</h3>
+              <table className="lots-table">
+                <thead>
+                  <tr>
+                    <th>Lot</th>
+                    <th>Type</th>
+                    <th>Surface</th>
+                    <th>{"\u00C9tage"}</th>
+                    <th>DPE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lots.map((lot, i) => (
+                    <tr key={i}>
+                      <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                      <td>{lot.type || 'NC'}</td>
+                      <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
+                      <td>{lot.etage || 'NC'}</td>
+                      <td>{lot.dpe || 'NC'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Données locatives agrégées + par lot */}
+            <div className="section">
+              <h2 className="section-title">{"Donn\u00E9es locatives"}</h2>
+              <div className="data-grid">
+                <div className="data-item">
+                  <span className="data-label">Loyer total mensuel</span>
+                  <span className="data-value">{bien.loyer ? `${bien.loyer.toLocaleString('fr-FR')} \u20AC/mois` : 'NC'}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">Loyer annuel</span>
+                  <span className="data-value">{lotsData?.loyer_total_annuel ? `${lotsData.loyer_total_annuel.toLocaleString('fr-FR')} \u20AC` : bien.loyer ? `${(bien.loyer * 12).toLocaleString('fr-FR')} \u20AC` : 'NC'}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">{"Taxe fonci\u00E8re"}</span>
+                  <span className={`data-value ${!bien.taxe_fonc_ann ? 'nc' : ''}`}>{bien.taxe_fonc_ann ? `${bien.taxe_fonc_ann.toLocaleString('fr-FR')} \u20AC/an` : 'NC'}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">Rendement brut</span>
+                  <span className="data-value" style={{ color: '#c0392b' }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : 'NC'}</span>
+                </div>
+                <div className="data-item">
+                  <span className="data-label">Taux d{"'"}occupation</span>
+                  <span className="data-value" style={{ color: '#1a7a40' }}>
+                    {lots.filter(l => l.etat === 'loue').length}/{lots.length} lots {"lou\u00E9s"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tableau lots — données locatives */}
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210', marginTop: '20px', marginBottom: '4px' }}>{"D\u00E9tail par lot"}</h3>
+              <table className="lots-table">
+                <thead>
+                  <tr>
+                    <th>Lot</th>
+                    <th>Type</th>
+                    <th>Loyer</th>
+                    <th>{"\u00C9tat"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lots.map((lot, i) => (
+                    <tr key={i}>
+                      <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                      <td>{lot.type || 'NC'}</td>
+                      <td>{lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
+                      <td>
+                        <span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>
+                          {lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Coûts création copropriété */}
+            <div className="section">
+              <h2 className="section-title">{"Co\u00FBts de cr\u00E9ation de copropri\u00E9t\u00E9"}</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div className="idr-param">
+                  <label>{"Cr\u00E9ation copro / lot"}</label>
+                  <input type="number" value={coutCoproParLot} onChange={e => setCoutCoproParLot(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>{'\u20AC'}</span>
+                </div>
+                <div className="idr-param">
+                  <label>Compteurs / lot</label>
+                  <input type="number" value={coutCompteursParLot} onChange={e => setCoutCompteursParLot(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>{'\u20AC'}{lotsData?.compteurs_individuels ? " (d\u00E9j\u00E0 individuels)" : ''}</span>
+                </div>
+                <div className="idr-param">
+                  <label>Travaux global</label>
+                  <input type="number" value={coutTravauxGlobal} onChange={e => setCoutTravauxGlobal(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>{'\u20AC'}</span>
+                </div>
+                <div className="idr-param">
+                  <label>Frais agence revente</label>
+                  <input type="number" step="0.5" value={fraisAgenceRevente} onChange={e => setFraisAgenceRevente(Number(e.target.value))} /> <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
+                </div>
+              </div>
+              <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '12px', padding: '16px 20px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                      {"Co\u00FBt total estim\u00E9"}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#7a6a60' }}>
+                      {`${coutCoproParLot.toLocaleString('fr-FR')} + ${coutCompteursParLot.toLocaleString('fr-FR')} \u20AC \u00D7 ${lots.length} lots + ${coutTravauxGlobal.toLocaleString('fr-FR')} \u20AC travaux`}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }}>
+                    {((coutCoproParLot + coutCompteursParLot) * lots.length + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Estimation revente par lot + Waterfall */}
+            <div className="section">
+              <h2 className="section-title">{"Sc\u00E9nario revente \u00E0 la d\u00E9coupe"}</h2>
+              <p style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '16px' }}>
+                {"Estimation du prix de revente lot par lot. Ajustez les prix manuellement si n\u00E9cessaire."}
+              </p>
+
+              {/* Tableau prix par lot */}
+              <table className="lots-table">
+                <thead>
+                  <tr>
+                    <th>Lot</th>
+                    <th>Type</th>
+                    <th>Surface</th>
+                    <th>{"Prix/m\u00B2 estim\u00E9"}</th>
+                    <th>{"Prix revente (\u00E9ditable)"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lots.map((lot, i) => {
+                    const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                    const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
+                    const prixRevente = prixReventeLots[i] ?? prixEstime
+                    return (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                        <td>{lot.type || 'NC'}</td>
+                        <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
+                        <td style={{ color: '#7a6a60' }}>{prixM2DVF ? `${prixM2DVF.toLocaleString('fr-FR')} \u20AC` : 'NC'}</td>
+                        <td>
+                          <input
+                            type="number"
+                            value={prixRevente || ''}
+                            onChange={e => setPrixReventeLots(prev => ({ ...prev, [i]: Number(e.target.value) }))}
+                            placeholder={prixEstime ? prixEstime.toLocaleString('fr-FR') : '0'}
+                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '130px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', textAlign: 'right' }}
+                          />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+
+              {/* Waterfall */}
+              {(() => {
+                const prixM2DVF = estimationData?.prix_m2 || (bien.estimation_prix_total && bien.surface ? Math.round(bien.estimation_prix_total / bien.surface) : 0)
+                const totalRevente = lots.reduce((sum, lot, i) => {
+                  const prixEstime = lot.surface && prixM2DVF ? Math.round(lot.surface * prixM2DVF) : 0
+                  return sum + (prixReventeLots[i] ?? prixEstime)
+                }, 0)
+                const prixAchat = bien.prix_fai || 0
+                const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
+                const coutCopro = (coutCoproParLot + coutCompteursParLot) * lots.length
+                const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
+                const totalCouts = prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence
+                const margeBrute = totalRevente - totalCouts
+                const tvaMarge = Math.round(margeBrute * 20 / 120)
+                const isBase = margeBrute - tvaMarge
+                const is15 = Math.min(isBase, 42500) * 0.15
+                const is25 = Math.max(0, isBase - 42500) * 0.25
+                const isTotal = Math.round(is15 + is25)
+                const margeNette = margeBrute - tvaMarge - isTotal
+
+                return totalRevente > 0 ? (
+                  <div style={{ marginTop: '20px' }}>
+                    <table className="results-table">
+                      <thead>
+                        <tr><th></th><th>Montant</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr><td>Prix revente total ({lots.length} lots)</td><td style={{ color: '#1a7a40', fontWeight: 700 }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr><td>{"Prix d\u2019achat"}</td><td style={{ color: '#c0392b' }}>-{prixAchat.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr><td>Frais notaire achat ({fraisNotaire}%)</td><td style={{ color: '#c0392b' }}>-{fraisNotaireAchat.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr><td>{"Cr\u00E9ation copropri\u00E9t\u00E9 + compteurs"}</td><td style={{ color: '#c0392b' }}>-{coutCopro.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        {coutTravauxGlobal > 0 && <tr><td>Travaux</td><td style={{ color: '#c0392b' }}>-{coutTravauxGlobal.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>}
+                        <tr><td>Frais agence revente ({fraisAgenceRevente}%)</td><td style={{ color: '#c0392b' }}>-{fraisAgence.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr className="results-total"><td>Marge brute</td><td style={{ color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr style={{ height: '8px' }}><td colSpan={2}></td></tr>
+                        <tr><td>TVA sur marge (20/120)</td><td style={{ color: '#c0392b' }}>-{tvaMarge.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr><td>IS (15% / 25%)</td><td style={{ color: '#c0392b' }}>-{isTotal.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr className="results-total"><td>Marge nette MdB</td><td style={{ color: margeNette >= 0 ? '#1a7a40' : '#c0392b', fontFamily: "'Fraunces', serif", fontSize: '18px' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</td></tr>
+                        <tr><td>Rendement {"op\u00E9ration"}</td><td style={{ fontWeight: 700 }}>{prixAchat > 0 ? (margeNette / prixAchat * 100).toFixed(1) : '0'} %</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null
+              })()}
+            </div>
+          </>
+        )}
 
         {bien.strategie_mdb === 'Travaux lourds' ? (
           <div className="section">
