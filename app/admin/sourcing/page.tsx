@@ -183,6 +183,7 @@ export default function AdminSourcingPage() {
   const [idrRunning, setIdrRunning] = useState(false)
   const [idrStats, setIdrStats] = useState({ processed: 0, total: 0, lots_found: 0, errors: 0 })
   const idrStopRef = useRef(false)
+  const [idrPending, setIdrPending] = useState(0)
 
   // Score travaux state
   const [scoreRunning, setScoreRunning] = useState(false)
@@ -1194,6 +1195,16 @@ export default function AdminSourcingPage() {
               <span key={f} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4ddf5', color: '#2a4a8a' }}>{f}</span>
             ))}
           </div>
+          {(stats.idr_pending || 0) > 0 && !idrRunning && (
+            <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 13, color: '#1a1210' }}>
+                <strong>{fmt(stats.idr_pending)}</strong> biens {'\u00e0'} traiter
+              </span>
+              <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
+                {"Co\u00fbt estim\u00e9 : ~"}{((stats.idr_pending || 0) * 0.003) < 1 ? ((stats.idr_pending || 0) * 0.003).toFixed(2) : Math.round((stats.idr_pending || 0) * 0.003)} {'\u20ac'} (Haiku)
+              </span>
+            </div>
+          )}
           <div className="src-row">
             {!idrRunning ? (
               <button className="src-btn src-btn-red" onClick={startExtractionIDR}>{'\u25B6'} Lancer</button>

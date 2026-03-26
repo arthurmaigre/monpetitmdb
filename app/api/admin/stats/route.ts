@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     const { data: cronStatut } = await supabaseAdmin.from('cron_config').select('params').eq('id', 'statut').single()
     const currentCycle = (cronStatut?.params as any)?.cycle || 1
 
-    const [r24, r7, e24, e7, v24, v7, vTotal, vCycleDone, vCycleExpired, vCyclePending] = await Promise.all([
+    const [r24, r7, e24, e7, v24, v7, vTotal, vCycleDone, vCycleExpired, vCyclePending, idrPendingRes] = await Promise.all([
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('created_at', h24),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).gte('created_at', d7),
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('derniere_verif_statut', h24),
@@ -66,6 +66,8 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Annonce expir\u00E9e').gte('verif_cycle_id', currentCycle),
       // Biens not yet verified this cycle (cycle_id < currentCycle)
       supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('statut', 'Toujours disponible').not('moteurimmo_unique_id', 'is', null).lt('verif_cycle_id', currentCycle),
+      // IDR extraction pending
+      supabaseAdmin.from('biens').select('id', { count: 'exact', head: true }).eq('strategie_mdb', 'Immeuble de rapport').eq('statut', 'Toujours disponible').not('moteurimmo_data', 'is', null).is('extraction_statut', null),
     ])
 
     const cycleDone = vCycleDone.count || 0
@@ -86,6 +88,7 @@ export async function GET(req: NextRequest) {
       verif_cycle_pending: cyclePending,
       verif_cycle_total: cycleTotal,
       verif_cycle_expired: vCycleExpired.count || 0,
+      idr_pending: idrPendingRes.count || 0,
     })
   } catch (err) {
     console.error('Stats error:', err)
