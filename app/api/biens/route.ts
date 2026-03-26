@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   profil_locataire, fin_bail, score_travaux,
   dpe, annee_construction,
   photo_storage_path, photo_url,
-  estimation_prix_total,
+  estimation_prix_total, lots_data,
   moteurimmo_data,
   created_at, updated_at
 `)
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   profil_locataire, fin_bail, score_travaux,
   dpe, annee_construction,
   photo_storage_path, photo_url,
-  estimation_prix_total,
+  estimation_prix_total, lots_data,
   moteurimmo_data,
   created_at, updated_at
 `)
