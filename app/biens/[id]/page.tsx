@@ -1555,7 +1555,11 @@ export default function FicheBienPage() {
   const scoreUtilCalc = scorePerso || bien.score_travaux
   const budgetTravCalc = scoreUtilCalc && bien.surface ? (budgetTravauxM2[String(scoreUtilCalc)] || 0) * bien.surface : 0
   const estimPrix = estimationData?.prix_total || 0
-  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix / (1 + objectifPV / 100) - budgetTravCalc) / (1 + fraisNotaire / 100)) : null
+  // Prix cible PV : resoudre pour que pvBrute = objectifPV% × cout total
+  // pvBrute = estimPrix × (1 - fraisAgence%) - prixCible × (1 + fraisNotaire%) - travaux
+  // objectif = pvBrute / (prixCible × (1 + fraisNotaire%))
+  // => prixCible = (estimPrix × (1 - fraisAgence/100) - budgetTrav) / ((1 + fraisNotaire/100) × (1 + objectifPV/100))
+  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix * (1 - fraisAgenceRevente / 100) - budgetTravCalc) / ((1 + fraisNotaire / 100) * (1 + objectifPV / 100))) : null
 
   // Prix cible cashflow (locatif)
   const prixCibleCashflow = resultatFAI?.prix_cible || null

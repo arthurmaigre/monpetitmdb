@@ -369,6 +369,7 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 - **Encoding JSX** : `{'\u20AC'}` pour € ; `{'♥'}` pour les icones. Accents dans placeholders : `placeholder={"texte accentué"}`
 - **Next.js App Router** : toujours `await params` dans les route handlers (bug Next.js 16)
 - **Estimation DVF = prix marche "en bon etat"** : pas de decote travaux, c'est le prix de revente apres travaux
+- **Prix cible PV** : `prixCible = (estimPrix * (1 - fraisAgence%) - travaux) / ((1 + fraisNotaire%) * (1 + objectifPV%))` — inclut frais agence revente dans le calcul
 - **MdB toujours a l'IS** : pas de regime IR pour marchand de biens, pas d'amortissement (biens = stock)
 - **TVA sur marge MdB** : marge × 20/120 (TVA "en dedans", pas × 20%)
 - **profil_locataire = "NC"** : traite comme vide dans l'UI (Non communique en grise)

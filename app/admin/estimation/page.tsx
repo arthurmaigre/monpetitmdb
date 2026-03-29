@@ -175,6 +175,10 @@ export default function AdminEstimationPage() {
         .method-title { font-size: 12px; font-weight: 700; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
         .method-text { font-size: 13px; color: #555; line-height: 1.6; }
         .method-formula { font-family: 'SF Mono', 'Fira Code', monospace; background: #1a1210; color: #e8e2d8; padding: 12px 16px; border-radius: 8px; font-size: 12px; line-height: 1.6; margin: 10px 0; overflow-x: auto; }
+        @media (max-width: 768px) {
+          .estim-wrap { padding: 24px 16px; }
+          .estim-title { font-size: 24px; }
+        }
       `}</style>
 
       <div className="estim-wrap">

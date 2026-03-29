@@ -374,6 +374,14 @@ export default function EditorialPage() {
         .ed-cal-kw { font-size: 10px; color: #9a8f8b; margin-bottom: 8px; }
         .ed-cal-btn { background: #c0392b; color: #fff; border: none; padding: 4px 10px; font-size: 10px; font-weight: 600; cursor: pointer; border-radius: 3px; }
         .ed-cal-btn:hover { background: #96281b; }
+        @media (max-width: 768px) {
+          .ed-wrap { flex-direction: column; height: auto; }
+          .ed-sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid #e2d9d0; }
+          .ed-aside { width: 100%; border-left: none; border-top: 1px solid #e2d9d0; }
+          .ed-main { min-height: 60vh; }
+          .ed-overlay-box { padding: 24px 20px; }
+          .ed-cal-grid { grid-template-columns: repeat(2, 1fr); }
+        }
       `}</style>
 
       <div className="ed-wrap">
@@ -408,10 +416,10 @@ export default function EditorialPage() {
         {/* MAIN */}
         <div className="ed-main">
           <div className="ed-tabs">
-            <button className={`ed-tab ${tab === 'rediger' ? 'active' : ''}`} onClick={() => setTab('rediger')}>R{'\u00e9'}diger</button>
-            <button className={`ed-tab ${tab === 'backlog' ? 'active' : ''}`} onClick={() => setTab('backlog')}>Backlog <span className="ed-tab-count">{BACKLOG.length}</span></button>
-            <button className={`ed-tab ${tab === 'articles' ? 'active' : ''}`} onClick={() => setTab('articles')}>Articles <span className="ed-tab-count">{articles.length}</span></button>
-            <button className={`ed-tab ${tab === 'calendrier' ? 'active' : ''}`} onClick={() => setTab('calendrier')}>Calendrier</button>
+            <button role="tab" aria-selected={tab === 'rediger'} className={`ed-tab ${tab === 'rediger' ? 'active' : ''}`} onClick={() => setTab('rediger')}>R{'\u00e9'}diger</button>
+            <button role="tab" aria-selected={tab === 'backlog'} className={`ed-tab ${tab === 'backlog' ? 'active' : ''}`} onClick={() => setTab('backlog')}>Backlog <span className="ed-tab-count">{BACKLOG.length}</span></button>
+            <button role="tab" aria-selected={tab === 'articles'} className={`ed-tab ${tab === 'articles' ? 'active' : ''}`} onClick={() => setTab('articles')}>Articles <span className="ed-tab-count">{articles.length}</span></button>
+            <button role="tab" aria-selected={tab === 'calendrier'} className={`ed-tab ${tab === 'calendrier' ? 'active' : ''}`} onClick={() => setTab('calendrier')}>Calendrier</button>
           </div>
 
           {/* TAB: REDIGER */}
@@ -424,7 +432,7 @@ export default function EditorialPage() {
               <div className="ed-form-grid">
                 <div className="ed-form-group full">
                   <label className="ed-label">Titre / Sujet</label>
-                  <input className="ed-input" value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="ex: Comment choisir entre BIC et IS pour un marchand de biens ?" />
+                  <input className="ed-input" value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder={"Comment choisir entre BIC et IS pour un marchand de biens ?"} />
                 </div>
                 <div className="ed-form-group">
                   <label className="ed-label">Cat{'\u00e9'}gorie</label>
@@ -447,11 +455,11 @@ export default function EditorialPage() {
                 </div>
                 <div className="ed-form-group">
                   <label className="ed-label">Mot-cl{'\u00e9'} SEO</label>
-                  <input className="ed-input" value={fKeyword} onChange={e => setFKeyword(e.target.value)} placeholder="ex: marchand de biens fiscalit\u00e9" />
+                  <input className="ed-input" value={fKeyword} onChange={e => setFKeyword(e.target.value)} placeholder={"marchand de biens fiscalit\u00E9"} />
                 </div>
                 <div className="ed-form-group full">
                   <label className="ed-label">Angle / Instructions</label>
-                  <textarea className="ed-textarea" value={fAngle} onChange={e => setFAngle(e.target.value)} placeholder="ex: Comparer les deux r\u00e9gimes avec un exemple chiffr\u00e9..." />
+                  <textarea className="ed-textarea" value={fAngle} onChange={e => setFAngle(e.target.value)} placeholder={"Comparer les deux r\u00E9gimes avec un exemple chiffr\u00E9..."} />
                 </div>
                 <div className="ed-form-group full">
                   <label className="ed-label">Public cible</label>

@@ -52,24 +52,33 @@ export default function AdminBiensPage() {
         .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
         .admin-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; }
         .admin-filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        .admin-search { padding: 9px 14px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; width: 220px; }
-        .admin-select { padding: 9px 14px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; }
+        .admin-search { padding: 10px 14px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; width: 220px; min-height: 44px; box-sizing: border-box; }
+        .admin-select { padding: 10px 14px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; min-height: 44px; box-sizing: border-box; }
         .admin-count { font-size: 13px; color: #7a6a60; }
-        .table-wrap { background: #fff; border-radius: 16px; overflow: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .table-wrap { background: #fff; border-radius: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
         thead tr { background: #f7f4f0; border-bottom: 2px solid #ede8e0; }
         th { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+        th[scope] { cursor: default; }
         tbody tr { border-bottom: 1px solid #f0ede8; transition: background 0.1s; }
         tbody tr:last-child { border-bottom: none; }
         tbody tr:hover { background: #faf8f5; }
         td { padding: 10px 14px; vertical-align: middle; }
-        .td-input { padding: 6px 10px; border-radius: 7px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; width: 90px; }
+        .td-input { padding: 8px 10px; border-radius: 7px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; width: 90px; min-height: 36px; box-sizing: border-box; }
         .td-input:focus { border-color: #c0392b; }
-        .td-select { padding: 6px 10px; border-radius: 7px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; }
+        .td-select { padding: 8px 10px; border-radius: 7px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; min-height: 36px; box-sizing: border-box; }
         .saving { opacity: 0.5; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .nc { color: #c0392b; font-style: italic; font-size: 11px; }
+        .admin-error { background: #fde8e8; color: #c0392b; border-radius: 10px; padding: 14px 20px; margin-bottom: 20px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+        @media (max-width: 768px) {
+          .admin-wrap { padding: 0 16px; margin: 24px auto; }
+          .admin-title { font-size: 22px; }
+          .admin-search { width: 100%; }
+          table { font-size: 11px; min-width: 700px; }
+          th, td { padding: 8px 10px; }
+        }
       `}</style>
 
       <div className="admin-wrap">

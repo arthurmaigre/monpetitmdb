@@ -56,16 +56,22 @@ export default function AdminUsersPage() {
         .admin-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; margin-bottom: 24px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .table-wrap { background: #fff; border-radius: 16px; overflow: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .table-wrap { background: #fff; border-radius: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px; }
         thead tr { background: #f7f4f0; border-bottom: 2px solid #ede8e0; }
         th { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
         tbody tr { border-bottom: 1px solid #f0ede8; transition: background 0.1s; }
         tbody tr:last-child { border-bottom: none; }
         tbody tr:hover { background: #faf8f5; }
         td { padding: 12px 14px; vertical-align: middle; }
-        .td-select { padding: 6px 10px; border-radius: 7px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; }
+        .td-select { padding: 8px 10px; border-radius: 7px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5; outline: none; min-height: 36px; box-sizing: border-box; }
         .saving { opacity: 0.5; }
+        @media (max-width: 768px) {
+          .admin-wrap { padding: 0 16px; margin: 24px auto; }
+          .admin-title { font-size: 22px; }
+          table { font-size: 11px; }
+          th, td { padding: 8px 10px; }
+        }
       `}</style>
 
       <div className="admin-wrap">

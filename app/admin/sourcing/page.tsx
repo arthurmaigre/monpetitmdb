@@ -645,6 +645,7 @@ export default function AdminSourcingPage() {
           padding: 10px 14px; border-radius: 10px; border: 1.5px solid #e8e2d8;
           font-family: 'DM Sans', sans-serif; font-size: 13px; background: #faf8f5;
           outline: none; color: #1a1210; transition: border-color 0.15s;
+          min-height: 44px; box-sizing: border-box;
         }
         .src-select:focus, .src-input:focus { border-color: #c0392b; }
 
@@ -1154,7 +1155,7 @@ export default function AdminSourcingPage() {
             ) : (
               <button className="src-btn src-btn-stop" onClick={() => { extractStopRef.current = true }}>{'\u25A0'} Stop</button>
             )}
-            <label className="src-toggle">
+            <label className="src-toggle" role="switch">
               <input type="checkbox" checked={extractAuto} onChange={e => setExtractAuto(e.target.checked)} />
               <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
               Auto (cron)
@@ -1264,7 +1265,7 @@ export default function AdminSourcingPage() {
             ) : (
               <button className="src-btn src-btn-stop" onClick={() => { scoreStopRef.current = true }}>{'\u25A0'} Stop</button>
             )}
-            <label className="src-toggle">
+            <label className="src-toggle" role="switch">
               <input type="checkbox" checked={scoreWithPhotos} onChange={e => setScoreWithPhotos(e.target.checked)} disabled={scoreRunning} />
               <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
               Analyser les photos
