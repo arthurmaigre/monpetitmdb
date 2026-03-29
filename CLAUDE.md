@@ -302,8 +302,8 @@ Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
 - Scripts GTM/Pixel charges uniquement si consent != 'refused'
 
 ## SEO
-- `public/robots.txt` : autorise tout sauf /admin, /api, /editorial, /parametres, /mon-profil, /mes-biens, /auth
-- `app/sitemap.ts` : sitemap dynamique (pages statiques + articles blog publies)
+- `public/robots.txt` : autorise tout sauf /admin, /api, /editorial, /parametres, /mon-profil, /mes-biens, /auth, /tarifs
+- `app/sitemap.ts` : sitemap dynamique (pages statiques + contact + faq + articles blog publies). Colonne `status` (anglais) pas `statut`.
 - Google Search Console configuree sur `www.monpetitmdb.fr`
 
 ## Auth
@@ -370,6 +370,8 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 - **Next.js App Router** : toujours `await params` dans les route handlers (bug Next.js 16)
 - **Estimation DVF = prix marche "en bon etat"** : pas de decote travaux, c'est le prix de revente apres travaux
 - **Prix cible PV** : `prixCible = (estimPrix * (1 - fraisAgence%) - travaux) / ((1 + fraisNotaire%) * (1 + objectifPV%))` — inclut frais agence revente dans le calcul
+- **charges_copro est MENSUEL en base** (comme loyer). Multiplier par 12 pour annuel dans les calculs fiscaux. taxe_fonc_ann est ANNUEL.
+- **Cashflow brut dans simulateur financement** : affiche toutes les lignes (loyer, charges recup, charges copro, TF, credit, assurance). Donnees manquantes = input editable rouge, jaune si renseigne 1 user, vert si valide
 - **MdB toujours a l'IS** : pas de regime IR pour marchand de biens, pas d'amortissement (biens = stock)
 - **TVA sur marge MdB** : marge × 20/120 (TVA "en dedans", pas × 20%)
 - **profil_locataire = "NC"** : traite comme vide dans l'UI (Non communique en grise)

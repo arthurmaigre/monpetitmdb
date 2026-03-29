@@ -329,7 +329,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
 
   const loyerAnnuel = (loyer || 0) * 12
   const chargesRecAnn = (charges_rec || 0) * 12
-  const chargesCoproAnn = charges_copro || 0
+  const chargesCoproAnn = (charges_copro || 0) * 12 // charges_copro est mensuel en base
   const taxeFoncAnn = taxe_fonc_ann || 0
   const interetsAnn = montantEmprunte * tauxCredit / 100
   const assuranceAnn = montantEmprunte * (tauxAssurance / 100)
@@ -581,11 +581,17 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
         <>
           <SectionLabel label="Revenus locatifs (annuel)" />
           <Row label="Loyer brut annuel" value={`${fmt(loyerAnnuel)} \u20AC`} />
+          {regime === 'nu_micro_foncier' && (
+            <Row label="Abattement forfaitaire (30%)" value={`-${fmt(Math.round(loyerAnnuel * 0.30))} \u20AC`} rouge info={"Micro-foncier : abattement de 30% sur les revenus fonciers bruts (art. 32 CGI). Toutes les charges sont r\u00E9put\u00E9es incluses dans cet abattement."} />
+          )}
+          {regime === 'lmnp_micro_bic' && (
+            <Row label="Abattement forfaitaire (50%)" value={`-${fmt(Math.round(loyerAnnuel * 0.50))} \u20AC`} rouge info={"Micro-BIC : abattement de 50% sur les recettes BIC meubl\u00E9es (art. 50-0 CGI). Toutes les charges sont r\u00E9put\u00E9es incluses."} />
+          )}
+          <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
+          <Row label="Taxe fonciere" value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
           <Row label="Charges recup. annuelles" value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} \u20AC` : `+${fmt(chargesRecAnn)} \u20AC`} />
-          <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} \u20AC`} rouge />
-          <Row label="Taxe fonciere" value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge />
-          <Row label="Interets emprunt" value={`-${fmt(interetsAnn)} \u20AC`} rouge />
-          <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge />
+          <Row label="Interets emprunt" value={`-${fmt(interetsAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
+          <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
           <Row
             label={"Autres charges d\u00E9ductibles"}
             value={isReel && chargesSupplementaires > 0 ? `-${fmt(chargesSupplementaires)} \u20AC` : `0 \u20AC`}
@@ -1584,7 +1590,7 @@ export default function FicheBienPage() {
   const mensualiteTotale = mensualiteCredit + mensualiteAss
 
   const chargesRec = bien.charges_rec || 0
-  const chargesCoproMens = (bien.charges_copro || 0) / 12
+  const chargesCoproMens = bien.charges_copro || 0 // deja mensuel en base
   const taxeFoncMens = (bien.taxe_fonc_ann || 0) / 12
   const loyerNet = bien.type_loyer === 'CC'
     ? bien.loyer - chargesRec - chargesCoproMens - taxeFoncMens
@@ -2422,28 +2428,128 @@ export default function FicheBienPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>Mensualite credit</td>
-                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteCredit)} {'\u20AC'}</td>
-                        <td style={{ color: '#c0392b' }}>{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
-                      </tr>
-                      <tr>
-                        <td>Mensualite assurance</td>
-                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteAss)} {'\u20AC'}</td>
-                        <td style={{ color: '#c0392b' }}>{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
-                      </tr>
-                      <tr className="results-total">
-                        <td>Total mensualite</td>
-                        <td style={{ color: '#c0392b', fontWeight: 700 }}>{fmt(mensualiteTotale)} {'\u20AC'}</td>
-                        <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteTotale * 12)} {'\u20AC'}</td>
-                      </tr>
-                      {peutCalculer && !isTravauxLourds && (
+                      {peutCalculer && !isTravauxLourds ? (() => {
+                        const coproMens = bien.charges_copro || 0
+                        const tfAnn = bien.taxe_fonc_ann || 0
+                        const loyerMensuel = bien.loyer || 0
+                        const chargesRecMens = bien.charges_rec || 0
+                        const isCC = bien.type_loyer === 'CC'
+
+                        // Couleur selon statut : rouge=manquant, jaune=renseigné 1 user, vert=validé 2+
+                        function cfColor(champ: string, val: number) {
+                          if (!val) return '#c0392b' // rouge — manquant
+                          const s = champsStatut[champ]
+                          if (s?.statut === 'vert') return '#1a7a40' // vert — validé
+                          if (s?.statut === 'jaune') return '#a06010' // jaune — 1 user
+                          return '#1a1210' // noir — donnée source
+                        }
+                        function cfBorder(champ: string, val: number) {
+                          if (!val) return '#c0392b'
+                          const s = champsStatut[champ]
+                          if (s?.statut === 'vert') return '#1a7a40'
+                          if (s?.statut === 'jaune') return '#f0c040'
+                          return '#e8e2d8'
+                        }
+                        function cfBg(champ: string, val: number) {
+                          if (!val) return '#fde8e8'
+                          const s = champsStatut[champ]
+                          if (s?.statut === 'vert') return '#eafaf1'
+                          if (s?.statut === 'jaune') return '#fffdf0'
+                          return '#faf8f5'
+                        }
+                        const editStyle = (champ: string, val: number) => ({ padding: '3px 6px', borderRadius: '4px', border: `1.5px solid ${cfBorder(champ, val)}`, fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: cfBg(champ, val), color: '#1a1210', outline: 'none', width: '65px', textAlign: 'right' as const })
+
+                        // Cellule liée mensuel/annuel
+                        function LinkedCell({ champ, valMens, isMensuel, signe }: { champ: string; valMens: number; isMensuel: boolean; signe: string }) {
+                          const val = isMensuel ? valMens : valMens * 12
+                          const hasVal = valMens > 0
+                          if (hasVal) {
+                            return <td style={{ color: signe === '-' ? '#c0392b' : '#1a7a40' }}>{signe}{fmt(Math.round(val))} {'\u20AC'}</td>
+                          }
+                          return (
+                            <td>
+                              <input
+                                type="number" placeholder="0"
+                                style={editStyle(champ, 0)}
+                                onBlur={async e => {
+                                  const v = Number(e.target.value)
+                                  if (!v || !userToken) return
+                                  const dbVal = isMensuel ? v : Math.round(v / 12)
+                                  const patch: Record<string, number> = {}
+                                  if (champ === 'taxe_fonc_ann') {
+                                    patch.taxe_fonc_ann = isMensuel ? v * 12 : v
+                                  } else {
+                                    patch[champ] = dbVal
+                                  }
+                                  await fetch(`/api/biens/${bien.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` }, body: JSON.stringify(patch) })
+                                  ;(bien as any)[champ] = champ === 'taxe_fonc_ann' ? (isMensuel ? v * 12 : v) : dbVal
+                                }}
+                              /> {'\u20AC'}
+                            </td>
+                          )
+                        }
+
+                        return (
+                          <>
+                            {/* Loyer */}
+                            <tr>
+                              <td>{"Loyer encaiss\u00E9"}{isCC ? ' (CC)' : ' (HC)'}</td>
+                              <td style={{ color: '#1a7a40' }}>+{fmt(loyerMensuel)} {'\u20AC'}</td>
+                              <td style={{ color: '#1a7a40' }}>+{fmt(loyerMensuel * 12)} {'\u20AC'}</td>
+                            </tr>
+                            {/* Charges récup */}
+                            <tr>
+                              <td>{isCC ? "Charges r\u00E9cup. (incluses CC)" : "Charges r\u00E9cup."}</td>
+                              <LinkedCell champ="charges_rec" valMens={chargesRecMens} isMensuel={true} signe={isCC ? '-' : '+'} />
+                              <LinkedCell champ="charges_rec" valMens={chargesRecMens} isMensuel={false} signe={isCC ? '-' : '+'} />
+                            </tr>
+                            {/* Charges copro */}
+                            <tr>
+                              <td>{"Charges copropri\u00E9t\u00E9"}</td>
+                              <LinkedCell champ="charges_copro" valMens={coproMens} isMensuel={true} signe="-" />
+                              <LinkedCell champ="charges_copro" valMens={coproMens} isMensuel={false} signe="-" />
+                            </tr>
+                            {/* Taxe foncière */}
+                            <tr>
+                              <td>{"Taxe fonci\u00E8re"}</td>
+                              <LinkedCell champ="taxe_fonc_ann" valMens={Math.round(tfAnn / 12)} isMensuel={true} signe="-" />
+                              <LinkedCell champ="taxe_fonc_ann" valMens={Math.round(tfAnn / 12)} isMensuel={false} signe="-" />
+                            </tr>
+                            {/* Crédit */}
+                            <tr>
+                              <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit)} {'\u20AC'}</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
+                            </tr>
+                            <tr>
+                              <td>Assurance emprunteur</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteAss)} {'\u20AC'}</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
+                            </tr>
+                            {/* Total */}
+                            <tr className="results-total">
+                              <td style={{ fontWeight: 700 }}>{"= Cashflow brut"}</td>
+                              <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 700 }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}</td>
+                              <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 800, fontSize: '16px', fontFamily: "'Fraunces', serif" }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}</td>
+                            </tr>
+                          </>
+                        )
+                      })() : (
                         <>
-                          <tr style={{ height: '12px' }}><td colSpan={3}></td></tr>
-                          <tr className="cashflow-row">
-                            <td style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>Cashflow brut</td>
-                            <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}</td>
-                            <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b', fontSize: '16px' }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}</td>
+                          <tr>
+                            <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
+                            <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteCredit)} {'\u20AC'}</td>
+                            <td style={{ color: '#c0392b' }}>{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
+                          </tr>
+                          <tr>
+                            <td>Assurance emprunteur</td>
+                            <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteAss)} {'\u20AC'}</td>
+                            <td style={{ color: '#c0392b' }}>{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
+                          </tr>
+                          <tr className="results-total">
+                            <td>{"Total mensualit\u00E9"}</td>
+                            <td style={{ color: '#c0392b', fontWeight: 700 }}>{fmt(mensualiteTotale)} {'\u20AC'}</td>
+                            <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteTotale * 12)} {'\u20AC'}</td>
                           </tr>
                         </>
                       )}

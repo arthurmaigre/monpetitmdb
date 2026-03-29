@@ -455,7 +455,7 @@ export function calculerCashflow(
 
   // Loyer net mensuel selon type HC/CC
   const chargesRec = charges_rec || 0
-  const chargesCoproMensuel = (charges_copro || 0) / 12
+  const chargesCoproMensuel = charges_copro || 0 // charges_copro est deja mensuel en base
   const taxeFoncMensuel = (taxe_fonc_ann || 0) / 12
 
   const loyerNetMensuel = type_loyer === 'CC'
@@ -487,7 +487,7 @@ export function calculerCashflow(
 
   } else if (regime === 'nu_reel_foncier') {
     // Reel foncier : charges deductibles + deficit foncier
-    const chargesDeductibles = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + cuDeductibles
+    const chargesDeductibles = (charges_copro || 0) * 12 + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + cuDeductibles
     const resultatFoncier = loyerAnnuel - chargesDeductibles
 
     if (resultatFoncier >= 0) {
@@ -520,7 +520,7 @@ export function calculerCashflow(
     // LMNP Reel BIC : amortissement composants, charges deductibles, TMI seul (pas de PS)
     const amortImmo = prix_fai * 0.85 / 30
     const amortMobilier = mobilier / 10
-    const chargesDeductibles = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortImmo + amortMobilier + cuDeductibles
+    const chargesDeductibles = (charges_copro || 0) * 12 + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortImmo + amortMobilier + cuDeductibles
     const revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
     impots_ir = revenuImposable * (tmi / 100)
 
@@ -528,7 +528,7 @@ export function calculerCashflow(
     // LMP Reel BIC : memes charges que LMNP mais cotisations sociales SSI ~45%
     const amortImmo = prix_fai * 0.85 / 30
     const amortMobilier = mobilier / 10
-    const chargesDeductibles = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortImmo + amortMobilier + cuDeductibles
+    const chargesDeductibles = (charges_copro || 0) * 12 + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortImmo + amortMobilier + cuDeductibles
     const beneficeBIC = loyerAnnuel - chargesDeductibles
 
     if (beneficeBIC > 0) {
@@ -551,7 +551,7 @@ export function calculerCashflow(
   // BUG FIX: Amortissement frais notaire sur 5 ans
   const amortNotaireSCI = fraisNotaireMontant / 5
   const cuSCI = chargesUtilisateurDeductibles(chargesUtilisateur, loyerAnnuel, 'sci_is')
-  const chargesSCI = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortSCI + amortNotaireSCI + cuSCI
+  const chargesSCI = (charges_copro || 0) * 12 + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortSCI + amortNotaireSCI + cuSCI
   const beneficeSCI = Math.max(0, loyerAnnuel - chargesSCI)
   const is = calculerIS(beneficeSCI)
   const cashflow_net_sci_is = cashflow_brut - is / 12
@@ -559,14 +559,14 @@ export function calculerCashflow(
   // LMNP (reel BIC pour backward compat)
   const amortLMNP = prix_fai * 0.85 / 30 + mobilier / 10
   const cuLMNP = chargesUtilisateurDeductibles(chargesUtilisateur, loyerAnnuel, 'lmnp_reel_bic')
-  const chargesLMNP = (charges_copro || 0) + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortLMNP + cuLMNP
+  const chargesLMNP = (charges_copro || 0) * 12 + (taxe_fonc_ann || 0) + interetsAnnuels + assuranceAnnuelle + amortLMNP + cuLMNP
   const beneficeLMNP = Math.max(0, loyerAnnuel - chargesLMNP)
   const impots_lmnp = beneficeLMNP * (tmi / 100)
   const cashflow_net_lmnp = cashflow_brut - impots_lmnp / 12
 
   // Rendements
   const rendement_brut = loyerAnnuel / prix_fai
-  const chargesAnnuellesTotal = (charges_copro || 0) + (taxe_fonc_ann || 0)
+  const chargesAnnuellesTotal = (charges_copro || 0) * 12 + (taxe_fonc_ann || 0)
   const rendement_net = (loyerAnnuel - chargesAnnuellesTotal) / prix_fai
 
   // Prix cible (formule Excel)

@@ -7,5 +7,6 @@ Disallow: /parametres/
 Disallow: /mon-profil/
 Disallow: /mes-biens/
 Disallow: /auth/
+Disallow: /tarifs
 
 Sitemap: https://www.monpetitmdb.fr/sitemap.xml

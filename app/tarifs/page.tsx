@@ -7,5 +7,9 @@ export default function TarifsPage() {
     window.location.href = '/#pricing'
   }, [])
 
-  return null
+  return (
+    <head>
+      <meta name="robots" content="noindex, nofollow" />
+    </head>
+  )
 }
