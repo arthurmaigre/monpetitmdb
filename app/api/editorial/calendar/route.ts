@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('editorial_calendar')
-    .select('*, article:articles(id, title, status)')
+    .select('*, article:articles(id, title, status, slug)')
     .order('week_start', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -93,6 +93,32 @@ Reponds UNIQUEMENT en JSON valide, sans backticks, sans explication. Format exac
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
+}
+
+// PATCH - Mettre a jour le statut d'une entree du calendrier
+export async function PATCH(request: NextRequest) {
+  const body = await request.json()
+  const { id, status, article_id } = body
+
+  if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 })
+
+  const updates: Record<string, any> = {}
+  if (status) updates.status = status
+  if (article_id !== undefined) updates.article_id = article_id
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'Aucune modification' }, { status: 400 })
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('editorial_calendar')
+    .update(updates)
+    .eq('id', id)
+    .select('*, article:articles(id, title, status, slug)')
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ entry: data })
 }
 
 function getMonday(d: Date): Date {

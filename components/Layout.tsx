@@ -475,6 +475,13 @@ export default function Layout({ children }: Props) {
               {"Strat\u00E9gies MDB"}
             </a>
             <a
+              href="/guide"
+              className="mdb-nav-link"
+              aria-current={isActive('/guide') ? 'page' : undefined}
+            >
+              Guides
+            </a>
+            <a
               href="/blog"
               className="mdb-nav-link"
               aria-current={isActive('/blog') ? 'page' : undefined}
@@ -594,6 +601,13 @@ export default function Layout({ children }: Props) {
             {"Strat\u00E9gies MDB"}
           </a>
           <a
+            href="/guide"
+            className="mdb-nav-link"
+            aria-current={isActive('/guide') ? 'page' : undefined}
+          >
+            Guides
+          </a>
+          <a
             href="/blog"
             className="mdb-nav-link"
             aria-current={isActive('/blog') ? 'page' : undefined}
@@ -642,6 +656,7 @@ export default function Layout({ children }: Props) {
                 <div className="mdb-footer-col-title">Plateforme</div>
                 <a href="/biens" className="mdb-footer-link" aria-label="Voir les biens">Biens</a>
                 <a href="/strategies" className="mdb-footer-link" aria-label="Les strat\u00E9gies">{"Strat\u00E9gies"}</a>
+                <a href="/guide" className="mdb-footer-link" aria-label="Guides investissement">Guides</a>
                 <a href="/blog" className="mdb-footer-link" aria-label="Conseils et guides">Conseils</a>
                 <a href="/#pricing" className="mdb-footer-link" aria-label="Voir les tarifs">Tarifs</a>
               </div>

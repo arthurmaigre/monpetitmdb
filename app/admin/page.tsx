@@ -127,6 +127,13 @@ export default function AdminPage() {
               <div className="nav-card-sub">{"Guide des 7 r\u00E9gimes fiscaux"}</div>
             </div>
           </a>
+          <a href="/admin/feedbacks" className="nav-card">
+            <div className="nav-icon" style={{ background: '#fff8f0', color: '#a06010' }}>{'\uD83D\uDCE8'}</div>
+            <div>
+              <div className="nav-card-title">Feedbacks</div>
+              <div className="nav-card-sub">{"Remont\u00E9es utilisateurs via Memo (bugs, suggestions)"}</div>
+            </div>
+          </a>
         </div>
       </div>
     </Layout>

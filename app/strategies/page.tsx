@@ -6,6 +6,8 @@ import Layout from '@/components/Layout'
 export default function StrategiesPage() {
   const [activeSection, setActiveSection] = useState('s1')
 
+  useEffect(() => { document.title = "Strat\u00E9gies d\u2019investissement immobilier | Mon Petit MDB" }, [])
+
   useEffect(() => {
     const blocks = ['s1', 's2', 's3', 's4']
     function onScroll() {

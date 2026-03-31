@@ -2,6 +2,10 @@ import type { Metadata } from 'next'
 import CookieBanner from '@/components/CookieBanner'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.monpetitmdb.fr'),
+  alternates: {
+    canonical: './',
+  },
   title: {
     default: 'Mon Petit MDB — Sourcing immobilier pour investisseurs',
     template: '%s | Mon Petit MDB',

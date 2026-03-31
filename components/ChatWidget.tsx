@@ -30,9 +30,10 @@ const COUNTER_KEY = 'mdb_chat_count'
 const MAX_HISTORY = 20
 
 function getWelcomeMessage(plan?: string | null): string {
-  if (plan === 'expert') return "Bonjour ! Je suis Memo, votre assistant IA immobilier.\n\nJe peux vous aider sur :\n\u2022 L\u2019analyse d\u00E9taill\u00E9e de chaque bien (rendement, cashflow, estimation DVF)\n\u2022 La simulation compl\u00E8te des 7 r\u00E9gimes fiscaux avec chiffres personnalis\u00E9s\n\u2022 Les sc\u00E9narios de revente et les abattements pour dur\u00E9e de d\u00E9tention\n\u2022 La comparaison entre strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Les montages juridiques (SCI IS, LMNP, marchand de biens)\n\nQue souhaitez-vous analyser ?"
-  if (plan === 'pro') return "Bonjour ! Je suis Memo, votre assistant IA immobilier.\n\nJe peux vous expliquer :\n\u2022 Les calculs de rendement brut et net de chaque bien\n\u2022 Le cashflow et le prix cible\n\u2022 L\u2019estimation DVF et ses correcteurs\n\u2022 Votre r\u00E9gime fiscal et une comparaison avec un second r\u00E9gime\n\nPassez au plan Expert pour acc\u00E9der aux simulations fiscales compl\u00E8tes sur les 7 r\u00E9gimes.\n\nQue souhaitez-vous comprendre ?"
-  return "Bonjour ! Je suis Memo, l\u2019assistant IA de Mon Petit MDB.\n\nJe peux r\u00E9pondre \u00E0 vos questions sur :\n\u2022 L\u2019investissement immobilier locatif\n\u2022 Les diff\u00E9rentes strat\u00E9gies (locataire en place, travaux, division, d\u00E9coupe)\n\u2022 Le fonctionnement de la plateforme\n\nCr\u00E9ez un compte Pro pour acc\u00E9der \u00E0 l\u2019analyse d\u00E9taill\u00E9e des biens et au simulateur fiscal."
+  const feedback = "\n\n\uD83D\uDCA1 Une id\u00E9e, un bug, une am\u00E9lioration ? Dites-le moi, je transmets directement \u00E0 l\u2019\u00E9quipe."
+  if (plan === 'expert') return "Bonjour ! Je suis Memo, votre assistant fiscal expert.\n\nJe ma\u00EEtrise les 7 r\u00E9gimes fiscaux immobiliers (LFI 2025 int\u00E9gr\u00E9e) et je peux :\n\u2022 Simuler votre cashflow et fiscalit\u00E9 avec des chiffres concrets\n\u2022 Comparer les r\u00E9gimes (LMNP r\u00E9el vs SCI IS, micro vs r\u00E9el, etc.)\n\u2022 Analyser un sc\u00E9nario de revente avec abattements et plus-value\n\u2022 D\u00E9tailler les charges d\u00E9ductibles par r\u00E9gime\n\u2022 Expliquer les montages MdB, division, immeuble de rapport\n\nQue souhaitez-vous analyser ?" + feedback
+  if (plan === 'pro') return "Bonjour ! Je suis Memo, votre assistant immobilier.\n\nJe peux vous aider sur :\n\u2022 Le rendement brut/net et le cashflow de chaque bien\n\u2022 L\u2019estimation DVF et les correcteurs de prix\n\u2022 La comparaison entre 2 r\u00E9gimes fiscaux\n\u2022 Les 4 strat\u00E9gies MDB (locataire en place, travaux, division, immeuble de rapport)\n\nPassez Expert pour les simulations fiscales compl\u00E8tes sur les 7 r\u00E9gimes.\n\nQue souhaitez-vous comprendre ?" + feedback
+  return "Bonjour ! Je suis Memo, l\u2019assistant de Mon Petit MDB.\n\nJe peux r\u00E9pondre \u00E0 vos questions sur :\n\u2022 L\u2019investissement immobilier et les strat\u00E9gies MDB\n\u2022 Les bases de la fiscalit\u00E9 locative (7 r\u00E9gimes disponibles)\n\u2022 Le fonctionnement de la plateforme\n\nPassez Pro pour l\u2019analyse d\u00E9taill\u00E9e des biens et le simulateur fiscal." + feedback
 }
 
 function getDailyLimit(plan?: string | null): number {
@@ -123,6 +124,22 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
         setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: c }; return u })
       }
 
+      // Detecter et traiter le tag feedback
+      const feedbackMatch = assistantContent.match(/\[FEEDBACK:(bug|suggestion|plainte|question):(calculs|affichage|donnees|ux|fiscalite|estimation|performance|autre):(.+?)\]/)
+      if (feedbackMatch) {
+        const [fullTag, fbType, fbCategory, fbSummary] = feedbackMatch
+        // Retirer le tag du message affiche
+        assistantContent = assistantContent.replace(fullTag, '').trim()
+        // Envoyer le feedback a l'API
+        try {
+          const token = await (await import('@/lib/supabase')).supabase.auth.getSession().then(r => r.data.session?.access_token)
+          fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ type: fbType, category: fbCategory, summary: fbSummary, detail: newMessages[newMessages.length - 1]?.content, bien_id: (context as any)?.id }),
+          }).catch(() => {})
+        } catch {}
+      }
       setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: assistantContent }; return u })
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: "D\u00E9sol\u00E9, une erreur est survenue. Veuillez r\u00E9essayer." }])

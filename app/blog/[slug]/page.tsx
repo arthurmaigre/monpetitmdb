@@ -64,5 +64,18 @@ export default async function ArticlePage({ params }: Props) {
 
   if (!article) notFound()
 
-  return <ArticleClient article={article} related={related} />
+  return (
+    <>
+      <ArticleClient article={article} related={related} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": article.title,
+        "datePublished": article.published_at,
+        "author": { "@type": "Person", "name": article.author || "Mon Petit MDB" },
+        "image": article.cover_url || undefined,
+        "publisher": { "@type": "Organization", "name": "Mon Petit MDB" }
+      }) }} />
+    </>
+  )
 }

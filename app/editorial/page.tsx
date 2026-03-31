@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { Fragment, useEffect, useState, useRef } from 'react'
 import Layout from '@/components/Layout'
 
 function ArticleContentWithPhotoPicker({ content, articleId, onContentUpdate }: { content: string, articleId: string, onContentUpdate: (html: string) => void }) {
@@ -69,6 +69,15 @@ const BACKLOG = [
   { category: 'March\u00e9 immobilier', title: 'O\u00f9 chercher des biens d\u00e9cot\u00e9s en 2026', keyword: 'march\u00e9 immobilier opportunit\u00e9s 2026', tone: 'expert', angle: 'March\u00e9s favorables aux MDB, donn\u00e9es DVF r\u00e9centes.' },
   { category: 'Cas pratique', title: 'Op\u00e9ration MDB de A \u00e0 Z avec tous les chiffres', keyword: 'simulation marchand de biens exemple', tone: 'cas-pratique', angle: 'Simulation compl\u00e8te : achat 180k\u20ac, travaux 45k\u20ac, revente 295k\u20ac.' },
 ]
+
+const CAL_STATUS_LABELS: Record<string, string> = { planned: 'Planifi\u00e9', writing: 'R\u00e9daction', review: 'Relecture', published: 'Publi\u00e9' }
+const CAL_STATUS_COLORS: Record<string, { bg: string, color: string }> = {
+  planned: { bg: '#E8E5E0', color: '#6B6560' },
+  writing: { bg: '#DBEAFE', color: '#1D4ED8' },
+  review: { bg: '#FFF3E0', color: '#E65100' },
+  published: { bg: '#E8F5E9', color: '#2D7A4F' },
+}
+const TONE_LABELS: Record<string, string> = { pedagogique: 'P\u00e9dagogique', expert: 'Expert', 'cas-pratique': 'Cas pratique', alerte: 'Alerte' }
 
 const STATUS_LABELS: Record<string, string> = { draft: 'Brouillon', generating: 'G\u00e9n\u00e9ration...', review: '\u00c0 relire', approved: 'Approuv\u00e9', published: 'Publi\u00e9' }
 const STATUS_COLORS: Record<string, { bg: string, color: string }> = {
@@ -188,6 +197,20 @@ export default function EditorialPage() {
     setFTitle(item.title || ''); setFCategory(item.category || ''); setFKeyword(item.keyword || '')
     setFTone(item.tone || 'pedagogique'); setFAngle(item.angle || ''); setFLength('moyen')
     setTab('rediger')
+  }
+
+  async function updateCalendarStatus(id: string, status: string) {
+    try {
+      const res = await fetch('/api/editorial/calendar', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      })
+      const data = await res.json()
+      if (data.entry) {
+        setCalendar(prev => prev.map(w => w.id === id ? data.entry : w))
+      }
+    } catch {}
   }
 
   const reviewCount = articles.filter(a => a.status === 'review').length
@@ -364,23 +387,33 @@ export default function EditorialPage() {
         .ed-overlay-box { background: #fff; padding: 40px 48px; text-align: center; border-top: 3px solid #c0392b; border-radius: 4px; }
         .ed-spinner { width: 48px; height: 48px; border: 2px solid #c0392b; border-top-color: transparent; border-radius: 50%; animation: ed-spin 0.8s linear infinite; margin: 0 auto 20px; }
         @keyframes ed-spin { to { transform: rotate(360deg); } }
-        .ed-cal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .ed-cal-month { grid-column: 1 / -1; font-family: 'Fraunces', serif; font-size: 18px; padding: 20px 0 8px; border-bottom: 1px solid #e2d9d0; margin-bottom: 4px; }
-        .ed-cal-card { background: #fff; border: 1px solid #e2d9d0; border-left: 3px solid #e2d9d0; padding: 14px; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
-        .ed-cal-card:hover { border-color: #c0392b; border-left-color: #c0392b; }
-        .ed-cal-week { font-size: 10px; font-weight: 600; color: #9a8f8b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-        .ed-cal-cat { font-size: 10px; font-weight: 600; color: #c0392b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-        .ed-cal-title { font-size: 12px; font-weight: 500; line-height: 1.4; margin-bottom: 8px; }
-        .ed-cal-kw { font-size: 10px; color: #9a8f8b; margin-bottom: 8px; }
-        .ed-cal-btn { background: #c0392b; color: #fff; border: none; padding: 4px 10px; font-size: 10px; font-weight: 600; cursor: pointer; border-radius: 3px; }
+        .ed-cal-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .ed-cal-table th { background: #1a1614; color: #fff; padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+        .ed-cal-table td { padding: 10px 14px; border-bottom: 1px solid #f0ebe3; vertical-align: middle; }
+        .ed-cal-table tr:hover td { background: #faf7f2; }
+        .ed-cal-month-row td { background: #f0ebe3 !important; font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; padding: 14px; color: #1a1614; }
+        .ed-cal-week-range { font-size: 10px; color: #9a8f8b; display: block; margin-top: 2px; }
+        .ed-cal-cat-badge { font-size: 10px; font-weight: 600; color: #c0392b; text-transform: uppercase; letter-spacing: 0.06em; }
+        .ed-cal-title-cell { font-weight: 500; line-height: 1.4; max-width: 280px; }
+        .ed-cal-kw-cell { font-size: 11px; color: #9a8f8b; }
+        .ed-cal-tone-cell { font-size: 11px; color: #4a3f3b; }
+        .ed-cal-status-select { font-family: 'DM Sans', sans-serif; font-size: 11px; padding: 4px 8px; border: 1px solid #e2d9d0; border-radius: 3px; cursor: pointer; background: #fff; outline: none; }
+        .ed-cal-status-select:focus { border-color: #c0392b; }
+        .ed-cal-status-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ed-cal-actions { display: flex; gap: 6px; align-items: center; }
+        .ed-cal-btn { background: #c0392b; color: #fff; border: none; padding: 5px 12px; font-size: 10px; font-weight: 600; cursor: pointer; border-radius: 3px; white-space: nowrap; }
         .ed-cal-btn:hover { background: #96281b; }
+        .ed-cal-btn-voir { background: #fff; color: #4a3f3b; border: 1px solid #e2d9d0; padding: 5px 12px; font-size: 10px; font-weight: 600; cursor: pointer; border-radius: 3px; white-space: nowrap; text-decoration: none; }
+        .ed-cal-btn-voir:hover { background: #1a1614; color: #fff; border-color: #1a1614; }
         @media (max-width: 768px) {
           .ed-wrap { flex-direction: column; height: auto; }
           .ed-sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid #e2d9d0; }
           .ed-aside { width: 100%; border-left: none; border-top: 1px solid #e2d9d0; }
           .ed-main { min-height: 60vh; }
           .ed-overlay-box { padding: 24px 20px; }
-          .ed-cal-grid { grid-template-columns: repeat(2, 1fr); }
+          .ed-cal-table { font-size: 11px; }
+          .ed-cal-table th, .ed-cal-table td { padding: 8px 10px; }
+          .ed-cal-title-cell { max-width: 180px; }
         }
       `}</style>
 
@@ -633,11 +666,16 @@ export default function EditorialPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div className="ed-heading" style={{ marginBottom: 0 }}>
                   <h2>Calendrier {'\u00e9'}ditorial</h2>
-                  <p>52 semaines de contenu g{'\u00e9'}n{'\u00e9'}r{'\u00e9'} par Claude selon votre ligne {'\u00e9'}ditoriale.</p>
+                  <p>Planning des articles par semaine — statut, suivi et lancement de r{'\u00e9'}daction.</p>
                 </div>
-                <button className="ed-btn-primary" onClick={generateCalendar} disabled={generating}>
-                  {calendar.length > 0 ? 'R\u00e9g\u00e9n\u00e9rer' : 'G\u00e9n\u00e9rer le planning'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: '#9a8f8b' }}>
+                    {calendar.filter(w => w.status === 'published').length}/{calendar.length} publi{'\u00e9'}s
+                  </span>
+                  <button className="ed-btn-primary" onClick={generateCalendar} disabled={generating}>
+                    {calendar.length > 0 ? 'R\u00e9g\u00e9n\u00e9rer' : 'G\u00e9n\u00e9rer le planning'}
+                  </button>
+                </div>
               </div>
 
               {calendar.length === 0 ? (
@@ -645,22 +683,83 @@ export default function EditorialPage() {
                   <p>Cliquez sur <strong>G{'\u00e9'}n{'\u00e9'}rer le planning</strong> pour cr{'\u00e9'}er votre ligne {'\u00e9'}ditoriale sur 52 semaines.</p>
                 </div>
               ) : (
-                <div className="ed-cal-grid">
-                  {Object.entries(calByMonth).map(([month, weeks]) => (
-                    <div key={month} style={{ display: 'contents' }}>
-                      <div className="ed-cal-month">{month} <span style={{ fontSize: '11px', color: '#9a8f8b', fontFamily: "'DM Sans'" }}>{weeks.length} article{weeks.length > 1 ? 's' : ''}</span></div>
-                      {weeks.map((w: any) => (
-                        <div key={w.id} className="ed-cal-card">
-                          <div className="ed-cal-week">Sem. {w.week_number}</div>
-                          <div className="ed-cal-cat">{w.category}</div>
-                          <div className="ed-cal-title">{w.title}</div>
-                          <div className="ed-cal-kw">{w.keyword}</div>
-                          <button className="ed-cal-btn" onClick={() => useCalendarItem(w)}>R{'\u00e9'}diger</button>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
+                <table className="ed-cal-table">
+                  <thead>
+                    <tr>
+                      <th>Semaine</th>
+                      <th>Cat{'\u00e9'}gorie</th>
+                      <th>Titre</th>
+                      <th>Mot-cl{'\u00e9'}</th>
+                      <th>Tonalit{'\u00e9'}</th>
+                      <th>Statut</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(calByMonth).map(([month, weeks]) => (
+                      <Fragment key={month}>
+                        <tr className="ed-cal-month-row">
+                          <td colSpan={7}>
+                            {month}
+                            <span style={{ fontSize: '11px', color: '#9a8f8b', fontFamily: "'DM Sans'", marginLeft: '12px', fontWeight: 400 }}>
+                              {(weeks as any[]).length} article{(weeks as any[]).length > 1 ? 's' : ''}
+                              {' \u2014 '}
+                              {(weeks as any[]).filter((w: any) => w.status === 'published').length} publi{'\u00e9'}(s)
+                            </span>
+                          </td>
+                        </tr>
+                        {(weeks as any[]).map((w: any) => {
+                          const weekStart = new Date(w.week_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                          const weekEnd = new Date(w.week_end).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                          const linkedArticle = w.article
+                          const isPublished = w.status === 'published' || linkedArticle?.status === 'published'
+
+                          return (
+                            <tr key={w.id}>
+                              <td>
+                                <strong>Sem. {w.week_number}</strong>
+                                <span className="ed-cal-week-range">{weekStart} — {weekEnd}</span>
+                              </td>
+                              <td><span className="ed-cal-cat-badge">{w.category}</span></td>
+                              <td className="ed-cal-title-cell">{w.title}</td>
+                              <td className="ed-cal-kw-cell">{w.keyword}</td>
+                              <td className="ed-cal-tone-cell">{TONE_LABELS[w.tone] || w.tone}</td>
+                              <td>
+                                <select
+                                  className="ed-cal-status-select"
+                                  value={w.status}
+                                  onChange={e => updateCalendarStatus(w.id, e.target.value)}
+                                  style={{
+                                    background: CAL_STATUS_COLORS[w.status]?.bg || '#E8E5E0',
+                                    color: CAL_STATUS_COLORS[w.status]?.color || '#6B6560',
+                                    borderColor: CAL_STATUS_COLORS[w.status]?.bg || '#E8E5E0',
+                                  }}
+                                >
+                                  {Object.entries(CAL_STATUS_LABELS).map(([val, label]) => (
+                                    <option key={val} value={val}>{label}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <div className="ed-cal-actions">
+                                  {!isPublished && (
+                                    <button className="ed-cal-btn" onClick={() => useCalendarItem(w)}>R{'\u00e9'}diger</button>
+                                  )}
+                                  {isPublished && linkedArticle?.slug && (
+                                    <a href={`/blog/${linkedArticle.slug}`} target="_blank" rel="noopener noreferrer" className="ed-cal-btn-voir">Voir</a>
+                                  )}
+                                  {isPublished && !linkedArticle?.slug && (
+                                    <span className="ed-cal-status-badge" style={{ background: CAL_STATUS_COLORS.published.bg, color: CAL_STATUS_COLORS.published.color }}>Publi{'\u00e9'}</span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           )}

@@ -30,6 +30,8 @@ const SUIVI_OPTIONS = [
 ]
 
 export default function MesBiensPage() {
+  useEffect(() => { document.title = 'Ma Watchlist | Mon Petit MDB' }, [])
+
   const [biens, setBiens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)

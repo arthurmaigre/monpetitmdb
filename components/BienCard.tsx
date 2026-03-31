@@ -247,7 +247,6 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
           display: 'flex', flexDirection: 'column', gap: theme.spacing[1], alignItems: 'flex-end',
         }}>
           {!isTravaux && <RendementBadge rendement={bien.rendement_brut} />}
-          <PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={scoreTravaux} surface={bien.surface} />
         </span>
 
         {/* Watchlist button */}

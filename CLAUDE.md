@@ -41,7 +41,9 @@ monpetitmdb/
 │   │   ├── admin/statut/       # Verification annonces expirees
 │   │   ├── admin/stats/        # Stats dashboard (RPC admin_stats)
 │   │   ├── admin/cron-config/  # Config cron (GET/PUT)
-│   │   └── admin/estimation/   # Config estimateur (GET/PUT)
+│   │   ├── admin/estimation/   # Config estimateur (GET/PUT)
+│   │   ├── editorial/calendar/ # CRUD calendrier editorial (GET/PATCH)
+│   │   └── feedback/           # Feedbacks utilisateurs via Memo (GET/POST/DELETE)
 │   ├── auth/callback/          # OAuth callback client-side (PKCE + implicit)
 │   ├── page.tsx                # Landing page (hero, strategies, pricing, screenshot)
 │   ├── admin/                  # Dashboard admin (index)
@@ -55,7 +57,10 @@ monpetitmdb/
 │   ├── blog/                   # Listing articles publies
 │   ├── blog/[slug]/            # Page article individuelle
 │   ├── strategies/             # Page 4 strategies detaillees
-│   ├── editorial/              # CMS articles IA (admin)
+│   ├── editorial/              # CMS articles IA (admin) + calendrier editorial
+│   ├── guide/                  # Listing guides SEO (piliers + satellites)
+│   ├── guide/[slug]/           # Page guide individuelle (SSR, schema.org, breadcrumb, TOC)
+│   ├── admin/feedbacks/        # Admin feedbacks utilisateurs
 │   ├── mes-biens/              # Watchlist utilisateur
 │   ├── mon-profil/             # Donnees personnelles + facturation + upgrade Stripe
 │   ├── parametres/             # Fiscalite, financement, charges recurrentes, budget travaux
@@ -209,9 +214,9 @@ Comparaison 2 regimes cote a cote
 
 ## Navigation (Layout.tsx)
 
-**Header desktop** : Biens Immobiliers | Strategies MDB | Conseils | [Watchlist] | [email dropdown]
+**Header desktop** : Biens Immobiliers | Strategies MDB | Guides | Conseils | [Watchlist] | [email dropdown]
 **Dropdown user** : Mon Profil | Mes parametres | Ma Watchlist | Administration (si admin) | Deconnexion
-**Footer** : Plateforme (Biens, Strategies, Conseils, Tarifs) | Support (Contact, Mentions legales, CGU)
+**Footer** : Plateforme (Biens, Strategies, Guides, Conseils, Tarifs) | Support (Contact, Mentions legales, CGU)
 
 ## Pipeline IA post-ingestion
 
@@ -250,6 +255,46 @@ Flag `--until` pour limiter la periode (ex: `--since 2022-01-01 --until 2025-01-
 Pipeline : Opus redige → Sonnet fact-checke → Unsplash photos
 Blog public : `/blog` (listing) + `/blog/[slug]` (article, police Lora)
 Label nav : "Conseils"
+Calendrier editorial : onglet "Calendrier" dans `/editorial`, table `editorial_calendar`, statut inline (planned/writing/review/published), bouton "Rediger" pre-remplit le formulaire
+
+## Guides SEO (/guide)
+
+Route `/guide/[slug]` : articles piliers + satellites SEO (SSR, revalidate 3600)
+Route `/guide` : listing par categorie (Strategies, Fiscalite, Marche, Travaux)
+Categories guide : articles dont category in ('Strategies', 'Fiscalite', 'Marche', 'Travaux', 'Financement')
+Schema.org : Article + BreadcrumbList sur chaque guide
+Sitemap : guide articles sous `/guide/`, blog articles sous `/blog/`
+Table des matieres sticky, breadcrumb, CTA, articles lies, share bar
+
+## SEO Technique
+
+- `metadataBase` + `alternates.canonical` dans root layout (canonical auto sur toutes les pages)
+- Metadata server-side via `layout.tsx` dans chaque dossier page client (biens, strategies, faq, contact, login, register, mes-biens)
+- Schema.org : WebSite + Organization + SoftwareApplication (pricing) sur homepage, FAQPage sur /faq, Article sur /blog et /guide
+- Sitemap dynamique : pages statiques + guide articles + blog articles
+- Audit SEO complet : `AUDIT_SEO.md`
+
+## Fiche bien — Layout et UX
+
+- **Sticky nav** : barre pilule centree beige (Donnees | Estimation | Financement | Fiscalite), IntersectionObserver highlight section active
+- **Two-cols layout** : colonne gauche (Estimation DVF + Cash Flow Avant Impot) / colonne droite (Estimation Travaux + Simulateur Financement) — `display: flex` independant, pas de gaps entre blocs
+- **Modals** : budget travaux, detail lots, loyers par lot, revente par lot, couts copro, contacter vendeur — ouverts en overlay centre au lieu de deplier les blocs
+- **CellEditable** : composant unifie pour toutes les cellules editables (Donnees Locatives + Cash Flow)
+  - `scale` prop : 1 (direct), 12 (mensuel→annuel), 1/12 (annuel→mensuel)
+  - State `dirtyChamps` partage au parent : editer dans une cellule ouvre les 3 cellules liees
+  - Donnee source (IA/Moteur Immo) : lecture seule, crayon pour simulation
+  - Donnee manquante : input rouge, editable, recalcul live
+  - Simulation : fond bleu, bouton ✓ (soumettre) + × (annuler)
+  - Jaune : soumis par 1 user, crayon pour re-editer
+  - Vert : valide par 2+ users, crayon pour re-editer
+- **Wording** : "Cash Flow Avant Impot" (ex cashflow brut), "Cash Flow Net d'Impot" (dans PnlColonne), "Estimation Prix de Revente" (ex Estimation marche DVF)
+- **Titres majuscules** : Caracteristiques du Bien, Donnees Locatives, Estimation Prix de Revente, etc.
+
+## Feedback Memo
+
+- Memo detecte bugs/suggestions via tag [FEEDBACK:type:cat:summary] dans les reponses
+- ChatWidget parse le tag, POST /api/feedback (upsert same summary → increment counter)
+- Admin `/admin/feedbacks` : cards avec occurrence, type badges, delete
 
 ## Deploiement
 - **Auto-deploy** : git push → GitHub → Vercel auto-deploy (env vars dans Vercel Dashboard)
@@ -371,6 +416,8 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 - **Estimation DVF = prix marche "en bon etat"** : pas de decote travaux, c'est le prix de revente apres travaux
 - **Prix cible PV** : `prixCible = (estimPrix * (1 - fraisAgence%) - travaux) / ((1 + fraisNotaire%) * (1 + objectifPV%))` — inclut frais agence revente dans le calcul
 - **charges_copro est MENSUEL en base** (comme loyer). Multiplier par 12 pour annuel dans les calculs fiscaux. taxe_fonc_ann est ANNUEL.
+- **Estimation DVF = net vendeur** (prix dans l'acte notarie, HORS frais agence). Frais agence revente = 0% par defaut (charge acquereur). Parametre "frais agence vendeur" disponible pour le cas rare charge vendeur.
+- **TVA sur marge MdB** : marge = DVF net vendeur - prix_fai. Le prix_fai inclut les frais agence achat, ce qui sous-estime legerement la marge (favorable au MdB). **Axe d'amelioration** : ajouter un parametre "frais agence achat" pour retrouver le prix net vendeur a l'achat et calculer la marge TVA exacte.
 - **Cashflow brut dans simulateur financement** : affiche toutes les lignes (loyer, charges recup, charges copro, TF, credit, assurance). Donnees manquantes = input editable rouge, jaune si renseigne 1 user, vert si valide
 - **MdB toujours a l'IS** : pas de regime IR pour marchand de biens, pas d'amortissement (biens = stock)
 - **TVA sur marge MdB** : marge × 20/120 (TVA "en dedans", pas × 20%)

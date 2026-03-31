@@ -373,8 +373,10 @@ export function calculerRevente(params: ParamsRevente): ResultatRevente {
 
   } else if (regime === 'marchand_de_biens') {
     // MdB toujours a l'IS : TVA sur marge + IS sur benefice
+    // prixRevente = net vendeur (DVF = prix dans l'acte, hors frais agence acquereur)
+    // prixAchat = prix FAI (inclut frais agence a l'achat)
     const marge = Math.max(0, prixRevente - prixAchat)
-    // BUG FIX: TVA "en dedans" — la marge est TTC
+    // TVA "en dedans" — la marge est TTC (art. 268 CGI)
     tvaMarge = marge * 20 / 120
     const benefice = Math.max(0, prixRevente - prixAchat - budgetTravaux - fraisNotaireMontant - tvaMarge)
     impotSociete = calculerIS(benefice)

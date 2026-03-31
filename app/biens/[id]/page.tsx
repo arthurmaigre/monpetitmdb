@@ -103,6 +103,21 @@ const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: stri
   gensdeconfiance: { name: 'Gens de Confiance', color: '#2E7D32', abbrev: 'GC' },
 }
 
+function ModalPanel({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  if (!open) return null
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-panel" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button className="modal-close" onClick={onClose}>{'\u00D7'}</button>
+        </div>
+        <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 function getPlatformFromUrl(url: string): string {
   if (!url) return 'autre'
   const u = url.toLowerCase()
@@ -196,128 +211,179 @@ const REGIMES_IDR = [
   { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
 ]
 
-function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate }: any) {
-  const valeur = bien[champ]
+function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate, setBien: setBienProp, scale = 1, dirtyChamps, setDirtyChamps, originalVals, setOriginalVals }: any) {
+  // scale: 1 = affiche/édite la valeur DB directe
+  //        12 = affiche valeur × 12 (annuel), enregistre ÷ 12
+  //        1/12 = affiche valeur ÷ 12 (mensuel depuis annuel), enregistre × 12
+  const dbVal = bien[champ]
+  const displayVal = dbVal != null ? Math.round(dbVal * scale) : null
   const statut = champsStatut[champ]
-  const [forceEdit, setForceEdit] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
-  const menuRef = useRef<HTMLDivElement>(null)
+  const hasSourceData = dbVal != null && !statut
+  const isVert = statut?.statut === 'vert'
+  const isJaune = statut?.statut === 'jaune'
+  const dirty = dirtyChamps?.[champ] || false
+  const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    function handleClick() { setShowMenu(false) }
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [])
+  // Valeur affichée : toujours dérivée de bien[champ] × scale
+  const localVal = displayVal != null ? String(displayVal) : ''
 
-  if (valeur === null || valeur === undefined) {
-    if (!userToken) return <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-    return (
-      <input type="number" defaultValue="" placeholder="NC"
-        style={{ width: '90px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: '#faf8f5', outline: 'none' }}
-        onBlur={e => { if (e.target.value) onUpdate(champ, Number(e.target.value)) }}
-        onFocus={e => e.target.style.borderColor = '#c0392b'} />
-    )
+  function setDirty(val: boolean) {
+    if (setDirtyChamps) setDirtyChamps((prev: any) => ({ ...prev, [champ]: val }))
   }
 
-  if (statut?.statut === 'vert' && !forceEdit) {
+  function startEdit() {
+    if (setOriginalVals) setOriginalVals((prev: any) => ({ ...prev, [champ]: dbVal }))
+    setDirty(true)
+  }
+
+  function toDbVal(v: string): number | null {
+    if (!v) return null
+    return Math.round(Number(v) / scale)
+  }
+
+  function handleChange(v: string) {
+    if (!dirty) startEdit()
+    else setDirty(true)
+    if (setBienProp) {
+      const newDbVal = v ? Math.round(Number(v) / scale) : null
+      setBienProp((prev: any) => ({ ...prev, [champ]: newDbVal }))
+    }
+  }
+
+  async function handleSubmit() {
+    if (dbVal == null) return
+    setSubmitting(true)
+    await onUpdate(champ, dbVal)
+    setDirty(false)
+    setSubmitting(false)
+  }
+
+  function handleCancel() {
+    setDirty(false)
+    const orig = originalVals?.[champ]
+    if (setBienProp) setBienProp((prev: any) => ({ ...prev, [champ]: orig !== undefined ? orig : null }))
+  }
+
+  const PencilBtn = () => (
+    <button
+      onClick={startEdit}
+      title={"Modifier pour simulation"}
+      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s' }}
+      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+      onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+    </button>
+  )
+
+  // --- Pas connecté : lecture seule ---
+  if (!userToken) {
+    if (displayVal == null) return <span style={{ color: '#c0392b', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
+    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{displayVal}{suffix}</span>
+  }
+
+  // --- Donnée source (IA/scraper) et pas en mode édition : lecture seule + crayon ---
+  if (hasSourceData && !dirty) {
     return (
-      <div style={{ position: 'relative', display: 'inline-block' }}>
-        <span onContextMenu={e => { e.preventDefault(); setMenuPos({ x: e.clientX, y: e.clientY }); setShowMenu(true) }}
-          style={{ fontWeight: 600, color: '#1a7a40', cursor: 'context-menu', borderBottom: '2px solid #1a7a40', paddingBottom: '1px' }}
-          title="Clic droit pour modifier">{valeur}{suffix}</span>
-        {showMenu && (
-          <div ref={menuRef} style={{ position: 'fixed', top: menuPos.y, left: menuPos.x, background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '8px', zIndex: 1000, minWidth: '220px' }}>
-            <div style={{ fontSize: '12px', color: '#7a6a60', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>Valide par 2+ utilisateurs</div>
-            <button onClick={() => { setShowMenu(false); if (window.confirm('Cette donnee a ete validee par plusieurs utilisateurs. Etes-vous sur de vouloir la modifier ?')) setForceEdit(true) }}
-              style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#c0392b', textAlign: 'left', borderRadius: '6px', fontFamily: 'DM Sans, sans-serif' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#fff8f7')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-              Modifier quand meme
-            </button>
-          </div>
-        )}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+        <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{displayVal}{suffix}</span>
+        <PencilBtn />
       </div>
     )
   }
 
-  if (statut?.statut === 'jaune' || forceEdit) {
+  // --- Donnée validée (vert) et pas en mode édition ---
+  if (isVert && !dirty) {
     return (
-      <input type="number" defaultValue={valeur || ''} placeholder="NC"
-        style={{ width: '90px', padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${forceEdit ? '#c0392b' : '#f0c040'}`, fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: forceEdit ? '#fff8f7' : '#fffdf0', outline: 'none' }}
-        onBlur={e => { if (e.target.value && e.target.value !== String(valeur)) { onUpdate(champ, Number(e.target.value)); setForceEdit(false) } }}
-        onFocus={e => e.target.style.borderColor = '#c0392b'} />
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontWeight: 600, color: '#1a7a40', fontSize: '13px' }}>{displayVal}{suffix}</span>
+        <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '12px', color: '#1a7a40' }}>{'\u2713'}</span>
+        <PencilBtn />
+      </div>
     )
   }
 
+  // --- Donnée jaune (1 user) et pas en mode édition ---
+  if (isJaune && !dirty) {
+    return (
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontWeight: 600, color: '#a06010', fontSize: '13px' }}>{displayVal}{suffix}</span>
+        <PencilBtn />
+      </div>
+    )
+  }
+
+  // --- Éditable (manquante ou en cours de simulation) ---
+  const isEmpty = !localVal
+  const borderColor = dirty ? '#2a4a8a' : isEmpty ? '#c0392b' : '#e8e2d8'
+  const bgColor = dirty ? '#f0f4ff' : isEmpty ? '#fde8e8' : '#faf8f5'
+
   return (
-    <span style={{ fontWeight: 600, color: '#1a1210', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'text' }}
-      title={"Cliquez pour modifier"}
-    >
-      {valeur}{suffix}
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c0b0a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
-        <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-      </svg>
-    </span>
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      <input
+        type="number"
+        value={localVal}
+        placeholder="NC"
+        style={{
+          width: '80px', padding: '4px 8px', borderRadius: '6px',
+          border: `1.5px solid ${borderColor}`,
+          fontFamily: "'DM Sans', sans-serif", fontSize: '13px',
+          background: bgColor,
+          outline: 'none', color: isEmpty ? '#c0392b' : '#1a1210',
+        }}
+        onChange={e => handleChange(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
+      />
+      {dirty && localVal && (
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          title={"Soumettre \u00E0 la communaut\u00E9"}
+          style={{
+            width: '24px', height: '24px', borderRadius: '6px', border: 'none',
+            background: '#1a7a40', color: '#fff', fontSize: '14px', fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'opacity 0.15s', opacity: submitting ? 0.5 : 1,
+          }}
+        >{'\u2713'}</button>
+      )}
+      {dirty && (
+        <button onClick={handleCancel} title={"Annuler"}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: '#c0392b', fontSize: '14px' }}
+        >{'\u00D7'}</button>
+      )}
+    </div>
   )
 }
 
 function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
   const valeur = bien.type_loyer
   const statut = champsStatut['type_loyer']
-  const [forceEdit, setForceEdit] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
+  const hasSourceData = valeur && !statut
+  const isVert = statut?.statut === 'vert'
 
-  useEffect(() => {
-    function handleClick() { setShowMenu(false) }
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [])
+  if (!userToken || hasSourceData) {
+    if (!valeur) return <span style={{ color: '#c0392b', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
+    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{valeur}</span>
+  }
 
-  if (valeur === null || valeur === undefined) {
-    if (!userToken) return <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-    return (
-      <select defaultValue="" onChange={e => { if (e.target.value) onUpdate('type_loyer', e.target.value) }}
-        style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: '#faf8f5', outline: 'none' }}>
+  const borderColor = !valeur ? '#c0392b' : isVert ? '#1a7a40' : '#e8e2d8'
+  const bgColor = !valeur ? '#fde8e8' : isVert ? '#eafaf1' : '#faf8f5'
+
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      <select
+        value={valeur || ''}
+        onChange={e => { if (e.target.value) onUpdate('type_loyer', e.target.value) }}
+        style={{ padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${borderColor}`, fontFamily: "'DM Sans', sans-serif", fontSize: '13px', background: bgColor, outline: 'none' }}
+      >
         <option value="">NC</option>
         <option value="HC">HC</option>
         <option value="CC">CC</option>
       </select>
-    )
-  }
-
-  if (statut?.statut === 'vert' && !forceEdit) {
-    return (
-      <div style={{ position: 'relative', display: 'inline-block' }}>
-        <span onContextMenu={e => { e.preventDefault(); setMenuPos({ x: e.clientX, y: e.clientY }); setShowMenu(true) }}
-          style={{ fontWeight: 600, color: '#1a7a40', cursor: 'context-menu', borderBottom: '2px solid #1a7a40', paddingBottom: '1px' }}
-          title="Clic droit pour modifier">{valeur}</span>
-        {showMenu && (
-          <div style={{ position: 'fixed', top: menuPos.y, left: menuPos.x, background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '8px', zIndex: 1000, minWidth: '220px' }}>
-            <div style={{ fontSize: '12px', color: '#7a6a60', padding: '6px 10px', borderBottom: '1px solid #f0ede8', marginBottom: '4px' }}>Valide par 2+ utilisateurs</div>
-            <button onClick={() => { setShowMenu(false); if (window.confirm('Cette donnee a ete validee par plusieurs utilisateurs. Etes-vous sur de vouloir la modifier ?')) setForceEdit(true) }}
-              style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: '#c0392b', textAlign: 'left', borderRadius: '6px', fontFamily: 'DM Sans, sans-serif' }}>
-              Modifier quand meme
-            </button>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  if (statut?.statut === 'jaune' || forceEdit) {
-    return (
-      <select defaultValue={valeur || ''} onChange={e => { if (e.target.value) { onUpdate('type_loyer', e.target.value); setForceEdit(false) } }}
-        style={{ padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${forceEdit ? '#c0392b' : '#f0c040'}`, fontFamily: 'DM Sans, sans-serif', fontSize: '13px', background: forceEdit ? '#fff8f7' : '#fffdf0', outline: 'none' }}>
-        <option value="">NC</option>
-        <option value="HC">HC</option>
-        <option value="CC">CC</option>
-      </select>
-    )
-  }
-
-  return <span style={{ fontWeight: 600, color: '#1a1210' }}>{valeur}</span>
+      {isVert && <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '12px', color: '#1a7a40' }}>{'\u2713'}</span>}
+    </div>
+  )
 }
 
 function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
@@ -427,23 +493,21 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
 
   // --- Revente ---
   const dur = dureeRevente || 5
-  const prixReventeBrut = estimation?.prix_total || 0
-  const fraisAgenceMontant = Math.round(prixReventeBrut * fraisAgenceRevente / 100)
-  const prixRevente = prixReventeBrut - fraisAgenceMontant
+  // Estimation DVF = prix net vendeur (transactions notariales, HORS frais agence)
+  const prixReventeNetVendeur = estimation?.prix_total || 0
+  // Frais agence revente : optionnel, charge vendeur uniquement (rare, 0 par defaut = vente en direct ou charge acquereur)
+  const fraisAgenceMontant = Math.round(prixReventeNetVendeur * fraisAgenceRevente / 100)
+  const prixReventeApresAgence = prixReventeNetVendeur - fraisAgenceMontant
   const fraisNotairePct = regime === 'marchand_de_biens' ? 2.5 : (fraisNotaire || 7.5)
   const fraisNotaireMontant = Math.round(prix_fai * fraisNotairePct / 100)
 
-  // PV brute = revente - achat - notaire - travaux
+  // PV brute = revente net vendeur - frais agence vendeur - achat FAI - notaire achat - travaux
+  // L'estimation DVF est deja le prix net vendeur (pas de frais agence a deduire sauf si charge vendeur)
   // Travaux deja deduits/amortis en locatif ne viennent pas en deduction de la PV
-  // Nu reel : deduits en deficit foncier → pas dans PV
-  // LMNP/LMP/SCI IS : amortis → deja dans VNC ou reintegres
-  // Micro : pas de deduction locative → travaux dans PV
-  // MdB : travaux = cout du stock, deduits du benefice (traite separement)
-  // Travaux deja deduits seulement si phase locative active (pas en Travaux lourds)
   const hasPhaseLocative = hasLoyer && !isTravauxLourds
   const travauxDejaDeduits = hasPhaseLocative && (regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is')
   const travauxPV = travauxDejaDeduits ? 0 : budgetTravaux
-  const pvBrute = prixRevente - prix_fai - fraisNotaireMontant - travauxPV
+  const pvBrute = prixReventeApresAgence - prix_fai - fraisNotaireMontant - travauxPV
 
   // Fiscalite PV selon regime
   let irPV = 0, psPV = 0, tvaMarge = 0, isPV = 0
@@ -489,16 +553,18 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
     // SCI IS : PV sur VNC, IS 15/25%, pas d'abattement + PFU 30% sur dividendes
     const amortCumule = ((prix_fai * 0.85 / 30) + fraisNotaireMontant / 5) * dur
     const vnc = prix_fai + fraisNotaireMontant + budgetTravaux - amortCumule
-    const pvSCI = Math.max(0, prixRevente - vnc)
+    const pvSCI = Math.max(0, prixReventeApresAgence - vnc)
     isPV = pvSCI <= 42500 ? pvSCI * 0.15 : 42500 * 0.15 + (pvSCI - 42500) * 0.25
     // PFU 30% flat tax sur dividendes distribues (benefice apres IS)
     const beneficeDistribuable = pvSCI - isPV
     psPV = beneficeDistribuable > 0 ? beneficeDistribuable * 0.30 : 0
   } else if (regime === 'marchand_de_biens') {
     // MdB toujours a l'IS : TVA sur marge + IS sur benefice
-    const marge = Math.max(0, prixReventeBrut - prix_fai)
+    // Marge TVA = prix de vente net vendeur - prix d'achat FAI
+    // (DVF = net vendeur, prix_fai inclut frais agence achat)
+    const marge = Math.max(0, prixReventeApresAgence - prix_fai)
     tvaMarge = marge * 20 / 120
-    const benefice = Math.max(0, prixRevente - prix_fai - budgetTravaux - fraisNotaireMontant - tvaMarge)
+    const benefice = Math.max(0, prixReventeApresAgence - prix_fai - budgetTravaux - fraisNotaireMontant - tvaMarge)
     isPV = benefice <= 42500 ? benefice * 0.15 : 42500 * 0.15 + (benefice - 42500) * 0.25
   }
   // Surtaxe PV > 50k (regimes des particuliers uniquement)
@@ -532,7 +598,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const crd = calculerCapitalRestantDu(montantEmprunte, tauxCredit, dureeAns, dur)
 
   // Bilan = produit revente - CRD - fiscalite PV + cashflow cumule - apport - frais notaire - travaux
-  const produitRevente = prixRevente - crd
+  const produitRevente = prixReventeApresAgence - crd
   const fondsInvestis = apport || 0
   const coutTotal = prix_fai + fraisNotaireMontant + budgetTravaux
   const fraisBancairesRevente = (!hasLoyer || isTravauxLourds) ? fraisBancaires : 0
@@ -550,7 +616,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
     ? Math.round((Math.pow(ratioROE, 1 / dur) - 1) * 1000) / 10
     : fondsInvestis > 0 && dur > 0 ? Math.round(profitNet / fondsInvestis / dur * 1000) / 10 : 0
 
-  const hasRevente = prixReventeBrut > 0
+  const hasRevente = prixReventeNetVendeur > 0
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
 
@@ -588,9 +654,9 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
             <Row label="Abattement forfaitaire (50%)" value={`-${fmt(Math.round(loyerAnnuel * 0.50))} \u20AC`} rouge info={"Micro-BIC : abattement de 50% sur les recettes BIC meubl\u00E9es (art. 50-0 CGI). Toutes les charges sont r\u00E9put\u00E9es incluses."} />
           )}
           <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
-          <Row label="Taxe fonciere" value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
-          <Row label="Charges recup. annuelles" value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} \u20AC` : `+${fmt(chargesRecAnn)} \u20AC`} />
-          <Row label="Interets emprunt" value={`-${fmt(interetsAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
+          <Row label={"Taxe fonci\u00E8re"} value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
+          <Row label={"Charges r\u00E9cup. annuelles"} value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} \u20AC` : `+${fmt(chargesRecAnn)} \u20AC`} />
+          <Row label={"Int\u00E9r\u00EAts emprunt"} value={`-${fmt(interetsAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
           <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
           <Row
             label={"Autres charges d\u00E9ductibles"}
@@ -629,14 +695,14 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
           />
           <Row label="Amortissement" value={`-${fmt(amort)} \u20AC`} rouge tiret={!hasAmort} info={"Amortissement fiscal uniquement en LMNP r\u00E9el, LMP et SCI IS"} />
           <Row label="Cotisations SSI (45%)" value={regime === 'lmp_reel_bic' ? `-${fmt(Math.max(0, revenuImposable) * 0.45)} \u20AC` : ''} rouge={regime === 'lmp_reel_bic'} tiret={regime !== 'lmp_reel_bic'} info={regime === 'lmp_reel_bic' ? "Cotisations sociales des ind\u00E9pendants (SSI)" : "Applicable uniquement en LMP"} />
-          <Row label="Resultat imposable" value={`${fmt(revenuImposable)} \u20AC`} bold />
-          <Row label="Impot" value={`-${fmt(impot)} \u20AC`} rouge bold />
+          <Row label={"R\u00E9sultat imposable"} value={`${fmt(revenuImposable)} \u20AC`} bold />
+          <Row label={"Imp\u00F4t"} value={`-${fmt(impot)} \u20AC`} rouge bold />
         </>
       )}
       <div style={{ marginTop: 'auto' }}>
       {hasLoyer && !isTravauxLourds && (
         <div style={{ paddingTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
-          <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cashflow net</div>
+          <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Net d\u2019Imp\u00F4t"}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowNetMensuel >= 0 ? '#1a7a40' : '#c0392b' }}>
               {cashflowNetMensuel >= 0 ? '+' : ''}{fmt(cashflowNetMensuel)} {'\u20AC'}/mois
@@ -652,9 +718,10 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
       {hasRevente && (
         <>
           <SectionLabel label={`Sc\u00e9nario revente \u00e0 ${dur} an${dur > 1 ? 's' : ''}`} />
-          <Row label="Prix de revente (DVF)" value={`${fmt(prixReventeBrut)} \u20AC`} />
-          <Row label={`Frais d'agence (${fraisAgenceRevente}%)`} value={`-${fmt(fraisAgenceMontant)} \u20AC`} rouge />
-          <Row label="Net vendeur" value={`${fmt(prixRevente)} \u20AC`} bold />
+          <Row label="Estimation DVF (net vendeur)" value={`${fmt(prixReventeNetVendeur)} \u20AC`} info={"DVF = prix dans l\u2019acte notari\u00E9. Hors frais d\u2019agence (g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur)."} />
+          {fraisAgenceRevente > 0 && fraisAgenceMontant > 0 && (
+            <Row label={`Frais d'agence vendeur (${fraisAgenceRevente}%)`} value={`-${fmt(fraisAgenceMontant)} \u20AC`} rouge info={"Uniquement si l\u2019agence est \u00E0 la charge du vendeur. En g\u00E9n\u00E9ral les frais sont \u00E0 la charge de l\u2019acqu\u00E9reur (mettre 0%)."} />
+          )}
           <Row label="Prix d'achat (FAI)" value={`-${fmt(prix_fai)} \u20AC`} rouge />
           <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge />
           <Row
@@ -1069,7 +1136,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   if (loading) {
     return (
       <div className="section">
-        <h2 className="section-title">{"Estimation marché DVF"}</h2>
+        <h2 className="section-title">{"Estimation Prix de Revente"}</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7a6a60', fontSize: '13px' }}>
           <div style={{ width: '16px', height: '16px', border: '2px solid #e8e2d8', borderTop: '2px solid #c0392b', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
           {"Analyse des transactions en cours..."}
@@ -1082,7 +1149,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   if (error || !estimation) {
     return (
       <div className="section">
-        <h2 className="section-title">{"Estimation marché DVF"}</h2>
+        <h2 className="section-title">{"Estimation Prix de Revente"}</h2>
         <div className="nc-warning">{error || "Estimation impossible — données insuffisantes ou pas de transactions comparables"}</div>
       </div>
     )
@@ -1112,11 +1179,11 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 
   return (
     <div className="section">
-      <h2 className="section-title">{"Estimation march\u00E9 DVF"}</h2>
+      <h2 className="section-title">{"Estimation Prix de Revente"}</h2>
       {isFree && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
           <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
-            {"D\u00E9bloquez l\u2019estimation march\u00E9 DVF"}
+            {"D\u00E9bloquez l\u2019estimation prix de revente"}
           </span>
           <a href="/mon-profil" style={{
             display: 'inline-block', padding: '7px 18px', borderRadius: 8,
@@ -1198,7 +1265,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
         {/* Colonne droite : Estimation */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-            {isAjuste ? "Mon estimation" : "Estimation march\u00E9"}
+            {isAjuste ? "Mon estimation" : "Prix de revente estim\u00E9"}
           </div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210' }}><V>{fmt(prixActuel)} {'\u20AC'}</V></div>
           <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px' }}><V>{fmt(prixM2Actuel)} {'\u20AC'}/m{"²"}</V></div>
@@ -1285,7 +1352,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
             </div>
           </div>
         )}
-        <div style={{ fontSize: '11px', color: '#b0a898', textAlign: 'right' }}>
+        <div style={{ fontSize: '11px', color: '#b0a898', textAlign: 'right', marginLeft: 'auto' }}>
           <div><V>{estimation.nb_comparables}</V> transactions comparables</div>
           <div>Rayon : <V>{estimation.rayon_m}m</V></div>
           <div style={{ marginTop: '4px', fontStyle: 'italic' }}>{"Source : DVF (donn\u00E9es notariales)"}</div>
@@ -1316,13 +1383,17 @@ export default function FicheBienPage() {
   const [freeAnalysesLeft, setFreeAnalysesLeft] = useState<number>(0)
   const [freeAnalysesUsed, setFreeAnalysesUsed] = useState<number>(0)
   const [champsStatut, setChampsStatut] = useState<Record<string, { valeur: string, statut: 'jaune' | 'vert' }>>({})
+  const [dirtyChamps, setDirtyChamps] = useState<Record<string, boolean>>({})
+  const [originalVals, setOriginalVals] = useState<Record<string, any>>({})
   const [scorePerso, setScorePerso] = useState<number | null>(null)
   const [inWatchlist, setInWatchlist] = useState(false)
   const [showDetailTravaux, setShowDetailTravaux] = useState(false)
   // IDR states
+  const [activeNav, setActiveNav] = useState('donnees')
   const [showLotsDetail, setShowLotsDetail] = useState(false)
   const [showLotsLocatif, setShowLotsLocatif] = useState(false)
   const [showCoutsCopro, setShowCoutsCopro] = useState(false)
+  const [showContact, setShowContact] = useState(false)
   const [showReventeLots, setShowReventeLots] = useState(false)
   const [coutGeometreParLot, setCoutGeometreParLot] = useState(1500)
   const [coutReglementCoproParLot, setCoutReglementCoproParLot] = useState(2500)
@@ -1371,7 +1442,7 @@ export default function FicheBienPage() {
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [estimationData, setEstimationData] = useState<any>(null)
   const [dureeRevente, setDureeRevente] = useState<number>(1)
-  const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number>(5)
+  const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number>(0) // 0% par defaut = charge acquereur ou vente directe
 
   useEffect(() => {
     async function load() {
@@ -1435,6 +1506,39 @@ export default function FicheBienPage() {
     }
     load()
   }, [id])
+
+  // Sticky nav — IntersectionObserver to highlight active section
+  useEffect(() => {
+    const sections = ['donnees', 'estimation', 'financement', 'fiscalite']
+    const observers: IntersectionObserver[] = []
+    const visibleSet = new Set<string>()
+    for (const sectionId of sections) {
+      const el = document.getElementById(`nav-${sectionId}`)
+      if (!el) continue
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) visibleSet.add(sectionId)
+          else visibleSet.delete(sectionId)
+          // Pick the first visible section in order
+          for (const s of sections) {
+            if (visibleSet.has(s)) { setActiveNav(s); break }
+          }
+        },
+        { rootMargin: '-120px 0px -60% 0px', threshold: 0 }
+      )
+      obs.observe(el)
+      observers.push(obs)
+    }
+    return () => observers.forEach(o => o.disconnect())
+  }, [bien])
+
+  function scrollToNav(sectionId: string) {
+    const el = document.getElementById(`nav-${sectionId}`)
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 130
+      window.scrollTo({ top: y, behavior: 'smooth' })
+    }
+  }
 
   async function handleScorePerso(score: number) {
     if (!userToken) return
@@ -1636,15 +1740,21 @@ export default function FicheBienPage() {
         .ecart-pos { background: #fde8e8; color: #a33; }
         .lbc-btn { display: inline-block; padding: 9px 18px; border: 2px solid #e8e2d8; border-radius: 10px; font-size: 13px; font-weight: 600; color: #1a1210; text-decoration: none; transition: all 0.15s; }
         .lbc-btn:hover { border-color: #c0392b; color: #c0392b; }
-        .section { background: #fff; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 24px; }
-        .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #1a1210; }
-        .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .section { background: #fff; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 24px; }
+        .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a1210; }
+        .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
         .data-subtitle { grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 8px; border-top: 1px solid #e8e2d8; margin-top: 4px; }
-        .data-item { display: flex; flex-direction: column; gap: 6px; }
+        .data-item { display: flex; flex-direction: column; gap: 4px; }
         .data-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .data-value { font-size: 14px; font-weight: 600; color: #1a1210; }
         .data-value.nc { color: #7a6a60; font-style: italic; font-weight: 400; }
+        .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+        .two-cols { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 24px; }
+        .two-cols > .col { flex: 1; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
         .simu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .strat-intro { background: #fff; border-radius: 12px; border: 1px solid #e8e2d8; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: #7a6a60; line-height: 1.6; }
+        .strat-intro strong { color: #1a1210; }
+        .data-missing { color: #c0392b; font-style: italic; font-weight: 400; font-size: 13px; }
         .param-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
         .param-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .param-input { padding: 9px 13px; border-radius: 9px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; background: #faf8f5; color: #1a1210; outline: none; width: 100%; box-sizing: border-box; }
@@ -1674,6 +1784,9 @@ export default function FicheBienPage() {
         .results-table thead th:first-child { text-align: left; }
         .results-table tbody tr { border-bottom: 1px solid #f0ede8; }
         .results-table tbody td { padding: 10px 12px; font-size: 14px; text-align: right; }
+        .results-table tbody td:not(:first-child) { display: table-cell; }
+        .results-table tbody td:not(:first-child) > div { margin-left: auto; }
+        .results-table tbody td:not(:first-child) > span { display: block; text-align: right; }
         .results-table tbody td:first-child { text-align: left; color: #555; font-size: 13px; }
         .results-total td { font-weight: 700; background: #f7f4f0; }
         .cashflow-row td:not(:first-child) { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; }
@@ -1688,7 +1801,25 @@ export default function FicheBienPage() {
         .breadcrumb a { color: #7a6a60; text-decoration: none; }
         .breadcrumb a:hover { color: #1a1210; }
         .breadcrumb .sep { color: #d0c8be; }
-        @media (max-width: 767px) { .fiche-wrap { padding: 16px; } .hero-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } }
+
+        /* Sticky nav */
+        .sticky-nav { position: sticky; top: 68px; z-index: 50; background: rgba(250,248,245,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 12px; padding: 4px; display: inline-flex; gap: 2px; margin-bottom: 24px; border: 1px solid #e8e2d8; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .sticky-nav-wrap { position: sticky; top: 68px; z-index: 50; display: flex; justify-content: center; margin-bottom: 24px; }
+        .sticky-nav-item { padding: 9px 20px; font-size: 13px; font-weight: 600; color: #7a6a60; white-space: nowrap; cursor: pointer; background: none; border: none; border-radius: 9px; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+        .sticky-nav-item:hover { color: #1a1210; background: rgba(0,0,0,0.04); }
+        .sticky-nav-item.active { color: #c0392b; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+        /* Modal panel */
+        .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(26,18,16,0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .modal-panel { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: modalIn 0.2s ease; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 12px; flex-shrink: 0; }
+        .modal-header h3 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #1a1210; margin: 0; }
+        .modal-close { background: none; border: none; cursor: pointer; color: #7a6a60; font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.15s; }
+        .modal-close:hover { background: #f0ede8; color: #1a1210; }
+        .modal-body { padding: 0 24px 24px; overflow-y: auto; flex: 1; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        @media (max-width: 767px) { .fiche-wrap { padding: 16px; } .hero-grid { grid-template-columns: 1fr; } .dual-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } .two-cols { flex-direction: column; } .sticky-nav { padding: 3px; } .sticky-nav-item { padding: 8px 14px; font-size: 12px; } .modal-panel { max-width: 100%; max-height: 90vh; } }
       `}</style>
 
       <div className="fiche-wrap">
@@ -1724,14 +1855,14 @@ export default function FicheBienPage() {
                         onChange={e => setModeCible(e.target.value as 'cashflow' | 'pv')}
                         style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px', padding: '2px 6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
                       >
-                        <option value="cashflow">{`Prix cible (Objectif ${objectifCashflow}% Cash Flow Brut)`}</option>
+                        <option value="cashflow">{`Prix cible (Objectif ${objectifCashflow}% Cash Flow Avant Imp\u00F4t)`}</option>
                         <option value="pv">{`Prix cible (Objectif ${objectifPV}% PV Brute)`}</option>
                       </select>
                     ) : (
                       <span className="prix-label" style={{ margin: 0 }}>
                         {prixCiblePV && (isTravauxLourds || !prixCibleCashflow)
                           ? `Prix cible (Objectif ${objectifPV}% PV Brute)`
-                          : `Prix cible (Objectif ${objectifCashflow}% Cash Flow Brut)`}
+                          : `Prix cible (Objectif ${objectifCashflow}% Cash Flow Avant Imp\u00F4t)`}
                       </span>
                     )}
                   </div>
@@ -1745,7 +1876,7 @@ export default function FicheBienPage() {
                       if (isCashflowMode) {
                         return (
                           <div style={{ marginTop: '4px', background: '#d4f5e0', borderRadius: '8px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a7a40' }}>Cashflow positif</span>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a7a40' }}>Cash flow positif</span>
                             <span style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a7a40' }} className={isFreeBlocked ? 'val-blur' : ''}>+{fmt(cashflowBrut)} {'\u20AC'}/mois</span>
                           </div>
                         )
@@ -1786,13 +1917,40 @@ export default function FicheBienPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: '-16px', marginBottom: '24px' }}>
+        <div style={{ marginTop: '-16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <PlatformLinks bien={bien} />
+          <button onClick={() => setShowContact(true)} style={{ fontSize: '12px', fontWeight: 600, color: '#c0392b', padding: '6px 14px', border: '1px solid #e8e2d8', borderRadius: '8px', background: '#fff', transition: 'all 150ms ease', whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"Compl\u00E9ter les donn\u00E9es manquantes \u2192"}</button>
         </div>
 
-        <div className="section">
+        {/* Sticky navigation */}
+        <div className="sticky-nav-wrap">
+          <nav className="sticky-nav">
+            <button className={`sticky-nav-item ${activeNav === 'donnees' ? 'active' : ''}`} onClick={() => scrollToNav('donnees')}>{"Donn\u00E9es"}</button>
+            <button className={`sticky-nav-item ${activeNav === 'estimation' ? 'active' : ''}`} onClick={() => scrollToNav('estimation')}>Estimation</button>
+            <button className={`sticky-nav-item ${activeNav === 'financement' ? 'active' : ''}`} onClick={() => scrollToNav('financement')}>Financement</button>
+            <button className={`sticky-nav-item ${activeNav === 'fiscalite' ? 'active' : ''}`} onClick={() => scrollToNav('fiscalite')}>{"Fiscalit\u00E9"}</button>
+          </nav>
+        </div>
+
+        {/* Intro stratégie */}
+        <div className="strat-intro">
+          {bien.strategie_mdb === 'Locataire en place' && (
+            <><strong>{"Strat\u00E9gie Locataire en place"}</strong>{" \u2014 Ce bien est vendu avec un locataire d\u00E9j\u00E0 en place, ce qui g\u00E9n\u00E8re des revenus locatifs imm\u00E9diats mais implique souvent une d\u00E9cote sur le prix. L\u2019analyse ci-dessous calcule d\u2019abord le "}<strong>{"cash flow avant imp\u00F4t"}</strong>{" (revenus - charges - cr\u00E9dit), puis l\u2019"}<strong>analyse fiscale</strong>{" d\u00E9termine le cash flow net d\u2019imp\u00F4t et la plus-value \u00E0 la revente. Pensez \u00E0 compl\u00E9ter les donn\u00E9es manquantes pour affiner les calculs."}</>
+          )}
+          {bien.strategie_mdb === 'Travaux lourds' && (
+            <><strong>{"Strat\u00E9gie Travaux lourds"}</strong>{" \u2014 Ce bien n\u00E9cessite des travaux importants. L\u2019estimation DVF correspond au prix march\u00E9 "}<strong>{"apr\u00E8s r\u00E9novation"}</strong>{" (pas de d\u00E9cote travaux). L\u2019analyse calcule la "}<strong>plus-value brute</strong>{" (estimation - prix - travaux - frais) et la fiscalit\u00E9 selon le r\u00E9gime choisi."}</>
+          )}
+          {bien.strategie_mdb === 'Division' && (
+            <><strong>{"Strat\u00E9gie Division"}</strong>{" \u2014 Ce bien pr\u00E9sente un potentiel de division en plusieurs lots ind\u00E9pendants. L\u2019analyse estime la rentabilit\u00E9 locative globale et le sc\u00E9nario de revente lot par lot."}</>
+          )}
+          {bien.strategie_mdb === 'Immeuble de rapport' && (
+            <><strong>{"Strat\u00E9gie Immeuble de rapport"}</strong>{" \u2014 Cet immeuble se compose de plusieurs lots. L\u2019analyse d\u00E9taille les revenus locatifs par lot, le cashflow global, et propose un sc\u00E9nario de revente \u00E0 la d\u00E9coupe avec estimation par lot."}</>
+          )}
+        </div>
+
+        <div id="nav-donnees" className="section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-            <h2 className="section-title" style={{ margin: 0 }}>{"Caract\u00E9ristiques du bien"}</h2>
+            <h2 className="section-title" style={{ margin: 0 }}>{"Caract\u00E9ristiques du Bien"}</h2>
             {(() => {
               const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
               const creationDate = mi?.creationDate
@@ -1855,7 +2013,7 @@ export default function FicheBienPage() {
                 <div className="data-subtitle">Immeuble</div>
                 <div className="data-item">
                   <span className="data-label">Nb lots</span>
-                  <CellEditable bien={bien} champ="nb_lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
+                  <CellEditable bien={bien} champ="nb_lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
                 </div>
                 <div className="data-item">
                   <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
@@ -1871,8 +2029,8 @@ export default function FicheBienPage() {
                   {showLotsDetail ? "Masquer le d\u00E9tail des lots" : "Voir le d\u00E9tail des lots"}
                 </button>
               </div>
-              {showLotsDetail && (
-                <div className="lots-table-wrap"><table className="lots-table" style={{ marginTop: '12px' }}>
+              <ModalPanel open={showLotsDetail} onClose={() => setShowLotsDetail(false)} title={"D\u00E9tail des lots"}>
+                <div className="lots-table-wrap"><table className="lots-table">
                   <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"\u00C9tage"}</th><th>DPE</th></tr></thead>
                   <tbody>
                     {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
@@ -1889,11 +2047,172 @@ export default function FicheBienPage() {
                     })}
                   </tbody>
                 </table></div>
-              )}
+              </ModalPanel>
             </>
           )}
         </div>
 
+        {bien.strategie_mdb === 'Travaux lourds' ? (
+          <div className="section">
+            <h2 className="section-title">{"Donn\u00E9es du Bien"}</h2>
+            <div className="data-grid">
+              <div className="data-item">
+                <span className="data-label">{"Taxe foncière"}</span>
+                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+              {!(bien.type_bien || '').toLowerCase().includes('maison') && (
+                <div className="data-item">
+                  <span className="data-label">Charges copro</span>
+                  <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                </div>
+              )}
+              <div className="data-item">
+                <span className="data-label">{"Budget énergie"}</span>
+                <span className={`data-value ${!bien.budget_energie_min ? 'nc' : ''}`}>
+                  {bien.budget_energie_min && bien.budget_energie_max ? `${bien.budget_energie_min} - ${bien.budget_energie_max} \u20AC/an` : 'NC'}
+                </span>
+              </div>
+              <div className="data-item">
+                <span className="data-label">GES</span>
+                <span className={`data-value ${!bien.ges ? 'nc' : ''}`}>{bien.ges || 'NC'}</span>
+              </div>
+            </div>
+            <div className="legende" style={{ marginTop: '12px' }}>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#c0392b' }}></div>{"Donn\u00E9e manquante \u2014 \u00E9ditable"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#2a4a8a' }}></div>{"Simulation \u2014 \u2713 pour soumettre, \u00D7 pour annuler"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Soumis par 1 utilisateur"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"\u2713 Valid\u00E9 par 2+ utilisateurs"}</div>
+            </div>
+            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
+          </div>
+        ) : (
+          <div className="section">
+            <h2 className="section-title">{"Donn\u00E9es Locatives"}</h2>
+            <div className="data-grid">
+              <div className="data-item">
+                <span className="data-label">Loyer</span>
+                <CellEditable bien={bien} champ="loyer" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+              <div className="data-item">
+                <span className="data-label">Type loyer</span>
+                <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+              <div className="data-item">
+                <span className="data-label">{"Charges récup."}</span>
+                <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+              <div className="data-item">
+                <span className="data-label">Charges copro</span>
+                <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+              <div className="data-item">
+                <span className="data-label">{"Taxe foncière"}</span>
+                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+              {!isIDR && (
+                <div className="data-item">
+                  <span className="data-label">Profil locataire</span>
+                  <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'Non communiqu\u00E9'}</span>
+                </div>
+              )}
+              {!isIDR && (
+                <div className="data-item">
+                  <span className="data-label">Fin de bail</span>
+                  <input
+                    type="date"
+                    defaultValue={bien.fin_bail && bien.fin_bail !== 'inconnu' && bien.fin_bail !== 'NC' ? bien.fin_bail.slice(0, 10) : ''}
+                    onBlur={async (e) => {
+                      const val = e.target.value
+                      if (!val || !userToken) return
+                      await fetch(`/api/biens/${bien.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+                        body: JSON.stringify({ fin_bail: val })
+                      })
+                      setBien((prev: any) => ({ ...prev, fin_bail: val }))
+                    }}
+                    style={{ padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none', width: '120px' }}
+                  />
+                </div>
+              )}
+              <div className="data-item">
+                <span className="data-label">Rendement brut</span>
+                <span className="data-value" style={{ color: '#c0392b' }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : 'NC'}</span>
+              </div>
+            </div>
+            <div className="legende">
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#c0392b' }}></div>{"Donn\u00E9e manquante \u2014 \u00E9ditable"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#2a4a8a' }}></div>{"Simulation \u2014 \u2713 pour soumettre, \u00D7 pour annuler"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Soumis par 1 utilisateur"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"\u2713 Valid\u00E9 par 2+ utilisateurs"}</div>
+            </div>
+            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
+            {/* IDR : taux occupation + loyers par lot dépliable */}
+            {isIDR && lots.length > 0 && (
+              <>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '13px', color: '#1a7a40', fontWeight: 600 }}>{lots.filter(l => l.etat === 'loue').length}/{nbLotsEffectif} lots {"lou\u00E9s"}</span>
+                  {bien.loyer && <span style={{ fontSize: '13px', color: '#7a6a60' }}>Loyer annuel : {(bien.loyer * 12).toLocaleString('fr-FR')} {'\u20AC'}</span>}
+                </div>
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                  <button onClick={() => setShowLotsLocatif(!showLotsLocatif)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                    {showLotsLocatif ? "Masquer" : "D\u00E9tail loyers par lot"}
+                  </button>
+                </div>
+                <ModalPanel open={showLotsLocatif} onClose={() => setShowLotsLocatif(false)} title={"D\u00E9tail loyers par lot"}>
+                  <div className="lots-table-wrap"><table className="lots-table">
+                    <thead><tr><th>Lot</th><th>Type</th><th>Loyer</th><th>{"\u00C9tat"}</th></tr></thead>
+                    <tbody>
+                      {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
+                        const lot = lots[i] || {}
+                        return (
+                          <tr key={i}>
+                            <td style={{ fontWeight: 600 }}>{i + 1}</td>
+                            <td>
+                              {lot.type ? lot.type : (
+                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
+                                  <option value="">NC</option>
+                                  <option value="Studio">Studio</option>
+                                  <option value="T1">T1</option>
+                                  <option value="T2">T2</option>
+                                  <option value="T3">T3</option>
+                                  <option value="T4">T4</option>
+                                  <option value="T5">T5</option>
+                                  <option value="Local commercial">Local commercial</option>
+                                  <option value="Garage">Garage</option>
+                                </select>
+                              )}
+                            </td>
+                            <td>
+                              {lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : (
+                                <input type="number" placeholder="0" style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', width: '70px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', textAlign: 'right' }} />
+                              )}
+                            </td>
+                            <td>
+                              {lot.etat ? (
+                                <span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span>
+                              ) : (
+                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
+                                  <option value="">NC</option>
+                                  <option value="loue">{"Lou\u00E9"}</option>
+                                  <option value="vacant">Vacant</option>
+                                  <option value="a_renover">{"\u00C0 r\u00E9nover"}</option>
+                                </select>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table></div>
+                </ModalPanel>
+              </>
+            )}
+          </div>
+        )}
+
+        <div id="nav-estimation" className="two-cols">
+        <div className="col">
         {(() => {
           const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
           return (
@@ -1913,8 +2232,8 @@ export default function FicheBienPage() {
                     <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                       {showReventeLots ? "Masquer la revente par lot" : "Estimer la revente par lot"}
                     </button>
-                    {showReventeLots && (
-                      <div style={{ marginTop: '12px', background: '#f7f4f0', borderRadius: '10px', padding: '16px', border: '1px solid #e8e2d8', textAlign: 'left' }}>
+                    <ModalPanel open={showReventeLots} onClose={() => setShowReventeLots(false)} title="Estimer la revente par lot">
+                      <div style={{ textAlign: 'left' }}>
                         <div className="lots-table-wrap"><table className="lots-table">
                           <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"Prix/m\u00B2"}</th><th>{"Prix revente"}</th></tr></thead>
                           <tbody>
@@ -1975,7 +2294,7 @@ export default function FicheBienPage() {
                           ) : null
                         })()}
                       </div>
-                    )}
+                    </ModalPanel>
                   </div>
                 ) : undefined}
               />
@@ -1983,164 +2302,73 @@ export default function FicheBienPage() {
           )
         })()}
 
-        {bien.strategie_mdb === 'Travaux lourds' ? (
+        {/* Cashflow brut (dans colonne gauche) */}
+        {!peutCalculer && !isTravauxLourds && !bien.prix_fai && (
+          <div className="section"><div className="nc-warning">Le prix est manquant — impossible de calculer.</div></div>
+        )}
+        {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && peutCalculer && !isTravauxLourds && (
           <div className="section">
-            <h2 className="section-title">{"Données du bien"}</h2>
-            <div className="data-grid">
-              <div className="data-item">
-                <span className="data-label">{"Taxe foncière"}</span>
-                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
-              </div>
-              {!(bien.type_bien || '').toLowerCase().includes('maison') && (
-                <div className="data-item">
-                  <span className="data-label">Charges copro</span>
-                  <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
-                </div>
-              )}
-              <div className="data-item">
-                <span className="data-label">{"Budget énergie"}</span>
-                <span className={`data-value ${!bien.budget_energie_min ? 'nc' : ''}`}>
-                  {bien.budget_energie_min && bien.budget_energie_max ? `${bien.budget_energie_min} - ${bien.budget_energie_max} \u20AC/an` : 'NC'}
-                </span>
-              </div>
-              <div className="data-item">
-                <span className="data-label">GES</span>
-                <span className={`data-value ${!bien.ges ? 'nc' : ''}`}>{bien.ges || 'NC'}</span>
-              </div>
-            </div>
-            <div className="legende" style={{ marginTop: '12px' }}>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Renseigné par 1 utilisateur — modifiable"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"Validé par 2+ utilisateurs — clic droit pour modifier"}</div>
-            </div>
-            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
-          </div>
-        ) : (
-          <div className="section">
-            <h2 className="section-title">{"Données locatives"}</h2>
-            <div className="data-grid">
-              <div className="data-item">
-                <span className="data-label">Loyer</span>
-                <CellEditable bien={bien} champ="loyer" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">Type loyer</span>
-                <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">{"Charges récup."}</span>
-                <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">Charges copro</span>
-                <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">{"Taxe foncière"}</span>
-                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} />
-              </div>
-              {!isIDR && (
-                <div className="data-item">
-                  <span className="data-label">Profil locataire</span>
-                  <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'Non communiqu\u00E9'}</span>
-                </div>
-              )}
-              {!isIDR && (
-                <div className="data-item">
-                  <span className="data-label">Fin de bail</span>
-                  <input
-                    type="date"
-                    defaultValue={bien.fin_bail && bien.fin_bail !== 'inconnu' && bien.fin_bail !== 'NC' ? bien.fin_bail.slice(0, 10) : ''}
-                    onBlur={async (e) => {
-                      const val = e.target.value
-                      if (!val || !userToken) return
-                      await fetch(`/api/biens/${bien.id}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-                        body: JSON.stringify({ fin_bail: val })
-                      })
-                      bien.fin_bail = val
-                    }}
-                    style={{ padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none', width: '120px' }}
-                  />
-                </div>
-              )}
-              <div className="data-item">
-                <span className="data-label">Rendement brut</span>
-                <span className="data-value" style={{ color: '#c0392b' }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : 'NC'}</span>
-              </div>
-            </div>
-            <div className="legende">
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Renseigné par 1 utilisateur — modifiable"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"Validé par 2+ utilisateurs — clic droit pour modifier"}</div>
-            </div>
-            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
-            {/* IDR : taux occupation + loyers par lot dépliable */}
-            {isIDR && lots.length > 0 && (
-              <>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', color: '#1a7a40', fontWeight: 600 }}>{lots.filter(l => l.etat === 'loue').length}/{nbLotsEffectif} lots {"lou\u00E9s"}</span>
-                  {bien.loyer && <span style={{ fontSize: '13px', color: '#7a6a60' }}>Loyer annuel : {(bien.loyer * 12).toLocaleString('fr-FR')} {'\u20AC'}</span>}
-                </div>
-                <div style={{ marginTop: '8px', textAlign: 'center' }}>
-                  <button onClick={() => setShowLotsLocatif(!showLotsLocatif)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                    {showLotsLocatif ? "Masquer" : "D\u00E9tail loyers par lot"}
-                  </button>
-                </div>
-                {showLotsLocatif && (
-                  <div className="lots-table-wrap"><table className="lots-table" style={{ marginTop: '12px' }}>
-                    <thead><tr><th>Lot</th><th>Type</th><th>Loyer</th><th>{"\u00C9tat"}</th></tr></thead>
+              <h2 className="section-title">{"Cash Flow Avant Imp\u00F4t"}</h2>
+                  <table className="results-table">
+                    <thead>
+                      <tr>
+                        <th></th>
+                        <th>Mensuel</th>
+                        <th>Annuel</th>
+                      </tr>
+                    </thead>
                     <tbody>
-                      {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
-                        const lot = lots[i] || {}
-                        return (
-                          <tr key={i}>
-                            <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                            <td>
-                              {lot.type ? lot.type : (
-                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
-                                  <option value="">NC</option>
-                                  <option value="Studio">Studio</option>
-                                  <option value="T1">T1</option>
-                                  <option value="T2">T2</option>
-                                  <option value="T3">T3</option>
-                                  <option value="T4">T4</option>
-                                  <option value="T5">T5</option>
-                                  <option value="Local commercial">Local commercial</option>
-                                  <option value="Garage">Garage</option>
-                                </select>
-                              )}
-                            </td>
-                            <td>
-                              {lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : (
-                                <input type="number" placeholder="0" style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', width: '70px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', textAlign: 'right' }} />
-                              )}
-                            </td>
-                            <td>
-                              {lot.etat ? (
-                                <span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span>
-                              ) : (
-                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
-                                  <option value="">NC</option>
-                                  <option value="loue">{"Lou\u00E9"}</option>
-                                  <option value="vacant">Vacant</option>
-                                  <option value="a_renover">{"\u00C0 r\u00E9nover"}</option>
-                                </select>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
+                            <tr>
+                              <td>{"Loyer"} <span style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></td>
+                              <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                              <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
+                            </tr>
+                            <tr>
+                              <td>{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (incluses CC)" : "Charges r\u00E9cup."}</td>
+                              <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                              <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
+                            </tr>
+                            <tr>
+                              <td>{"Charges copro"}</td>
+                              <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                              <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
+                            </tr>
+                            <tr>
+                              <td>{"Taxe fonci\u00E8re"}</td>
+                              <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1/12} /></td>
+                              <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                            </tr>
+                            <tr>
+                              <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit)} {'\u20AC'}</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
+                            </tr>
+                            <tr>
+                              <td>Assurance emprunteur</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteAss)} {'\u20AC'}</td>
+                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
+                            </tr>
                     </tbody>
-                  </table></div>
-                )}
-              </>
-            )}
+                  </table>
+                  <div style={{ marginTop: '16px', background: cashflowBrut >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+                    <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Avant Imp\u00F4t"}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }}>
+                        {cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}/mois
+                      </span>
+                      <span style={{ fontSize: '13px', color: (cashflowBrut * 12) >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }}>
+                        {(cashflowBrut * 12) >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}/an
+                      </span>
+                    </div>
+                  </div>
           </div>
         )}
+        </div>{/* fin col gauche */}
 
+        <div className="col">
         {/* Estimation travaux (toutes strategies) */}
         <div className="section">
-          <h2 className="section-title">{bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic travaux' : 'Estimation travaux'}</h2>
+          <h2 className="section-title">{bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic Travaux' : 'Estimation Travaux'}</h2>
           {isFreeBlocked && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
               <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
@@ -2246,8 +2474,8 @@ export default function FicheBienPage() {
                     </span>
                   )}
                 </div>
-                {/* Detail par poste */}
-                {showDetailTravaux && (
+                {/* Detail par poste — modal */}
+                <ModalPanel open={showDetailTravaux} onClose={() => setShowDetailTravaux(false)} title="Affiner le budget travaux">
                   <div style={{ marginTop: '16px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
                     {(['entretien', 'amelioration', 'construction'] as const).map(type => {
                       const postes = POSTES_TRAVAUX.filter(p => p.type === type)
@@ -2320,7 +2548,7 @@ export default function FicheBienPage() {
                       <span style={{ fontSize: '18px', fontWeight: 800, fontFamily: "'Fraunces', serif", color: '#a06010' }}>{Math.round(budgetDetailTotal).toLocaleString('fr-FR')} {'\u20AC'}</span>
                     </div>
                   </div>
-                )}
+                </ModalPanel>
               </>
             )
           })()}
@@ -2333,8 +2561,7 @@ export default function FicheBienPage() {
                   {showCoutsCopro ? "Masquer les co\u00FBts copro" : "Estimer les co\u00FBts de cr\u00E9ation de copropri\u00E9t\u00E9"}
                 </button>
               </div>
-              {showCoutsCopro && (
-                <div style={{ marginTop: '12px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
+              <ModalPanel open={showCoutsCopro} onClose={() => setShowCoutsCopro(false)} title={"Co\u00FBts de cr\u00E9ation de copropri\u00E9t\u00E9"}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px 12px', alignItems: 'center', fontSize: '13px' }}>
                     <span style={{ color: '#7a6a60', fontWeight: 600 }}>{"\u00C9tat descriptif (g\u00E9om\u00E8tre)"}</span>
                     <input type="number" value={coutGeometreParLot} onChange={e => setCoutGeometreParLot(Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', width: '90px', fontFamily: "'DM Sans', sans-serif", background: '#fff', textAlign: 'right' }} />
@@ -2358,25 +2585,15 @@ export default function FicheBienPage() {
                       {((coutGeometreParLot + coutReglementCoproParLot + coutCompteursParLot) * nbLotsEffectif + coutTravauxGlobal).toLocaleString('fr-FR')} {'\u20AC'}
                     </span>
                   </div>
-                </div>
-              )}
+              </ModalPanel>
             </div>
           )}
         </div>
 
-        <div id="contact" className="section">
-          <h2 className="section-title">{"Récupérer les données manquantes"}</h2>
-          <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />
-        </div>
-
-        {!peutCalculer && !isTravauxLourds && !bien.prix_fai && (
-          <div className="section"><div className="nc-warning">Le prix est manquant — impossible de calculer.</div></div>
-        )}
         {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
           <>
-            <div className="section">
-              <h2 className="section-title">Simulateur de financement</h2>
-              <div className="simu-grid">
+            <div id="nav-financement" className="section">
+              <h2 className="section-title">Simulateur de Financement</h2>
                 <div>
                   {prixCibleCombine && (
                     <div className="param-group">
@@ -2403,7 +2620,7 @@ export default function FicheBienPage() {
                     <span className="param-hint">{"Montant emprunt\u00E9"} : {fmt(montantEmprunte)} {'\u20AC'}</span>
                   </div>
                   <div className="param-group">
-                    <label className="param-label">Taux credit (%)</label>
+                    <label className="param-label">{"Taux cr\u00E9dit (%)"}</label>
                     <input className="param-input" type="number" step="0.01" value={taux} onChange={e => setTaux(Number(e.target.value))} />
                   </div>
                   <div className="param-group">
@@ -2411,160 +2628,37 @@ export default function FicheBienPage() {
                     <input className="param-input" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(Number(e.target.value))} />
                   </div>
                   <div className="param-group">
-                    <label className="param-label">Duree — {duree} ans</label>
+                    <label className="param-label">{"Dur\u00E9e"} — {duree} ans</label>
                     <div className="slider-wrap">
                       <input type="range" className="slider" min={5} max={30} step={1} value={duree} onChange={e => setDuree(Number(e.target.value))} />
                       <div className="slider-labels"><span>5 ans</span><span>30 ans</span></div>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <table className="results-table">
-                    <thead>
-                      <tr>
-                        <th></th>
-                        <th>Mensuel</th>
-                        <th>Annuel</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {peutCalculer && !isTravauxLourds ? (() => {
-                        const coproMens = bien.charges_copro || 0
-                        const tfAnn = bien.taxe_fonc_ann || 0
-                        const loyerMensuel = bien.loyer || 0
-                        const chargesRecMens = bien.charges_rec || 0
-                        const isCC = bien.type_loyer === 'CC'
-
-                        // Couleur selon statut : rouge=manquant, jaune=renseigné 1 user, vert=validé 2+
-                        function cfColor(champ: string, val: number) {
-                          if (!val) return '#c0392b' // rouge — manquant
-                          const s = champsStatut[champ]
-                          if (s?.statut === 'vert') return '#1a7a40' // vert — validé
-                          if (s?.statut === 'jaune') return '#a06010' // jaune — 1 user
-                          return '#1a1210' // noir — donnée source
-                        }
-                        function cfBorder(champ: string, val: number) {
-                          if (!val) return '#c0392b'
-                          const s = champsStatut[champ]
-                          if (s?.statut === 'vert') return '#1a7a40'
-                          if (s?.statut === 'jaune') return '#f0c040'
-                          return '#e8e2d8'
-                        }
-                        function cfBg(champ: string, val: number) {
-                          if (!val) return '#fde8e8'
-                          const s = champsStatut[champ]
-                          if (s?.statut === 'vert') return '#eafaf1'
-                          if (s?.statut === 'jaune') return '#fffdf0'
-                          return '#faf8f5'
-                        }
-                        const editStyle = (champ: string, val: number) => ({ padding: '3px 6px', borderRadius: '4px', border: `1.5px solid ${cfBorder(champ, val)}`, fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: cfBg(champ, val), color: '#1a1210', outline: 'none', width: '65px', textAlign: 'right' as const })
-
-                        // Cellule liée mensuel/annuel
-                        function LinkedCell({ champ, valMens, isMensuel, signe }: { champ: string; valMens: number; isMensuel: boolean; signe: string }) {
-                          const val = isMensuel ? valMens : valMens * 12
-                          const hasVal = valMens > 0
-                          if (hasVal) {
-                            return <td style={{ color: signe === '-' ? '#c0392b' : '#1a7a40' }}>{signe}{fmt(Math.round(val))} {'\u20AC'}</td>
-                          }
-                          return (
-                            <td>
-                              <input
-                                type="number" placeholder="0"
-                                style={editStyle(champ, 0)}
-                                onBlur={async e => {
-                                  const v = Number(e.target.value)
-                                  if (!v || !userToken) return
-                                  const dbVal = isMensuel ? v : Math.round(v / 12)
-                                  const patch: Record<string, number> = {}
-                                  if (champ === 'taxe_fonc_ann') {
-                                    patch.taxe_fonc_ann = isMensuel ? v * 12 : v
-                                  } else {
-                                    patch[champ] = dbVal
-                                  }
-                                  await fetch(`/api/biens/${bien.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` }, body: JSON.stringify(patch) })
-                                  ;(bien as any)[champ] = champ === 'taxe_fonc_ann' ? (isMensuel ? v * 12 : v) : dbVal
-                                }}
-                              /> {'\u20AC'}
-                            </td>
-                          )
-                        }
-
-                        return (
-                          <>
-                            {/* Loyer */}
-                            <tr>
-                              <td>{"Loyer encaiss\u00E9"}{isCC ? ' (CC)' : ' (HC)'}</td>
-                              <td style={{ color: '#1a7a40' }}>+{fmt(loyerMensuel)} {'\u20AC'}</td>
-                              <td style={{ color: '#1a7a40' }}>+{fmt(loyerMensuel * 12)} {'\u20AC'}</td>
-                            </tr>
-                            {/* Charges récup */}
-                            <tr>
-                              <td>{isCC ? "Charges r\u00E9cup. (incluses CC)" : "Charges r\u00E9cup."}</td>
-                              <LinkedCell champ="charges_rec" valMens={chargesRecMens} isMensuel={true} signe={isCC ? '-' : '+'} />
-                              <LinkedCell champ="charges_rec" valMens={chargesRecMens} isMensuel={false} signe={isCC ? '-' : '+'} />
-                            </tr>
-                            {/* Charges copro */}
-                            <tr>
-                              <td>{"Charges copropri\u00E9t\u00E9"}</td>
-                              <LinkedCell champ="charges_copro" valMens={coproMens} isMensuel={true} signe="-" />
-                              <LinkedCell champ="charges_copro" valMens={coproMens} isMensuel={false} signe="-" />
-                            </tr>
-                            {/* Taxe foncière */}
-                            <tr>
-                              <td>{"Taxe fonci\u00E8re"}</td>
-                              <LinkedCell champ="taxe_fonc_ann" valMens={Math.round(tfAnn / 12)} isMensuel={true} signe="-" />
-                              <LinkedCell champ="taxe_fonc_ann" valMens={Math.round(tfAnn / 12)} isMensuel={false} signe="-" />
-                            </tr>
-                            {/* Crédit */}
-                            <tr>
-                              <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
-                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit)} {'\u20AC'}</td>
-                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
-                            </tr>
-                            <tr>
-                              <td>Assurance emprunteur</td>
-                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteAss)} {'\u20AC'}</td>
-                              <td style={{ color: '#c0392b' }}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
-                            </tr>
-                            {/* Total */}
-                            <tr className="results-total">
-                              <td style={{ fontWeight: 700 }}>{"= Cashflow brut"}</td>
-                              <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 700 }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}</td>
-                              <td style={{ color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 800, fontSize: '16px', fontFamily: "'Fraunces', serif" }}>{cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}</td>
-                            </tr>
-                          </>
-                        )
-                      })() : (
-                        <>
-                          <tr>
-                            <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
-                            <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteCredit)} {'\u20AC'}</td>
-                            <td style={{ color: '#c0392b' }}>{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
-                          </tr>
-                          <tr>
-                            <td>Assurance emprunteur</td>
-                            <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteAss)} {'\u20AC'}</td>
-                            <td style={{ color: '#c0392b' }}>{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
-                          </tr>
-                          <tr className="results-total">
-                            <td>{"Total mensualit\u00E9"}</td>
-                            <td style={{ color: '#c0392b', fontWeight: 700 }}>{fmt(mensualiteTotale)} {'\u20AC'}</td>
-                            <td style={{ color: '#c0392b', fontWeight: 600 }}>{fmt(mensualiteTotale * 12)} {'\u20AC'}</td>
-                          </tr>
-                        </>
-                      )}
-                    </tbody>
-                  </table>
-                  {profil && <div className="profil-bar">Parametres pre-remplis depuis votre profil — modifiables dans Mon profil</div>}
+                {/* Mensualités */}
+                <div style={{ background: '#f7f4f0', borderRadius: '10px', padding: '16px 18px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>
+                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{"Mensualité crédit"}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{fmt(mensualiteCredit)} {'\u20AC'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>
+                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>Assurance emprunteur</span>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{fmt(mensualiteAss)} {'\u20AC'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a1210' }}>{"Mensualité totale"}</span>
+                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: '#c0392b' }}>{fmt(mensualiteTotale)} {'\u20AC'}<span style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginLeft: '4px' }}>/mois</span></span>
+                  </div>
                 </div>
-              </div>
+                {profil && <div className="profil-bar">{"Paramètres pré-remplis depuis votre profil — modifiables dans Mon profil"}</div>}
             </div>
-
           </>
         )}
+        </div>{/* fin col droite */}
+        </div>{/* fin two-cols nav-estimation */}
 
         {bien.prix_fai && (
-          <div>
+          <div id="nav-fiscalite">
           <div className="section">
             <h2 className="section-title">Analyse Fiscale</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
@@ -2589,7 +2683,7 @@ export default function FicheBienPage() {
                 ))}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '13px', color: '#7a6a60' }}>Frais agence revente :</span>
+                <span style={{ fontSize: '13px', color: '#7a6a60' }} title={"0% = vente directe ou frais charge acqu\u00E9reur (par d\u00E9faut). Augmentez uniquement si les frais sont \u00E0 la charge du vendeur."}>Frais agence vendeur :</span>
                 <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
                   onChange={e => setFraisAgenceRevente(Number(e.target.value))}
                   className="param-input" style={{ width: '60px', textAlign: 'right' }} />
@@ -2612,13 +2706,17 @@ export default function FicheBienPage() {
                 </div>
               )}
               <div className="pnl-grid">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre regime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
                 <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
               </div>
             </div>
           </div>
           </div>
         )}
+
+        <ModalPanel open={showContact} onClose={() => setShowContact(false)} title={"R\u00E9cup\u00E9rer les donn\u00E9es manquantes"}>
+          <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />
+        </ModalPanel>
 
       </div>
     </Layout>

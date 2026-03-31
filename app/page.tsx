@@ -693,6 +693,37 @@ export default function Home() {
       <script dangerouslySetInnerHTML={{ __html: `
         (function(){var o=new IntersectionObserver(function(e){e.forEach(function(i){if(i.isIntersecting){i.target.classList.add('visible');o.unobserve(i.target)}})},{threshold:0.1});document.querySelectorAll('.fade-in').forEach(function(el){o.observe(el)})})()
       `}} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Mon Petit MDB",
+        "url": "https://www.monpetitmdb.fr",
+        "description": "Plateforme de sourcing immobilier pour investisseurs particuliers. M\u00E9thodologie marchand de biens.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.monpetitmdb.fr/biens?search={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Mon Petit MDB",
+        "url": "https://www.monpetitmdb.fr",
+        "description": "Sourcing immobilier pour investisseurs particuliers avec la m\u00E9thodologie marchand de biens."
+      }) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Mon Petit MDB",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "offers": [
+          { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "EUR", "description": "Listing biens, fiches complètes, watchlist 10 biens, Memo IA 5 msg/jour" },
+          { "@type": "Offer", "name": "Pro", "price": "19", "priceCurrency": "EUR", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "19", "priceCurrency": "EUR", "billingDuration": "P1M" }, "description": "1 stratégie MDB, simulateur fiscal, estimation DVF, scénario revente, Memo IA 50 msg/jour" },
+          { "@type": "Offer", "name": "Expert", "price": "49", "priceCurrency": "EUR", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "49", "priceCurrency": "EUR", "billingDuration": "P1M" }, "description": "Toutes les stratégies, tous les régimes fiscaux, watchlist illimitée, Memo IA illimité, alertes" }
+        ]
+      }) }} />
     </>
   )
 }

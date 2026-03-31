@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 
 const faqs = [
@@ -40,6 +40,21 @@ const faqs = [
 
 export default function FaqPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
+
+  useEffect(() => { document.title = 'Questions fr\u00E9quentes | Mon Petit MDB' }, [])
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  }
 
   return (
     <Layout>
@@ -94,6 +109,7 @@ export default function FaqPage() {
           ))}
         </div>
       </div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
     </Layout>
   )
 }
