@@ -177,7 +177,7 @@ Redige l'article complet en HTML (h1, h2, h3, p, ul, li, strong, blockquote, tab
     },
     body: JSON.stringify({
       model: 'claude-opus-4-20250514',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     }),
@@ -265,7 +265,7 @@ IMPORTANT : retourne UNIQUEMENT le HTML corrige, sans commentaire, sans explicat
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: reviewPrompt,
         messages: [{ role: 'user', content: `Voici l'article a relire et corriger :\n\n${html}` }],
       }),
