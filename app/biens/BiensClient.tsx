@@ -59,7 +59,7 @@ export default function BiensPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
-  const [hoverPhoto, setHoverPhoto] = useState<{ url: string, x: number, y: number } | null>(null)
+  const [hoverPhoto, setHoverPhoto] = useState<{ urls: string[], x: number, y: number, idx: number } | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
@@ -724,7 +724,7 @@ export default function BiensPage() {
                             {watchlistIds.has(bien.id) ? '♥' : '♡'}
                           </button>
                         </td>
-                        <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); setHoverPhoto({ url: bien.photo_url, x: r.left + r.width / 2, y: r.top + r.height / 2 }) }} onMouseLeave={() => setHoverPhoto(null)} /> : <div className="list-thumb-empty">-</div>}</td>
+                        <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); const md = typeof (bien as any).moteurimmo_data === 'string' ? JSON.parse((bien as any).moteurimmo_data || '{}') : ((bien as any).moteurimmo_data || {}); const urls = md.pictureUrls?.length > 0 ? md.pictureUrls : [bien.photo_url]; setHoverPhoto({ urls, x: r.left + r.width / 2, y: r.top + r.height / 2, idx: 0 }) }} onMouseLeave={() => setHoverPhoto(null)} /> : <div className="list-thumb-empty">-</div>}</td>
                         <td className="sticky-col" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
                           <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
@@ -893,17 +893,37 @@ export default function BiensPage() {
           </div>
         </div>
       )}
-      {/* Overlay photo zoom */}
+      {/* Overlay photo carrousel */}
       {hoverPhoto && (
-        <div style={{
-          position: 'fixed', zIndex: 99999, pointerEvents: 'none',
-          left: hoverPhoto.x, top: hoverPhoto.y,
-          transform: 'translate(-50%, -50%)',
-        }}>
-          <img src={hoverPhoto.url} alt="" style={{
-            width: '420px', height: '300px', objectFit: 'cover',
-            borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
-          }} />
+        <div
+          style={{
+            position: 'fixed', zIndex: 99999,
+            left: hoverPhoto.x, top: hoverPhoto.y,
+            transform: 'translate(-50%, -50%)',
+          }}
+          onMouseLeave={() => setHoverPhoto(null)}
+        >
+          <div style={{ position: 'relative', width: '420px', height: '300px' }}>
+            <img src={hoverPhoto.urls[hoverPhoto.idx]} alt="" style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
+            }} />
+            {hoverPhoto.urls.length > 1 && (
+              <>
+                <button onClick={() => setHoverPhoto(prev => prev ? { ...prev, idx: prev.idx > 0 ? prev.idx - 1 : prev.urls.length - 1 } : null)}
+                  style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                  {'\u2039'}
+                </button>
+                <button onClick={() => setHoverPhoto(prev => prev ? { ...prev, idx: prev.idx < prev.urls.length - 1 ? prev.idx + 1 : 0 } : null)}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                  {'\u203A'}
+                </button>
+                <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: 10, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>
+                  {hoverPhoto.idx + 1}/{hoverPhoto.urls.length}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </Layout>
