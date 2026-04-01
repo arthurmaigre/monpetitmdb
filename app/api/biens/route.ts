@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   dpe, annee_construction,
   photo_storage_path, photo_url,
   estimation_prix_total, lots_data, nb_lots, monopropriete, compteurs_individuels,
-  moteurimmo_data,
+  moteurimmo_data, latitude, longitude,
   created_at, updated_at
 `)
       .in('id', idList)
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   dpe, annee_construction,
   photo_storage_path, photo_url,
   estimation_prix_total, lots_data, nb_lots, monopropriete, compteurs_individuels,
-  moteurimmo_data,
+  moteurimmo_data, latitude, longitude,
   created_at, updated_at
 `)
     .eq('statut', statut)
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
   const strategie = searchParams.get('strategie')
   const page = parseInt(searchParams.get('page') || '1')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
+  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 2000)
   const from = (page - 1) * limit
 
   const locationType = searchParams.get('locationType')

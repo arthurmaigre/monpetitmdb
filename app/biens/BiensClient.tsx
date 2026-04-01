@@ -1,9 +1,12 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
+
+const MapView = dynamic(() => import('./MapView'), { ssr: false, loading: () => <div style={{ height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#faf8f5', borderRadius: '16px', color: '#7a6a60' }}>Chargement de la carte...</div> })
 import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
@@ -29,7 +32,7 @@ export default function BiensPage() {
   const [metropoles, setMetropoles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [view, setView] = useState<'grid' | 'list'>(saved.current?.view || 'grid')
+  const [view, setView] = useState<'grid' | 'list' | 'map'>(saved.current?.view || 'grid')
   const [filtersOpen, setFiltersOpen] = useState(true)
   const [strategie, setStrategie] = useState(saved.current?.strategie || '')
   const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
@@ -118,10 +121,10 @@ export default function BiensPage() {
   }, [loading, allBiens])
 
   // Construire l'URL API avec filtres
-  function buildApiUrl(page: number) {
+  function buildApiUrl(page: number, mapMode = false) {
     const params = new URLSearchParams()
     params.set('page', String(page))
-    params.set('limit', String(PAGE_SIZE))
+    params.set('limit', mapMode ? '2000' : String(PAGE_SIZE))
     if (strategie) params.set('strategie', strategie)
     if (selectedCommune) {
       params.set('locationType', selectedCommune.type || 'commune')
@@ -151,7 +154,7 @@ export default function BiensPage() {
     setError(null)
     setCurrentPage(1)
     scrollRestored.current = false
-    fetch(buildApiUrl(1))
+    fetch(buildApiUrl(1, view === 'map'))
       .then(r => { if (!r.ok) throw new Error('Erreur serveur'); return r.json() })
       .then(d => {
         setAllBiens(d.biens || [])
@@ -160,7 +163,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, view])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -532,6 +535,7 @@ export default function BiensPage() {
           <div className="view-toggle">
             <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
             <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
+            <button className={`view-btn ${view === 'map' ? 'active' : ''}`} onClick={() => setView('map')}>Carte</button>
           </div>
           {(prixMin || prixMax || surfaceMin || surfaceMax || rendMin || scoreTravauxMin || typeBien !== 'Tous' || selectedCommune) && (
             <button
@@ -628,6 +632,8 @@ export default function BiensPage() {
                   {"\u00C9largir les filtres"}
                 </button>
               </div>
+            ) : view === 'map' ? (
+              <MapView biens={filtered} userToken={userToken} watchlistIds={watchlistIds} onWatchlistChange={(bienId, added) => { setWatchlistIds(prev => { const next = new Set(prev); added ? next.add(bienId) : next.delete(bienId); return next }) }} />
             ) : view === 'grid' ? (
               <div className="grid">
                 {filtered.map(bien => (

@@ -13,6 +13,7 @@ interface Props {
   userToken?: string | null
   onWatchlistChange?: (bienId: string, added: boolean) => void
   extraTitleRight?: React.ReactNode
+  compact?: boolean
 }
 
 function formatPrix(n: number) {
@@ -46,7 +47,7 @@ function ChevronRight() {
   )
 }
 
-export default function BienCard({ bien, inWatchlist = false, userToken, onWatchlistChange, extraTitleRight }: Props) {
+export default function BienCard({ bien, inWatchlist = false, userToken, onWatchlistChange, extraTitleRight, compact = false }: Props) {
   const [isInWatchlist, setIsInWatchlist] = useState(inWatchlist)
   const [loading, setLoading] = useState(false)
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
@@ -243,8 +244,11 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
           <MetroBadge metropole={bien.metropole} />
         </span>
         <span style={{
-          position: 'absolute', top: theme.spacing[3], right: theme.spacing[3],
-          display: 'flex', flexDirection: 'column', gap: theme.spacing[1], alignItems: 'flex-end',
+          position: 'absolute',
+          ...(compact
+            ? { bottom: theme.spacing[3], left: theme.spacing[3] }
+            : { top: theme.spacing[3], right: theme.spacing[3] }),
+          display: 'flex', flexDirection: 'column', gap: theme.spacing[1], alignItems: compact ? 'flex-start' : 'flex-end',
         }}>
           {!isTravaux && <RendementBadge rendement={bien.rendement_brut} />}
         </span>
