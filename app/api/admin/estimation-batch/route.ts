@@ -13,8 +13,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '50'), 200)
+  // Verifier si le cron est active dans cron_config
+  const { data: config } = await supabaseAdmin
+    .from('cron_config')
+    .select('enabled')
+    .eq('id', 'estimation')
+    .maybeSingle()
+  if (config && !config.enabled) {
+    return NextResponse.json({ message: 'Cron estimation desactive', skipped: true })
+  }
+
+  const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '10'), 200)
   const result = await runEstimationBatch(limit)
+
+  // Mettre a jour last_run dans cron_config
+  await supabaseAdmin
+    .from('cron_config')
+    .update({ last_run: new Date().toISOString(), last_result: result })
+    .eq('id', 'estimation')
+
   if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
   return NextResponse.json(result)
 }
