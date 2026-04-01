@@ -62,7 +62,7 @@ function parseScoreResponse(text: string): { score: number; commentaire: string 
     if (!score || score < 1 || score > 5) return null
     return {
       score: Math.round(score),
-      commentaire: String(obj.commentaire || '').slice(0, 500),
+      commentaire: String(obj.commentaire || '').slice(0, 800),
     }
   } catch {
     return null
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
 
         const message = await anthropic.messages.create({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 300,
+          max_tokens: 500,
           messages: [{ role: 'user', content: contentParts }],
         })
 

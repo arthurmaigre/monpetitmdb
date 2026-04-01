@@ -104,7 +104,7 @@ def run():
 
             msg = client.messages.create(
                 model="claude-haiku-4-5-20251001",
-                max_tokens=150,
+                max_tokens=500,
                 messages=[{"role": "user", "content": f"{SCORE_PROMPT}\n\nTitre: {title}\nDescription: {desc}\nDPE: {b.get('dpe') or 'NC'}\nAnnee: {b.get('annee_construction') or 'NC'}\nPrix: {b.get('prix_fai')} | Surface: {b.get('surface')}m2"}]
             )
             raw = re.sub(r"`+json|`+", "", msg.content[0].text.strip())

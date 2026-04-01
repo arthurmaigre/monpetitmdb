@@ -960,12 +960,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               ]} />
           )}
           {regime === 'marchand_de_biens' && (
-            <ExpandableTaxRow label={"TVA sur marge (20%)"} total={Math.round(tvaMarge)} isFree={isFree}
-              info={`TVA calcul\u00E9e \u00AB\u00A0en dedans\u00A0\u00BB sur la marge (revente net vendeur - achat net vendeur).`}
-              details={[
-                { label: `Marge (${fmt(prixReventeNetVendeur)} - ${fmt(prixNetVendeurAchat)})`, value: `${fmt(Math.round(Math.max(0, prixReventeNetVendeur - prixNetVendeurAchat)))}\u00A0\u20AC` },
-                { label: `TVA (marge \u00D7 20/120)`, value: `-${fmt(Math.round(tvaMarge))}\u00A0\u20AC` },
-              ]} />
+            <Row label={"TVA sur marge (20%)"} value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge
+              info={`TVA calcul\u00E9e \u00AB\u00A0en dedans\u00A0\u00BB : marge (${fmt(prixReventeNetVendeur)} - ${fmt(prixNetVendeurAchat)} = ${fmt(Math.round(Math.max(0, prixReventeNetVendeur - prixNetVendeurAchat)))}\u00A0\u20AC) \u00D7 20/120 = ${fmt(Math.round(tvaMarge))}\u00A0\u20AC.`} />
           )}
           {regime === 'sci_is' && (
             <ExpandableTaxRow label={"IS sur PV (15% / 25%)"} total={Math.round(isPV)} isFree={isFree}
@@ -1030,7 +1026,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
             <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}
             </div>
-            {(
+            {!isTravauxLourds && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                 <span style={{ color: '#555' }}>{"Cash Flow locatif net d\u2019imp\u00F4t cumul\u00E9"}</span>
                 <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
@@ -1040,18 +1036,6 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               <span style={{ color: '#555' }}>{pvNette >= 0 ? "Plus-value nette d\u2019imp\u00F4t" : "Moins-value nette d\u2019imp\u00F4t"}</span>
               <span style={{ fontWeight: 600, color: pvNette >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{pvNette >= 0 ? '+' : ''}{fmt(pvNette)} {'\u20AC'}</span>
             </div>
-            {interetsCumules > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                <span style={{ color: '#555' }}>{`Int\u00E9r\u00EAts d'emprunt (${dur} an${dur > 1 ? 's' : ''})`}</span>
-                <span style={{ fontWeight: 600, color: '#c0392b' }} className={isFree ? 'val-blur' : ''}>-{fmt(interetsCumules)} {'\u20AC'}</span>
-              </div>
-            )}
-            {fraisBancairesRevente > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                <span style={{ color: '#555' }}>Frais de dossier bancaire</span>
-                <span style={{ fontWeight: 600, color: '#c0392b' }} className={isFree ? 'val-blur' : ''}>-{fmt(fraisBancairesRevente)} {'\u20AC'}</span>
-              </div>
-            )}
             <div style={{ borderTop: '2px solid rgba(0,0,0,0.1)', paddingTop: '8px' }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: profitNet >= 0 ? '#1a7a40' : '#c0392b', marginBottom: '4px' }} className={isFree ? 'val-blur' : ''}>
                 {profitNet >= 0 ? '+' : ''}{fmt(profitNet)} {'\u20AC'}
@@ -1502,9 +1486,9 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 
         {/* Colonne gauche : Prix FAI */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9"}</div>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210' }}>{fmt(prixFai)} {'\u20AC'}</div>
-          {surface ? <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px' }}>{fmt(Math.round(prixFai / surface))} {'\u20AC'}/m{'\u00B2'}</div> : null}
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9 (FAI)"}</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210', whiteSpace: 'nowrap' }}>{fmt(prixFai)}{'\u00A0\u20AC'}</div>
+          {surface ? <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px', whiteSpace: 'nowrap' }}>{fmt(Math.round(prixFai / surface))}{'\u00A0\u20AC'}/m{'\u00B2'}</div> : null}
         </div>
 
         {/* Colonne centrale : Ecart */}
@@ -1527,8 +1511,8 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
           <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             {isAjuste ? "Mon estimation" : "Prix de revente estim\u00E9"}
           </div>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210' }}><V>{fmt(prixActuel)} {'\u20AC'}</V></div>
-          <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px' }}><V>{fmt(prixM2Actuel)} {'\u20AC'}/m{"²"}</V></div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210', whiteSpace: 'nowrap' }}><V>{fmt(prixActuel)}{'\u00A0\u20AC'}</V></div>
+          <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px', whiteSpace: 'nowrap' }}><V>{fmt(prixM2Actuel)}{'\u00A0\u20AC'}/m{'\u00B2'}</V></div>
           {isAjuste && !isFree && (
             <div style={{ fontSize: '11px', color: '#b0a898', marginTop: '4px' }}>
               DVF : {fmt(estimation.prix_total)} {'\u20AC'}
@@ -2959,9 +2943,11 @@ export default function FicheBienPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               {prixCibleCombine && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#7a6a60' }}>Base de calcul :</span>
-                  <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} style={{ minWidth: '90px', padding: '8px 16px' }} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                  <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} style={{ minWidth: '90px', padding: '8px 16px' }} onClick={() => setBaseCalc('cible')}>Prix cible</button>
+                  <span style={{ fontSize: '13px', color: '#7a6a60', whiteSpace: 'nowrap' }}>Base de calcul :</span>
+                  <div className="toggle-row" style={{ minWidth: '220px' }}>
+                    <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
+                    <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
+                  </div>
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

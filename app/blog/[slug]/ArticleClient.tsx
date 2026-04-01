@@ -25,7 +25,6 @@ interface RelatedArticle {
 
 export default function ArticleClient({ article, related }: { article: Article; related: RelatedArticle[] }) {
   const [copied, setCopied] = useState(false)
-
   const toc = useMemo(() => {
     if (!article?.content) return []
     const headings: { id: string; text: string; level: number }[] = []
@@ -38,6 +37,18 @@ export default function ArticleClient({ article, related }: { article: Article; 
     }
     return headings
   }, [article])
+
+  // Si le sommaire a <= 15 entrees, tout deplier par defaut
+  const defaultExpanded = useMemo(() => {
+    if (toc.length <= 15) {
+      const all = new Set<number>()
+      let h2i = -1
+      toc.forEach(h => { if (h.level === 2) { h2i++; all.add(h2i) } })
+      return all
+    }
+    return new Set<number>()
+  }, [toc])
+  const [expandedH2, setExpandedH2] = useState<Set<number>>(defaultExpanded)
 
   const contentWithIds = useMemo(() => {
     if (!article?.content) return ''
@@ -76,13 +87,19 @@ export default function ArticleClient({ article, related }: { article: Article; 
   return (
     <Layout>
       <style>{`
-        .guide-layout { max-width: 1100px; margin: 0 auto; padding: 48px 24px 100px; display: grid; grid-template-columns: 220px 1fr; gap: 48px; }
-        .guide-sidebar { position: sticky; top: 100px; align-self: start; }
-        .guide-sidebar-toc { background: #f7f4f0; border-radius: 12px; padding: 20px; }
-        .guide-sidebar-title { font-size: 11px; font-weight: 700; color: #1a1210; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
-        .guide-sidebar-toc a { display: block; font-size: 13px; color: #7a6a60; text-decoration: none; padding: 4px 0; line-height: 1.4; transition: color 150ms ease; }
+        .guide-wrap { max-width: 1100px; margin: 0 auto; padding: 48px 24px 100px; }
+        .guide-layout { display: grid; grid-template-columns: 220px 1fr; gap: 48px; }
+        .guide-sidebar { position: sticky; top: 100px; align-self: start; max-height: calc(100vh - 120px); overflow-y: auto; }
+        .guide-sidebar::-webkit-scrollbar { width: 4px; }
+        .guide-sidebar::-webkit-scrollbar-thumb { background: #d4cdc4; border-radius: 4px; }
+        .guide-sidebar-toc { background: #f7f4f0; border-radius: 12px; padding: 16px 20px; }
+        .guide-sidebar-title { font-size: 11px; font-weight: 700; color: #1a1210; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+        .guide-sidebar-toc a { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: #7a6a60; text-decoration: none; padding: 3px 0; line-height: 1.4; transition: color 150ms ease; }
+        .guide-sidebar-toc a::before { content: '\u2022'; color: #d4cdc4; font-size: 10px; flex-shrink: 0; }
         .guide-sidebar-toc a:hover { color: #c0392b; }
-        .guide-sidebar-toc a.toc-h3 { padding-left: 14px; font-size: 12px; }
+        .guide-sidebar-toc a:hover::before { color: #c0392b; }
+        .guide-sidebar-toc a.toc-h3 { padding-left: 14px; font-size: 11px; }
+        .guide-sidebar-toc a.toc-h3::before { content: '\u2013'; font-size: 9px; }
         .guide-main { min-width: 0; }
 
         .guide-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #7a6a60; margin-bottom: 28px; flex-wrap: wrap; }
@@ -145,59 +162,92 @@ export default function ArticleClient({ article, related }: { article: Article; 
 
         @media (max-width: 900px) {
           .guide-layout { grid-template-columns: 1fr; gap: 0; }
-          .guide-sidebar { position: static; margin-bottom: 24px; }
+          .guide-sidebar { position: static; margin-bottom: 24px; max-height: none; overflow: visible; }
           .guide-title { font-size: 28px; }
           .guide-content { font-size: 16px; }
           .guide-related-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
-      <div className="guide-layout">
-        <aside className="guide-sidebar">
-          {toc.length >= 3 && (
-            <nav className="guide-sidebar-toc">
-              <div className="guide-sidebar-title">Sommaire</div>
-              {toc.map((h, i) => (
-                <a key={i} href={`#${h.id}`} className={h.level === 3 ? 'toc-h3' : ''}>{h.text}</a>
-              ))}
-            </nav>
-          )}
-        </aside>
+      <div className="guide-wrap">
+        {/* Header pleine largeur */}
+        <nav className="guide-breadcrumb">
+          <a href="/">Accueil</a>
+          <span className="guide-breadcrumb-sep">{'>'}</span>
+          <a href="/blog">Conseils</a>
+          <span className="guide-breadcrumb-sep">{'>'}</span>
+          <span className="guide-breadcrumb-current">{article.title}</span>
+        </nav>
 
-        <main className="guide-main">
-          <nav className="guide-breadcrumb">
-            <a href="/">Accueil</a>
-            <span className="guide-breadcrumb-sep">{'>'}</span>
-            <a href="/blog">Conseils</a>
-            <span className="guide-breadcrumb-sep">{'>'}</span>
-            <span className="guide-breadcrumb-current">{article.title}</span>
-          </nav>
+        {article.category && (
+          <span className="guide-cat" style={{ background: catStyle(article.category).bg, color: catStyle(article.category).color }}>
+            {article.category}
+          </span>
+        )}
+        <h1 className="guide-title">{article.title}</h1>
 
-          {article.category && (
-            <span className="guide-cat" style={{ background: catStyle(article.category).bg, color: catStyle(article.category).color }}>
-              {article.category}
-            </span>
-          )}
-          <h1 className="guide-title">{article.title}</h1>
-
-          <div className="guide-meta">
-            <div className="guide-avatar">L</div>
-            <div>
-              <div className="guide-author-name">{"La r\u00e9daction Mon Petit MDB"}</div>
-              <div className="guide-author-date">{formatDate(article.published_at)}</div>
-            </div>
-            <div className="guide-read">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              {readTime(article.word_count)} de lecture
-              {article.word_count && <span className="guide-wc">{'\u00b7'} {article.word_count.toLocaleString('fr-FR')} mots</span>}
-            </div>
+        <div className="guide-meta">
+          <div className="guide-avatar">L</div>
+          <div>
+            <div className="guide-author-name">{"La r\u00e9daction Mon Petit MDB"}</div>
+            <div className="guide-author-date">{formatDate(article.published_at)}</div>
           </div>
+          <div className="guide-read">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {readTime(article.word_count)} de lecture
+            {article.word_count && <span className="guide-wc">{'\u00b7'} {article.word_count.toLocaleString('fr-FR')} mots</span>}
+          </div>
+        </div>
 
-          {article.cover_url && (
-            <img src={article.cover_url} alt={article.title} style={{ width: '100%', height: 'auto', borderRadius: '16px', marginBottom: '32px', maxHeight: '400px', objectFit: 'cover' }} />
-          )}
+        {/* Grille 2 colonnes : sommaire + contenu */}
+        <div className="guide-layout">
+          <aside className="guide-sidebar">
+            {toc.length >= 3 && (
+              <nav className="guide-sidebar-toc">
+                <div className="guide-sidebar-title">Sommaire</div>
+                {(() => {
+                  const excludePatterns = /^(faq|sources|conclusion)/i
+                  const filtered = toc.filter(h => !excludePatterns.test(h.text.trim()))
+                  const result: React.ReactNode[] = []
+                  let h2Index = -1
 
-          <div className="guide-content" dangerouslySetInnerHTML={{ __html: contentWithIds }} />
+                  filtered.forEach((h, i) => {
+                    if (h.level === 2) {
+                      h2Index++
+                      const currentH2 = h2Index
+                      const hasChildren = filtered.some((next, j) => j > i && next.level === 3 && !filtered.slice(i + 1, j).some(b => b.level === 2))
+                      const isExpanded = expandedH2.has(currentH2)
+
+                      result.push(
+                        <div key={`h2-${i}`} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                          <a href={`#${h.id}`} style={{ flex: 1 }}>{h.text}</a>
+                          {hasChildren && (
+                            <span
+                              onClick={(e) => { e.preventDefault(); setExpandedH2(prev => { const next = new Set(prev); next.has(currentH2) ? next.delete(currentH2) : next.add(currentH2); return next }) }}
+                              style={{ fontSize: '9px', color: '#b0a898', cursor: 'pointer', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0, padding: '2px' }}
+                            >{'\u25BC'}</span>
+                          )}
+                        </div>
+                      )
+                    } else if (h.level === 3 && expandedH2.has(h2Index)) {
+                      result.push(
+                        <a key={`h3-${i}`} href={`#${h.id}`} className="toc-h3">{h.text}</a>
+                      )
+                    }
+                  })
+
+                  return result
+                })()}
+              </nav>
+            )}
+          </aside>
+
+          <main className="guide-main">
+            {article.cover_url && (
+              <img src={article.cover_url} alt={article.title} style={{ width: '100%', height: 'auto', borderRadius: '16px', marginBottom: '32px', maxHeight: '400px', objectFit: 'cover' }} />
+            )}
+
+            <div className="guide-content" dangerouslySetInnerHTML={{ __html: contentWithIds }} />
 
           <div className="guide-cta">
             <div className="guide-cta-title">{"Trouvez votre prochain investissement"}</div>
@@ -245,8 +295,9 @@ export default function ArticleClient({ article, related }: { article: Article; 
           <div className="guide-footer">
             <a href="/blog">{"Voir tous les articles \u2192"}</a>
           </div>
-        </main>
-      </div>
+          </main>
+        </div>{/* fin guide-layout */}
+      </div>{/* fin guide-wrap */}
     </Layout>
   )
 }

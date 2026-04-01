@@ -111,6 +111,11 @@ export async function GET(request: NextRequest) {
   if (rendement_min) { query = query.gte('rendement_brut', Number(rendement_min) / 100); countQuery = countQuery.gte('rendement_brut', Number(rendement_min) / 100) }
   if (type_bien) { query = query.eq('type_bien', type_bien); countQuery = countQuery.eq('type_bien', type_bien) }
 
+  const surface_min = searchParams.get('surface_min')
+  const surface_max = searchParams.get('surface_max')
+  if (surface_min) { query = query.gte('surface', Number(surface_min)); countQuery = countQuery.gte('surface', Number(surface_min)) }
+  if (surface_max) { query = query.lte('surface', Number(surface_max)); countQuery = countQuery.lte('surface', Number(surface_max)) }
+
   const score_travaux_min = searchParams.get('score_travaux_min')
   if (score_travaux_min) {
     query = query.gte('score_travaux', Number(score_travaux_min))

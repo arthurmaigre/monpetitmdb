@@ -42,6 +42,8 @@ export default function BiensPage() {
   const [typeBien, setTypeBien] = useState(saved.current?.typeBien || 'Tous')
   const [prixMin, setPrixMin] = useState(saved.current?.prixMin || '')
   const [prixMax, setPrixMax] = useState(saved.current?.prixMax || '')
+  const [surfaceMin, setSurfaceMin] = useState(saved.current?.surfaceMin || '')
+  const [surfaceMax, setSurfaceMax] = useState(saved.current?.surfaceMax || '')
   const [rendMin, setRendMin] = useState(saved.current?.rendMin || '')
   const [scoreTravauxMin, setScoreTravauxMin] = useState(saved.current?.scoreTravauxMin || '')
   const [tri, setTri] = useState(saved.current?.tri || 'recent')
@@ -79,10 +81,10 @@ export default function BiensPage() {
     try {
       sessionStorage.setItem('biens_filters', JSON.stringify({
         strategie, metropole, ville, communeSearch, selectedCommune,
-        typeBien, prixMin, prixMax, rendMin, scoreTravauxMin, tri, view,
+        typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, tri, view,
       }))
     } catch {}
-  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin, tri, view])
+  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, tri, view])
 
   // Sauvegarder la position de scroll avant de quitter
   useEffect(() => {
@@ -129,6 +131,8 @@ export default function BiensPage() {
     if (typeBien !== 'Tous') params.set('type_bien', typeBien)
     if (prixMin) params.set('prix_min', prixMin)
     if (prixMax) params.set('prix_max', prixMax)
+    if (surfaceMin) params.set('surface_min', surfaceMin)
+    if (surfaceMax) params.set('surface_max', surfaceMax)
     if (rendMin) params.set('rendement_min', rendMin)
     if (scoreTravauxMin) params.set('score_travaux_min', scoreTravauxMin)
     return `/api/biens?${params.toString()}`
@@ -156,7 +160,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, rendMin, scoreTravauxMin])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -490,6 +494,15 @@ export default function BiensPage() {
             <label className="filter-label">Prix max</label>
             <input type="number" placeholder={"300 000 \u20AC"} value={prixMax} onChange={e => setPrixMax(e.target.value)} style={{ width: '120px' }} />
           </div>
+          <div className="filter-sep" />
+          <div className="filter-group">
+            <label className="filter-label">{"Surface min (m\u00B2)"}</label>
+            <input type="number" placeholder={"20"} value={surfaceMin} onChange={e => setSurfaceMin(e.target.value)} style={{ width: '80px' }} />
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">{"Surface max (m\u00B2)"}</label>
+            <input type="number" placeholder={"150"} value={surfaceMax} onChange={e => setSurfaceMax(e.target.value)} style={{ width: '80px' }} />
+          </div>
           {strategie !== 'Travaux lourds' && (
             <div className="filter-group">
               <label className="filter-label">Rdt brut min</label>
@@ -520,10 +533,10 @@ export default function BiensPage() {
             <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
             <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
           </div>
-          {(prixMin || prixMax || rendMin || scoreTravauxMin || typeBien !== 'Tous' || selectedCommune) && (
+          {(prixMin || prixMax || surfaceMin || surfaceMax || rendMin || scoreTravauxMin || typeBien !== 'Tous' || selectedCommune) && (
             <button
               onClick={() => {
-                setPrixMin(''); setPrixMax(''); setRendMin(''); setScoreTravauxMin('')
+                setPrixMin(''); setPrixMax(''); setSurfaceMin(''); setSurfaceMax(''); setRendMin(''); setScoreTravauxMin('')
                 setTypeBien('Tous'); clearCommune()
               }}
               style={{
