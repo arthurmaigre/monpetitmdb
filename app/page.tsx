@@ -352,15 +352,7 @@ export default function Home() {
                 <span className="strat-tag">Plus-value travaux</span>
                 <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
-              <div className="strat-card">
-                <div className="strat-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8503a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                </div>
-                <div className="strat-name">Division</div>
-                <p className="strat-desc">{"Rep\u00E9rez les grands appartements ou maisons divisibles en plusieurs lots pour maximiser la rentabilit\u00E9."}</p>
-                <span className="strat-tag">{"Cr\u00E9ation de valeur"}</span>
-                <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
-              </div>
+              {/* Division masquee — a reactiver quand la strategie sera prete */}
               <div className="strat-card">
                 <div className="strat-icon">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8503a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -673,7 +665,6 @@ export default function Home() {
                 <h4>{"Strat\u00E9gies"}</h4>
                 <a href="/biens">Locataire en place</a>
                 <a href="/biens">Travaux lourds</a>
-                <a href="/biens">Division</a>
                 <a href="/biens">Immeuble de rapport</a>
               </div>
               <div className="ft-col">

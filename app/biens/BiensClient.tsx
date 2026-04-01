@@ -11,7 +11,7 @@ import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien } from '@/lib/types'
-import { TYPES_BIEN, TRIS, TRIS_TRAVAUX } from '@/lib/constants'
+import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, STRATEGIES_VISIBLES } from '@/lib/constants'
 import { calculerCashflow } from '@/lib/calculs'
 
 function formatPrix(n: number) {
@@ -264,7 +264,7 @@ export default function BiensPage() {
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  const strategies = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport']
+  const strategies = STRATEGIES_VISIBLES
 
   // Filtres cote client (les autres sont cote serveur)
   let filtered = allBiens.filter(b => {
