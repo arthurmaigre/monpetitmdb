@@ -33,13 +33,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 async function getArticle(slug: string) {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('articles')
-    .select('title, slug, content, category, keyword, published_at, word_count, cover_url, author')
+    .select('title, slug, content, category, keyword, published_at, word_count, cover_url')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
 
+  if (error) console.error('[blog/slug] getArticle error:', error.message, '| slug:', slug)
+  if (!data) console.error('[blog/slug] Article not found for slug:', slug, '| supabaseUrl:', process.env.NEXT_PUBLIC_SUPABASE_URL, '| hasSecretKey:', !!process.env.SUPABASE_SECRET_KEY)
   return data
 }
 

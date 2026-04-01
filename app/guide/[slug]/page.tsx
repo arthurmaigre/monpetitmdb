@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 async function getArticle(slug: string) {
   const { data } = await supabaseAdmin
     .from('articles')
-    .select('title, slug, content, category, keyword, published_at, word_count, cover_url, author, excerpt')
+    .select('title, slug, content, category, keyword, published_at, word_count, cover_url, excerpt')
     .eq('slug', slug)
     .eq('status', 'published')
     .in('category', GUIDE_CATEGORIES)
