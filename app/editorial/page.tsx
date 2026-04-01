@@ -45,7 +45,7 @@ function ArticleContentWithPhotoPicker({ content, articleId, onContentUpdate }: 
   )
 }
 
-const CATEGORIES = ['Fiscalit\u00e9', 'Strat\u00e9gie d\'investissement', 'Travaux & r\u00e9novation', 'Financement', 'March\u00e9 immobilier', 'Guide d\u00e9butant', 'Cas pratique']
+const CATEGORIES = ['Strat\u00e9gies', 'Fiscalit\u00e9', 'Travaux', 'Financement', 'March\u00e9']
 const TONES = [
   { value: 'pedagogique', label: 'P\u00e9dagogique & accessible' },
   { value: 'expert', label: 'Expert & technique' },
@@ -53,21 +53,23 @@ const TONES = [
   { value: 'alerte', label: 'Alerte / Mise en garde' },
 ]
 const LENGTHS = [
-  { value: 'court', label: 'Court (~600 mots)' },
-  { value: 'moyen', label: 'Moyen (~1000 mots)' },
-  { value: 'long', label: 'Long (~1800 mots)' },
+  { value: 'court', label: 'Court (~800 mots)' },
+  { value: 'moyen', label: 'Satellite (~1500 mots)' },
+  { value: 'long', label: 'Long (~2500 mots)' },
+  { value: 'pilier', label: 'Pilier (~3000 mots)' },
 ]
 const AUDIENCES = ['D\u00e9butant complet', 'Investisseur amateur', 'Profil MDB actif', 'Professionnel']
 
+// Backlog align\u00e9 avec l'audit SEO — sujets avanc\u00e9s pr\u00e9vus S43-S52
 const BACKLOG = [
-  { category: 'Fiscalit\u00e9', title: 'BIC vs IS pour marchand de biens : quel r\u00e9gime choisir ?', keyword: 'marchand de biens r\u00e9gime fiscal', tone: 'cas-pratique', angle: 'Comparer BIC et IS avec un exemple chiffr\u00e9 : achat 200k\u20ac, revente 280k\u20ac.' },
-  { category: 'Fiscalit\u00e9', title: 'TVA sur marge en marchand de biens : fonctionnement et pi\u00e8ges', keyword: 'TVA sur marge immobilier', tone: 'expert', angle: 'M\u00e9canisme TVA sur marge, conditions, 3 pi\u00e8ges fr\u00e9quents.' },
-  { category: 'Strat\u00e9gie d\'investissement', title: 'Comment identifier une bonne affaire avec la m\u00e9thode MDB', keyword: 'investissement marchand de biens', tone: 'pedagogique', angle: 'Crit\u00e8res de s\u00e9lection : d\u00e9cote, localisation, travaux estimables.' },
-  { category: 'Travaux & r\u00e9novation', title: 'Travaux lourds vs l\u00e9gers : impact sur la rentabilit\u00e9 MDB', keyword: 'travaux immobilier rentabilit\u00e9', tone: 'cas-pratique', angle: 'Calcul de rentabilit\u00e9 compar\u00e9 selon le niveau de travaux.' },
-  { category: 'Financement', title: 'Financer une op\u00e9ration MDB : cr\u00e9dit, crowdfunding ou fonds propres ?', keyword: 'financement marchand de biens', tone: 'pedagogique', angle: 'Comparer 3 modes de financement avec crit\u00e8res de choix.' },
-  { category: 'Guide d\u00e9butant', title: 'Devenir marchand de biens : 5 \u00e9tapes pour se lancer', keyword: 'comment devenir marchand de biens', tone: 'pedagogique', angle: 'Structure juridique, premi\u00e8re op\u00e9ration, fiscalit\u00e9, financement, revente.' },
-  { category: 'March\u00e9 immobilier', title: 'O\u00f9 chercher des biens d\u00e9cot\u00e9s en 2026', keyword: 'march\u00e9 immobilier opportunit\u00e9s 2026', tone: 'expert', angle: 'March\u00e9s favorables aux MDB, donn\u00e9es DVF r\u00e9centes.' },
-  { category: 'Cas pratique', title: 'Op\u00e9ration MDB de A \u00e0 Z avec tous les chiffres', keyword: 'simulation marchand de biens exemple', tone: 'cas-pratique', angle: 'Simulation compl\u00e8te : achat 180k\u20ac, travaux 45k\u20ac, revente 295k\u20ac.' },
+  { category: 'Fiscalit\u00e9', title: 'BIC vs IS pour marchand de biens : quel r\u00e9gime choisir ?', keyword: 'marchand de biens r\u00e9gime fiscal', tone: 'cas-pratique', angle: 'SATELLITE P3. Comparer BIC et IS avec un exemple chiffr\u00e9 : achat 200k\u20ac, revente 280k\u20ac. 1500 mots. Lien vers article pilier MdB.', audience: ['Profil MDB actif'] },
+  { category: 'Fiscalit\u00e9', title: 'TVA sur marge marchand de biens : calcul et exemples', keyword: 'TVA marge marchand de biens', tone: 'expert', angle: 'SATELLITE P3. M\u00e9canisme TVA sur marge 20/120, conditions, 3 pi\u00e8ges fr\u00e9quents. 1500 mots. Lien vers article pilier MdB.', audience: ['Profil MDB actif'] },
+  { category: 'Strat\u00e9gies', title: 'Achat revente immobilier : la strat\u00e9gie MdB d\u00e9taill\u00e9e', keyword: 'achat revente immobilier', tone: 'pedagogique', angle: 'SATELLITE P3. Crit\u00e8res de s\u00e9lection : d\u00e9cote, localisation, travaux estimables. 1500 mots. Lien vers article pilier MdB.', audience: ['Investisseur amateur'] },
+  { category: 'Travaux', title: 'Score travaux : \u00e9valuer l\'\u00e9tat d\'un bien immobilier', keyword: 'score travaux immobilier', tone: 'cas-pratique', angle: 'SATELLITE P4. Score 1-5, grille IA, impact sur budget et rentabilit\u00e9. 1500 mots. Lien vers article pilier IDR.', audience: ['Investisseur amateur'] },
+  { category: 'Financement', title: 'Financer un immeuble de rapport', keyword: 'financer immeuble de rapport', tone: 'pedagogique', angle: 'SATELLITE P4. Comparer cr\u00e9dit classique, crowdfunding, fonds propres. 1500 mots. Lien vers article pilier IDR.', audience: ['Investisseur amateur', 'Profil MDB actif'] },
+  { category: 'Strat\u00e9gies', title: 'Division immobili\u00e8re : cr\u00e9er de la valeur', keyword: 'division immobiliere', tone: 'expert', angle: 'SATELLITE P3. R\u00e9glementation, co\u00fbts, exemple chiffr\u00e9 avant/apr\u00e8s. 1500 mots. Lien vers article pilier MdB.', audience: ['Profil MDB actif'] },
+  { category: 'Strat\u00e9gies', title: 'Revente \u00e0 la d\u00e9coupe : strat\u00e9gie et fiscalit\u00e9', keyword: 'revente a la decoupe', tone: 'expert', angle: 'SATELLITE P3. Processus complet, cr\u00e9ation copro, fiscalit\u00e9 MdB. 1500 mots. Lien vers article pilier MdB.', audience: ['Profil MDB actif'] },
+  { category: 'Strat\u00e9gies', title: 'Op\u00e9ration MDB de A \u00e0 Z : simulation compl\u00e8te', keyword: 'simulation marchand de biens exemple', tone: 'cas-pratique', angle: 'Contenu avanc\u00e9. Simulation compl\u00e8te : achat 180k\u20ac, travaux 45k\u20ac, revente 295k\u20ac. Tous les frais et la fiscalit\u00e9. 2500 mots.', audience: ['Profil MDB actif', 'Professionnel'] },
 ]
 
 const CAL_STATUS_LABELS: Record<string, string> = { planned: 'Planifi\u00e9', writing: 'R\u00e9daction', review: 'Relecture', published: 'Publi\u00e9' }
@@ -187,15 +189,41 @@ export default function EditorialPage() {
     setGenerating(false)
   }
 
+  function detectLength(angle: string): string {
+    if (!angle) return 'moyen'
+    const a = angle.toLowerCase()
+    if (a.includes('pilier') || a.includes('3000')) return 'pilier'
+    if (a.includes('2500') || a.includes('2000')) return 'long'
+    if (a.includes('1500')) return 'moyen'
+    if (a.includes('800') || a.includes('600')) return 'court'
+    return 'moyen'
+  }
+
   function useBacklogItem(item: typeof BACKLOG[0]) {
     setFTitle(item.title); setFCategory(item.category); setFKeyword(item.keyword)
-    setFTone(item.tone); setFAngle(item.angle); setFLength('moyen')
+    setFTone(item.tone); setFAngle(item.angle); setFLength(detectLength(item.angle))
+    setFAudience(item.audience || ['Investisseur amateur'])
     setTab('rediger')
+  }
+
+  function detectAudience(tone: string, angle: string): string[] {
+    const a = (angle || '').toLowerCase()
+    // Pages villes
+    if (a.includes('ville') || a.includes('investir a') || a.includes('investir à')) return ['Investisseur amateur']
+    // Par ton
+    switch (tone) {
+      case 'pedagogique': return ['D\u00e9butant complet', 'Investisseur amateur']
+      case 'expert': return ['Investisseur amateur', 'Profil MDB actif']
+      case 'cas-pratique': return ['Profil MDB actif']
+      case 'alerte': return ['Investisseur amateur', 'Profil MDB actif']
+      default: return ['Investisseur amateur']
+    }
   }
 
   function useCalendarItem(item: any) {
     setFTitle(item.title || ''); setFCategory(item.category || ''); setFKeyword(item.keyword || '')
-    setFTone(item.tone || 'pedagogique'); setFAngle(item.angle || ''); setFLength('moyen')
+    setFTone(item.tone || 'pedagogique'); setFAngle(item.angle || ''); setFLength(detectLength(item.angle || ''))
+    setFAudience(detectAudience(item.tone || 'pedagogique', item.angle || ''))
     setTab('rediger')
   }
 

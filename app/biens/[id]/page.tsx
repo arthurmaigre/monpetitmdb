@@ -217,6 +217,7 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
   //        1/12 = affiche valeur ÷ 12 (mensuel depuis annuel), enregistre × 12
   const dbVal = bien[champ]
   const displayVal = dbVal != null ? Math.round(dbVal * scale) : null
+  const displayFormatted = displayVal != null ? `${displayVal.toLocaleString('fr-FR')}\u00A0\u20AC` : null
   const statut = champsStatut[champ]
   const hasSourceData = dbVal != null && !statut
   const isVert = statut?.statut === 'vert'
@@ -276,17 +277,20 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
     </button>
   )
 
+  // Texte formaté pour lecture seule
+  const readText = suffix ? `${displayVal != null ? displayVal.toLocaleString('fr-FR') : ''}${suffix}` : displayFormatted
+
   // --- Pas connecté : lecture seule ---
   if (!userToken) {
     if (displayVal == null) return <span style={{ color: '#c0392b', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{displayVal}{suffix}</span>
+    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{readText}</span>
   }
 
   // --- Donnée source (IA/scraper) et pas en mode édition : lecture seule + crayon ---
   if (hasSourceData && !dirty) {
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-        <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{displayVal}{suffix}</span>
+        <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{readText}</span>
         <PencilBtn />
       </div>
     )
@@ -296,7 +300,7 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
   if (isVert && !dirty) {
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontWeight: 600, color: '#1a7a40', fontSize: '13px' }}>{displayVal}{suffix}</span>
+        <span style={{ fontWeight: 600, color: '#1a7a40', fontSize: '13px' }}>{readText}</span>
         <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '12px', color: '#1a7a40' }}>{'\u2713'}</span>
         <PencilBtn />
       </div>
@@ -307,7 +311,7 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
   if (isJaune && !dirty) {
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontWeight: 600, color: '#a06010', fontSize: '13px' }}>{displayVal}{suffix}</span>
+        <span style={{ fontWeight: 600, color: '#a06010', fontSize: '13px' }}>{readText}</span>
         <PencilBtn />
       </div>
     )
@@ -386,12 +390,93 @@ function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
   )
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
+function ExpandableTaxRow({ label, total, isFree, details, info }: { label: string, total: number, isFree: boolean, details: { label: string, value: string, vert?: boolean }[], info?: string }) {
+  const [open, setOpen] = useState(false)
+  const hasDetails = details.length > 0
+  return (
+    <div>
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8', cursor: hasDetails ? 'pointer' : 'default' }}
+        onClick={() => hasDetails && setOpen(!open)}
+      >
+        <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {label}
+          {hasDetails && (
+            <span style={{ fontSize: '10px', color: '#b0a898', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>{'\u25BC'}</span>
+          )}
+          {info && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{info}</span></span>}
+        </span>
+        <span style={{ fontSize: '14px', fontWeight: 500, color: total > 0 ? '#c0392b' : '#1a1210' }} className={isFree ? 'val-blur' : ''}>
+          {total > 0 ? `-${total.toLocaleString('fr-FR')}\u00A0\u20AC` : `0\u00A0\u20AC`}
+        </span>
+      </div>
+      {open && hasDetails && (
+        <div style={{ padding: '4px 0 4px 16px', background: '#faf8f5', borderBottom: '1px solid #f0ede8' }}>
+          {details.map((d, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '12px' }}>
+              <span style={{ color: '#7a6a60' }}>{d.label}</span>
+              <span style={{ color: d.vert ? '#1a7a40' : '#7a6a60' }}>{d.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ExpandableCharges({ label, total, isReel, isFree, details }: { label: string, total: number, isReel: boolean, isFree: boolean, details: { label: string, value: number, info?: string }[] }) {
+  const [open, setOpen] = useState(false)
+  const hasCharges = total > 0
+  return (
+    <div>
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8', cursor: isReel ? 'pointer' : 'default' }}
+        onClick={() => isReel && setOpen(!open)}
+      >
+        <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {label}
+          {isReel && (
+            <span style={{ fontSize: '10px', color: '#b0a898', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>{'\u25BC'}</span>
+          )}
+          {!isReel && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9ductible uniquement en r\u00E9gime r\u00E9el"}</span></span>}
+        </span>
+        <span style={{ fontSize: '14px', fontWeight: 500, color: !isReel ? '#c0b0a0' : hasCharges ? '#c0392b' : '#1a1210' }} className={isFree && isReel ? 'val-blur' : ''}>
+          {!isReel ? '-' : hasCharges ? `-${total.toLocaleString('fr-FR')}\u00A0\u20AC` : '0\u00A0\u20AC'}
+        </span>
+      </div>
+      {open && isReel && (
+        <div style={{ padding: '4px 0 4px 16px', background: '#faf8f5', borderBottom: '1px solid #f0ede8' }}>
+          {details.map(d => (
+            <div key={d.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', fontSize: '12px', color: d.value > 0 ? '#7a6a60' : '#c0b0a0' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {d.label}
+                {d.info && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{d.info}</span></span>}
+              </span>
+              <span>{d.value > 0 ? `${d.value.toLocaleString('fr-FR')}\u00A0\u20AC` : '0\u00A0\u20AC'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { montantEmprunte, tauxCredit, tauxAssurance, dureeAns } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
   const hasLoyer = loyer && loyer > 0
   const isMarchand = regime === 'marchand_de_biens'
+
+  // Visibilite conditionnelle : afficher une ligne si au moins un des 2 regimes l'utilise
+  const isMicro = (r: string) => r === 'nu_micro_foncier' || r === 'lmnp_micro_bic'
+  const hasAmortRegime = (r: string) => r === 'lmnp_reel_bic' || r === 'lmp_reel_bic' || r === 'sci_is'
+  const isLMP = (r: string) => r === 'lmp_reel_bic'
+  const showAbattementRow = isMicro(regime) || isMicro(otherRegime)
+  const showAmortRow = hasAmortRegime(regime) || hasAmortRegime(otherRegime)
+  const showSSIRow = isLMP(regime) || isLMP(otherRegime)
+  // Revente : reintegration si au moins un est LMNP reel
+  const showReintegrationRow = regime === 'lmnp_reel_bic' || otherRegime === 'lmnp_reel_bic'
 
   const loyerAnnuel = (loyer || 0) * 12
   const chargesRecAnn = (charges_rec || 0) * 12
@@ -410,16 +495,18 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const hasAmort = regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
   const amort = (regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic') ? amortLMNP : regime === 'sci_is' ? (amortSCI + amortNotaireSCI) : 0
 
-  // Charges utilisateur (deductibles seulement en reel, pas en MdB ni micro)
-  const isReel = regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
+  // Charges utilisateur (deductibles en reel, SCI IS et MdB — pas en micro)
+  const isReel = regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is' || regime === 'marchand_de_biens'
   const assurancePNO = isReel ? (chargesUtilisateur?.assurance_pno || 0) : 0
   const fraisGestionPct = isReel ? (chargesUtilisateur?.frais_gestion_pct || 0) : 0
   const fraisGestion = loyerAnnuel * fraisGestionPct / 100
   const honorairesComptable = isReel ? (chargesUtilisateur?.honoraires_comptable || 0) : 0
-  // CFE et frais OGA : uniquement en BIC (LMNP/LMP) et SCI IS
-  const isBICouSCI = regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
-  const cfe = isBICouSCI ? (chargesUtilisateur?.cfe || 0) : 0
-  const fraisOGA = isBICouSCI ? (chargesUtilisateur?.frais_oga || 0) : 0
+  // CFE : due en BIC (LMNP/LMP), SCI IS et MdB (toute societe/activite pro)
+  // Frais OGA : uniquement en BIC (LMNP/LMP) pour eviter la majoration 15% du benefice
+  const isBICouSCIouMdB = regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is' || regime === 'marchand_de_biens'
+  const isBIC = regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic'
+  const cfe = isBICouSCIouMdB ? (chargesUtilisateur?.cfe || 0) : 0
+  const fraisOGA = isBIC ? (chargesUtilisateur?.frais_oga || 0) : 0
   const fraisBancaires = chargesUtilisateur?.frais_bancaires || 0
   const chargesSupplementaires = assurancePNO + fraisGestion + honorairesComptable + cfe + fraisOGA
 
@@ -457,7 +544,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   } else if (regime === 'lmnp_reel_bic') {
     const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort + chargesSupplementaires + travauxAmortis
     revenuImposable = Math.max(0, loyerAnnuel - chargesDeductibles)
-    impot = revenuImposable * (tmi / 100)
+    impot = revenuImposable * (tmi / 100 + 0.172)
   } else if (regime === 'lmp_reel_bic') {
     const chargesDeductibles = chargesCoproAnn + taxeFoncAnn + interetsAnn + assuranceAnn + amort + chargesSupplementaires + travauxAmortis
     const benefice = loyerAnnuel - chargesDeductibles
@@ -495,9 +582,11 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const dur = dureeRevente || 5
   // Estimation DVF = prix net vendeur (transactions notariales, HORS frais agence)
   const prixReventeNetVendeur = estimation?.prix_total || 0
-  // Frais agence revente : optionnel, charge vendeur uniquement (rare, 0 par defaut = vente en direct ou charge acquereur)
-  const fraisAgenceMontant = Math.round(prixReventeNetVendeur * fraisAgenceRevente / 100)
-  const prixReventeApresAgence = prixReventeNetVendeur - fraisAgenceMontant
+  // Frais agence : % inclus dans le FAI a l'achat. Sert a retrouver le prix net vendeur achat pour la TVA sur marge MdB
+  const prixNetVendeurAchat = fraisAgenceRevente > 0 ? Math.round(prix_fai / (1 + fraisAgenceRevente / 100)) : prix_fai
+  const fraisAgenceAchatMontant = prix_fai - prixNetVendeurAchat
+  // Estimation DVF = deja net vendeur, pas de frais agence a deduire a la revente
+  const prixReventeApresAgence = prixReventeNetVendeur
   const fraisNotairePct = regime === 'marchand_de_biens' ? 2.5 : (fraisNotaire || 7.5)
   const fraisNotaireMontant = Math.round(prix_fai * fraisNotairePct / 100)
 
@@ -507,6 +596,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   const hasPhaseLocative = hasLoyer && !isTravauxLourds
   const travauxDejaDeduits = hasPhaseLocative && (regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is')
   const travauxPV = travauxDejaDeduits ? 0 : budgetTravaux
+  const pvBruteSimple = prixReventeApresAgence - prixNetVendeurAchat
   const pvBrute = prixReventeApresAgence - prix_fai - fraisNotaireMontant - travauxPV
 
   // Fiscalite PV selon regime
@@ -514,24 +604,28 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   let reintegrationAmort = 0
   let cotisationsSocialesLMP = 0
   const abattements = calculerAbattementPV(dur)
+  // Detail pour affichage depliant
+  let pvBaseIR = 0, pvBasePS = 0, pvImposableIR = 0, pvImposablePS = 0
 
   if (regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier' || regime === 'lmnp_micro_bic') {
     // Particuliers : IR 19% + PS 17.2%, avec abattements detention
     if (pvBrute > 0) {
-      const pvIR = pvBrute * (1 - abattements.abattementIR / 100)
-      const pvPS = pvBrute * (1 - abattements.abattementPS / 100)
-      irPV = pvIR * 0.19
-      psPV = pvPS * 0.172
+      pvBaseIR = pvBrute; pvBasePS = pvBrute
+      pvImposableIR = pvBrute * (1 - abattements.abattementIR / 100)
+      pvImposablePS = pvBrute * (1 - abattements.abattementPS / 100)
+      irPV = pvImposableIR * 0.19
+      psPV = pvImposablePS * 0.172
     }
   } else if (regime === 'lmnp_reel_bic') {
     // LMNP reel : reintegration des amortissements cumules (reforme LFI 2025) + abattements
     reintegrationAmort = amort * dur
     const pvReintegree = Math.max(0, pvBrute + reintegrationAmort)
     if (pvReintegree > 0) {
-      const pvIR = pvReintegree * (1 - abattements.abattementIR / 100)
-      const pvPS = pvReintegree * (1 - abattements.abattementPS / 100)
-      irPV = pvIR * 0.19
-      psPV = pvPS * 0.172
+      pvBaseIR = pvReintegree; pvBasePS = pvReintegree
+      pvImposableIR = pvReintegree * (1 - abattements.abattementIR / 100)
+      pvImposablePS = pvReintegree * (1 - abattements.abattementPS / 100)
+      irPV = pvImposableIR * 0.19
+      psPV = pvImposablePS * 0.172
     }
   } else if (regime === 'lmp_reel_bic') {
     // LMP : exoneration si recettes < 90k ET > 5 ans, sinon PV professionnelle (court terme + long terme)
@@ -551,7 +645,11 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
     }
   } else if (regime === 'sci_is') {
     // SCI IS : PV sur VNC, IS 15/25%, pas d'abattement + PFU 30% sur dividendes
-    const amortCumule = ((prix_fai * 0.85 / 30) + fraisNotaireMontant / 5) * dur
+    // Interets deja deduits du resultat courant en phase locative → pas re-deduits ici
+    const amortCumuleImmo = (prix_fai * 0.85 / 30) * dur
+    const amortCumuleNotaire = (fraisNotaireMontant / 5) * Math.min(dur, 5)
+    const amortCumuleTravaux = travauxAmortis * Math.min(dur, 10)
+    const amortCumule = amortCumuleImmo + amortCumuleNotaire + amortCumuleTravaux
     const vnc = prix_fai + fraisNotaireMontant + budgetTravaux - amortCumule
     const pvSCI = Math.max(0, prixReventeApresAgence - vnc)
     isPV = pvSCI <= 42500 ? pvSCI * 0.15 : 42500 * 0.15 + (pvSCI - 42500) * 0.25
@@ -560,10 +658,10 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
     psPV = beneficeDistribuable > 0 ? beneficeDistribuable * 0.30 : 0
   } else if (regime === 'marchand_de_biens') {
     // MdB toujours a l'IS : TVA sur marge + IS sur benefice
-    // Marge TVA = prix de vente net vendeur - prix d'achat FAI
-    // (DVF = net vendeur, prix_fai inclut frais agence achat)
-    const marge = Math.max(0, prixReventeApresAgence - prix_fai)
+    // Marge TVA = prix de vente net vendeur - prix d'achat net vendeur (hors frais agence)
+    const marge = Math.max(0, prixReventeApresAgence - prixNetVendeurAchat)
     tvaMarge = marge * 20 / 120
+    // Interets deja deduits du resultat courant en phase locative → pas re-deduits ici
     const benefice = Math.max(0, prixReventeApresAgence - prix_fai - budgetTravaux - fraisNotaireMontant - tvaMarge)
     isPV = benefice <= 42500 ? benefice * 0.15 : 42500 * 0.15 + (benefice - 42500) * 0.25
   }
@@ -623,7 +721,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
   function Row({ label, value, rouge = false, bold = false, tiret = false, info = '', vert = false }: any) {
     return (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
-        <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontSize: '13px', color: '#555', fontWeight: bold ? 600 : 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
           {label}
           {info && !isFree && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{info}</span></span>}
         </span>
@@ -646,35 +744,68 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
       {hasLoyer && !isTravauxLourds && (
         <>
           <SectionLabel label="Revenus locatifs (annuel)" />
-          <Row label="Loyer brut annuel" value={`${fmt(loyerAnnuel)} \u20AC`} />
-          {regime === 'nu_micro_foncier' && (
-            <Row label="Abattement forfaitaire (30%)" value={`-${fmt(Math.round(loyerAnnuel * 0.30))} \u20AC`} rouge info={"Micro-foncier : abattement de 30% sur les revenus fonciers bruts (art. 32 CGI). Toutes les charges sont r\u00E9put\u00E9es incluses dans cet abattement."} />
+          <Row label={type_loyer === 'CC' ? "Loyer (CC)" : "Loyer (HC)"} value={`${fmt(loyerAnnuel)} \u20AC`}
+            info={type_loyer === 'CC' ? "Loyer charges comprises. Les charges r\u00E9cup\u00E9rables (eau, ordures, entretien parties communes) sont incluses dans ce montant et d\u00E9duites sur la ligne suivante." : "Loyer hors charges. Les charges r\u00E9cup\u00E9rables sont pay\u00E9es en plus par le locataire et ajout\u00E9es sur la ligne suivante."} />
+          <Row label={"Charges r\u00E9cup."} value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} \u20AC` : `+${fmt(chargesRecAnn)} \u20AC`}
+            info={type_loyer === 'CC' ? "Charges r\u00E9cup\u00E9rables incluses dans le loyer CC. Elles sont d\u00E9duites car ce sont des charges du locataire, pas un revenu du propri\u00E9taire." : "Charges r\u00E9cup\u00E9rables pay\u00E9es par le locataire en plus du loyer HC. Elles s\u2019ajoutent aux recettes mais ne sont pas imposables (transit)."} />
+          {showAbattementRow && (
+            regime === 'nu_micro_foncier' ? (
+              <Row label="Abattement forfaitaire (30%)" value={`-${fmt(Math.round(loyerAnnuel * 0.30))} \u20AC`} rouge info={"En micro-foncier, l\u2019administration applique un abattement de 30% sur vos loyers bruts. Cet abattement est cens\u00E9 couvrir toutes vos charges (copro, taxe fonci\u00E8re, int\u00E9r\u00EAts, travaux\u2026). Vous ne pouvez donc rien d\u00E9duire en plus. Simple mais souvent moins avantageux que le r\u00E9el si vous avez des charges \u00E9lev\u00E9es ou du cr\u00E9dit."} />
+            ) : regime === 'lmnp_micro_bic' ? (
+              <Row label="Abattement forfaitaire (50%)" value={`-${fmt(Math.round(loyerAnnuel * 0.50))} \u20AC`} rouge info={"En micro-BIC meubl\u00E9, l\u2019abattement est de 50% sur les recettes brutes. C\u2019est g\u00E9n\u00E9reux mais vous ne pouvez rien d\u00E9duire en plus (ni charges, ni amortissement). Le r\u00E9gime r\u00E9el avec amortissement est souvent plus int\u00E9ressant."} />
+            ) : (
+              <div style={{ padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>&nbsp;</div>
+            )
           )}
-          {regime === 'lmnp_micro_bic' && (
-            <Row label="Abattement forfaitaire (50%)" value={`-${fmt(Math.round(loyerAnnuel * 0.50))} \u20AC`} rouge info={"Micro-BIC : abattement de 50% sur les recettes BIC meubl\u00E9es (art. 50-0 CGI). Toutes les charges sont r\u00E9put\u00E9es incluses."} />
-          )}
-          <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
-          <Row label={"Taxe fonci\u00E8re"} value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
-          <Row label={"Charges r\u00E9cup. annuelles"} value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} \u20AC` : `+${fmt(chargesRecAnn)} \u20AC`} />
-          <Row label={"Int\u00E9r\u00EAts emprunt"} value={`-${fmt(interetsAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
-          <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'} info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic' ? "Inclus dans l\u2019abattement forfaitaire" : undefined} />
-          <Row
+          <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
+            info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el (Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS, MdB)."
+              : "Charges de copropri\u00E9t\u00E9 annuelles : entretien parties communes, gardien, ascenseur, assurance immeuble\u2026 Enti\u00E8rement d\u00E9ductibles en r\u00E9gime r\u00E9el."} />
+          <Row label={"Taxe fonci\u00E8re"} value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
+            info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
+              : "Imp\u00F4t local annuel pay\u00E9 par le propri\u00E9taire. La part d\u00E9chets m\u00E9nagers (TEOM) est r\u00E9cup\u00E9rable aupr\u00E8s du locataire. Enti\u00E8rement d\u00E9ductible en r\u00E9gime r\u00E9el."} />
+          <Row label={"Int\u00E9r\u00EAts emprunt"} value={`-${fmt(interetsAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
+            info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
+              : regime === 'nu_reel_foncier'
+                ? "Int\u00E9r\u00EAts d\u2019emprunt annuels. En Nu r\u00E9el foncier, ils sont d\u00E9ductibles sans limite des revenus fonciers. Si vos charges d\u00E9passent vos loyers, le d\u00E9ficit li\u00E9 aux int\u00E9r\u00EAts est reportable sur les revenus fonciers des 10 ann\u00E9es suivantes."
+                : "Int\u00E9r\u00EAts d\u2019emprunt annuels. Enti\u00E8rement d\u00E9ductibles du r\u00E9sultat imposable. C\u2019est une des principales charges qui r\u00E9duisent l\u2019imp\u00F4t les premi\u00E8res ann\u00E9es."} />
+          <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
+            info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
+              : "Assurance d\u00E9c\u00E8s-invalidit\u00E9 exig\u00E9e par la banque lors de l\u2019emprunt. Calcul\u00E9e en % du capital emprunt\u00E9. Enti\u00E8rement d\u00E9ductible en r\u00E9gime r\u00E9el au m\u00EAme titre que les int\u00E9r\u00EAts."} />
+          <ExpandableCharges
             label={"Autres charges d\u00E9ductibles"}
-            value={isReel && chargesSupplementaires > 0 ? `-${fmt(chargesSupplementaires)} \u20AC` : `0 \u20AC`}
-            rouge={isReel && chargesSupplementaires > 0}
-            tiret={!isReel}
-            info={!isReel
-              ? "D\u00E9ductible uniquement en r\u00E9gime r\u00E9el"
-              : chargesSupplementaires > 0
-                ? [
-                    assurancePNO > 0 && `Assurance PNO : ${fmt(assurancePNO)} \u20AC`,
-                    fraisGestion > 0 && `Gestion locative (${fraisGestionPct}%) : ${fmt(fraisGestion)} \u20AC`,
-                    honorairesComptable > 0 && `Comptable : ${fmt(honorairesComptable)} \u20AC`,
-                    cfe > 0 && `CFE : ${fmt(cfe)} \u20AC`,
-                    fraisOGA > 0 && `Frais OGA : ${fmt(fraisOGA)} \u20AC`,
-                    fraisBancaires > 0 && `Frais bancaires : ${fmt(fraisBancaires)} \u20AC/an (${fmt(chargesUtilisateur?.frais_bancaires || 0)} \u20AC liss\u00E9s sur ${dureeAns} ans, d\u00E9ductibles en totalit\u00E9 la 1\u00E8re ann\u00E9e)`,
-                  ].filter(Boolean).join(' | ')
-                : "Renseignez vos charges dans Mes param\u00E8tres (PNO, gestion locative, comptable, CFE, OGA, frais bancaires)"}
+            total={chargesSupplementaires}
+            isReel={isReel}
+            isFree={isFree}
+            details={[
+              { label: 'Assurance PNO', value: assurancePNO, info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
+                : "Assurance Propri\u00E9taire Non Occupant. Couvre les risques locatifs (d\u00E9g\u00E2ts des eaux, incendie, responsabilit\u00E9 civile). Obligatoire en copropri\u00E9t\u00E9. D\u00E9ductible dans votre r\u00E9gime." },
+              { label: `Gestion locative (${fraisGestionPct}%)`, value: Math.round(fraisGestion), info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
+                : "Honoraires de l\u2019agence ou du gestionnaire qui s\u2019occupe de trouver les locataires et g\u00E9rer le bien. G\u00E9n\u00E9ralement 5 \u00E0 10% des loyers HC. D\u00E9ductible dans votre r\u00E9gime." },
+              { label: 'Comptable', value: honorairesComptable, info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
+                : regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic'
+                  ? "Honoraires d\u2019expert-comptable. Obligatoire en BIC r\u00E9el pour \u00E9tablir le bilan et la liasse fiscale. D\u00E9ductible dans votre r\u00E9gime."
+                  : regime === 'sci_is' || regime === 'marchand_de_biens'
+                    ? "Honoraires d\u2019expert-comptable. Obligatoire pour une soci\u00E9t\u00E9 \u00E0 l\u2019IS (bilan, liasse fiscale, AG). D\u00E9ductible dans votre r\u00E9gime."
+                    : "Honoraires d\u2019expert-comptable. Recommand\u00E9 en Nu r\u00E9el foncier pour optimiser la d\u00E9claration 2044. D\u00E9ductible dans votre r\u00E9gime." },
+              { label: 'CFE', value: cfe, info: !isBICouSCIouMdB
+                ? "Non applicable en location nue (pas d\u2019activit\u00E9 commerciale). La CFE est due uniquement en LMNP/LMP r\u00E9el, SCI IS et MdB."
+                : "Cotisation Fonci\u00E8re des Entreprises. Imp\u00F4t local d\u00FB chaque ann\u00E9e par toute activit\u00E9 professionnelle ou soci\u00E9t\u00E9. Le montant d\u00E9pend de la commune. D\u00E9ductible dans votre r\u00E9gime." },
+              { label: 'Frais OGA', value: fraisOGA, info: !isBIC
+                ? regime === 'sci_is' || regime === 'marchand_de_biens'
+                  ? "Non applicable en soci\u00E9t\u00E9 \u00E0 l\u2019IS. L\u2019OGA est un dispositif r\u00E9serv\u00E9 aux BIC (LMNP et LMP) pour \u00E9viter la majoration de 15% du b\u00E9n\u00E9fice."
+                  : "Non applicable dans votre r\u00E9gime. L\u2019OGA est r\u00E9serv\u00E9 au LMNP et LMP r\u00E9el. L\u2019adh\u00E9sion \u00E9vite la majoration de 15% du b\u00E9n\u00E9fice imposable."
+                : "Organisme de Gestion Agr\u00E9\u00E9. L\u2019adh\u00E9sion \u00E9vite la majoration de 15% du b\u00E9n\u00E9fice imposable en BIC r\u00E9el. Fortement recommand\u00E9 en LMNP/LMP. Co\u00FBt : 150 \u00E0 300 \u20AC/an. D\u00E9ductible dans votre r\u00E9gime." },
+              { label: 'Frais bancaires / dossier', value: fraisBancaires, info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
+                : "Frais de dossier bancaire et frais de garantie (hypoth\u00E8que ou caution). Pay\u00E9s une seule fois \u00E0 la souscription du pr\u00EAt. D\u00E9ductibles en totalit\u00E9 la 1\u00E8re ann\u00E9e, liss\u00E9s ici pour simplifier. D\u00E9ductible dans votre r\u00E9gime." },
+            ]}
           />
           <Row
             label={"Travaux d\u00E9ductibles"}
@@ -683,25 +814,65 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
               : `0 \u20AC`}
             rouge={(regime === 'nu_reel_foncier' && travauxDeductibles > 0) || ((regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is') && travauxAmortis > 0)}
             tiret={!isReel}
-            info={!isReel
-              ? "D\u00E9ductible uniquement en r\u00E9gime r\u00E9el"
-              : regime === 'nu_reel_foncier'
-                ? (budgetTravaux > 0
-                  ? `Budget : ${fmt(budgetTravaux)} \u20AC (score ${scoreUtilise}/5). Seuls entretien et am\u00E9lioration sont d\u00E9ductibles (d\u00E9ficit foncier, plafonn\u00E9 10 700 \u20AC/an). Pas la construction/agrandissement.`
-                  : "Renseignez un score travaux pour estimer le budget")
-                : (budgetTravaux > 0
-                  ? `Budget : ${fmt(budgetTravaux)} \u20AC (score ${scoreUtilise}/5). Tous travaux amortissables sur 10 ans.`
-                  : "Renseignez un score travaux pour estimer le budget")}
+            info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. En r\u00E9gime r\u00E9el, les travaux sont d\u00E9ductibles (Nu r\u00E9el) ou amortissables sur 10 ans (LMNP/LMP/SCI IS)."
+              : regime === 'marchand_de_biens'
+                ? "En MdB, les travaux sont des charges d\u2019exploitation d\u00E9duites du r\u00E9sultat l\u2019ann\u00E9e de la d\u00E9pense. Pas d\u2019amortissement (le bien est en stock, pas en immobilisation)."
+                : regime === 'nu_reel_foncier'
+                  ? (budgetTravaux > 0
+                    ? `Budget : ${fmt(budgetTravaux)} \u20AC (score ${scoreUtilise}/5). En Nu r\u00E9el, les travaux d\u2019entretien et d\u2019am\u00E9lioration sont d\u00E9ductibles en totalit\u00E9 l\u2019ann\u00E9e de la d\u00E9pense. Le d\u00E9ficit foncier g\u00E9n\u00E9r\u00E9 est imputable sur le revenu global jusqu\u2019\u00E0 10 700 \u20AC/an. Attention : la construction et l\u2019agrandissement ne sont pas d\u00E9ductibles.`
+                    : "Renseignez un score travaux pour estimer le budget. En Nu r\u00E9el, les travaux d\u2019entretien/am\u00E9lioration sont d\u00E9ductibles via le m\u00E9canisme du d\u00E9ficit foncier (plafonn\u00E9 10 700 \u20AC/an).")
+                  : (budgetTravaux > 0
+                    ? `Budget : ${fmt(budgetTravaux)} \u20AC (score ${scoreUtilise}/5). En ${regime === 'sci_is' ? "SCI IS" : "LMNP/LMP r\u00E9el"}, les travaux sont amortis sur 10 ans (${fmt(Math.round(budgetTravaux / 10))} \u20AC/an). L\u2019amortissement r\u00E9duit le r\u00E9sultat imposable chaque ann\u00E9e.`
+                    : `Renseignez un score travaux pour estimer le budget. En ${regime === 'sci_is' ? "SCI IS" : "LMNP/LMP r\u00E9el"}, les travaux sont amortissables sur 10 ans.`)}
           />
-          <Row label="Amortissement" value={`-${fmt(amort)} \u20AC`} rouge tiret={!hasAmort} info={"Amortissement fiscal uniquement en LMNP r\u00E9el, LMP et SCI IS"} />
-          <Row label="Cotisations SSI (45%)" value={regime === 'lmp_reel_bic' ? `-${fmt(Math.max(0, revenuImposable) * 0.45)} \u20AC` : ''} rouge={regime === 'lmp_reel_bic'} tiret={regime !== 'lmp_reel_bic'} info={regime === 'lmp_reel_bic' ? "Cotisations sociales des ind\u00E9pendants (SSI)" : "Applicable uniquement en LMP"} />
-          <Row label={"R\u00E9sultat imposable"} value={`${fmt(revenuImposable)} \u20AC`} bold />
-          <Row label={"Imp\u00F4t"} value={`-${fmt(impot)} \u20AC`} rouge bold />
+          {showAmortRow && (
+            <Row label="Amortissement" value={`-${fmt(amort)} \u20AC`} rouge tiret={!hasAmort} info={
+              regime === 'nu_micro_foncier'
+                ? "Non disponible en micro-foncier. L\u2019amortissement est r\u00E9serv\u00E9 au LMNP r\u00E9el, LMP et SCI IS."
+                : regime === 'lmnp_micro_bic'
+                  ? "Non disponible en micro-BIC. L\u2019amortissement est le principal avantage du r\u00E9gime r\u00E9el BIC."
+                  : regime === 'nu_reel_foncier'
+                    ? "Non disponible en location nue. Le Nu r\u00E9el offre le d\u00E9ficit foncier en contrepartie."
+                    : regime === 'marchand_de_biens'
+                      ? "Non disponible en MdB. Le bien est un stock, pas une immobilisation."
+                      : regime === 'sci_is'
+                        ? `SCI IS : b\u00E2ti 85% sur 30 ans + notaire sur 5 ans. Ici : ${fmt(Math.round(prix_fai * 0.85 / 30))} + ${fmt(Math.round(fraisNotaireMontantLocatif / 5))} \u20AC/an. R\u00E9duit le b\u00E9n\u00E9fice soumis \u00E0 l\u2019IS.`
+                        : `LMNP/LMP r\u00E9el : b\u00E2ti 85% sur 30 ans + mobilier 5 000 \u20AC sur 10 ans. Ici : ${fmt(Math.round(prix_fai * 0.85 / 30))} + ${fmt(Math.round(5000 / 10))} \u20AC/an. R\u00E9duit le revenu imposable, souvent \u00E0 z\u00E9ro. LFI 2025 : r\u00E9int\u00E9gration \u00E0 la revente.`
+            } />
+          )}
+          {showSSIRow && (
+            <Row label="Cotisations SSI (45%)" value={regime === 'lmp_reel_bic' ? `-${fmt(Math.max(0, revenuImposable) * 0.45)} \u20AC` : ''} rouge={regime === 'lmp_reel_bic'} tiret={regime !== 'lmp_reel_bic'}
+              info={regime === 'lmp_reel_bic'
+                ? "En LMP, cotisations sociales ~45% du b\u00E9n\u00E9fice (maladie, retraite, allocations). C\u2019est le principal inconv\u00E9nient du LMP par rapport au LMNP."
+                : "Non applicable dans votre r\u00E9gime. Les cotisations SSI sont dues uniquement en LMP."} />
+          )}
+          <Row label={"R\u00E9sultat imposable"} value={`${fmt(revenuImposable)} \u20AC`} bold
+            info={regime === 'nu_micro_foncier'
+              ? "Loyer brut - abattement 30%. Impos\u00E9 \u00E0 votre TMI + pr\u00E9l\u00E8vements sociaux 17,2%."
+              : regime === 'lmnp_micro_bic'
+                ? "Recettes brutes - abattement 50%. Impos\u00E9 \u00E0 votre TMI + pr\u00E9l\u00E8vements sociaux 17,2%."
+                : regime === 'nu_reel_foncier'
+                  ? "Loyers - toutes les charges d\u00E9ductibles. Si n\u00E9gatif, c\u2019est un d\u00E9ficit foncier imputable sur votre revenu global (max 10 700 \u20AC/an). Impos\u00E9 \u00E0 votre TMI + PS 17,2%."
+                  : regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic'
+                    ? "Recettes - charges - amortissement. Gr\u00E2ce \u00E0 l\u2019amortissement, ce r\u00E9sultat est souvent proche de z\u00E9ro. Impos\u00E9 \u00E0 votre TMI + PS 17,2%."
+                    : regime === 'sci_is' || regime === 'marchand_de_biens'
+                      ? `B\u00E9n\u00E9fice de la soci\u00E9t\u00E9. Impos\u00E9 \u00E0 l\u2019IS : 15% jusqu\u2019\u00E0 42 500 \u20AC, 25% au-del\u00E0. Pas de TMI ni de PS \u00E0 ce stade (uniquement quand les dividendes sont distribu\u00E9s).`
+                      : ''} />
+          <Row label={"Imp\u00F4t"} value={`-${fmt(impot)} \u20AC`} rouge
+            info={regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier'
+              ? `Imp\u00F4t sur le revenu (TMI ${tmi}%) + pr\u00E9l\u00E8vements sociaux (17,2%) = ${tmi + 17.2}% du r\u00E9sultat imposable.`
+              : regime === 'lmnp_micro_bic'
+                ? `Imp\u00F4t sur le revenu (TMI ${tmi}%) + pr\u00E9l\u00E8vements sociaux (17,2%) = ${tmi + 17.2}% du r\u00E9sultat imposable.`
+                : regime === 'lmnp_reel_bic'
+                  ? `Imp\u00F4t sur le revenu \u00E0 votre TMI (${tmi}%) + pr\u00E9l\u00E8vements sociaux (17,2%) = ${tmi + 17.2}% du r\u00E9sultat imposable.`
+                  : regime === 'lmp_reel_bic'
+                    ? `Imp\u00F4t sur le revenu \u00E0 votre TMI (${tmi}%). Les cotisations SSI (45%) remplacent les PS.`
+                    : `Imp\u00F4t sur les soci\u00E9t\u00E9s : 15% jusqu\u2019\u00E0 42 500 \u20AC de b\u00E9n\u00E9fice, 25% au-del\u00E0. Les dividendes seront ensuite soumis au PFU (30%) lors de la distribution.`} />
         </>
       )}
-      <div style={{ marginTop: 'auto' }}>
       {hasLoyer && !isTravauxLourds && (
-        <div style={{ paddingTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+        <div style={{ paddingTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px', marginTop: '12px' }}>
           <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Net d\u2019Imp\u00F4t"}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowNetMensuel >= 0 ? '#1a7a40' : '#c0392b' }}>
@@ -718,12 +889,28 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
       {hasRevente && (
         <>
           <SectionLabel label={`Sc\u00e9nario revente \u00e0 ${dur} an${dur > 1 ? 's' : ''}`} />
-          <Row label="Estimation DVF (net vendeur)" value={`${fmt(prixReventeNetVendeur)} \u20AC`} info={"DVF = prix dans l\u2019acte notari\u00E9. Hors frais d\u2019agence (g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur)."} />
-          {fraisAgenceRevente > 0 && fraisAgenceMontant > 0 && (
-            <Row label={`Frais d'agence vendeur (${fraisAgenceRevente}%)`} value={`-${fmt(fraisAgenceMontant)} \u20AC`} rouge info={"Uniquement si l\u2019agence est \u00E0 la charge du vendeur. En g\u00E9n\u00E9ral les frais sont \u00E0 la charge de l\u2019acqu\u00E9reur (mettre 0%)."} />
+          <Row label="Estimation Prix de Revente (net vendeur)" value={`${fmt(prixReventeNetVendeur)} \u20AC`}
+            info={regime === 'marchand_de_biens'
+              ? "Prix de revente estim\u00E9 via les donn\u00E9es DVF (transactions notariales r\u00E9elles). C\u2019est le prix \u00AB\u00A0en bon \u00E9tat\u00A0\u00BB apr\u00E8s travaux. En MdB, c\u2019est votre prix de sortie sur lequel se calcule la marge."
+              : regime === 'sci_is'
+                ? "Prix de revente estim\u00E9 via les donn\u00E9es DVF. En SCI IS, la plus-value se calcule sur la VNC (valeur nette comptable = prix + frais + travaux - amortissements cumul\u00E9s), pas sur le prix d\u2019achat."
+                : "Prix de revente estim\u00E9 via les donn\u00E9es DVF (transactions notariales r\u00E9elles). C\u2019est le prix net vendeur dans l\u2019acte. Les frais d\u2019agence sont g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur."} />
+          <Row label="Prix d'achat (net vendeur)" value={`-${fmt(prixNetVendeurAchat)} \u20AC`} rouge
+            info={"Prix pay\u00E9 au vendeur du bien (hors frais d\u2019agence). C\u2019est le prix inscrit dans l\u2019acte notari\u00E9 d\u2019achat."} />
+          <Row label={pvBruteSimple >= 0 ? "Plus-value brute" : "Moins-value brute"} value={`${pvBruteSimple > 0 ? '+' : ''}${fmt(pvBruteSimple)} \u20AC`} bold vert={pvBruteSimple > 0} rouge={pvBruteSimple <= 0}
+            info={regime === 'marchand_de_biens'
+              ? "Diff\u00E9rence entre le prix de revente net vendeur et le prix d\u2019achat net vendeur. En MdB, c\u2019est aussi la base de calcul de la TVA sur marge."
+              : "Diff\u00E9rence entre les deux prix net vendeur (revente et achat). C\u2019est la vraie cr\u00E9ation de valeur sur le bien, avant frais et fiscalit\u00E9."} />
+          {fraisAgenceAchatMontant > 0 && (
+            <Row label={`Frais d'agence achat (${fraisAgenceRevente}%)`} value={`-${fmt(fraisAgenceAchatMontant)} \u20AC`} rouge
+              info={regime === 'marchand_de_biens'
+                ? `Commission de l\u2019agence immobili\u00E8re \u00E0 l\u2019achat. En MdB, ces frais ne font pas partie de la base de la TVA sur marge. Prix FAI total : ${fmt(prix_fai)} \u20AC.`
+                : `Commission de l\u2019agence immobili\u00E8re \u00E0 l\u2019achat, g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur. Prix FAI total : ${fmt(prix_fai)} \u20AC.`} />
           )}
-          <Row label="Prix d'achat (FAI)" value={`-${fmt(prix_fai)} \u20AC`} rouge />
-          <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge />
+          <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge
+            info={regime === 'marchand_de_biens'
+              ? `Frais de notaire r\u00E9duits \u00E0 ~2,5% pour les marchands de biens (droits de mutation r\u00E9duits). C\u2019est un avantage significatif par rapport aux 7-8% d\u2019un particulier.`
+              : `Frais de notaire (droits de mutation + \u00E9moluments). En ancien : 7-8% du prix. En neuf : 2-3%. Ces frais augmentent le co\u00FBt total de l\u2019op\u00E9ration et r\u00E9duisent la plus-value nette.`} />
           <Row
             label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})` : 'Travaux'}
             value={travauxDejaDeduits
@@ -731,71 +918,126 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
               : (budgetTravaux > 0 ? `-${fmt(budgetTravaux)} \u20AC` : `0 \u20AC`)}
             rouge={!travauxDejaDeduits && budgetTravaux > 0}
             info={travauxDejaDeduits
-              ? "Travaux d\u00E9j\u00E0 d\u00E9duits ou amortis en phase locative. Non comptabilis\u00E9s une 2e fois dans la plus-value."
-              : "Co\u00FBt total des travaux. En micro (pas de d\u00E9duction locative), ils augmentent le prix de revient et r\u00E9duisent la plus-value imposable."}
+              ? regime === 'nu_reel_foncier'
+                ? "Travaux d\u00E9j\u00E0 d\u00E9duits via le d\u00E9ficit foncier en phase locative. Non comptabilis\u00E9s une 2e fois. En contrepartie, ils ont r\u00E9duit votre imp\u00F4t sur le revenu pendant la location."
+                : "Travaux d\u00E9j\u00E0 amortis en phase locative (sur 10 ans). Non comptabilis\u00E9s une 2e fois dans la plus-value. L\u2019amortissement a r\u00E9duit votre r\u00E9sultat imposable chaque ann\u00E9e."
+              : regime === 'marchand_de_biens'
+                ? "Co\u00FBt total des travaux de r\u00E9novation. En MdB, les travaux sont une charge d\u2019exploitation qui r\u00E9duit le b\u00E9n\u00E9fice imposable. C\u2019est le levier principal de cr\u00E9ation de valeur."
+                : "Co\u00FBt total des travaux. En r\u00E9gime micro, les travaux ne sont pas d\u00E9ductibles pendant la location, mais ils augmentent le prix de revient et r\u00E9duisent la plus-value imposable \u00E0 la revente."}
           />
           {interetsCumules > 0 && (
-            <Row label={`Int\u00E9r\u00EAts d'emprunt (${dur} an${dur > 1 ? 's' : ''})`} value={`-${fmt(interetsCumules)} \u20AC`} rouge info={`Int\u00E9r\u00EAts : ${fmt(interetsAnn)} \u20AC/an + Assurance : ${fmt(assuranceAnn)} \u20AC/an \u00D7 ${dur} an${dur > 1 ? 's' : ''}`} />
+            <Row label={`Int\u00E9r\u00EAts d'emprunt (${dur} an${dur > 1 ? 's' : ''})`} value={`-${fmt(interetsCumules)} \u20AC`} rouge
+              info={`Co\u00FBt total du cr\u00E9dit sur ${dur} an${dur > 1 ? 's' : ''} : int\u00E9r\u00EAts ${fmt(interetsAnn)} \u20AC/an + assurance ${fmt(assuranceAnn)} \u20AC/an. Ces frais financiers r\u00E9duisent le b\u00E9n\u00E9fice r\u00E9el de l\u2019op\u00E9ration. En phase locative, ils sont d\u00E9ductibles du r\u00E9sultat imposable (en r\u00E9gime r\u00E9el).`} />
           )}
           {interetsCumules > 0 && fraisBancaires > 0 && (
-            <Row label="Frais de dossier bancaire" value={`-${fmt(fraisBancaires)} \u20AC`} rouge info="Frais de dossier et de garantie bancaire, d\u00E9ductibles en totalit\u00E9" />
+            <Row label="Frais de dossier bancaire" value={`-${fmt(fraisBancaires)} \u20AC`} rouge
+              info={"Frais de dossier et de garantie (hypoth\u00E8que ou caution) pay\u00E9s \u00E0 la souscription du pr\u00EAt. C\u2019est un co\u00FBt ponctuel qui s\u2019ajoute au co\u00FBt total de l\u2019op\u00E9ration."} />
           )}
-          <Row label={pvBrute >= 0 ? "Plus-value brute" : "Moins-value brute"} value={`${pvBrute > 0 ? '+' : ''}${fmt(pvBrute)} \u20AC`} bold vert={pvBrute > 0} rouge={pvBrute <= 0} />
+          <Row label={pvBrute >= 0 ? "Plus-value nette avant imp\u00F4t" : "Moins-value nette avant imp\u00F4t"} value={`${pvBrute > 0 ? '+' : ''}${fmt(pvBrute)} \u20AC`} bold vert={pvBrute > 0} rouge={pvBrute <= 0}
+            info={regime === 'marchand_de_biens'
+              ? "Diff\u00E9rence entre le prix de revente et tous les co\u00FBts (achat + notaire + travaux + frais). C\u2019est la marge brute de l\u2019op\u00E9ration MdB avant TVA et IS."
+              : regime === 'sci_is'
+                ? "Diff\u00E9rence entre le prix de revente et le co\u00FBt total de l\u2019op\u00E9ration. En SCI IS, cette plus-value sera calcul\u00E9e sur la VNC (apr\u00E8s d\u00E9duction des amortissements), ce qui augmente la base imposable."
+                : "Diff\u00E9rence entre le prix de revente et le co\u00FBt total de l\u2019op\u00E9ration (achat + notaire + travaux + frais financiers). C\u2019est ce qu\u2019il vous reste avant imp\u00F4ts sur la plus-value."} />
 
-          {/* Fiscalite PV — 3 lignes fixes pour alignement */}
-          <Row
-            label={regime === 'lmnp_reel_bic' ? "R\u00E9int\u00E9gration amortissements" : regime === 'marchand_de_biens' ? "TVA sur marge (20/120)" : regime === 'lmp_reel_bic' ? (dur > 5 ? "PV professionnelle" : `PV professionnelle (TMI ${tmi}%)`) : regime === 'sci_is' ? "IS sur PV (15% / 25%)" : "IR sur PV (19%)"}
-            value={regime === 'lmnp_reel_bic' ? `+${fmt(Math.round(reintegrationAmort))} \u20AC`
-              : regime === 'marchand_de_biens' ? `-${fmt(Math.round(tvaMarge))} \u20AC`
-              : regime === 'lmp_reel_bic' ? (dur > 5 ? "Exon\u00E9r\u00E9e (> 5 ans)" : `-${fmt(Math.round(irPV))} \u20AC`)
-              : regime === 'sci_is' ? `-${fmt(Math.round(isPV))} \u20AC`
-              : `-${fmt(Math.round(irPV))} \u20AC`}
-            rouge={!(regime === 'lmp_reel_bic' && dur > 5)}
-            vert={regime === 'lmp_reel_bic' && dur > 5}
-            info={regime === 'lmnp_reel_bic' ? "Amortissements d\u00E9duits r\u00E9int\u00E9gr\u00E9s dans la base imposable (r\u00E9forme LFI 2025)"
-              : regime === 'sci_is' ? "PV sur VNC (valeur nette comptable), reste dans la SCI"
-              : regime === 'lmp_reel_bic' && dur > 5 ? "Exon\u00E9ration totale apr\u00E8s 5 ans de d\u00E9tention" : ''}
-          />
-          <Row
-            label={regime === 'lmnp_reel_bic' ? "IR sur PV (19%)"
-              : regime === 'marchand_de_biens' ? "IS sur b\u00E9n\u00E9fice (15% / 25%)"
-              : regime === 'sci_is' ? "PFU dividendes (30%)"
-              : regime === 'lmp_reel_bic' ? "Pr\u00E9l. sociaux (17.2%)"
-              : "Pr\u00E9l. sociaux (17.2%)"}
-            value={regime === 'lmnp_reel_bic' ? `-${fmt(Math.round(irPV))} \u20AC`
-              : regime === 'marchand_de_biens' ? `-${fmt(Math.round(isPV))} \u20AC`
-              : regime === 'sci_is' ? `-${fmt(Math.round(psPV))} \u20AC`
-              : regime === 'lmp_reel_bic' ? (psPV > 0 ? `-${fmt(Math.round(psPV))} \u20AC` : '') : `-${fmt(Math.round(psPV))} \u20AC`}
-            rouge={psPV > 0 || (regime === 'lmnp_reel_bic' && irPV > 0) || (regime === 'marchand_de_biens' && isPV > 0)}
-            tiret={regime === 'lmp_reel_bic' && psPV === 0}
-            info={regime === 'sci_is' ? "Flat tax 30% sur les dividendes distribu\u00E9s aux associ\u00E9s (b\u00E9n\u00E9fice apr\u00E8s IS)" : ''}
-          />
-          <Row
-            label={regime === 'lmnp_reel_bic' ? "Pr\u00E9l. sociaux (17.2%)"
-              : regime === 'lmp_reel_bic' ? "Cotisations SSI (45%)"
-              : ''}
-            value={regime === 'lmnp_reel_bic' ? `-${fmt(Math.round(psPV))} \u20AC`
-              : regime === 'lmp_reel_bic' && cotisationsSocialesLMP > 0 ? `-${fmt(Math.round(cotisationsSocialesLMP))} \u20AC`
-              : ''}
-            rouge={regime === 'lmnp_reel_bic' || (regime === 'lmp_reel_bic' && cotisationsSocialesLMP > 0)}
-            tiret={regime !== 'lmnp_reel_bic' && !(regime === 'lmp_reel_bic' && cotisationsSocialesLMP > 0)}
-            info={regime === 'lmp_reel_bic' ? "Cotisations SSI sur la plus-value court terme (amortissements)" : ''}
-          />
-          <Row label={pvNette >= 0 ? "Plus-value nette" : "Moins-value nette"} value={`${pvNette >= 0 ? '+' : ''}${fmt(pvNette)} \u20AC`} bold vert={pvNette >= 0} rouge={pvNette < 0} />
+          {/* Fiscalite PV — Niveau 1 : Reintegration (LMNP reel) ou ligne vide */}
+          {showReintegrationRow && (
+            regime === 'lmnp_reel_bic' ? (
+              <Row label={"R\u00E9int\u00E9gration amortissements"} value={`+${fmt(Math.round(reintegrationAmort))} \u20AC`} rouge
+                info={"Depuis la LFI 2025, les amortissements d\u00E9duits pendant la phase locative sont r\u00E9int\u00E9gr\u00E9s dans la base de calcul de la plus-value \u00E0 la revente."} />
+            ) : (
+              <div style={{ padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>&nbsp;</div>
+            )
+          )}
+
+          {/* Niveau 2 : IR / TVA marge / IS sur PV / PV pro */}
+          {(regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier' || regime === 'lmnp_micro_bic' || regime === 'lmnp_reel_bic') && (
+            <ExpandableTaxRow label={"IR sur PV (19%)"} total={Math.round(irPV)} isFree={isFree}
+              info={"Imp\u00F4t forfaitaire de 19% sur la plus-value, r\u00E9duit par les abattements pour dur\u00E9e de d\u00E9tention (exon\u00E9ration totale IR apr\u00E8s 22 ans)."}
+              details={[
+                { label: `IR sur PV (19%) - avant abattements`, value: `${fmt(Math.round(pvBaseIR * 0.19))}\u00A0\u20AC` },
+                { label: abattements.abattementIR > 0 ? `Abattement IR (${dur} ans / -${Math.round(abattements.abattementIR)}%)` : `Abattement IR (${dur} an${dur > 1 ? 's' : ''} / 0%)`, value: abattements.abattementIR > 0 ? `-${fmt(Math.round(pvBaseIR * 0.19 - irPV))}\u00A0\u20AC` : '0\u00A0\u20AC', vert: abattements.abattementIR > 0 },
+              ]} />
+          )}
+          {regime === 'marchand_de_biens' && (
+            <ExpandableTaxRow label={"TVA sur marge (20%)"} total={Math.round(tvaMarge)} isFree={isFree}
+              info={`TVA calcul\u00E9e \u00AB\u00A0en dedans\u00A0\u00BB sur la marge (revente net vendeur - achat net vendeur).`}
+              details={[
+                { label: `Marge (${fmt(prixReventeNetVendeur)} - ${fmt(prixNetVendeurAchat)})`, value: `${fmt(Math.round(Math.max(0, prixReventeNetVendeur - prixNetVendeurAchat)))}\u00A0\u20AC` },
+                { label: `TVA (marge \u00D7 20/120)`, value: `-${fmt(Math.round(tvaMarge))}\u00A0\u20AC` },
+              ]} />
+          )}
+          {regime === 'sci_is' && (
+            <ExpandableTaxRow label={"IS sur PV (15% / 25%)"} total={Math.round(isPV)} isFree={isFree}
+              info={"PV calcul\u00E9e sur la VNC (prix + frais + travaux - amortissements cumul\u00E9s). Pas d\u2019abattement pour dur\u00E9e de d\u00E9tention."}
+              details={[
+                { label: 'PV sur VNC', value: `${fmt(Math.round(isPV / (isPV <= 42500 * 0.15 ? 0.15 : 0.25) || 0))}\u00A0\u20AC` },
+                { label: 'IS (15% / 25%)', value: `-${fmt(Math.round(isPV))}\u00A0\u20AC` },
+              ]} />
+          )}
+          {regime === 'lmp_reel_bic' && (
+            <ExpandableTaxRow label={dur > 5 ? "PV professionnelle" : `PV professionnelle (TMI ${tmi}%)`} total={dur > 5 ? 0 : Math.round(irPV)} isFree={isFree}
+              info={dur > 5 ? "Exon\u00E9ration totale apr\u00E8s 5 ans d\u2019activit\u00E9 (recettes < 90 000 \u20AC/an)." : `PV impos\u00E9e \u00E0 votre TMI. Exon\u00E9r\u00E9e apr\u00E8s 5 ans.`}
+              details={dur > 5 ? [{ label: 'Exon\u00E9r\u00E9e (> 5 ans, recettes < 90k\u20AC)', value: '0\u00A0\u20AC', vert: true }] : [
+                { label: `IR (TMI ${tmi}%)`, value: `-${fmt(Math.round(irPV))}\u00A0\u20AC` },
+              ]} />
+          )}
+
+          {/* Niveau 3 : PS / IS benefice / PFU / SSI */}
+          {(regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier' || regime === 'lmnp_micro_bic' || regime === 'lmnp_reel_bic') && (
+            <ExpandableTaxRow label={"PS sur PV (17,2%)"} total={Math.round(psPV)} isFree={isFree}
+              info={"Pr\u00E9l\u00E8vements sociaux de 17,2%. Abattements diff\u00E9rents de l\u2019IR : exon\u00E9ration totale PS apr\u00E8s 30 ans (vs 22 ans pour l\u2019IR)."}
+              details={[
+                { label: `PS sur PV (17,2%) - avant abattements`, value: `${fmt(Math.round(pvBasePS * 0.172))}\u00A0\u20AC` },
+                { label: abattements.abattementPS > 0 ? `Abattement PS (${dur} ans / -${Math.round(abattements.abattementPS)}%)` : `Abattement PS (${dur} an${dur > 1 ? 's' : ''} / 0%)`, value: abattements.abattementPS > 0 ? `-${fmt(Math.round(pvBasePS * 0.172 - psPV))}\u00A0\u20AC` : '0\u00A0\u20AC', vert: abattements.abattementPS > 0 },
+              ]} />
+          )}
+          {regime === 'marchand_de_biens' && (
+            <ExpandableTaxRow label={"IS sur b\u00E9n\u00E9fice (15% / 25%)"} total={Math.round(isPV)} isFree={isFree}
+              info={"IS sur le b\u00E9n\u00E9fice net apr\u00E8s TVA sur marge. 15% jusqu\u2019\u00E0 42 500 \u20AC, 25% au-del\u00E0."}
+              details={[
+                { label: 'B\u00E9n\u00E9fice (marge - TVA - frais)', value: `${fmt(Math.round(isPV <= 42500 * 0.15 ? isPV / 0.15 : (isPV - 42500 * 0.15) / 0.25 + 42500))}\u00A0\u20AC` },
+                { label: 'IS (15% / 25%)', value: `-${fmt(Math.round(isPV))}\u00A0\u20AC` },
+              ]} />
+          )}
+          {regime === 'sci_is' && (
+            <ExpandableTaxRow label={"PFU dividendes (30%)"} total={Math.round(psPV)} isFree={isFree}
+              info={"Flat tax 30% si les b\u00E9n\u00E9fices sont distribu\u00E9s en dividendes. Si les fonds restent dans la SCI, pas de PFU imm\u00E9diat."}
+              details={[
+                { label: 'B\u00E9n\u00E9fice distribuable (apr\u00E8s IS)', value: `${fmt(Math.round(psPV / 0.3 || 0))}\u00A0\u20AC` },
+                { label: 'PFU (30%)', value: `-${fmt(Math.round(psPV))}\u00A0\u20AC` },
+              ]} />
+          )}
+          {regime === 'lmp_reel_bic' && (
+            <ExpandableTaxRow label={"Cotisations SSI (45%)"} total={Math.round(cotisationsSocialesLMP)} isFree={isFree}
+              info={"Cotisations sociales sur la plus-value court terme (part li\u00E9e aux amortissements d\u00E9duits)."}
+              details={cotisationsSocialesLMP > 0 ? [
+                { label: 'PV court terme (amortissements)', value: `${fmt(Math.round(cotisationsSocialesLMP / 0.45))}\u00A0\u20AC` },
+                { label: 'SSI (45%)', value: `-${fmt(Math.round(cotisationsSocialesLMP))}\u00A0\u20AC` },
+              ] : [{ label: 'Pas de PV court terme', value: '0\u00A0\u20AC', vert: true }]} />
+          )}
+          <Row label={pvNette >= 0 ? "Plus-value nette d\u2019imp\u00F4t" : "Moins-value nette d\u2019imp\u00F4t"} value={`${pvNette >= 0 ? '+' : ''}${fmt(pvNette)} \u20AC`} bold vert={pvNette >= 0} rouge={pvNette < 0}
+            info={regime === 'marchand_de_biens'
+              ? "B\u00E9n\u00E9fice net de l\u2019op\u00E9ration MdB apr\u00E8s TVA sur marge et IS. C\u2019est ce qui reste dans la soci\u00E9t\u00E9 (avant distribution de dividendes)."
+              : regime === 'sci_is'
+                ? "Plus-value nette apr\u00E8s IS et PFU. En SCI IS, la double imposition (IS sur le b\u00E9n\u00E9fice + PFU sur les dividendes) p\u00E8se lourd sur les op\u00E9rations de revente."
+                : regime === 'lmp_reel_bic' && dur > 5
+                  ? "Plus-value nette apr\u00E8s exon\u00E9ration LMP. Apr\u00E8s 5 ans, c\u2019est le r\u00E9gime le plus avantageux pour la revente (z\u00E9ro imp\u00F4t sur la PV)."
+                  : "Plus-value nette apr\u00E8s tous les imp\u00F4ts (IR 19% + PS 17,2% avec abattements dur\u00E9e). C\u2019est le gain r\u00E9el sur la revente du bien."} />
 
           {/* BILAN FINAL */}
-          <div style={{ marginTop: 'auto', paddingTop: '16px', background: profitNet >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '16px' }}>
+          <div style={{ marginTop: '16px', paddingTop: '16px', background: profitNet >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '16px' }}>
             <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}
             </div>
-            {cashflowCumule !== 0 && (
+            {(
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                <span style={{ color: '#555' }}>Cashflow locatif net cumul{'\u00e9'}</span>
+                <span style={{ color: '#555' }}>{"Cash Flow locatif net d\u2019imp\u00F4t cumul\u00E9"}</span>
                 <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-              <span style={{ color: '#555' }}>{pvNette >= 0 ? 'Plus-value nette' : 'Moins-value nette'}</span>
+              <span style={{ color: '#555' }}>{pvNette >= 0 ? "Plus-value nette d\u2019imp\u00F4t" : "Moins-value nette d\u2019imp\u00F4t"}</span>
               <span style={{ fontWeight: 600, color: pvNette >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{pvNette >= 0 ? '+' : ''}{fmt(pvNette)} {'\u20AC'}</span>
             </div>
             {interetsCumules > 0 && (
@@ -816,12 +1058,12 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', marginTop: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>ROI</span>
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROI <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Investment (retour sur investissement). C\u2019est votre gain total (cashflow + plus-value) divis\u00E9 par le co\u00FBt total de l\u2019op\u00E9ration (achat + notaire + travaux). Un ROI de 20% signifie que vous avez gagn\u00E9 20\u00A0\u20AC pour 100\u00A0\u20AC investis. Le ROI annualis\u00E9 permet de comparer des op\u00E9rations de dur\u00E9es diff\u00E9rentes."}</span></span>
                   <span style={{ fontWeight: 600, color: roiTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roiTotal > 0 ? '+' : ''}{roiTotal}% ({roiAnnualise > 0 ? '+' : ''}{roiAnnualise}%/an)</span>
                 </div>
                 {fondsInvestis > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>ROE</span>
+                    <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROE <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Equity (retour sur fonds propres). C\u2019est votre gain total divis\u00E9 par l\u2019argent que VOUS avez mis de votre poche (apport + frais de notaire). Gr\u00E2ce \u00E0 l\u2019effet de levier du cr\u00E9dit, le ROE est souvent bien sup\u00E9rieur au ROI. Un ROE de 50% signifie que vous avez gagn\u00E9 50\u00A0\u20AC pour 100\u00A0\u20AC sortis de votre poche."}</span></span>
                     <span style={{ fontWeight: 600, color: roeTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roeTotal > 0 ? '+' : ''}{roeTotal}% ({roeAnnualise > 0 ? '+' : ''}{roeAnnualise}%/an)</span>
                   </div>
                 )}
@@ -830,8 +1072,26 @@ function PnlColonne({ titre, bien, financement, tmi, regime, highlight = false, 
           </div>
         </>
       )}
-      </div>
     </div>
+  )
+}
+
+const SCORE_LABELS: Record<number, { label: string, color: string, info: string }> = {
+  1: { label: 'Bon \u00E9tat', color: '#1a7a40', info: "Le bien est en bon \u00E9tat g\u00E9n\u00E9ral. Quelques rafra\u00EEchissements l\u00E9gers possibles (peinture, petites r\u00E9parations). Habitable imm\u00E9diatement sans travaux majeurs. Budget : ~200 \u20AC/m\u00B2." },
+  2: { label: 'Rafra\u00EEchissement', color: '#1a7a40', info: "Le bien n\u00E9cessite des travaux de rafra\u00EEchissement : peinture, sols, \u00E9lectricit\u00E9 aux normes, petite plomberie. Pas de modification structurelle. Budget : ~500 \u20AC/m\u00B2." },
+  3: { label: 'R\u00E9novation moyenne', color: '#f0a830', info: "R\u00E9novation compl\u00E8te d\u2019une ou plusieurs pi\u00E8ces : cuisine, salle de bain, \u00E9lectricit\u00E9 compl\u00E8te, rev\u00EAtements. Pas de gros \u0153uvre. Budget : ~800 \u20AC/m\u00B2." },
+  4: { label: 'Travaux lourds', color: '#c0392b', info: "Travaux lourds touchant la structure ou les r\u00E9seaux : reprise de plomberie, \u00E9lectricit\u00E9, cloisons, planchers, isolation, fen\u00EAtres. Peut n\u00E9cessiter un architecte. Budget : ~1 200 \u20AC/m\u00B2." },
+  5: { label: 'R\u00E9habilitation compl\u00E8te', color: '#c0392b', info: "R\u00E9habilitation totale du bien : reprise de la structure (charpente, toiture, fa\u00E7ade, murs porteurs), mise aux normes compl\u00E8te, redistribution des espaces. Local commercial ou bien insalubre \u00E0 transformer. Budget : ~1 800 \u20AC/m\u00B2 et plus." },
+}
+
+function ScoreLabel({ score }: { score: number | null }) {
+  if (!score || !SCORE_LABELS[score]) return null
+  const { label, color, info } = SCORE_LABELS[score]
+  return (
+    <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      <span style={{ fontSize: '12px', fontWeight: 600, color, padding: '2px 8px', background: color === '#1a7a40' ? '#d4f5e0' : color === '#f0a830' ? '#fff8f0' : '#fde8e8', borderRadius: '6px' }}>{label}</span>
+      <span style={{ cursor: 'help', fontSize: '10px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '13px', height: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{info}</span></span>
+    </span>
   )
 }
 
@@ -1016,7 +1276,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
 
       {champsManquants.length > 0 && (
         <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#a06010' }}>
-          {champsManquants.length} information{champsManquants.length > 1 ? 's' : ''} manquante{champsManquants.length > 1 ? 's' : ''} pour calculer la rentabilit\u00e9 nette
+          {champsManquants.length} information{champsManquants.length > 1 ? 's' : ''} manquante{champsManquants.length > 1 ? 's' : ''} {"pour calculer la rentabilit\u00E9 nette"}
         </div>
       )}
 
@@ -1429,9 +1689,9 @@ export default function FicheBienPage() {
 
   const [baseCalc, setBaseCalc] = useState<'fai' | 'cible'>('fai')
   const [modeCible, setModeCible] = useState<'cashflow' | 'pv'>('pv')
-  const [apport, setApport] = useState(0)
-  const [taux, setTaux] = useState(3.5)
-  const [tauxAssurance, setTauxAssurance] = useState(0.3)
+  const [apport, setApport] = useState<number | ''>(0)
+  const [taux, setTaux] = useState<number | ''>(3.5)
+  const [tauxAssurance, setTauxAssurance] = useState<number | ''>(0.3)
   const [duree, setDuree] = useState(20)
   const [fraisNotaire, setFraisNotaire] = useState(7.5)
   const [tmi, setTmi] = useState(30)
@@ -1442,7 +1702,7 @@ export default function FicheBienPage() {
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [estimationData, setEstimationData] = useState<any>(null)
   const [dureeRevente, setDureeRevente] = useState<number>(1)
-  const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number>(0) // 0% par defaut = charge acquereur ou vente directe
+  const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number | ''>(5) // 5% par defaut = frais agence inclus dans le FAI
 
   useEffect(() => {
     async function load() {
@@ -1489,7 +1749,13 @@ export default function FicheBienPage() {
           if (p.duree_ans != null) setDuree(p.duree_ans)
           if (p.frais_notaire != null) setFraisNotaire(p.frais_notaire)
           if (p.tmi != null) setTmi(p.tmi)
-          if (p.regime && [...REGIMES, ...REGIMES_IDR].some(r => r.value === p.regime)) setRegime(p.regime)
+          if (p.regime && [...REGIMES, ...REGIMES_IDR].some(r => r.value === p.regime)) {
+            setRegime(p.regime)
+            // Regime2 = premier regime different du profil pour eviter la comparaison identique
+            const suggere = ['lmnp_reel_bic', 'nu_reel_foncier', 'sci_is', 'marchand_de_biens', 'lmnp_micro_bic']
+            const alt = suggere.find(r => r !== p.regime)
+            if (alt) setRegime2(alt)
+          }
           if (p.objectif_cashflow != null) setObjectifCashflow(p.objectif_cashflow)
           if (p.objectif_pv != null) setObjectifPV(p.objectif_pv)
           if (p.budget_travaux_m2) setBudgetTravauxM2(p.budget_travaux_m2)
@@ -1657,7 +1923,7 @@ export default function FicheBienPage() {
 
   const resultatFAI = peutCalculer ? calculerCashflow(
     { prix_fai: bien.prix_fai, loyer: bien.loyer, type_loyer: bien.type_loyer, charges_rec: bien.charges_rec || 0, charges_copro: bien.charges_copro || 0, taxe_fonc_ann: bien.taxe_fonc_ann || 0, surface: bien.surface },
-    { apport, tauxCredit: taux, tauxAssurance, dureeAns: duree, fraisNotaire, objectifCashflow },
+    { apport: (apport || 0) as number, tauxCredit: (taux || 0) as number, tauxAssurance: (tauxAssurance || 0) as number, dureeAns: duree, fraisNotaire, objectifCashflow },
     { tmi, regime: regime as any }
   ) : null
 
@@ -1666,10 +1932,10 @@ export default function FicheBienPage() {
   const budgetTravCalc = scoreUtilCalc && bien.surface ? (budgetTravauxM2[String(scoreUtilCalc)] || 0) * bien.surface : 0
   const estimPrix = estimationData?.prix_total || 0
   // Prix cible PV : resoudre pour que pvBrute = objectifPV% × cout total
-  // pvBrute = estimPrix × (1 - fraisAgence%) - prixCible × (1 + fraisNotaire%) - travaux
+  // pvBrute = estimPrix (DVF net vendeur) - prixCible × (1 + fraisNotaire%) - travaux
   // objectif = pvBrute / (prixCible × (1 + fraisNotaire%))
-  // => prixCible = (estimPrix × (1 - fraisAgence/100) - budgetTrav) / ((1 + fraisNotaire/100) × (1 + objectifPV/100))
-  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix * (1 - fraisAgenceRevente / 100) - budgetTravCalc) / ((1 + fraisNotaire / 100) * (1 + objectifPV / 100))) : null
+  // => prixCible = (estimPrix - budgetTrav) / ((1 + fraisNotaire/100) × (1 + objectifPV/100))
+  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix - budgetTravCalc) / ((1 + fraisNotaire / 100) * (1 + objectifPV / 100))) : null
 
   // Prix cible cashflow (locatif)
   const prixCibleCashflow = resultatFAI?.prix_cible || null
@@ -1682,15 +1948,20 @@ export default function FicheBienPage() {
   const hasCibleContraignant = prixCibleCombine && prixCibleCombine < bien?.prix_fai
 
   const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
+  // Valeurs numeriques (coerce '' -> 0 pour les calculs)
+  const apportNum = apport || 0
+  const tauxNum = taux || 0
+  const tauxAssuranceNum = tauxAssurance || 0
+  const fraisAgenceNum = fraisAgenceRevente || 0
   const prixBase = baseCalc === 'fai' ? bien.prix_fai : (prixCibleCombine || bien.prix_fai)
   const montantProjet = prixBase * (1 + fraisNotaire / 100) + budgetTravCalc
-  const montantEmprunte = Math.max(0, montantProjet - apport)
-  const apportPct = montantProjet > 0 ? Math.round(apport / montantProjet * 1000) / 10 : 0
+  const montantEmprunte = Math.max(0, montantProjet - apportNum)
+  const apportPct = montantProjet > 0 ? Math.round(apportNum / montantProjet * 1000) / 10 : 0
   const ecartPct = prixCibleCombine ? ((prixCibleCombine - bien.prix_fai) / bien.prix_fai * 100).toFixed(1) : null
   const ecartNegatif = Number(ecartPct) <= 0
 
-  const mensualiteCredit = calculerMensualite(montantEmprunte, taux, duree)
-  const mensualiteAss = montantEmprunte * (tauxAssurance / 100) / 12
+  const mensualiteCredit = calculerMensualite(montantEmprunte, tauxNum, duree)
+  const mensualiteAss = montantEmprunte * (tauxAssuranceNum / 100) / 12
   const mensualiteTotale = mensualiteCredit + mensualiteAss
 
   const chargesRec = bien.charges_rec || 0
@@ -1702,7 +1973,7 @@ export default function FicheBienPage() {
   const cashflowBrut = loyerNet - mensualiteTotale
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
-  const financement = { montantEmprunte, tauxCredit: taux, tauxAssurance, dureeAns: duree }
+  const financement = { montantEmprunte, tauxCredit: tauxNum, tauxAssurance: tauxAssuranceNum, dureeAns: duree }
   const chargesUtilisateur = profil ? {
     assurance_pno: profil.assurance_pno || 0,
     frais_gestion_pct: profil.frais_gestion_pct || 0,
@@ -1749,8 +2020,8 @@ export default function FicheBienPage() {
         .data-value { font-size: 14px; font-weight: 600; color: #1a1210; }
         .data-value.nc { color: #7a6a60; font-style: italic; font-weight: 400; }
         .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
-        .two-cols { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 24px; }
-        .two-cols > .col { flex: 1; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+        .two-cols { display: flex; gap: 24px; align-items: flex-start; }
+        .two-cols > .col { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
         .simu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
         .strat-intro { background: #fff; border-radius: 12px; border: 1px solid #e8e2d8; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: #7a6a60; line-height: 1.6; }
         .strat-intro strong { color: #1a1210; }
@@ -2276,17 +2547,18 @@ export default function FicheBienPage() {
                           const prixAchat = bien.prix_fai || 0
                           const fraisNotaireAchat = Math.round(prixAchat * fraisNotaire / 100)
                           const coutCopro = (coutGeometreParLot + coutReglementCoproParLot + coutCompteursParLot) * nbLotsEffectif
-                          const fraisAgence = Math.round(totalRevente * fraisAgenceRevente / 100)
+                          const prixNetVendeurAchatIDR = fraisAgenceNum > 0 ? Math.round(prixAchat / (1 + fraisAgenceNum / 100)) : prixAchat
                           const fraisNotaireRevente = Math.round(totalRevente * 2.5 / 100) // 2.5% MdB
-                          const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisAgence - fraisNotaireRevente
-                          const tvaMarge = Math.round(Math.max(0, margeBrute) * 20 / 120)
+                          const margeBrute = totalRevente - prixAchat - fraisNotaireAchat - coutCopro - coutTravauxGlobal - fraisNotaireRevente
+                          const margeTVA = Math.max(0, totalRevente - prixNetVendeurAchatIDR)
+                          const tvaMarge = Math.round(margeTVA * 20 / 120)
                           const isBase = Math.max(0, margeBrute - tvaMarge)
                           const isTotal = Math.round(Math.min(isBase, 42500) * 0.15 + Math.max(0, isBase - 42500) * 0.25)
                           const margeNette = margeBrute - tvaMarge - isTotal
                           return totalRevente > 0 ? (
                             <div style={{ marginTop: '16px', borderTop: '1px solid #e8e2d8', paddingTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '13px' }}>
                               <span style={{ color: '#7a6a60' }}>Revente totale</span><span style={{ textAlign: 'right', fontWeight: 600, color: '#1a7a40' }}>{totalRevente.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                              <span style={{ color: '#7a6a60' }}>{"Co\u00FBts totaux"}</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisAgence + fraisNotaireRevente).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                              <span style={{ color: '#7a6a60' }}>{"Co\u00FBts totaux"}</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(prixAchat + fraisNotaireAchat + coutCopro + coutTravauxGlobal + fraisNotaireRevente).toLocaleString('fr-FR')} {'\u20AC'}</span>
                               <span style={{ color: '#7a6a60' }}>Marge brute</span><span style={{ textAlign: 'right', fontWeight: 700, color: margeBrute >= 0 ? '#1a7a40' : '#c0392b' }}>{margeBrute >= 0 ? '+' : ''}{margeBrute.toLocaleString('fr-FR')} {'\u20AC'}</span>
                               <span style={{ color: '#7a6a60' }}>TVA marge + IS</span><span style={{ textAlign: 'right', color: '#c0392b' }}>-{(tvaMarge + isTotal).toLocaleString('fr-FR')} {'\u20AC'}</span>
                               <span style={{ fontWeight: 700 }}>Marge nette MdB</span><span style={{ textAlign: 'right', fontWeight: 800, fontSize: '15px', fontFamily: "'Fraunces', serif", color: margeNette >= 0 ? '#1a7a40' : '#c0392b' }}>{margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString('fr-FR')} {'\u20AC'}</span>
@@ -2399,6 +2671,7 @@ export default function FicheBienPage() {
                   })}
                 </div>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>{bien.score_travaux}/5</span>
+                <ScoreLabel score={bien.score_travaux} />
               </div>
             ) : (
               <div style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '8px' }}>Aucun score IA disponible</div>
@@ -2430,6 +2703,7 @@ export default function FicheBienPage() {
                   })}
                 </div>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{(scorePerso || bien.score_travaux) ? `${scorePerso || bien.score_travaux}/5` : 'NC'}</span>
+                <ScoreLabel score={scorePerso || bien.score_travaux} />
                 {scorePerso && scorePerso !== bien.score_travaux && <span style={{ fontSize: '11px', color: '#b0a898', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleScorePerso(scorePerso)}>{"Réinitialiser au score IA"}</span>}
               </div>
             )}
@@ -2610,22 +2884,22 @@ export default function FicheBienPage() {
                     <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
                   </div>
                   <div className="param-group">
-                    <label className="param-label">Apport — {apportPct} % du projet ({fmt(apport)} {'\u20AC'})</label>
+                    <label className="param-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</label>
                     <div className="slider-wrap">
                       <input type="range" className="slider" min={0} max={100} step={0.5} value={apportPct}
                         onChange={e => { const pct = Number(e.target.value); setApport(Math.round(montantProjet * pct / 100)) }} />
                       <div className="slider-labels"><span>0 %</span><span>100 %</span></div>
                     </div>
-                    <input className="param-input" type="number" value={apport} onChange={e => setApport(Number(e.target.value))} placeholder={"Montant en \u20AC"} />
+                    <input className="param-input" type="number" value={apport} onChange={e => setApport(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setApport(profil?.apport ?? 0) }} placeholder={"Montant en \u20AC"} />
                     <span className="param-hint">{"Montant emprunt\u00E9"} : {fmt(montantEmprunte)} {'\u20AC'}</span>
                   </div>
                   <div className="param-group">
                     <label className="param-label">{"Taux cr\u00E9dit (%)"}</label>
-                    <input className="param-input" type="number" step="0.01" value={taux} onChange={e => setTaux(Number(e.target.value))} />
+                    <input className="param-input" type="number" step="0.01" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTaux(profil?.taux_credit ?? 3.5) }} />
                   </div>
                   <div className="param-group">
                     <label className="param-label">Taux assurance (%)</label>
-                    <input className="param-input" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(Number(e.target.value))} />
+                    <input className="param-input" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTauxAssurance(profil?.taux_assurance ?? 0.3) }} />
                   </div>
                   <div className="param-group">
                     <label className="param-label">{"Dur\u00E9e"} — {duree} ans</label>
@@ -2665,13 +2939,12 @@ export default function FicheBienPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#7a6a60' }}>Comparer avec :</span>
                 <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
-                  {/* TODO: limit to 2 regimes for Pro — currently shows all regimes for both Pro and Expert */}
                   {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"D\u00E9tention :"}</span>
-                {[1, 2, 3, 4, 5].map(d => (
+                {[1, 2, 3, 4, 5, 10, 15, 20].map(d => (
                   <button key={d} onClick={() => setDureeRevente(d)} style={{
                     padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                     border: dureeRevente === d ? '2px solid #c0392b' : '1.5px solid #e8e2d8',
@@ -2682,10 +2955,20 @@ export default function FicheBienPage() {
                   </button>
                 ))}
               </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              {prixCibleCombine && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#7a6a60' }}>Base de calcul :</span>
+                  <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} style={{ minWidth: '90px', padding: '8px 16px' }} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
+                  <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} style={{ minWidth: '90px', padding: '8px 16px' }} onClick={() => setBaseCalc('cible')}>Prix cible</button>
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '13px', color: '#7a6a60' }} title={"0% = vente directe ou frais charge acqu\u00E9reur (par d\u00E9faut). Augmentez uniquement si les frais sont \u00E0 la charge du vendeur."}>Frais agence vendeur :</span>
+                <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"Frais d\u2019agence \u00E0 l\u2019achat :"}</span>
                 <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
-                  onChange={e => setFraisAgenceRevente(Number(e.target.value))}
+                  onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
+                  onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
                   className="param-input" style={{ width: '60px', textAlign: 'right' }} />
                 <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
               </div>
@@ -2706,8 +2989,8 @@ export default function FicheBienPage() {
                 </div>
               )}
               <div className="pnl-grid">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
-                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apport} fraisAgenceRevente={fraisAgenceRevente} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
               </div>
             </div>
           </div>

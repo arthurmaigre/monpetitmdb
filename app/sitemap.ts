@@ -34,7 +34,7 @@ export default async function sitemap() {
       .order('updated_at', { ascending: false })
 
     if (articles) {
-      const guideCategories = ['Stratégies', 'Fiscalité', 'Marché', 'Travaux', 'Financement']
+      const guideCategories = ['Stratégies', 'Fiscalité', 'Marché', 'Travaux', 'Financement', 'Strategies', 'Fiscalite', 'Marche']
       for (const a of articles) {
         const isGuide = guideCategories.includes(a.category)
         const entry = {
