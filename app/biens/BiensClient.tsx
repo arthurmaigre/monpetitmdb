@@ -355,7 +355,7 @@ export default function BiensPage() {
         .empty-state { text-align: center; padding: 80px 40px; color: #7a6a60; }
         .empty-state h3 { font-family: 'Fraunces', serif; font-size: 22px; color: #1a1210; margin-bottom: 8px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 24px; }
-        .list-wrap { position: relative; overflow-x: scroll; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .list-wrap { position: relative; overflow-x: scroll; overflow-y: visible; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .list-wrap::-webkit-scrollbar { height: 0; }
         .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 16px; max-width: 1504px; margin: 0 auto; }
         .floating-scroll-inner { height: 1px; pointer-events: none; }
@@ -370,8 +370,10 @@ export default function BiensPage() {
         .sticky-col { position: sticky; z-index: 2; background: #fff; text-align: left; }
         .sticky-col-head { position: sticky; z-index: 3; background: #f7f4f0; text-align: left !important; }
         .list-table tbody tr:hover .sticky-col { background: #faf8f5; }
-        .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; transition: transform 0.3s ease; }
-        .list-thumb:hover { transform: scale(1.6); z-index: 10; position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.2); border-radius: 6px; }
+        .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; transition: transform 0.3s ease; cursor: zoom-in; }
+        .list-thumb-td { overflow: visible !important; }
+        .list-thumb-td:hover { z-index: 9999 !important; }
+        .list-thumb:hover { transform: scale(6); transform-origin: center center; z-index: 9999; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border-radius: 4px; }
         .list-thumb-empty { width: 72px; height: 52px; border-radius: 8px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
         .td-bien-title { font-weight: 600; color: #1a1210; display: block; margin-bottom: 2px; }
         .td-bien-quartier { font-size: 12px; color: #b0a898; display: block; }
@@ -724,7 +726,7 @@ export default function BiensPage() {
                             {watchlistIds.has(bien.id) ? '♥' : '♡'}
                           </button>
                         </td>
-                        <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
+                        <td className="sticky-col list-thumb-td" style={{ left: '40px', width: '80px', minWidth: '80px', overflow: 'visible' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
                         <td className="sticky-col" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
                           <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
