@@ -724,7 +724,7 @@ export default function BiensPage() {
                             {watchlistIds.has(bien.id) ? '♥' : '♡'}
                           </button>
                         </td>
-                        <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); const md = typeof (bien as any).moteurimmo_data === 'string' ? JSON.parse((bien as any).moteurimmo_data || '{}') : ((bien as any).moteurimmo_data || {}); const urls = md.pictureUrls?.length > 0 ? md.pictureUrls : [bien.photo_url]; setHoverPhoto({ urls, x: r.left + r.width / 2, y: r.top + r.height / 2, idx: 0 }) }} onMouseLeave={() => setHoverPhoto(null)} /> : <div className="list-thumb-empty">-</div>}</td>
+                        <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); const md = typeof (bien as any).moteurimmo_data === 'string' ? JSON.parse((bien as any).moteurimmo_data || '{}') : ((bien as any).moteurimmo_data || {}); const urls = md.pictureUrls?.length > 0 ? md.pictureUrls : [bien.photo_url]; setHoverPhoto({ urls, x: r.right + 16, y: r.top, idx: 0 }) }} /> : <div className="list-thumb-empty">-</div>}</td>
                         <td className="sticky-col" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
                           <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
@@ -899,11 +899,12 @@ export default function BiensPage() {
           style={{
             position: 'fixed', zIndex: 99999,
             left: hoverPhoto.x, top: hoverPhoto.y,
-            transform: 'translate(-50%, -50%)',
           }}
           onMouseLeave={() => setHoverPhoto(null)}
         >
-          <div style={{ position: 'relative', width: '420px', height: '300px' }}>
+          <div style={{ position: 'relative', width: '420px', height: '300px', paddingLeft: '0px' }}>
+            {/* Zone invisible a gauche pour faire le pont avec la miniature */}
+            <div style={{ position: 'absolute', left: '-24px', top: 0, width: '24px', height: '100%' }} />
             <img src={hoverPhoto.urls[hoverPhoto.idx]} alt="" style={{
               width: '100%', height: '100%', objectFit: 'cover',
               borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
