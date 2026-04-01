@@ -278,7 +278,7 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
   )
 
   // Texte formaté pour lecture seule
-  const readText = suffix ? `${displayVal != null ? displayVal.toLocaleString('fr-FR') : ''}${suffix}` : displayFormatted
+  const readText = suffix ? `${displayVal != null ? displayVal.toLocaleString('fr-FR') : ''}${suffix.replace(/ /g, '\u00A0')}` : displayFormatted
 
   // --- Pas connecté : lecture seule ---
   if (!userToken) {
