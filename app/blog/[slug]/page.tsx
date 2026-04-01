@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 async function getArticle(slug: string) {
   const { data, error } = await supabaseAdmin
     .from('articles')
-    .select('title, slug, content, category, keyword, published_at, word_count, cover_url')
+    .select('title, slug, content, category, keyword, published_at, word_count, cover_url, excerpt')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
@@ -48,7 +48,7 @@ async function getArticle(slug: string) {
 async function getRelatedArticles(slug: string) {
   const { data } = await supabaseAdmin
     .from('articles')
-    .select('title, slug, cover_url, published_at')
+    .select('title, slug, cover_url, published_at, category')
     .eq('status', 'published')
     .neq('slug', slug)
     .order('published_at', { ascending: false })
@@ -74,9 +74,19 @@ export default async function ArticlePage({ params }: Props) {
         "@type": "Article",
         "headline": article.title,
         "datePublished": article.published_at,
-        "author": { "@type": "Person", "name": article.author || "Mon Petit MDB" },
+        "author": { "@type": "Organization", "name": "Mon Petit MDB" },
         "image": article.cover_url || undefined,
-        "publisher": { "@type": "Organization", "name": "Mon Petit MDB" }
+        "publisher": { "@type": "Organization", "name": "Mon Petit MDB" },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": `https://www.monpetitmdb.fr/blog/${article.slug}` }
+      }) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://www.monpetitmdb.fr" },
+          { "@type": "ListItem", "position": 2, "name": "Conseils", "item": "https://www.monpetitmdb.fr/blog" },
+          { "@type": "ListItem", "position": 3, "name": article.title, "item": `https://www.monpetitmdb.fr/blog/${article.slug}` }
+        ]
       }) }} />
     </>
   )

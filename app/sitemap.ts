@@ -16,7 +16,6 @@ export default async function sitemap() {
     { url: `${baseUrl}/register`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.5 },
     { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.5 },
     { url: `${baseUrl}/faq`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.6 },
-    { url: `${baseUrl}/guide`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.8 },
     { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: 'yearly' as const, priority: 0.3 },
     { url: `${baseUrl}/cgu`, lastModified: new Date(), changeFrequency: 'yearly' as const, priority: 0.3 },
     { url: `${baseUrl}/mentions-legales`, lastModified: new Date(), changeFrequency: 'yearly' as const, priority: 0.3 },
@@ -24,30 +23,23 @@ export default async function sitemap() {
 
   // Articles de blog et guides publies
   let blogPages: { url: string; lastModified: Date; changeFrequency: 'weekly'; priority: number }[] = []
-  let guidePages: { url: string; lastModified: Date; changeFrequency: 'weekly'; priority: number }[] = []
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
     const { data: articles } = await supabase
       .from('articles')
-      .select('slug, updated_at, category')
+      .select('slug, updated_at')
       .eq('status', 'published')
       .order('updated_at', { ascending: false })
 
     if (articles) {
-      const guideCategories = ['Stratégies', 'Fiscalité', 'Marché', 'Travaux', 'Financement', 'Strategies', 'Fiscalite', 'Marche']
-      for (const a of articles) {
-        const isGuide = guideCategories.includes(a.category)
-        const entry = {
-          url: `${baseUrl}/${isGuide ? 'guide' : 'blog'}/${a.slug}`,
-          lastModified: new Date(a.updated_at),
-          changeFrequency: 'weekly' as const,
-          priority: isGuide ? 0.8 : 0.7,
-        }
-        if (isGuide) guidePages.push(entry)
-        else blogPages.push(entry)
-      }
+      blogPages = articles.map(a => ({
+        url: `${baseUrl}/blog/${a.slug}`,
+        lastModified: new Date(a.updated_at),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }))
     }
   } catch { /* ignore */ }
 
-  return [...staticPages, ...guidePages, ...blogPages]
+  return [...staticPages, ...blogPages]
 }
