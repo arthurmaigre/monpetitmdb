@@ -41,10 +41,12 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return
+    const container = mapRef.current
 
     import('leaflet').then((L) => {
+      if (mapInstance.current) return // Double-check apres async (React StrictMode)
       LRef.current = L.default
-      const map = L.default.map(mapRef.current!, {
+      const map = L.default.map(container, {
         center: [46.6, 2.3],
         zoom: 6,
         zoomControl: true,
@@ -88,15 +90,15 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
     const defaultIcon = L.divIcon({
       className: 'map-marker-custom',
       html: '<div class="map-marker-dot"></div>',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6],
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
     })
 
     const activeIcon = L.divIcon({
       className: 'map-marker-custom',
       html: '<div class="map-marker-dot active"></div>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
     })
 
     biensAvecCoords.forEach(bien => {
@@ -160,8 +162,10 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
         .map-card-wrap > div > div:last-child { flex: 1; min-width: 0; }
         .map-container { flex: 1; min-width: 0; }
         .map-marker-custom { background: none; border: none; }
-        .map-marker-dot { width: 12px; height: 12px; background: #c0392b; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: all 150ms ease; }
-        .map-marker-dot.active { width: 16px; height: 16px; background: #1a1210; border: 3px solid #c0392b; box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
+        .map-marker-dot { width: 14px; height: 14px; background: #c0392b; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: all 150ms ease; cursor: pointer; }
+        .map-marker-dot::after { content: ''; position: absolute; top: -8px; left: -8px; right: -8px; bottom: -8px; border-radius: 50%; }
+        .map-marker-dot:hover { width: 20px; height: 20px; margin: -3px 0 0 -3px; background: #a5311f; box-shadow: 0 3px 10px rgba(192,57,43,0.4); }
+        .map-marker-dot.active { width: 20px; height: 20px; margin: -3px 0 0 -3px; background: #1a1210; border: 3px solid #c0392b; box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
         .map-info { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13px; color: #7a6a60; }
         @media (max-width: 900px) {
           .map-layout { flex-direction: column-reverse; height: auto; }

@@ -191,6 +191,10 @@ export default function AdminSourcingPage() {
   const [scoreStats, setScoreStats] = useState({ processed: 0, total: 0, scored: 0, errors: 0 })
   const scoreStopRef = useRef(false)
 
+  // Estimation DVF state
+  const [estimRunning, setEstimRunning] = useState(false)
+  const [estimStats, setEstimStats] = useState({ total: 0, done: 0, errors: 0, skipped: 0 })
+
   // Statut annonces state
   const [statutRunning, setStatutRunning] = useState(false)
   const [statutStats, setStatutStats] = useState({ expired: 0, checked: 0, last_check: '' })
@@ -494,6 +498,19 @@ export default function AdminSourcingPage() {
   }
 
   // ---------- Statut Annonces ----------
+  async function startEstimation() {
+    setEstimRunning(true)
+    setEstimStats({ total: 0, done: 0, errors: 0, skipped: 0 })
+    try {
+      const res = await fetch('/api/admin/estimation-batch?limit=50')
+      const data = await res.json()
+      setEstimStats({ total: data.total || 0, done: data.done || 0, errors: data.errors || 0, skipped: data.skipped || 0 })
+    } catch {
+      setEstimStats(prev => ({ ...prev, errors: prev.errors + 1 }))
+    }
+    setEstimRunning(false)
+  }
+
   async function startStatut() {
     if (!token) return
     setStatutRunning(true)
@@ -1292,6 +1309,52 @@ export default function AdminSourcingPage() {
           )}
         </div>
 
+        {/* ===== STEP 5: Estimation DVF ===== */}
+        <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
+          <div className="src-section-header">
+            <StepNumber num={5} color="#2a4a8a" />
+            <div className="src-section-title">Estimation DVF (batch)</div>
+          </div>
+          <div className="src-section-desc">
+            Estime le prix de revente de chaque bien via les donn{'\u00e9'}es DVF (transactions notariales). Biens sans estimation ou estimation {"> "}30 jours.
+          </div>
+          <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <span style={{ fontSize: 13, color: '#1a1210' }}>
+              <strong>{fmt(stats.estimation_pending || 0)}</strong> biens sans estimation
+            </span>
+            <span style={{ fontSize: 13, color: '#2a4a8a', fontWeight: 600 }}>
+              <strong>{fmt(stats.estimation_done || 0)}</strong> estim{'\u00e9'}s
+            </span>
+          </div>
+          <div className="src-row">
+            {!estimRunning ? (
+              <button className="src-btn src-btn-red" onClick={startEstimation}>{'\u25B6'} Lancer le batch estimation</button>
+            ) : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Spinner />
+                <span style={{ fontSize: 13, color: '#1a1210' }}>Estimation en cours... (peut prendre plusieurs minutes)</span>
+              </span>
+            )}
+          </div>
+          {estimStats.total > 0 && (
+            <div className="progress-wrap">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1210', minWidth: 100, fontFamily: "'Fraunces', serif" }}>
+                  {fmt(estimStats.done)} / {fmt(estimStats.total)}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <ProgressBar value={estimStats.done} max={estimStats.total} color="#2a4a8a" />
+                </div>
+              </div>
+              <div className="src-stats-row">
+                <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(estimStats.done)}</strong> estim{'\u00e9'}s</Pill>
+                {estimStats.skipped > 0 && <Pill color="#7a6a60" bg="#f0ede8"><strong>{fmt(estimStats.skipped)}</strong> ignor{'\u00e9'}s</Pill>}
+                {estimStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(estimStats.errors)}</strong> erreurs</Pill>}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* ===== STEP 6: Configuration Cron ===== */}
         <div className="src-section" style={{ borderLeftColor: '#c0392b' }}>
           <div className="src-section-header">
@@ -1308,6 +1371,7 @@ export default function AdminSourcingPage() {
               { title: 'Moteur Immo', icon: '\uD83C\uDFE0', color: '#2a4a8a', ids: ['ingest', 'statut'] },
               { title: 'Validation (Regex)', icon: '\uD83D\uDD0D', color: '#f0a830', ids: ['regex'] },
               { title: 'IA (Claude Haiku)', icon: '\uD83E\uDDE0', color: '#1a7a40', ids: ['extraction', 'score_travaux'] },
+              { title: 'Estimation DVF', icon: '\uD83D\uDCCA', color: '#2a4a8a', ids: ['estimation'] },
             ]
 
             const progressMap: Record<string, { done: number; total: number }> = {

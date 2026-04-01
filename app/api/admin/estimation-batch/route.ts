@@ -2,7 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { estimerBien } from '@/lib/estimation'
 
-export const maxDuration = 300 // 5 minutes max
+export const maxDuration = 300
+
+// GET — appel cron (cron-job.org) : /api/admin/estimation-batch?limit=50
+// Authorization: Bearer <CRON_SECRET>
+export async function GET(request: NextRequest) {
+  const auth = request.headers.get('authorization')
+  const cronSecret = process.env.CRON_SECRET
+  if (cronSecret && auth !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '50'), 200)
+  const result = await runEstimationBatch(limit)
+  if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
+  return NextResponse.json(result)
+}
 
 async function runEstimationBatch(limit: number) {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
@@ -44,43 +59,25 @@ async function runEstimationBatch(limit: number) {
       }
 
       const estimation = await estimerBien({
-        surface: bien.surface,
-        prix_fai: bien.prix_fai,
-        type_bien: bien.type_bien,
-        nb_pieces: bien.nb_pieces,
-        etage: bien.etage,
-        dpe: bien.dpe,
-        ascenseur: bien.ascenseur,
-        acces_exterieur: bien.acces_exterieur,
-        score_travaux: bien.score_travaux,
-        surface_terrain: bien.surface_terrain,
-        adresse: bien.adresse,
-        ville: bien.ville,
-        code_postal: bien.code_postal,
-        parking_type: bien.parking_type,
-        has_piscine: bien.has_piscine,
-        exposition: bien.exposition,
-        vue: bien.vue,
-        etat_interieur: bien.etat_interieur,
-        jardin_etat: bien.jardin_etat,
-        has_cave: bien.has_cave,
-        has_gardien: bien.has_gardien,
-        has_double_vitrage: bien.has_double_vitrage,
-        has_cuisine_equipee: bien.has_cuisine_equipee,
-        is_plain_pied: bien.is_plain_pied,
-        standing_immeuble: bien.standing_immeuble,
-        nb_sdb: bien.nb_sdb,
-        nb_chambres: bien.nb_chambres,
-        has_grenier: false,
-        assainissement: undefined
+        surface: bien.surface, prix_fai: bien.prix_fai, type_bien: bien.type_bien,
+        nb_pieces: bien.nb_pieces, etage: bien.etage, dpe: bien.dpe,
+        ascenseur: bien.ascenseur, acces_exterieur: bien.acces_exterieur,
+        score_travaux: bien.score_travaux, surface_terrain: bien.surface_terrain,
+        adresse: bien.adresse, ville: bien.ville, code_postal: bien.code_postal,
+        parking_type: bien.parking_type, has_piscine: bien.has_piscine,
+        exposition: bien.exposition, vue: bien.vue, etat_interieur: bien.etat_interieur,
+        jardin_etat: bien.jardin_etat, has_cave: bien.has_cave, has_gardien: bien.has_gardien,
+        has_double_vitrage: bien.has_double_vitrage, has_cuisine_equipee: bien.has_cuisine_equipee,
+        is_plain_pied: bien.is_plain_pied, standing_immeuble: bien.standing_immeuble,
+        nb_sdb: bien.nb_sdb, nb_chambres: bien.nb_chambres,
+        has_grenier: false, assainissement: undefined
       }, existingGeo, prixParkingLocal)
 
       if (estimation) {
         await supabaseAdmin
           .from('biens')
           .update({
-            latitude: estimation.latitude,
-            longitude: estimation.longitude,
+            latitude: estimation.latitude, longitude: estimation.longitude,
             estimation_prix_m2: estimation.prix_m2_corrige,
             estimation_prix_total: estimation.prix_total,
             estimation_confiance: estimation.confiance,
@@ -98,33 +95,8 @@ async function runEstimationBatch(limit: number) {
       errors++
     }
 
-    // Pause entre chaque bien pour ne pas surcharger l'API DVF
     await new Promise(resolve => setTimeout(resolve, 200))
   }
 
   return { total, done, errors, skipped }
-}
-
-// POST — lancement manuel depuis l'admin (gros batch ou petit batch)
-export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}))
-  const limit = Math.min(body.limit || 5000, 5000)
-
-  const result = await runEstimationBatch(limit)
-  if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
-  return NextResponse.json(result)
-}
-
-// GET — appel cron (petit batch, auth par CRON_SECRET)
-export async function GET(request: NextRequest) {
-  const auth = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && auth !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '50'), 200)
-  const result = await runEstimationBatch(limit)
-  if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
-  return NextResponse.json(result)
 }
