@@ -370,7 +370,8 @@ export default function BiensPage() {
         .sticky-col { position: sticky; z-index: 2; background: #fff; text-align: left; }
         .sticky-col-head { position: sticky; z-index: 3; background: #f7f4f0; text-align: left !important; }
         .list-table tbody tr:hover .sticky-col { background: #faf8f5; }
-        .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; }
+        .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; transition: transform 0.3s ease; }
+        .list-thumb:hover { transform: scale(1.6); z-index: 10; position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.2); border-radius: 6px; }
         .list-thumb-empty { width: 72px; height: 52px; border-radius: 8px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
         .td-bien-title { font-weight: 600; color: #1a1210; display: block; margin-bottom: 2px; }
         .td-bien-quartier { font-size: 12px; color: #b0a898; display: block; }
