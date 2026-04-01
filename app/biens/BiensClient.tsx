@@ -310,7 +310,7 @@ export default function BiensPage() {
   function CellEditable({ bien, champ, suffix = '' }: { bien: any, champ: string, suffix?: string }) {
     const valeur = bien[champ]
     const estSaving = saving === bien.id + champ
-    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}{suffix}</span>
+    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555', whiteSpace: 'nowrap' }}>{typeof valeur === 'number' ? valeur.toLocaleString('fr-FR') : valeur}{suffix.replace(/ /g, '\u00A0')}</span>
     if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
     return (
       <input type="number" defaultValue="" placeholder="NC" disabled={!!estSaving}

@@ -140,6 +140,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
           if (e.key === 'ArrowRight') { e.preventDefault(); handleNextPhoto(e as any) }
         } : undefined}
         aria-label={photos.length > 1 ? `Photo ${photoIdx + 1} sur ${photos.length}` : undefined}
+        className="bien-card-photo"
         style={{ height: '196px', background: theme.colors.bgHover, overflow: 'hidden', position: 'relative' }}>
         {photos.length > 0 ? (
           <>
@@ -176,7 +177,8 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
                 style={{
                   width: '100%', height: '100%', objectFit: 'cover',
                   opacity: imgLoaded ? 1 : 0,
-                  transition: `opacity ${theme.transitions.fast}`,
+                  transition: `opacity ${theme.transitions.fast}, transform 0.4s ease`,
+                  transformOrigin: 'center center',
                 }}
               />
             )}
@@ -431,6 +433,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
+        .bien-card-photo:hover img { transform: scale(1.08); }
       `}</style>
 
       {/* Modal upgrade watchlist */}
