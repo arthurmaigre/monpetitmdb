@@ -361,7 +361,7 @@ export default function BiensPage() {
         .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 16px; max-width: 1504px; margin: 0 auto; }
         .floating-scroll-inner { height: 1px; pointer-events: none; }
         .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
-        .list-table thead { position: sticky; top: 56px; z-index: 5; }
+        .list-table thead { position: sticky; top: 0; z-index: 5; }
         .list-table thead tr { background: #f7f4f0; }
         .list-table thead th { padding: 12px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
         .list-table thead th span { display: block; font-size: 10px; font-weight: 400; color: #b0a898; letter-spacing: 0; text-transform: none; margin-top: 2px; height: 14px; }
