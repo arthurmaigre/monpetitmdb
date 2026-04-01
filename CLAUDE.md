@@ -53,13 +53,12 @@ monpetitmdb/
 │   ├── admin/estimation/       # Admin config estimateur
 │   ├── admin/guide-fiscal/     # Reference fiscale 7 regimes (admin only)
 │   ├── biens/[id]/             # Fiche bien + PnlColonne 7 regimes + scenario revente
-│   ├── biens/                  # Liste biens avec filtres (SSR desactive, BiensClient.tsx)
+│   ├── biens/                  # Liste biens avec filtres + vue carte (SSR desactive, BiensClient.tsx, MapView.tsx)
 │   ├── blog/                   # Listing articles publies
 │   ├── blog/[slug]/            # Page article individuelle
 │   ├── strategies/             # Page 4 strategies detaillees
 │   ├── editorial/              # CMS articles IA (admin) + calendrier editorial
-│   ├── guide/                  # Listing guides SEO (piliers + satellites)
-│   ├── guide/[slug]/           # Page guide individuelle (SSR, schema.org, breadcrumb, TOC)
+│   ├── biens/MapView.tsx        # Vue carte Leaflet (panneau lateral + markers)
 │   ├── admin/feedbacks/        # Admin feedbacks utilisateurs
 │   ├── mes-biens/              # Watchlist utilisateur
 │   ├── mon-profil/             # Donnees personnelles + facturation + upgrade Stripe
@@ -214,9 +213,9 @@ Comparaison 2 regimes cote a cote
 
 ## Navigation (Layout.tsx)
 
-**Header desktop** : Biens Immobiliers | Strategies MDB | Guides | Conseils | [Watchlist] | [email dropdown]
+**Header desktop** : Biens Immobiliers | Strategies MDB | Conseils | [Watchlist] | [email dropdown]
 **Dropdown user** : Mon Profil | Mes parametres | Ma Watchlist | Administration (si admin) | Deconnexion
-**Footer** : Plateforme (Biens, Strategies, Guides, Conseils, Tarifs) | Support (Contact, Mentions legales, CGU)
+**Footer** : Plateforme (Biens, Strategies, Conseils, Tarifs) | Support (Contact, Mentions legales, CGU)
 
 ## Pipeline IA post-ingestion
 
@@ -257,20 +256,19 @@ Blog public : `/blog` (listing) + `/blog/[slug]` (article, police Lora)
 Label nav : "Conseils"
 Calendrier editorial : onglet "Calendrier" dans `/editorial`, table `editorial_calendar`, statut inline (planned/writing/review/published), bouton "Rediger" pre-remplit le formulaire
 
-## Guides SEO (/guide)
+## Blog / Conseils (/blog)
 
-Route `/guide/[slug]` : articles piliers + satellites SEO (SSR, revalidate 3600)
-Route `/guide` : listing par categorie (Strategies, Fiscalite, Marche, Travaux)
-Categories guide : articles dont category in ('Strategies', 'Fiscalite', 'Marche', 'Travaux', 'Financement')
-Schema.org : Article + BreadcrumbList sur chaque guide
-Sitemap : guide articles sous `/guide/`, blog articles sous `/blog/`
-Table des matieres sticky, breadcrumb, CTA, articles lies, share bar
+Route unique `/blog` : listing tous les articles publies avec filtres par categorie
+Route `/blog/[slug]` : article individuel (SSR, revalidate 3600, sidebar TOC sticky depliable, breadcrumb, schema.org Article + BreadcrumbList)
+Categories : Strategies, Fiscalite, Travaux, Financement, Marche (5 canoniques)
+Sitemap : tous les articles sous `/blog/`
+Sommaire : H2 visibles, H3 depliables au clic, auto-deplie si <= 15 entrees, FAQ/Sources/Conclusion masques
 
 ## SEO Technique
 
 - `metadataBase` + `alternates.canonical` dans root layout (canonical auto sur toutes les pages)
 - Metadata server-side via `layout.tsx` dans chaque dossier page client (biens, strategies, faq, contact, login, register, mes-biens)
-- Schema.org : WebSite + Organization + SoftwareApplication (pricing) sur homepage, FAQPage sur /faq, Article sur /blog et /guide
+- Schema.org : WebSite + Organization + SoftwareApplication (pricing) sur homepage, FAQPage sur /faq, Article + BreadcrumbList sur /blog
 - Sitemap dynamique : pages statiques + guide articles + blog articles
 - Audit SEO complet : `AUDIT_SEO.md`
 
@@ -348,7 +346,7 @@ Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
 
 ## SEO
 - `public/robots.txt` : autorise tout sauf /admin, /api, /editorial, /parametres, /mon-profil, /mes-biens, /auth, /tarifs
-- `app/sitemap.ts` : sitemap dynamique (pages statiques + contact + faq + articles blog publies). Colonne `status` (anglais) pas `statut`.
+- `app/sitemap.ts` : sitemap dynamique (pages statiques + tous articles publies sous `/blog/`). Colonne `status` (anglais) pas `statut`.
 - Google Search Console configuree sur `www.monpetitmdb.fr`
 
 ## Auth
