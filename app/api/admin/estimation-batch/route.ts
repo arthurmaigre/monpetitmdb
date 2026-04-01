@@ -95,7 +95,7 @@ async function runEstimationBatch(limit: number) {
       errors++
     }
 
-    await new Promise(resolve => setTimeout(resolve, 200))
+    // Pas de pause — l'API DVF est deja lente (rayon adaptatif)
   }
 
   return { total, done, errors, skipped }
