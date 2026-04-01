@@ -114,20 +114,40 @@ export async function GET(request: NextRequest) {
     .from('ref_communes')
     .select('code_postal, nom_commune, metropole')
 
+  // Normaliser les espaces en tirets pour matcher les noms composes (Saint Nazaire → Saint-Nazaire)
+  const qNormalized = q.replace(/\s+/g, '-')
   if (isNumber) {
     query = query.like('code_postal', `${q}%`)
   } else {
-    query = query.ilike('nom_commune', `${q}%`)
+    query = query.ilike('nom_commune', `${qNormalized}%`)
   }
 
   if (metropole && metropole !== 'Toutes') {
     query = query.eq('metropole', metropole)
   }
 
-  query = query.order('nom_commune').limit(20)
+  query = query.order('nom_commune').limit(50)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Completer avec les villes des biens (couvre toute la France, pas seulement les 22 metropoles)
+  const biensQuery = isNumber
+    ? supabaseAdmin.from('biens').select('ville, code_postal').like('code_postal', `${q}%`).not('ville', 'is', null).limit(50)
+    : supabaseAdmin.from('biens').select('ville, code_postal').ilike('ville', `${qNormalized}%`).not('ville', 'is', null).limit(50)
+  const { data: biensData } = await biensQuery
+  if (biensData && biensData.length > 0) {
+    const seenBiens = new Set<string>()
+    // Marquer les communes deja trouvees dans ref_communes
+    for (const c of (data || [])) seenBiens.add(`${c.code_postal}-${c.nom_commune}`)
+    for (const b of biensData) {
+      const key = `${b.code_postal || ''}-${b.ville}`
+      if (!seenBiens.has(key) && b.ville && b.code_postal) {
+        seenBiens.add(key)
+        results.push({ type: 'commune', code_postal: b.code_postal, nom_commune: b.ville, label: `${b.ville} (${b.code_postal})` })
+      }
+    }
+  }
 
   // Deduplique par code_postal + nom_commune
   const seen = new Set()
@@ -152,5 +172,5 @@ export async function GET(request: NextRequest) {
     results.push({ type: 'commune', code_postal: c.code_postal, nom_commune: c.nom_commune, label: `${c.nom_commune} (${c.code_postal})` })
   }
 
-  return NextResponse.json({ communes: results.slice(0, 25) })
+  return NextResponse.json({ communes: results.slice(0, 50) })
 }

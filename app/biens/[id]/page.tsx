@@ -1079,6 +1079,118 @@ function ScoreLabel({ score }: { score: number | null }) {
   )
 }
 
+function LotsEditor({ lots, nbLotsEffectif, userToken, onSave }: { lots: any[], nbLotsEffectif: number, userToken: string | null, onSave: (lots: any[]) => Promise<void> }) {
+  const [editLots, setEditLots] = useState(() => {
+    return Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => ({
+      type: lots[i]?.type || '',
+      surface: lots[i]?.surface || '',
+      loyer: lots[i]?.loyer || '',
+      etage: lots[i]?.etage || '',
+      dpe: lots[i]?.dpe || '',
+      etat: lots[i]?.etat || '',
+    }))
+  })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  function updateLot(i: number, field: string, value: string) {
+    setEditLots(prev => {
+      const next = [...prev]
+      next[i] = { ...next[i], [field]: value }
+      return next
+    })
+    setSaved(false)
+  }
+
+  function addLot() {
+    setEditLots(prev => [...prev, { type: '', surface: '', loyer: '', etage: '', dpe: '', etat: '' }])
+    setSaved(false)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    const cleaned = editLots.map(l => ({
+      type: l.type || undefined,
+      surface: l.surface ? Number(l.surface) : undefined,
+      loyer: l.loyer ? Number(l.loyer) : undefined,
+      etage: l.etage || undefined,
+      dpe: l.dpe || undefined,
+      etat: l.etat || undefined,
+    }))
+    await onSave(cleaned)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const inputStyle: React.CSSProperties = { padding: '5px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', width: '100%', boxSizing: 'border-box' }
+
+  return (
+    <div>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="lots-table" style={{ fontSize: '12px' }}>
+          <thead>
+            <tr>
+              <th style={{ width: '36px' }}>Lot</th>
+              <th style={{ width: '90px' }}>Type</th>
+              <th style={{ width: '70px' }}>Surface</th>
+              <th style={{ width: '70px' }}>Loyer</th>
+              <th style={{ width: '60px' }}>{"\u00C9tage"}</th>
+              <th style={{ width: '50px' }}>DPE</th>
+              <th style={{ width: '70px' }}>{"\u00C9tat"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {editLots.map((lot, i) => (
+              <tr key={i}>
+                <td style={{ fontWeight: 600, textAlign: 'center' }}>{i + 1}</td>
+                <td>
+                  <select value={lot.type} onChange={e => updateLot(i, 'type', e.target.value)} style={inputStyle}>
+                    <option value="">-</option>
+                    <option value="Appartement">Appartement</option>
+                    <option value="Studio">Studio</option>
+                    <option value="Local commercial">Local commercial</option>
+                    <option value="Parking">Parking</option>
+                    <option value="Cave">Cave</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </td>
+                <td><input type="number" placeholder={"m\u00B2"} value={lot.surface} onChange={e => updateLot(i, 'surface', e.target.value)} style={inputStyle} /></td>
+                <td><input type="number" placeholder={"\u20AC/mois"} value={lot.loyer} onChange={e => updateLot(i, 'loyer', e.target.value)} style={inputStyle} /></td>
+                <td><input type="text" placeholder="RDC" value={lot.etage} onChange={e => updateLot(i, 'etage', e.target.value)} style={inputStyle} /></td>
+                <td>
+                  <select value={lot.dpe} onChange={e => updateLot(i, 'dpe', e.target.value)} style={inputStyle}>
+                    <option value="">-</option>
+                    {['A','B','C','D','E','F','G'].map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select value={lot.etat} onChange={e => updateLot(i, 'etat', e.target.value)} style={inputStyle}>
+                    <option value="">-</option>
+                    <option value="loue">{"Lou\u00E9"}</option>
+                    <option value="vacant">Vacant</option>
+                    <option value="travaux">Travaux</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={addLot} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid #e8e2d8', background: '#faf8f5', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+          + Ajouter un lot
+        </button>
+        {userToken && (
+          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: saved ? '#1a7a40' : '#1a1210', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
+            {saving ? 'Sauvegarde...' : saved ? '\u2713 Sauvegard\u00E9' : 'Sauvegarder'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function genererMessageContact(bien: any): { message: string, champsManquants: string[] } {
   const manquants: string[] = []
   const typeBien = `${bien.type_bien || 'bien'} ${bien.nb_pieces || ''}`.trim()
@@ -2268,15 +2380,31 @@ export default function FicheBienPage() {
                 <div className="data-subtitle">Immeuble</div>
                 <div className="data-item">
                   <span className="data-label">Nb lots</span>
-                  <CellEditable bien={bien} champ="nb_lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                  <CellEditable bien={bien} champ="nb_lots" suffix=" lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
                 </div>
                 <div className="data-item">
                   <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
-                  <span className="data-value" style={{ color: bien.monopropriete ? '#1a7a40' : '#7a6a60' }}>{bien.monopropriete === true ? 'Oui' : bien.monopropriete === false ? 'Non' : 'NC'}</span>
+                  {userToken ? (
+                    <select value={bien.monopropriete === true ? 'oui' : bien.monopropriete === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, monopropriete: v })); handleUpdate('monopropriete', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.monopropriete === true ? '#1a7a40' : bien.monopropriete === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
+                      <option value="">NC</option>
+                      <option value="oui">Oui</option>
+                      <option value="non">Non</option>
+                    </select>
+                  ) : (
+                    <span className="data-value" style={{ color: bien.monopropriete ? '#1a7a40' : '#7a6a60' }}>{bien.monopropriete === true ? 'Oui' : bien.monopropriete === false ? 'Non' : 'NC'}</span>
+                  )}
                 </div>
                 <div className="data-item">
                   <span className="data-label">Compteurs individuels</span>
-                  <span className="data-value" style={{ color: bien.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{bien.compteurs_individuels === true ? 'Oui' : bien.compteurs_individuels === false ? 'Non' : 'NC'}</span>
+                  {userToken ? (
+                    <select value={bien.compteurs_individuels === true ? 'oui' : bien.compteurs_individuels === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, compteurs_individuels: v })); handleUpdate('compteurs_individuels', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.compteurs_individuels === true ? '#1a7a40' : bien.compteurs_individuels === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
+                      <option value="">NC</option>
+                      <option value="oui">Oui</option>
+                      <option value="non">Non</option>
+                    </select>
+                  ) : (
+                    <span className="data-value" style={{ color: bien.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{bien.compteurs_individuels === true ? 'Oui' : bien.compteurs_individuels === false ? 'Non' : 'NC'}</span>
+                  )}
                 </div>
               </div>
               <div style={{ marginTop: '12px', textAlign: 'center' }}>
@@ -2285,23 +2413,7 @@ export default function FicheBienPage() {
                 </button>
               </div>
               <ModalPanel open={showLotsDetail} onClose={() => setShowLotsDetail(false)} title={"D\u00E9tail des lots"}>
-                <div className="lots-table-wrap"><table className="lots-table">
-                  <thead><tr><th>Lot</th><th>Type</th><th>Surface</th><th>{"\u00C9tage"}</th><th>DPE</th></tr></thead>
-                  <tbody>
-                    {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
-                      const lot = lots[i] || {}
-                      return (
-                        <tr key={i}>
-                          <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                          <td>{lot.type || 'NC'}</td>
-                          <td>{lot.surface ? `${lot.surface} m\u00B2` : 'NC'}</td>
-                          <td>{lot.etage || 'NC'}</td>
-                          <td>{lot.dpe || 'NC'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table></div>
+                <LotsEditor lots={lots} nbLotsEffectif={nbLotsEffectif} userToken={userToken} onSave={async (newLots) => { await handleUpdate('lots_data', { lots: newLots }); }} />
               </ModalPanel>
             </>
           )}
