@@ -12,7 +12,7 @@ interface Article {
   published_at: string
   word_count: number | null
   cover_url: string | null
-  excerpt: string | null
+  excerpt?: string | null
 }
 
 interface RelatedArticle {

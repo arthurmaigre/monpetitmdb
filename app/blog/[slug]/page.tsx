@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const { data } = await supabaseAdmin
     .from('articles')
-    .select('title, excerpt, cover_url, category')
+    .select('title, cover_url, category')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
@@ -22,10 +22,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: data.title,
-    description: data.excerpt || `${data.title} — Mon Petit MDB`,
+    description: `${data.title} — Mon Petit MDB`,
     openGraph: {
       title: data.title,
-      description: data.excerpt || undefined,
+      description: `${data.title} — Mon Petit MDB`,
       images: data.cover_url ? [data.cover_url] : undefined,
       type: 'article',
     },
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 async function getArticle(slug: string) {
   const { data, error } = await supabaseAdmin
     .from('articles')
-    .select('title, slug, content, category, keyword, published_at, word_count, cover_url, excerpt')
+    .select('title, slug, content, category, keyword, published_at, word_count, cover_url')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
