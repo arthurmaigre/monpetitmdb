@@ -328,7 +328,7 @@ Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monp
 ### IA Haiku — Extraction + Score
 - `/api/admin/extraction` — `*/2 4-12 * * *` (15 biens/appel)
 - `/api/admin/score-travaux` — `*/2 12-20 * * *` (15 biens/appel)
-- `/api/admin/extraction-idr` — `*/2 20-23 * * *` (15 biens/appel, Immeuble de rapport)
+- `/api/admin/extraction-idr` — `* 20-23 * * *` (3-5 biens/appel, Immeuble de rapport)
 
 ## Chat IA — Memo
 - Nom : **Memo** — assistant IA immobilier
