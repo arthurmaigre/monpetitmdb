@@ -461,12 +461,18 @@ function ExpandableCharges({ label, total, isReel, isFree, details }: { label: s
   )
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
-  const { montantEmprunte, tauxCredit, tauxAssurance, dureeAns } = financement
+  const { tauxCredit, tauxAssurance, dureeAns } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
   const hasLoyer = loyer && loyer > 0
   const isMarchand = regime === 'marchand_de_biens'
+
+  // Frais de notaire propres a cette colonne : 2.5% MdB, sinon valeur profil
+  const colFraisNotairePct = isMarchand ? 2.5 : (fraisNotaireBase || 7.5)
+  const colFraisNotaireMontant = prix_fai * colFraisNotairePct / 100
+  // Recalculer le montant emprunte et la mensualite pour cette colonne
+  const colMontantEmprunte = Math.max(0, prix_fai + colFraisNotaireMontant - (apport || 0))
 
   // Visibilite conditionnelle : afficher une ligne si au moins un des 2 regimes l'utilise
   const isMicro = (r: string) => r === 'nu_micro_foncier' || r === 'lmnp_micro_bic'
@@ -482,14 +488,14 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const chargesRecAnn = (charges_rec || 0) * 12
   const chargesCoproAnn = (charges_copro || 0) * 12 // charges_copro est mensuel en base
   const taxeFoncAnn = taxe_fonc_ann || 0
-  const interetsAnn = montantEmprunte * tauxCredit / 100
-  const assuranceAnn = montantEmprunte * (tauxAssurance / 100)
+  const interetsAnn = colMontantEmprunte * tauxCredit / 100
+  const assuranceAnn = colMontantEmprunte * (tauxAssurance / 100)
   const mobilier = 5000
   const amortImmo = prix_fai * 0.85 / 30
   const amortMobilier = mobilier / 10
   const amortLMNP = amortImmo + amortMobilier
-  const fraisNotairePctLocatif = regime === 'marchand_de_biens' ? 2.5 : (fraisNotaire || 7.5)
-  const fraisNotaireMontantLocatif = Math.round(prix_fai * fraisNotairePctLocatif / 100)
+  const fraisNotairePctLocatif = colFraisNotairePct
+  const fraisNotaireMontantLocatif = Math.round(colFraisNotaireMontant)
   const amortSCI = prix_fai * 0.85 / 30
   const amortNotaireSCI = fraisNotaireMontantLocatif / 5
   const hasAmort = regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
@@ -567,8 +573,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
     impot = revenuImposable <= 42500 ? revenuImposable * 0.15 : 42500 * 0.15 + (revenuImposable - 42500) * 0.25
   }
 
-  const mensualiteCredit = calculerMensualite(montantEmprunte, tauxCredit, dureeAns)
-  const mensualiteAss = montantEmprunte * (tauxAssurance / 100) / 12
+  const mensualiteCredit = calculerMensualite(colMontantEmprunte, tauxCredit, dureeAns)
+  const mensualiteAss = colMontantEmprunte * (tauxAssurance / 100) / 12
   const mensualiteTotale = mensualiteCredit + mensualiteAss
   const chargesRec = charges_rec || 0
   const chargesCoproMens = chargesCoproAnn / 12
@@ -587,8 +593,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const fraisAgenceAchatMontant = prix_fai - prixNetVendeurAchat
   // Estimation DVF = deja net vendeur, pas de frais agence a deduire a la revente
   const prixReventeApresAgence = prixReventeNetVendeur
-  const fraisNotairePct = regime === 'marchand_de_biens' ? 2.5 : (fraisNotaire || 7.5)
-  const fraisNotaireMontant = Math.round(prix_fai * fraisNotairePct / 100)
+  const fraisNotairePct = colFraisNotairePct
+  const fraisNotaireMontant = Math.round(colFraisNotaireMontant)
 
   // PV brute = revente net vendeur - frais agence vendeur - achat FAI - notaire achat - travaux
   // L'estimation DVF est deja le prix net vendeur (pas de frais agence a deduire sauf si charge vendeur)
@@ -693,7 +699,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const interetsCumules = !hasLoyer || isTravauxLourds ? Math.round((interetsAnn + assuranceAnn) * dur) : 0
 
   // Capital restant du
-  const crd = calculerCapitalRestantDu(montantEmprunte, tauxCredit, dureeAns, dur)
+  const crd = calculerCapitalRestantDu(colMontantEmprunte, tauxCredit, dureeAns, dur)
 
   // Bilan = produit revente - CRD - fiscalite PV + cashflow cumule - apport - frais notaire - travaux
   const produitRevente = prixReventeApresAgence - crd
@@ -738,7 +744,29 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
 
   return (
     <div style={{ background: highlight ? '#fff8f0' : '#fff', border: highlight ? '2px solid #f0d090' : '1.5px solid #ede8e0', borderRadius: '14px', padding: '20px 24px', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: '#1a1210' }}>{titre}</div>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: '15px', fontWeight: 700, marginBottom: colFraisNotairePct !== (fraisNotaire || 7.5) ? '8px' : '16px', color: '#1a1210' }}>{titre}</div>
+      {(() => {
+        const thisHasNote = colFraisNotairePct !== (fraisNotaire || 7.5)
+        const otherNotairePct = otherRegime === 'marchand_de_biens' ? 2.5 : (fraisNotaireBase || 7.5)
+        const otherHasNote = otherNotairePct !== (fraisNotaire || 7.5)
+        if (thisHasNote) return (
+          <div style={{ fontSize: '11px', color: '#7a6a60', background: '#faf8f5', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, fontStyle: 'italic' }}>
+            {isMarchand
+              ? `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de 2,5\u00A0% de frais de notaire (taux r\u00E9duit MdB), soit un emprunt de ${fmt(colMontantEmprunte)}\u00A0\u20AC.`
+              : `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de ${colFraisNotairePct}\u00A0% de frais de notaire, soit un emprunt de ${fmt(colMontantEmprunte)}\u00A0\u20AC.`
+            }
+          </div>
+        )
+        if (otherHasNote) return (
+          <div style={{ fontSize: '11px', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, visibility: 'hidden' }} aria-hidden="true">
+            {otherRegime === 'marchand_de_biens'
+              ? `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de 2,5\u00A0% de frais de notaire (taux r\u00E9duit MdB), soit un emprunt de 000\u00A0000\u00A0\u20AC.`
+              : `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de 7,5\u00A0% de frais de notaire, soit un emprunt de 000\u00A0000\u00A0\u20AC.`
+            }
+          </div>
+        )
+        return null
+      })()}
 
       {/* === PARTIE LOCATIVE (annuelle) === */}
       {hasLoyer && !isTravauxLourds && (
@@ -1790,6 +1818,7 @@ export default function FicheBienPage() {
   const [tauxAssurance, setTauxAssurance] = useState<number | ''>(0.3)
   const [duree, setDuree] = useState(20)
   const [fraisNotaire, setFraisNotaire] = useState(7.5)
+  const [fraisNotaireBase, setFraisNotaireBase] = useState(7.5) // valeur profil hors MdB
   const [tmi, setTmi] = useState(30)
   const [regime, setRegime] = useState('nu_micro_foncier')
   const [objectifCashflow, setObjectifCashflow] = useState(0)
@@ -1843,14 +1872,19 @@ export default function FicheBienPage() {
           if (p.taux_credit != null) setTaux(p.taux_credit)
           if (p.taux_assurance != null) setTauxAssurance(p.taux_assurance)
           if (p.duree_ans != null) setDuree(p.duree_ans)
-          if (p.frais_notaire != null) setFraisNotaire(p.frais_notaire)
           if (p.tmi != null) setTmi(p.tmi)
+          const baseNotaire = p.frais_notaire ?? 7.5
+          setFraisNotaireBase(baseNotaire)
           if (p.regime && [...REGIMES, ...REGIMES_IDR].some(r => r.value === p.regime)) {
             setRegime(p.regime)
+            // MdB = frais notaire reduits 2.5%, sinon valeur profil
+            setFraisNotaire(p.regime === 'marchand_de_biens' ? 2.5 : baseNotaire)
             // Regime2 = premier regime different du profil pour eviter la comparaison identique
             const suggere = ['lmnp_reel_bic', 'nu_reel_foncier', 'sci_is', 'marchand_de_biens', 'lmnp_micro_bic']
             const alt = suggere.find(r => r !== p.regime)
             if (alt) setRegime2(alt)
+          } else {
+            setFraisNotaire(baseNotaire)
           }
           if (p.objectif_cashflow != null) setObjectifCashflow(p.objectif_cashflow)
           if (p.objectif_pv != null) setObjectifPV(p.objectif_pv)
@@ -3087,8 +3121,8 @@ export default function FicheBienPage() {
                 </div>
               )}
               <div className="pnl-grid">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
-                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
               </div>
             </div>
           </div>
