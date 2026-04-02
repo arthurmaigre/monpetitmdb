@@ -94,13 +94,8 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
               <a href="${lien}" style="font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 700; color: #1a1210; text-decoration: none; display: block;">${titre}</a>
               <!-- Localisation -->
               <div style="font-size: 12px; color: #7a6a60; margin-top: 3px;">${ville}${cp}${quartier ? ` - ${quartier}` : ''}</div>
-              <!-- Prix + Rendement -->
-              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 12px 0 10px;">
-                <tr>
-                  <td style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 800; color: #1a1210; letter-spacing: -0.02em;">${prix}</td>
-                  <td></td>
-                </tr>
-              </table>
+              <!-- Prix -->
+              <div style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 800; color: #1a1210; letter-spacing: -0.02em; margin: 12px 0 10px;">${prix}</div>
               <!-- Pills -->
               ${pillsArr.length > 0 ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 14px;"><tr>${pillsArr.join('')}</tr></table>` : ''}
               <!-- Bouton -->
