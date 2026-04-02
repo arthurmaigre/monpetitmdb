@@ -31,6 +31,11 @@ export default function ParametresPage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [alertes, setAlertes] = useState<any[]>([])
+  const [showAlertForm, setShowAlertForm] = useState(false)
+  const [alertForm, setAlertForm] = useState<Record<string, any>>({ nom: '', strategie_mdb: 'Locataire en place', frequence: 'quotidien' })
+  const [alertSaving, setAlertSaving] = useState(false)
+  const [alertError, setAlertError] = useState('')
 
   useEffect(() => {
     async function loadProfile() {
@@ -42,6 +47,10 @@ export default function ParametresPage() {
         const data = await res.json()
         setProfile(data.profile)
         setPlan(data.profile?.plan || 'free')
+        if (data.profile?.plan === 'expert') {
+          const aRes = await fetch('/api/alertes', { headers: { Authorization: `Bearer ${session.access_token}` } })
+          if (aRes.ok) { const aData = await aRes.json(); setAlertes(aData.alertes || []) }
+        }
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement du profil')
       } finally {
@@ -70,6 +79,45 @@ export default function ParametresPage() {
 
   function update(key: string, value: any) { setProfile((p: any) => ({ ...p, [key]: value })) }
   function updateNum(key: string, raw: string) { update(key, raw === '' ? null : Number(raw)) }
+
+  async function createAlerte() {
+    setAlertSaving(true); setAlertError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const res = await fetch('/api/alertes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(alertForm),
+    })
+    const data = await res.json()
+    if (!res.ok) { setAlertError(data.error || 'Erreur'); setAlertSaving(false); return }
+    setAlertes(prev => [data.alerte, ...prev])
+    setShowAlertForm(false)
+    setAlertForm({ nom: '', strategie_mdb: 'Locataire en place', frequence: 'quotidien' })
+    setAlertSaving(false)
+  }
+
+  async function toggleAlerte(id: string, enabled: boolean) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await fetch('/api/alertes', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ id, enabled }),
+    })
+    setAlertes(prev => prev.map(a => a.id === id ? { ...a, enabled } : a))
+  }
+
+  async function deleteAlerte(id: string) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await fetch('/api/alertes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ id }),
+    })
+    setAlertes(prev => prev.filter(a => a.id !== id))
+  }
 
   if (loading) return (
     <Layout>
@@ -368,6 +416,111 @@ export default function ParametresPage() {
             {saving ? 'Sauvegarde en cours...' : 'Sauvegarder mes param\u00E8tres'}
           </button>
         </form>
+
+        {/* Section Alertes — Expert uniquement */}
+        {plan === 'expert' && (
+          <div style={{ marginTop: '32px' }}>
+            <div className="profil-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <h2 className="profil-section-title" style={{ margin: 0 }}>Mes alertes</h2>
+                  <p className="profil-section-desc" style={{ margin: '4px 0 0' }}>{"Recevez par email les nouveaux biens correspondant \u00E0 vos crit\u00E8res."}</p>
+                </div>
+                {alertes.length < 5 && (
+                  <button onClick={() => setShowAlertForm(true)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#c0392b', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+                    + Nouvelle alerte
+                  </button>
+                )}
+              </div>
+
+              {/* Formulaire de création */}
+              {showAlertForm && (
+                <div style={{ background: '#faf8f5', borderRadius: '12px', padding: '20px', marginBottom: '16px', border: '1.5px solid #e8e2d8' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>Nom de l'alerte *</label>
+                      <input className="profil-input" value={alertForm.nom || ''} onChange={e => setAlertForm(f => ({ ...f, nom: e.target.value }))} placeholder={"ex: Locataire Lyon < 200k\u20AC"} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Strat\u00E9gie *"}</label>
+                      <select className="profil-select" value={alertForm.strategie_mdb} onChange={e => setAlertForm(f => ({ ...f, strategie_mdb: e.target.value }))}>
+                        <option value="Locataire en place">Locataire en place</option>
+                        <option value="Travaux lourds">Travaux lourds</option>
+                        <option value="Immeuble de rapport">Immeuble de rapport</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"M\u00E9tropole"}</label>
+                      <input className="profil-input" value={alertForm.metropole || ''} onChange={e => setAlertForm(f => ({ ...f, metropole: e.target.value }))} placeholder="ex: Lyon" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Prix min (\u20AC)"}</label>
+                      <input className="profil-input" type="number" value={alertForm.prix_min || ''} onChange={e => setAlertForm(f => ({ ...f, prix_min: e.target.value }))} placeholder="50 000" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Prix max (\u20AC)"}</label>
+                      <input className="profil-input" type="number" value={alertForm.prix_max || ''} onChange={e => setAlertForm(f => ({ ...f, prix_max: e.target.value }))} placeholder="200 000" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Surface min (m\u00B2)"}</label>
+                      <input className="profil-input" type="number" value={alertForm.surface_min || ''} onChange={e => setAlertForm(f => ({ ...f, surface_min: e.target.value }))} placeholder="30" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Surface max (m\u00B2)"}</label>
+                      <input className="profil-input" type="number" value={alertForm.surface_max || ''} onChange={e => setAlertForm(f => ({ ...f, surface_max: e.target.value }))} placeholder="80" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>Rendement min (%)</label>
+                      <input className="profil-input" type="number" step="0.1" value={alertForm.rendement_min || ''} onChange={e => setAlertForm(f => ({ ...f, rendement_min: e.target.value }))} placeholder="5" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Fr\u00E9quence"}</label>
+                      <select className="profil-select" value={alertForm.frequence} onChange={e => setAlertForm(f => ({ ...f, frequence: e.target.value }))}>
+                        <option value="quotidien">Quotidien</option>
+                        <option value="hebdomadaire">Hebdomadaire</option>
+                      </select>
+                    </div>
+                  </div>
+                  {alertError && <p style={{ color: '#c0392b', fontSize: '13px', marginTop: '8px' }}>{alertError}</p>}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                    <button onClick={() => { setShowAlertForm(false); setAlertError('') }} style={{ padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: '#fff', fontSize: '13px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Annuler</button>
+                    <button onClick={createAlerte} disabled={alertSaving} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#c0392b', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: alertSaving ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: alertSaving ? 0.7 : 1 }}>
+                      {alertSaving ? 'Cr\u00E9ation...' : 'Cr\u00E9er l\'alerte'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste des alertes */}
+              {alertes.length === 0 && !showAlertForm ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#b0a898' }}>
+                  <p style={{ fontSize: '14px' }}>Aucune alerte configur{'\u00E9'}e</p>
+                  <p style={{ fontSize: '12px' }}>{"Cr\u00E9ez votre premi\u00E8re alerte pour recevoir les nouveaux biens par email."}</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {alertes.map(a => (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', background: '#fff', borderRadius: '10px', border: '1.5px solid #e8e2d8' }}>
+                      <button onClick={() => toggleAlerte(a.id, !a.enabled)} style={{ width: '36px', height: '20px', borderRadius: '10px', border: 'none', background: a.enabled ? '#27ae60' : '#e8e2d8', cursor: 'pointer', position: 'relative', transition: 'background 150ms ease', flexShrink: 0 }}>
+                        <span style={{ position: 'absolute', top: '2px', left: a.enabled ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: '#fff', transition: 'left 150ms ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: a.enabled ? '#1a1210' : '#b0a898' }}>{a.nom}</div>
+                        <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '2px' }}>
+                          {a.filtres?.strategie_mdb}
+                          {a.filtres?.metropole ? ` \u2014 ${a.filtres.metropole}` : ''}
+                          {a.filtres?.prix_max ? ` \u2014 < ${Number(a.filtres.prix_max).toLocaleString('fr-FR')}\u00A0\u20AC` : ''}
+                          {` \u2014 ${a.frequence === 'hebdomadaire' ? 'Hebdo' : 'Quotidien'}`}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteAlerte(a.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c0392b', fontSize: '18px', padding: '4px', flexShrink: 0 }} title="Supprimer">{'\u2715'}</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )
