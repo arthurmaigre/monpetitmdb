@@ -17,6 +17,7 @@ Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 1 strategie, 
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
 - **Editorial** : Claude Opus (redaction) + Sonnet (fact-check) + Unsplash (photos)
 - **Storage bucket** : `mdb-files`
+- **Email transactionnel** : Brevo API (ex Sendinblue) — alertes nouveaux biens
 
 ## Structure repo (`C:\Users\GAMER\monpetitmdb`)
 ```
@@ -290,6 +291,15 @@ Sommaire : H2 visibles, H3 depliables au clic, auto-deplie si <= 15 entrees, FAQ
 - **Wording** : "Cash Flow Avant Impot" (ex cashflow brut), "Cash Flow Net d'Impot" (dans PnlColonne), "Estimation Prix de Revente" (ex Estimation marche DVF)
 - **Titres majuscules** : Caracteristiques du Bien, Donnees Locatives, Estimation Prix de Revente, etc.
 
+## Alertes email (Expert)
+- **Table `alertes`** : user_id, nom, filtres (JSONB), frequence (quotidien/hebdomadaire), enabled, last_sent_at
+- **API CRUD** : `/api/alertes` (GET/POST/PATCH/DELETE), max 5 alertes par utilisateur
+- **Cron** : `/api/admin/alertes` — verifie les nouveaux biens depuis last_sent_at, envoie email via Brevo API
+- **Filtres** : strategie_mdb, metropole, ville, code_postal, prix min/max, surface min/max, rendement min, score travaux min
+- **Email** : template HTML responsive design MDB, max 20 biens par email, lien vers la fiche
+- **Service** : Brevo API v3 (`https://api.brevo.com/v3/smtp/email`), domaine authentifie (SPF + DKIM + DMARC)
+- **UI** : section "Mes alertes" dans `/parametres` (Expert only), toggle on/off, creation/suppression
+
 ## Feedback Memo
 
 - Memo detecte bugs/suggestions via tag [FEEDBACK:type:cat:summary] dans les reponses
@@ -329,6 +339,9 @@ Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monp
 - `/api/admin/extraction` — `*/2 4-12 * * *` (15 biens/appel)
 - `/api/admin/score-travaux` — `*/2 12-20 * * *` (15 biens/appel)
 - `/api/admin/extraction-idr` — `* 20-23 * * *` (3-5 biens/appel, Immeuble de rapport)
+
+### Alertes email
+- `/api/admin/alertes` — `0 9 * * *` (quotidien, match nouveaux biens + envoi Brevo)
 
 ## Chat IA — Memo
 - Nom : **Memo** — assistant IA immobilier
@@ -403,6 +416,8 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 STRIPE_PRICE_PRO / STRIPE_PRICE_EXPERT
 CRON_SECRET (pour auth Vercel Cron)
 MOTEURIMMO_API_KEY (pour ingestion depuis API routes)
+BREVO_API_KEY (email transactionnel alertes)
+BREVO_SENDER_EMAIL (alertes@monpetitmdb.fr)
 ```
 
 ## Paywall Free
