@@ -188,10 +188,8 @@ export async function GET(req: NextRequest) {
       if (daysSince < 7) continue
     }
 
-    // Date de reference : dernier envoi ou 24h (quotidien) / 7j (hebdomadaire)
-    const defaultSince = alerte.frequence === 'hebdomadaire'
-      ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // Date de reference : dernier envoi ou 30j (premier envoi) / 24h (quotidien) / 7j (hebdomadaire)
+    const defaultSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     const sinceDate = alerte.last_sent_at || defaultSince
 
     // Chercher les nouveaux biens
