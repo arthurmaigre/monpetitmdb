@@ -1643,7 +1643,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 
         {/* Colonne gauche : Prix FAI */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9 (FAI)"}</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9"}<br />{"(FAI)"}</div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210', whiteSpace: 'nowrap' }}>{fmt(prixFai)}{'\u00A0\u20AC'}</div>
           {surface ? <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px', whiteSpace: 'nowrap' }}>{fmt(Math.round(prixFai / surface))}{'\u00A0\u20AC'}/m{'\u00B2'}</div> : null}
         </div>
@@ -3111,9 +3111,16 @@ export default function FicheBienPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#7a6a60' }}>Comparer avec :</span>
-                <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
-                  {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
+                {userPlan === 'expert' ? (
+                  <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
+                    {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="param-input" style={{ width: 'auto', background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
+                    <a href="/#pricing" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Tous les r\u00E9gimes \u2192 Expert"}</a>
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"D\u00E9tention :"}</span>

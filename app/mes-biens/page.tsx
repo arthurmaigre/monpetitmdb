@@ -663,7 +663,7 @@ export default function MesBiensPage() {
             >
               + Ajouter un bien
             </button>
-            {biens.length > 0 && (
+            {biens.length > 0 && isExpert && (
               <button
                 onClick={() => {
                   const headers = ['Type', 'Ville', 'Surface', 'Prix FAI', 'Prix/m2', 'Loyer', 'Rendement', 'Strategie', 'URL']

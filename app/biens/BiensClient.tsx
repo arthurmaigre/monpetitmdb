@@ -63,6 +63,8 @@ export default function BiensPage() {
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
+  const [userPlan, setUserPlan] = useState<string>('free')
+  const [userRegime, setUserRegime] = useState<string>('')
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
   const [tableWidth, setTableWidth] = useState(0)
@@ -213,6 +215,8 @@ export default function BiensPage() {
         const wData = await wRes.json()
         setWatchlistIds(new Set((wData.watchlist || []).map((w: any) => w.bien_id)))
         const pData = await pRes.json()
+        if (pData.profile?.plan) setUserPlan(pData.profile.plan)
+        if (pData.profile?.regime) setUserRegime(pData.profile.regime)
         if (pData.profile?.budget_travaux_m2) setBudgetTravauxM2(pData.profile.budget_travaux_m2)
       }
       if (!strategie) setLoading(false)
@@ -265,7 +269,14 @@ export default function BiensPage() {
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  const strategies = STRATEGIES_VISIBLES
+  // Pro : 1 seule strategie (deduite du regime fiscal profil). Expert : toutes.
+  const REGIME_TO_STRATEGIE: Record<string, string> = {
+    'nu_micro_foncier': 'Locataire en place', 'nu_reel_foncier': 'Locataire en place',
+    'lmnp_micro_bic': 'Locataire en place', 'lmnp_reel_bic': 'Locataire en place', 'lmp_reel_bic': 'Locataire en place',
+    'sci_is': 'Immeuble de rapport', 'marchand_de_biens': 'Travaux lourds',
+  }
+  const proStrategie = REGIME_TO_STRATEGIE[userRegime] || STRATEGIES_VISIBLES[0]
+  const strategies = userPlan === 'pro' ? [proStrategie] : STRATEGIES_VISIBLES
 
   // Filtres cote client (les autres sont cote serveur)
   let filtered = allBiens.filter(b => {
