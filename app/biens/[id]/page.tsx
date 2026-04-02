@@ -1900,10 +1900,14 @@ export default function FicheBienPage() {
             setRegime(p.regime)
             // MdB = frais notaire reduits 2.5%, sinon valeur profil
             setFraisNotaire(p.regime === 'marchand_de_biens' ? 2.5 : baseNotaire)
-            // Regime2 = premier regime different du profil pour eviter la comparaison identique
-            const suggere = ['lmnp_reel_bic', 'nu_reel_foncier', 'sci_is', 'marchand_de_biens', 'lmnp_micro_bic']
-            const alt = suggere.find(r => r !== p.regime)
-            if (alt) setRegime2(alt)
+            // Regime2 depuis le profil, sinon premier regime different
+            if (p.regime2 && [...REGIMES, ...REGIMES_IDR].some(r => r.value === p.regime2) && p.regime2 !== p.regime) {
+              setRegime2(p.regime2)
+            } else {
+              const suggere = ['lmnp_reel_bic', 'nu_reel_foncier', 'sci_is', 'marchand_de_biens', 'lmnp_micro_bic']
+              const alt = suggere.find(r => r !== p.regime)
+              if (alt) setRegime2(alt)
+            }
           } else {
             setFraisNotaire(baseNotaire)
           }

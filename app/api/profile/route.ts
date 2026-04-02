@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
   const body = await req.json()
-  const allowed = ['tmi', 'regime', 'apport', 'taux_credit', 'duree_ans', 'frais_notaire', 'metropole_favorite', 'taux_assurance', 'objectif_cashflow', 'objectif_pv', 'budget_travaux_m2', 'assurance_pno', 'frais_gestion_pct', 'honoraires_comptable', 'cfe', 'frais_oga', 'frais_bancaires']
+  const allowed = ['tmi', 'regime', 'regime2', 'strategie_mdb', 'apport', 'taux_credit', 'duree_ans', 'frais_notaire', 'metropole_favorite', 'taux_assurance', 'objectif_cashflow', 'objectif_pv', 'budget_travaux_m2', 'assurance_pno', 'frais_gestion_pct', 'honoraires_comptable', 'cfe', 'frais_oga', 'frais_bancaires']
   const updates: any = {}
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key]
