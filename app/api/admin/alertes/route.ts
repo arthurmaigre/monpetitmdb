@@ -40,6 +40,7 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
 
     return `
       <div style="border: 1.5px solid #e8e2d8; border-radius: 12px; overflow: hidden; margin-bottom: 12px;">
+        ${b.photo_url ? `<a href="${lien}" style="display: block;"><img src="${b.photo_url}" alt="${titre}" width="600" style="width: 100%; height: 180px; object-fit: cover; display: block;" /></a>` : ''}
         <div style="padding: 16px 18px;">
           <div style="margin-bottom: 8px;">
             <a href="${lien}" style="font-family: 'Fraunces', Georgia, serif; font-size: 16px; font-weight: 700; color: #1a1210; text-decoration: none; display: block;">
