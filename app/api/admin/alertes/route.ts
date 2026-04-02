@@ -100,8 +100,7 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
 async function sendEmail(to: string, subject: string, html: string): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.BREVO_API_KEY
   if (!apiKey) {
-    const envKeys = Object.keys(process.env).filter(k => k.includes('BREVO')).join(', ')
-    return { ok: false, error: `BREVO_API_KEY manquante. Variables BREVO trouvees: [${envKeys || 'aucune'}]` }
+    return { ok: false, error: `BREVO_API_KEY manquante. Type: ${typeof process.env.BREVO_API_KEY}. Debut: ${(process.env.BREVO_API_KEY || '').slice(0, 8)}` }
   }
 
   try {
