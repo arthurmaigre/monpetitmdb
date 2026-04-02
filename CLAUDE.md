@@ -23,7 +23,7 @@ Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 1 strategie, 
 monpetitmdb/
 ├── app/
 │   ├── api/
-│   │   ├── biens/              # GET /api/biens, GET/PATCH /api/biens/[id]
+│   │   ├── biens/              # GET/POST /api/biens, GET/PATCH /api/biens/[id]
 │   │   ├── blog/               # GET /api/blog (articles publies)
 │   │   ├── communes/           # Recherche localisation (ville, dept, region, metropole)
 │   │   ├── estimation/[id]/    # Estimation DVF par bien
@@ -77,9 +77,11 @@ monpetitmdb/
 │   ├── ChatWidget.tsx          # Chat IA "Memo" flottant (Haiku, streaming, ouvert par defaut)
 │   ├── LandingHeader.tsx       # Header landing page (detecte connexion)
 │   ├── Layout.tsx              # Header (nav + dropdown user) + Footer
+│   ├── TypeBienIllustration.tsx # Illustrations SVG par type de bien (Appartement, Maison, Immeuble, etc.)
 │   └── ui/                     # Composants UI partages
 │       ├── Button.tsx          # Bouton (primary/secondary/ghost/danger, sm/md/lg)
 │       ├── Input.tsx           # Input (default/search/inline, label, hint, error, suffix)
+│       ├── AddressAutocomplete.tsx # Autocompletion adresse via API BAN (gouv.fr)
 │       ├── Modal.tsx           # Modal (focus trap, Escape, overlay, 3 variants)
 │       ├── Card.tsx            # Card (padding, border, hover shadow)
 │       ├── Toast.tsx           # Toast notifications (success/error/warning, 3s auto-dismiss)
@@ -333,8 +335,12 @@ Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monp
 - Streaming Haiku, historique sessionStorage
 
 ## Watchlist — Suivi pipeline MDB
-13 statuts : a_analyser → info_demandee → analyse_complete → offre_envoyee → en_negociation → visite → sous_compromis → acte_signe + 5 KO
+14 statuts : a_analyser → info_demandee → analyse_complete → offre_envoyee → en_negociation → visite → sous_compromis → acte_signe + 5 KO + archive
 Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
+- **Archivage (soft delete)** : DELETE watchlist passe le suivi a `archive` (pas de suppression reelle). Toggle "Archives" dans `/mes-biens` pour voir/restaurer. Les archives ne comptent pas dans la limite du plan.
+- **Ajout manuel** : POST /api/biens cree un bien + auto-ajout watchlist. URL `manual://user_id/timestamp`. Strategie inferee (loyer → Locataire en place, immeuble → IDR, sinon → Travaux lourds). Badge "MON BIEN" sur les cards/liste.
+- **Tunnel ajout 3 etapes** : 1) Caracteristiques + adresse (autocompletion BAN) 2) Donnees locatives (toggle oui/non) 3) Travaux (score 1-5)
+- **Illustrations SVG** : composant `TypeBienIllustration` affiche une icone par type de bien quand pas de photo (Appartement, Maison, Immeuble, Local commercial, Terrain, Parking)
 
 ## Tracking & Analytics
 - **Google Tag Manager** : GTM-P2NK7FXK — installe dans layout.tsx

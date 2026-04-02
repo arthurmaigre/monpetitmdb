@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       .from('watchlist')
       .select('bien_id', { count: 'exact', head: true })
       .eq('user_id', user.id)
+      .neq('suivi', 'archive')
 
     if (countError) return NextResponse.json({ error: countError.message }, { status: 500 })
 
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH — mettre a jour le score travaux perso ou le suivi
-const SUIVI_VALUES = ['a_analyser', 'info_demandee', 'analyse_complete', 'offre_envoyee', 'en_negociation', 'visite', 'sous_compromis', 'acte_signe', 'ko_pas_rentable', 'ko_offre_refusee', 'ko_non_conforme', 'ko_vendu', 'ko_autre']
+const SUIVI_VALUES = ['a_analyser', 'info_demandee', 'analyse_complete', 'offre_envoyee', 'en_negociation', 'visite', 'sous_compromis', 'acte_signe', 'ko_pas_rentable', 'ko_offre_refusee', 'ko_non_conforme', 'ko_vendu', 'ko_autre', 'archive']
 
 export async function PATCH(req: NextRequest) {
   const user = await getUser(req)
@@ -128,7 +129,7 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
-// DELETE — retirer un bien
+// DELETE — archiver un bien (soft delete)
 export async function DELETE(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
@@ -138,7 +139,7 @@ export async function DELETE(req: NextRequest) {
 
   const { error } = await supabaseAdmin
     .from('watchlist')
-    .delete()
+    .update({ suivi: 'archive' })
     .eq('user_id', user.id)
     .eq('bien_id', bien_id)
 

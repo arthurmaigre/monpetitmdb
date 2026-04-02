@@ -8,6 +8,8 @@ import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
 import { calculerCashflow } from '@/lib/calculs'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
+import TypeBienIllustration from '@/components/TypeBienIllustration'
 
 function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
@@ -27,6 +29,7 @@ const SUIVI_OPTIONS = [
   { value: 'ko_non_conforme',  label: 'KO - Non conforme',      color: '#e74c3c', bg: '#fdedec' },
   { value: 'ko_vendu',         label: 'KO - Vendu',             color: '#e74c3c', bg: '#fdedec' },
   { value: 'ko_autre',         label: 'KO - Autre',             color: '#e74c3c', bg: '#fdedec' },
+  { value: 'archive',          label: 'Archiv\u00E9',           color: '#95a5a6', bg: '#f0f0f0' },
 ]
 
 export default function MesBiensPage() {
@@ -44,6 +47,14 @@ export default function MesBiensPage() {
   const [suiviMap, setSuiviMap] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState('')
+  const [addStep, setAddStep] = useState(1)
+  const [addForm, setAddForm] = useState<Record<string, any>>({})
+  const [hasLocatif, setHasLocatif] = useState(false)
+  const [etageFocus, setEtageFocus] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
   const [tableWidth, setTableWidth] = useState(0)
@@ -114,11 +125,14 @@ export default function MesBiensPage() {
     return () => obs.disconnect()
   }, [view, loading, activeTab, biens.length])
 
+  const activeBiens = biens.filter(b => suiviMap[b.id] !== 'archive')
+  const archivedBiens = biens.filter(b => suiviMap[b.id] === 'archive')
+  const displayBiens = showArchived ? archivedBiens : activeBiens
   const watchlistLimit = plan === 'expert' ? Infinity : plan === 'pro' ? 50 : 10
-  const isAtLimit = biens.length >= watchlistLimit
+  const isAtLimit = activeBiens.length >= watchlistLimit
   const isExpert = plan === 'expert'
-  const strategies = [...new Set(biens.map(b => b.strategie_mdb).filter(Boolean))] as string[]
-  const filteredBiens = activeTab ? biens.filter(b => b.strategie_mdb === activeTab) : biens
+  const strategies = [...new Set(displayBiens.map(b => b.strategie_mdb).filter(Boolean))] as string[]
+  const filteredBiens = activeTab && !showArchived ? displayBiens.filter(b => b.strategie_mdb === activeTab) : displayBiens
 
   async function handleSuiviChange(bienId: string, newSuivi: string) {
     setSuiviMap(prev => ({ ...prev, [bienId]: newSuivi }))
@@ -129,9 +143,28 @@ export default function MesBiensPage() {
     })
   }
 
+  async function handleArchive(bienId: string) {
+    if (!userToken) return
+    setSuiviMap(prev => ({ ...prev, [bienId]: 'archive' }))
+    await fetch('/api/watchlist', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ bien_id: bienId })
+    })
+  }
+
+  async function handleRestore(bienId: string) {
+    if (!userToken) return
+    setSuiviMap(prev => ({ ...prev, [bienId]: 'a_analyser' }))
+    await fetch('/api/watchlist', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ bien_id: bienId, suivi: 'a_analyser' })
+    })
+  }
+
   function handleRemove(bienId: string) {
-    setBiens(prev => prev.filter(b => b.id !== bienId))
-    setWatchlistIds(prev => { const next = new Set(prev); next.delete(bienId); return next })
+    handleArchive(bienId)
   }
 
   async function updateBien(bien: any, champ: string, valeur: any) {
@@ -183,6 +216,342 @@ export default function MesBiensPage() {
       <select className="suivi-select" value={suiviMap[bienId] || 'a_analyser'} onChange={e => handleSuiviChange(bienId, e.target.value)} style={{ color: opt.color, background: opt.bg }}>
         {SUIVI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
+    )
+  }
+
+  function openAddModal() {
+    setAddError(''); setAddStep(1); setAddForm({ type_bien: 'Appartement' }); setHasLocatif(false); setShowAddModal(true)
+  }
+
+  function updateAddForm(fields: Record<string, any>) {
+    setAddForm(prev => ({ ...prev, ...fields }))
+  }
+
+  function validateStep1(): boolean {
+    const { type_bien, ville, code_postal, surface, prix_fai } = addForm
+    if (!type_bien) { setAddError('Type de bien requis'); return false }
+    if (!ville?.trim()) { setAddError('Ville requise'); return false }
+    if (!code_postal || !/^\d{5}$/.test(code_postal)) { setAddError('Code postal invalide (5 chiffres)'); return false }
+    if (!surface || Number(surface) <= 0) { setAddError('Surface requise'); return false }
+    if (!prix_fai || Number(prix_fai) <= 0) { setAddError('Prix FAI requis'); return false }
+    setAddError(''); return true
+  }
+
+  async function submitAddBien() {
+    if (!userToken) return
+    setAddLoading(true)
+    setAddError('')
+    try {
+      const res = await fetch('/api/biens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify(addForm),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.upgrade) setAddError(`Limite watchlist atteinte (${data.limit} biens). Passez au plan sup\u00E9rieur.`)
+        else setAddError(data.error || 'Erreur lors de la cr\u00E9ation')
+        setAddLoading(false)
+        return
+      }
+      const wRes = await fetch('/api/watchlist', { headers: { Authorization: `Bearer ${userToken}` } })
+      const wData = await wRes.json()
+      const items = wData.watchlist || []
+      setWatchlistIds(new Set(items.map((w: any) => w.bien_id)))
+      const suiviInit: Record<string, string> = {}
+      items.forEach((w: any) => { suiviInit[w.bien_id] = w.suivi || 'a_analyser' })
+      setSuiviMap(suiviInit)
+      if (items.length > 0) {
+        const biensRes = await fetch('/api/biens?ids=' + items.map((w: any) => w.bien_id).join(','))
+        const biensData = await biensRes.json()
+        setBiens(biensData.biens || [])
+        const strats = [...new Set((biensData.biens || []).map((x: any) => x.strategie_mdb).filter(Boolean))]
+        if (strats.length > 0 && !strats.includes(activeTab)) setActiveTab(strats[0] as string)
+      }
+      setShowAddModal(false)
+    } catch {
+      setAddError('Erreur r\u00E9seau')
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
+  const STEP_TITLES = ['', 'Caract\u00E9ristiques du bien', 'Donn\u00E9es locatives', 'Travaux']
+  const SCORE_LABELS: Record<number, string> = { 1: '\u00C9tat correct', 2: 'Rafra\u00EEchissement', 3: 'Travaux moyens', 4: 'Travaux lourds', 5: 'Tr\u00E8s lourds / ruine' }
+
+  function AddBienModal() {
+    if (!showAddModal) return null
+
+    const _ls: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '4px' }
+    const _lt: React.CSSProperties = { fontSize: '12px', fontWeight: 600, color: '#7a6a60', letterSpacing: '0.04em' }
+    const _in: React.CSSProperties = { padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', background: '#faf8f5', outline: 'none', width: '100%', boxSizing: 'border-box' }
+    const _btnPrimary: React.CSSProperties = { padding: '10px 24px', borderRadius: '8px', border: 'none', background: '#c0392b', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }
+    const _btnSecondary: React.CSSProperties = { padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: '#7a6a60' }
+
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }} onClick={() => setShowAddModal(false)}>
+        <div style={{ background: '#fff', borderRadius: '16px', maxWidth: '560px', width: '92%', maxHeight: '88vh', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '32px', overflowY: 'auto', flex: 1 }}>
+
+          {/* Header + progress */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 700, color: '#1a1210', margin: 0 }}>Ajouter un bien</h2>
+            <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#7a6a60', lineHeight: 1 }}>{'\u00D7'}</button>
+          </div>
+
+          {/* Stepper */}
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
+            {[1, 2, 3].map(s => (
+              <div key={s} style={{ flex: 1, height: '3px', borderRadius: '2px', background: s <= addStep ? '#c0392b' : '#e8e2d8', transition: 'background 200ms ease' }} />
+            ))}
+          </div>
+          <p style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '20px', fontWeight: 500 }}>
+            {`\u00C9tape ${addStep}/3 \u2014 ${STEP_TITLES[addStep]}`}
+          </p>
+
+          {addError && <div style={{ background: '#fdedec', color: '#e74c3c', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', marginBottom: '16px' }}>{addError}</div>}
+
+          {/* ÉTAPE 1 — Caractéristiques + Adresse */}
+          {addStep === 1 && (
+            <div>
+              <p style={{ fontSize: '12px', color: '#b0a898', marginBottom: '16px' }}>Les champs marqu{'\u00E9'}s * sont obligatoires</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label style={_ls}>
+                  <span style={_lt}>Type de bien *</span>
+                  <select value={addForm.type_bien || 'Appartement'} onChange={e => updateAddForm({ type_bien: e.target.value })} style={_in}>
+                    <option value="Appartement">Appartement</option>
+                    <option value="Maison">Maison</option>
+                    <option value="Immeuble">Immeuble</option>
+                    <option value="Local commercial">Local commercial</option>
+                    <option value="Terrain">Terrain</option>
+                    <option value="Parking">Parking</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </label>
+                <label style={_ls}>
+                  <span style={_lt}>{"Pi\u00E8ces"}</span>
+                  <select value={addForm.nb_pieces || ''} onChange={e => updateAddForm({ nb_pieces: e.target.value })} style={_in}>
+                    <option value="">-</option>
+                    {['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10+'].map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </label>
+                <label style={_ls}>
+                  <span style={_lt}>{"Surface (m\u00B2) *"}</span>
+                  <input type="number" value={addForm.surface || ''} onChange={e => updateAddForm({ surface: e.target.value })} min="1" step="0.1" placeholder="45" style={_in} />
+                </label>
+                <label style={_ls}>
+                  <span style={_lt}>Prix FAI ({'\u20AC'}) *</span>
+                  <input type="number" value={addForm.prix_fai || ''} onChange={e => updateAddForm({ prix_fai: e.target.value })} min="1" step="1" placeholder="150 000" style={_in} />
+                </label>
+                <div style={{ ..._ls, position: 'relative' }}>
+                  <span style={_lt}>{"\u00C9tage"}</span>
+                  <input
+                    value={addForm.etage || ''}
+                    onChange={e => updateAddForm({ etage: e.target.value })}
+                    onFocus={() => setEtageFocus(true)}
+                    onBlur={() => setTimeout(() => setEtageFocus(false), 150)}
+                    placeholder="RDC, 1er, 5e..."
+                    autoComplete="off"
+                    style={_in}
+                  />
+                  {etageFocus && (() => {
+                    const ALL_ETAGES = ['RDC', ...Array.from({ length: 30 }, (_, i) => i === 0 ? '1er' : `${i + 1}e`), 'Dernier']
+                    const q = (addForm.etage || '').toLowerCase()
+                    const filtered = q ? ALL_ETAGES.filter(e => e.toLowerCase().includes(q)) : ALL_ETAGES
+                    if (filtered.length === 0 || (filtered.length === 1 && filtered[0] === addForm.etage)) return null
+                    return (
+                      <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', borderRadius: '8px', border: '1px solid #e8e2d8', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', listStyle: 'none', margin: '2px 0 0', padding: '4px 0', maxHeight: '160px', overflowY: 'auto' }}>
+                        {filtered.map(v => (
+                          <li key={v} onMouseDown={() => { updateAddForm({ etage: v }); setEtageFocus(false) }} style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '14px', fontFamily: "'DM Sans', sans-serif", color: '#1a1210' }} onMouseEnter={e => (e.currentTarget.style.background = '#f7f4f0')} onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>{v}</li>
+                        ))}
+                      </ul>
+                    )
+                  })()}
+                </div>
+                <label style={_ls}>
+                  <span style={_lt}>DPE</span>
+                  <select value={addForm.dpe || ''} onChange={e => updateAddForm({ dpe: e.target.value })} style={_in}>
+                    <option value="">-</option>
+                    {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </label>
+                <label style={_ls}>
+                  <span style={_lt}>Chambres</span>
+                  <input type="number" value={addForm.nb_chambres || ''} onChange={e => updateAddForm({ nb_chambres: e.target.value })} min="0" max="50" step="1" placeholder="2" style={_in} />
+                </label>
+                <label style={_ls}>
+                  <span style={_lt}>Salles de bain</span>
+                  <input type="number" value={addForm.nb_sdb || ''} onChange={e => updateAddForm({ nb_sdb: e.target.value })} min="0" max="20" step="1" placeholder="1" style={_in} />
+                </label>
+                <label style={_ls}>
+                  <span style={_lt}>{"Ann\u00E9e construction"}</span>
+                  <input type="number" value={addForm.annee_construction || ''} onChange={e => updateAddForm({ annee_construction: e.target.value })} min="1800" max="2030" placeholder="1985" style={_in} />
+                </label>
+              </div>
+
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f0ede8' }}>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210', marginBottom: '12px' }}>Adresse</p>
+                <div style={{ marginBottom: '12px' }}>
+                  <AddressAutocomplete
+                    label="Rechercher une adresse"
+                    value={addForm._adresseQuery || ''}
+                    placeholder={"12 rue de la Paix, Paris"}
+                    onChange={val => updateAddForm({ _adresseQuery: val })}
+                    onSelect={addr => updateAddForm({
+                      adresse: addr.adresse,
+                      ville: addr.ville,
+                      code_postal: addr.code_postal,
+                      latitude: addr.latitude,
+                      longitude: addr.longitude,
+                      _adresseQuery: `${addr.adresse}, ${addr.code_postal} ${addr.ville}`,
+                    })}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label style={{ ..._ls, gridColumn: '1 / -1' }}>
+                    <span style={_lt}>Adresse</span>
+                    <input value={addForm.adresse || ''} onChange={e => updateAddForm({ adresse: e.target.value })} placeholder="12 rue de la Paix" style={_in} />
+                  </label>
+                  <label style={_ls}>
+                    <span style={_lt}>Ville *</span>
+                    <input value={addForm.ville || ''} onChange={e => updateAddForm({ ville: e.target.value })} placeholder="Lyon" style={_in} />
+                  </label>
+                  <label style={_ls}>
+                    <span style={_lt}>Code postal *</span>
+                    <input value={addForm.code_postal || ''} onChange={e => updateAddForm({ code_postal: e.target.value })} placeholder="69001" maxLength={5} style={_in} />
+                  </label>
+                </div>
+              </div>
+
+              <label style={{ ..._ls, marginTop: '12px' }}>
+                <span style={_lt}>URL de l'annonce</span>
+                <input type="url" value={addForm.url || ''} onChange={e => updateAddForm({ url: e.target.value })} placeholder="https://www.leboncoin.fr/..." style={_in} />
+              </label>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setShowAddModal(false)} style={_btnSecondary}>Annuler</button>
+                <button type="button" onClick={() => { if (validateStep1()) setAddStep(2) }} style={_btnPrimary}>{"Suivant \u2192"}</button>
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 2 — Données locatives */}
+          {addStep === 2 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', padding: '14px 16px', background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8' }}>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: '#1a1210' }}>Le bien est-il lou{'\u00E9'} ?</span>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                  <button type="button" onClick={() => setHasLocatif(false)} style={{ padding: '6px 16px', borderRadius: '6px', border: '1.5px solid #e8e2d8', background: !hasLocatif ? '#1a1210' : '#fff', color: !hasLocatif ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Non</button>
+                  <button type="button" onClick={() => setHasLocatif(true)} style={{ padding: '6px 16px', borderRadius: '6px', border: '1.5px solid #e8e2d8', background: hasLocatif ? '#1a1210' : '#fff', color: hasLocatif ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Oui</button>
+                </div>
+              </div>
+
+              {hasLocatif ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label style={_ls}>
+                    <span style={_lt}>Loyer ({'\u20AC'}/mois) *</span>
+                    <input type="number" value={addForm.loyer || ''} onChange={e => updateAddForm({ loyer: e.target.value })} min="1" step="1" placeholder="650" style={_in} />
+                  </label>
+                  <label style={_ls}>
+                    <span style={_lt}>Type de loyer</span>
+                    <select value={addForm.type_loyer || 'HC'} onChange={e => updateAddForm({ type_loyer: e.target.value })} style={_in}>
+                      <option value="HC">Hors charges (HC)</option>
+                      <option value="CC">Charges comprises (CC)</option>
+                    </select>
+                  </label>
+                  <label style={_ls}>
+                    <span style={_lt}>{"Charges r\u00E9cup\u00E9rables (\u20AC/mois)"}</span>
+                    <input type="number" value={addForm.charges_rec || ''} onChange={e => updateAddForm({ charges_rec: e.target.value })} min="0" step="1" placeholder="50" style={_in} />
+                  </label>
+                  <label style={_ls}>
+                    <span style={_lt}>{"Charges copro (\u20AC/mois)"}</span>
+                    <input type="number" value={addForm.charges_copro || ''} onChange={e => updateAddForm({ charges_copro: e.target.value })} min="0" step="1" placeholder="120" style={_in} />
+                  </label>
+                  <label style={_ls}>
+                    <span style={_lt}>{"Taxe fonci\u00E8re (\u20AC/an)"}</span>
+                    <input type="number" value={addForm.taxe_fonc_ann || ''} onChange={e => updateAddForm({ taxe_fonc_ann: e.target.value })} min="0" step="1" placeholder="800" style={_in} />
+                  </label>
+                  <label style={_ls}>
+                    <span style={_lt}>Fin de bail</span>
+                    <input type="date" value={addForm.fin_bail || ''} onChange={e => updateAddForm({ fin_bail: e.target.value })} style={_in} />
+                  </label>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#b0a898' }}>
+                  <p style={{ fontSize: '14px' }}>Pas de donn{'\u00E9'}es locatives {'\u00E0'} renseigner.</p>
+                  <p style={{ fontSize: '12px', marginTop: '4px' }}>Vous pourrez les ajouter plus tard depuis la fiche du bien.</p>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'space-between' }}>
+                <button type="button" onClick={() => { setAddError(''); setAddStep(1) }} style={_btnSecondary}>{"\u2190 Retour"}</button>
+                <button type="button" onClick={() => { setAddError(''); setAddStep(3) }} style={_btnPrimary}>{"Suivant \u2192"}</button>
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 3 — Travaux */}
+          {addStep === 3 && (
+            <div>
+              <p style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '20px' }}>
+                {"Estimez l'\u00E9tat du bien pour calibrer le budget travaux."}
+              </p>
+
+              <div style={{ marginBottom: '20px' }}>
+                <span style={_lt}>{"Score travaux"}</span>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                  {[1, 2, 3, 4, 5].map(s => {
+                    const selected = Number(addForm.score_travaux) === s
+                    const colors = ['#27ae60', '#f0e034', '#f0a830', '#eb6a2a', '#e42a1e']
+                    return (
+                      <button key={s} type="button" onClick={() => updateAddForm({ score_travaux: s })} style={{
+                        flex: 1, padding: '10px 4px', borderRadius: '8px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textAlign: 'center',
+                        border: selected ? `2px solid ${colors[s - 1]}` : '1.5px solid #e8e2d8',
+                        background: selected ? `${colors[s - 1]}15` : '#faf8f5',
+                        transition: 'all 150ms ease',
+                      }}>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: selected ? colors[s - 1] : '#b0a898' }}>{s}</div>
+                        <div style={{ fontSize: '10px', color: selected ? colors[s - 1] : '#b0a898', marginTop: '2px', lineHeight: 1.2 }}>{SCORE_LABELS[s]}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <label style={_ls}>
+                <span style={_lt}>Commentaire sur les travaux</span>
+                <textarea value={addForm.score_commentaire || ''} onChange={e => updateAddForm({ score_commentaire: e.target.value })} placeholder={"Toiture \u00E0 refaire, fen\u00EAtres simple vitrage, cuisine \u00E0 r\u00E9nover..."} maxLength={500} rows={3} style={{ ..._in, resize: 'vertical', minHeight: '72px' }} />
+                <span style={{ fontSize: '11px', color: '#b0a898', textAlign: 'right' }}>{(addForm.score_commentaire || '').length}/500</span>
+              </label>
+
+              {/* Récap */}
+              <div style={{ marginTop: '20px', padding: '14px 16px', background: '#faf8f5', borderRadius: '10px', border: '1px solid #e8e2d8' }}>
+                <p style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '8px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{"R\u00E9capitulatif"}</p>
+                <div style={{ fontSize: '13px', color: '#1a1210', lineHeight: 1.8 }}>
+                  <span style={{ fontWeight: 600 }}>{addForm.type_bien || 'Appartement'}</span>
+                  {addForm.nb_pieces ? ` ${addForm.nb_pieces}` : ''}
+                  {addForm.surface ? ` \u2014 ${addForm.surface} m\u00B2` : ''}
+                  <br />
+                  {addForm.adresse ? `${addForm.adresse}, ` : ''}{addForm.ville} {addForm.code_postal}
+                  <br />
+                  <span style={{ fontWeight: 600 }}>{addForm.prix_fai ? `${Number(addForm.prix_fai).toLocaleString('fr-FR')} \u20AC` : ''}</span>
+                  {hasLocatif && addForm.loyer ? ` \u2014 Loyer ${Number(addForm.loyer).toLocaleString('fr-FR')} \u20AC/mois` : ''}
+                  {addForm.score_travaux ? ` \u2014 Travaux ${addForm.score_travaux}/5` : ''}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'space-between' }}>
+                <button type="button" onClick={() => { setAddError(''); setAddStep(2) }} style={_btnSecondary}>{"\u2190 Retour"}</button>
+                <button type="button" disabled={addLoading} onClick={submitAddBien} style={{ ..._btnPrimary, opacity: addLoading ? 0.7 : 1, cursor: addLoading ? 'wait' : 'pointer' }}>
+                  {addLoading ? 'Ajout en cours...' : 'Ajouter le bien'}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+        </div>
+      </div>
     )
   }
 
@@ -272,10 +641,10 @@ export default function MesBiensPage() {
                 color: isAtLimit && !isExpert ? '#c0392b' : '#7a6a60',
                 fontSize: 13, fontWeight: 600, marginLeft: 12, verticalAlign: 'middle'
               }}>
-                {isExpert ? `${biens.length} biens` : `${biens.length} / ${watchlistLimit}`}
+                {isExpert ? `${activeBiens.length} biens` : `${activeBiens.length} / ${watchlistLimit}`}
               </span>
             </h1>
-            <p className="mes-biens-sub">{biens.length} bien{biens.length > 1 ? 's' : ''} sauvegard{'\u00E9'}{biens.length > 1 ? 's' : ''}</p>
+            <p className="mes-biens-sub">{activeBiens.length} bien{activeBiens.length > 1 ? 's' : ''} sauvegard{'\u00E9'}{activeBiens.length > 1 ? 's' : ''}{archivedBiens.length > 0 ? ` \u00B7 ${archivedBiens.length} archiv\u00E9${archivedBiens.length > 1 ? 's' : ''}` : ''}</p>
             {isAtLimit && !isExpert && (
               <p style={{ fontSize: 14, color: '#c0392b', marginTop: 8 }}>
                 {"Vous avez atteint la limite de votre plan. "}
@@ -286,6 +655,14 @@ export default function MesBiensPage() {
             )}
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={openAddModal}
+              style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #c0392b', background: '#c0392b', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', transition: 'opacity 150ms ease' }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              + Ajouter un bien
+            </button>
             {biens.length > 0 && (
               <button
                 onClick={() => {
@@ -303,6 +680,14 @@ export default function MesBiensPage() {
                 style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: '#fff', fontSize: '12px', fontWeight: 600, color: '#1a1210', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
               >
                 {"Exporter CSV \u2193"}
+              </button>
+            )}
+            {archivedBiens.length > 0 && (
+              <button
+                onClick={() => setShowArchived(prev => !prev)}
+                style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: showArchived ? '#f0f0f0' : '#fff', fontSize: '12px', fontWeight: 600, color: showArchived ? '#95a5a6' : '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
+              >
+                {showArchived ? `\u2190 Retour` : `Archiv\u00E9s (${archivedBiens.length})`}
               </button>
             )}
             <div className="view-toggle" role="group" aria-label="Mode d'affichage">
@@ -340,14 +725,28 @@ export default function MesBiensPage() {
             )}
 
             <p style={{ fontSize: '14px', color: '#7a6a60', marginBottom: '16px' }}>
-              <strong style={{ color: '#1a1210' }}>{filteredBiens.length}</strong> bien{filteredBiens.length > 1 ? 's' : ''} {activeTab && `\u2014 ${activeTab}`}
+              {showArchived ? (
+                <><strong style={{ color: '#95a5a6' }}>{filteredBiens.length}</strong> bien{filteredBiens.length > 1 ? 's' : ''} archiv{'\u00E9'}{filteredBiens.length > 1 ? 's' : ''}</>
+              ) : (
+                <><strong style={{ color: '#1a1210' }}>{filteredBiens.length}</strong> bien{filteredBiens.length > 1 ? 's' : ''} {activeTab && `\u2014 ${activeTab}`}</>
+              )}
             </p>
 
             {view === 'grid' ? (
               <div className="grid">
                 {filteredBiens.map(bien => {
                   const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || SUIVI_OPTIONS[0]
-                  return (
+                  return showArchived ? (
+                    <div key={bien.id} style={{ position: 'relative', opacity: 0.7 }}>
+                      <BienCard bien={bien} inWatchlist={false} userToken={userToken} />
+                      <button
+                        onClick={() => handleRestore(bien.id)}
+                        style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', padding: '10px', borderRadius: '8px', border: 'none', background: '#27ae60', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        {"\u21A9 Restaurer dans ma watchlist"}
+                      </button>
+                    </div>
+                  ) : (
                   <BienCard
                     key={bien.id}
                     bien={bien}
@@ -356,7 +755,7 @@ export default function MesBiensPage() {
                     onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
                     extraTitleRight={
                       <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg, flexShrink: 0 }}>
-                        {SUIVI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        {SUIVI_OPTIONS.map(o => o.value !== 'archive' && <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     }
                   />
@@ -407,18 +806,25 @@ export default function MesBiensPage() {
                     {filteredBiens.map(bien => (
                       <tr key={bien.id}>
                         <td className="sticky-col" style={{ left: 0, width: '40px', minWidth: '40px' }}>
-                          <button className="td-heart" onClick={async () => {
-                            if (!userToken) return
-                            const res = await fetch('/api/watchlist', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` }, body: JSON.stringify({ bien_id: bien.id }) })
-                            if (res.ok) handleRemove(bien.id)
-                          }}>{'\u2665'}</button>
+                          {showArchived ? (
+                            <button className="td-heart" style={{ color: '#27ae60' }} onClick={() => handleRestore(bien.id)} title="Restaurer">{'\u21A9'}</button>
+                          ) : (
+                            <button className="td-heart" onClick={() => handleArchive(bien.id)}>{'\u2665'}</button>
+                          )}
                         </td>
                         <td className="sticky-col" style={{ left: '40px', width: '130px', minWidth: '130px' }}>
                           <SuiviSelect bienId={bien.id} />
                         </td>
-                        <td className="sticky-col" style={{ left: '170px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty">-</div>}</td>
+                        <td className="sticky-col" style={{ left: '170px', width: '80px', minWidth: '80px' }}>
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                            {bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty"><TypeBienIllustration type={bien.type_bien} size={36} /></div>}
+                            {bien.url?.startsWith('manual://') && <span style={{ position: 'absolute', bottom: '2px', left: '2px', fontSize: '7px', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.55)', padding: '1px 4px', borderRadius: '3px', lineHeight: 1.3 }}>MON BIEN</span>}
+                          </div>
+                        </td>
                         <td className="sticky-col" style={{ left: '250px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
-                          <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</span>
+                          <span className="td-bien-title">
+                            {bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}
+                          </span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
@@ -518,6 +924,7 @@ export default function MesBiensPage() {
             )}
           </>
         )}
+        {AddBienModal()}
       </div>
     </Layout>
   )

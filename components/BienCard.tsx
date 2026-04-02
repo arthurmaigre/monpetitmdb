@@ -6,6 +6,7 @@ import { theme } from '@/lib/theme'
 import MetroBadge from './MetroBadge'
 import RendementBadge from './RendementBadge'
 import PlusValueBadge from './PlusValueBadge'
+import TypeBienIllustration from './TypeBienIllustration'
 
 interface Props {
   bien: Bien
@@ -55,7 +56,8 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
   const [imgLoaded, setImgLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
   const photos = getPhotos(bien)
-  const lienTitre = bien.url ? bien.url : '/biens/' + bien.id
+  const isManuel = bien.url?.startsWith('manual://')
+  const lienTitre = bien.url && !isManuel ? bien.url : '/biens/' + bien.id
   const scoreTravaux = bien.score_travaux
   const isTravaux = bien.strategie_mdb === 'Travaux lourds'
   const isIDR = bien.strategie_mdb === 'Immeuble de rapport'
@@ -184,20 +186,13 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
             )}
           </>
         ) : (
-          /* Skeleton placeholder when no photos at all */
+          /* Illustration placeholder by type */
           <div style={{
             height: '100%', display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            color: theme.colors.textTertiary, fontSize: theme.fontSizes.sm, gap: theme.spacing[1],
-            background: `linear-gradient(90deg, ${theme.colors.bgHover} 25%, ${theme.colors.sandLight} 50%, ${theme.colors.bgHover} 75%)`,
-            backgroundSize: '200% 100%',
-            animation: 'shimmer 1.5s infinite',
+            background: theme.colors.sandLight,
           }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" style={{ opacity: 0.5 }}>
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
-            </svg>
+            <TypeBienIllustration type={bien.type_bien} size={72} />
           </div>
         )}
 
@@ -245,6 +240,9 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
         <span style={{ position: 'absolute', top: theme.spacing[3], left: theme.spacing[3] }}>
           <MetroBadge metropole={bien.metropole} />
         </span>
+        {isManuel && (
+          <span style={{ position: 'absolute', bottom: theme.spacing[3], left: theme.spacing[3], fontSize: '10px', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', padding: '3px 8px', borderRadius: '6px', letterSpacing: '0.04em' }}>MON BIEN</span>
+        )}
         <span style={{
           position: 'absolute',
           ...(compact

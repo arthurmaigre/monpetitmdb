@@ -1,5 +1,145 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { createClient } from '@supabase/supabase-js'
+
+async function getUser(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '')
+  if (!token) return null
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  )
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return null
+  return user
+}
+
+const STRATEGIES = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport']
+const TYPES_BIEN = ['Appartement', 'Maison', 'Immeuble', 'Local commercial', 'Terrain', 'Parking', 'Autre']
+
+export async function POST(req: NextRequest) {
+  const user = await getUser(req)
+  if (!user) return NextResponse.json({ error: 'Non autoris\u00E9' }, { status: 401 })
+
+  const body = await req.json()
+  const { url, strategie_mdb, ville, code_postal, type_bien, surface, prix_fai, loyer, nb_pieces,
+    adresse, etage, annee_construction, dpe, nb_chambres, nb_sdb,
+    type_loyer, charges_rec, charges_copro, taxe_fonc_ann, profil_locataire, fin_bail,
+    score_travaux, score_commentaire, latitude, longitude } = body
+
+  // Validation champs obligatoires
+  if (!ville || typeof ville !== 'string')
+    return NextResponse.json({ error: 'Ville requise' }, { status: 400 })
+  if (!code_postal || !/^\d{5}$/.test(code_postal))
+    return NextResponse.json({ error: 'Code postal invalide (5 chiffres)' }, { status: 400 })
+  if (!type_bien || !TYPES_BIEN.includes(type_bien))
+    return NextResponse.json({ error: 'Type de bien invalide' }, { status: 400 })
+  if (!surface || surface <= 0)
+    return NextResponse.json({ error: 'Surface requise' }, { status: 400 })
+  if (!prix_fai || prix_fai <= 0)
+    return NextResponse.json({ error: 'Prix FAI requis' }, { status: 400 })
+
+  // Déduplication par URL si fournie
+  if (url) {
+    const { data: existing } = await supabaseAdmin
+      .from('biens')
+      .select('id')
+      .eq('url', url)
+      .maybeSingle()
+    if (existing) {
+      // Le bien existe déjà, on l'ajoute directement en watchlist
+      await supabaseAdmin.from('watchlist').upsert(
+        { user_id: user.id, bien_id: existing.id, suivi: 'a_analyser' },
+        { onConflict: 'user_id,bien_id' }
+      )
+      return NextResponse.json({ bien: existing, alreadyExisted: true })
+    }
+  }
+
+  // Vérifier limite watchlist
+  const WATCHLIST_LIMITS: Record<string, number | null> = { free: 10, pro: 50, expert: null }
+  const { data: profile } = await supabaseAdmin.from('profiles').select('plan').eq('id', user.id).single()
+  const plan = profile?.plan || 'free'
+  const limit = WATCHLIST_LIMITS[plan] ?? 10
+
+  if (limit !== null) {
+    const { count } = await supabaseAdmin
+      .from('watchlist')
+      .select('bien_id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+    if ((count ?? 0) >= limit) {
+      return NextResponse.json({ error: 'Limite watchlist atteinte', limit, plan, upgrade: true }, { status: 403 })
+    }
+  }
+
+  // Inférer la stratégie si non fournie
+  let finalStrategie = strategie_mdb
+  if (!finalStrategie || !STRATEGIES.includes(finalStrategie)) {
+    if (type_bien === 'Immeuble') finalStrategie = 'Immeuble de rapport'
+    else if (loyer && Number(loyer) > 0) finalStrategie = 'Locataire en place'
+    else if (score_travaux && Number(score_travaux) >= 3) finalStrategie = 'Travaux lourds'
+    else finalStrategie = 'Travaux lourds'
+  }
+
+  // Créer le bien
+  const bienData: Record<string, any> = {
+    url: url || `manual://${user.id}/${Date.now()}`,
+    strategie_mdb: finalStrategie,
+    ville: ville.trim(),
+    code_postal,
+    type_bien,
+    surface: Number(surface),
+    prix_fai: Number(prix_fai),
+    prix_m2: Math.round(Number(prix_fai) / Number(surface)),
+    statut: 'Toujours disponible',
+  }
+
+  // Étape 1 — Caractéristiques
+  if (nb_pieces) bienData.nb_pieces = nb_pieces
+  if (adresse) bienData.adresse = adresse.trim()
+  if (etage) bienData.etage = etage.trim()
+  if (annee_construction && Number(annee_construction) > 0) bienData.annee_construction = Number(annee_construction)
+  if (dpe && /^[A-G]$/i.test(dpe)) bienData.dpe = dpe.toUpperCase()
+  if (nb_chambres && Number(nb_chambres) > 0) bienData.nb_chambres = Number(nb_chambres)
+  if (nb_sdb && Number(nb_sdb) > 0) bienData.nb_sdb = Number(nb_sdb)
+
+  // Étape 2 — Données locatives
+  if (loyer && Number(loyer) > 0) {
+    bienData.loyer = Number(loyer)
+    bienData.type_loyer = type_loyer || 'HC'
+    bienData.rendement_brut = (Number(loyer) * 12) / Number(prix_fai)
+  }
+  if (charges_rec && Number(charges_rec) > 0) bienData.charges_rec = Number(charges_rec)
+  if (charges_copro && Number(charges_copro) > 0) bienData.charges_copro = Number(charges_copro)
+  if (taxe_fonc_ann && Number(taxe_fonc_ann) > 0) bienData.taxe_fonc_ann = Number(taxe_fonc_ann)
+  if (profil_locataire && profil_locataire.trim()) bienData.profil_locataire = profil_locataire.trim()
+  if (fin_bail) bienData.fin_bail = fin_bail
+
+  // Étape 3 — Travaux
+  if (score_travaux && Number(score_travaux) >= 1 && Number(score_travaux) <= 5) bienData.score_travaux = Number(score_travaux)
+  if (score_commentaire && score_commentaire.trim()) bienData.score_commentaire = score_commentaire.trim().slice(0, 500)
+
+  // Coordonnées GPS (BAN)
+  if (latitude && longitude) { bienData.latitude = Number(latitude); bienData.longitude = Number(longitude) }
+
+  const { data: newBien, error: insertError } = await supabaseAdmin
+    .from('biens')
+    .insert(bienData)
+    .select('id')
+    .single()
+
+  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+
+  // Auto-ajout en watchlist
+  await supabaseAdmin.from('watchlist').insert({
+    user_id: user.id,
+    bien_id: newBien.id,
+    suivi: 'a_analyser',
+  })
+
+  return NextResponse.json({ bien: newBien, alreadyExisted: false }, { status: 201 })
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
