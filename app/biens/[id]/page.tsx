@@ -603,8 +603,11 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // L'estimation DVF est deja le prix net vendeur (pas de frais agence a deduire sauf si charge vendeur)
   // Travaux deja deduits/amortis en locatif ne viennent pas en deduction de la PV
   const hasPhaseLocative = hasLoyer && !isTravauxLourds
-  const travauxDejaDeduits = hasPhaseLocative && (regime === 'nu_reel_foncier' || regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is')
-  const travauxPV = travauxDejaDeduits ? 0 : budgetTravaux
+  // Travaux dans la PV : toujours deduits du cout d'acquisition (c'est un cout reel)
+  // En Nu reel : deduits a 100% en locatif (deficit foncier) → deduits aussi de la PV (pas de double deduction car pas d'amortissement)
+  // En LMNP/LMP/SCI : amortis sur 10 ans en locatif → deduits de la PV + reintegration des amortissements cumules
+  // En micro/MdB : pas deduits en locatif → deduits de la PV normalement
+  const travauxPV = budgetTravaux
   const pvBruteSimple = prixReventeApresAgence - prixNetVendeurAchat
   const pvBrute = prixReventeApresAgence - prix_fai - fraisNotaireMontant - travauxPV
 
@@ -627,7 +630,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
     }
   } else if (regime === 'lmnp_reel_bic') {
     // LMNP reel : reintegration des amortissements cumules (reforme LFI 2025) + abattements
-    reintegrationAmort = amort * dur
+    // Inclut amort immo + mobilier + travaux amortis
+    reintegrationAmort = (amort + travauxAmortis) * dur
     const pvReintegree = Math.max(0, pvBrute + reintegrationAmort)
     if (pvReintegree > 0) {
       pvBaseIR = pvReintegree; pvBasePS = pvReintegree
@@ -644,7 +648,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
       cotisationsSocialesLMP = 0
     } else if (pvBrute > 0) {
       // Court terme = min(PV brute, amortissements cumules) -> TMI + SSI 45%
-      const amortsCumules = amort * dur
+      const amortsCumules = (amort + travauxAmortis) * dur
       const pvCourtTerme = Math.min(pvBrute, amortsCumules)
       // Long terme = PV brute - court terme -> 12.8% IR + 17.2% PS
       const pvLongTerme = Math.max(0, pvBrute - pvCourtTerme)
@@ -946,17 +950,15 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               : `Frais de notaire (droits de mutation + \u00E9moluments). En ancien : 7-8% du prix. En neuf : 2-3%. Ces frais augmentent le co\u00FBt total de l\u2019op\u00E9ration et r\u00E9duisent la plus-value nette.`} />
           <Row
             label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})` : 'Travaux'}
-            value={travauxDejaDeduits
-              ? (budgetTravaux > 0 ? `${fmt(budgetTravaux)} \u20AC (d\u00E9j\u00E0 d\u00E9duits)` : `0 \u20AC`)
-              : (budgetTravaux > 0 ? `-${fmt(budgetTravaux)} \u20AC` : `0 \u20AC`)}
-            rouge={!travauxDejaDeduits && budgetTravaux > 0}
-            info={travauxDejaDeduits
-              ? regime === 'nu_reel_foncier'
-                ? "Travaux d\u00E9j\u00E0 d\u00E9duits via le d\u00E9ficit foncier en phase locative. Non comptabilis\u00E9s une 2e fois. En contrepartie, ils ont r\u00E9duit votre imp\u00F4t sur le revenu pendant la location."
-                : "Travaux d\u00E9j\u00E0 amortis en phase locative (sur 10 ans). Non comptabilis\u00E9s une 2e fois dans la plus-value. L\u2019amortissement a r\u00E9duit votre r\u00E9sultat imposable chaque ann\u00E9e."
-              : regime === 'marchand_de_biens'
-                ? "Co\u00FBt total des travaux de r\u00E9novation. En MdB, les travaux sont une charge d\u2019exploitation qui r\u00E9duit le b\u00E9n\u00E9fice imposable. C\u2019est le levier principal de cr\u00E9ation de valeur."
-                : "Co\u00FBt total des travaux. En r\u00E9gime micro, les travaux ne sont pas d\u00E9ductibles pendant la location, mais ils augmentent le prix de revient et r\u00E9duisent la plus-value imposable \u00E0 la revente."}
+            value={budgetTravaux > 0 ? `-${fmt(budgetTravaux)} \u20AC` : `0 \u20AC`}
+            rouge={budgetTravaux > 0}
+            info={regime === 'marchand_de_biens'
+                ? "Co\u00FBt total des travaux de r\u00E9novation.\n\nEn marchand de biens, les travaux sont une charge d\u2019exploitation qui r\u00E9duit le b\u00E9n\u00E9fice imposable. C\u2019est le levier principal de cr\u00E9ation de valeur."
+                : regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
+                  ? `Co\u00FBt total des travaux, d\u00E9duit du prix de revient.\n\nCes travaux sont aussi amortis sur 10\u00A0ans en phase locative (${fmt(travauxAmortis)}\u00A0\u20AC/an). Les amortissements cumul\u00E9s sont r\u00E9int\u00E9gr\u00E9s dans la plus-value imposable.`
+                  : regime === 'nu_reel_foncier'
+                    ? "Co\u00FBt total des travaux, d\u00E9duit du prix de revient.\n\nCes travaux ont aussi \u00E9t\u00E9 d\u00E9duits en d\u00E9ficit foncier pendant la phase locative. Il n\u2019y a pas de r\u00E9int\u00E9gration \u00E0 la revente en location nue."
+                    : "Co\u00FBt total des travaux, d\u00E9duit du prix de revient.\n\nEn r\u00E9gime micro, les travaux ne sont pas d\u00E9ductibles pendant la location, mais ils r\u00E9duisent la plus-value imposable \u00E0 la revente."}
           />
           {interetsCumules > 0 && (
             <Row label={`Int\u00E9r\u00EAts d'emprunt (${dur} an${dur > 1 ? 's' : ''})`} value={`-${fmt(interetsCumules)} \u20AC`} rouge
