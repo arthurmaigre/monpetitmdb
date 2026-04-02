@@ -58,7 +58,6 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
       if (b.nb_lots) pillsArr.push(pill('#d4ddf5', '#2a4a8a', `${b.nb_lots} lots`))
       if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
       if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
-      if (rendement) pillsArr.push(pill('#fde8e8', '#c0392b', rendement))
       if (b.monopropriete) pillsArr.push(pill('#d4f5e0', '#1a7a40', 'Monopropri\u00E9t\u00E9'))
     } else if (isTravaux) {
       if (b.score_travaux) pillsArr.push(pill('#fef9e7', '#856404', `Travaux ${b.score_travaux}/5`))
@@ -67,7 +66,6 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
     } else {
       if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
       if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
-      if (rendement) pillsArr.push(pill('#fde8e8', '#c0392b', rendement))
       if (b.dpe) pillsArr.push(pill(DPE_COLORS[b.dpe] || '#7a6a60', '#fff', `DPE ${b.dpe}`))
       if (b.profil_locataire && b.profil_locataire !== 'NC') pillsArr.push(pill('#f7f4f0', '#7a6a60', b.profil_locataire))
     }
@@ -91,8 +89,13 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
               <a href="${lien}" style="font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 700; color: #1a1210; text-decoration: none; display: block;">${titre}</a>
               <!-- Localisation -->
               <div style="font-size: 12px; color: #7a6a60; margin-top: 3px;">${ville}${cp}${quartier ? ` - ${quartier}` : ''}</div>
-              <!-- Prix -->
-              <div style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 800; color: #1a1210; margin: 12px 0 10px; letter-spacing: -0.02em;">${prix}</div>
+              <!-- Prix + Rendement -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 12px 0 10px;">
+                <tr>
+                  <td style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 800; color: #1a1210; letter-spacing: -0.02em;">${prix}</td>
+                  ${rendement ? `<td style="text-align: right; vertical-align: bottom;"><span style="font-size: 11px; color: #7a6a60; display: block;">Rendement brut</span><span style="font-size: 16px; font-weight: 800; color: #c0392b;">${rendement}</span></td>` : ''}
+                </tr>
+              </table>
               <!-- Pills -->
               ${pillsArr.length > 0 ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 14px;"><tr>${pillsArr.join('')}</tr></table>` : ''}
               <!-- Bouton -->
