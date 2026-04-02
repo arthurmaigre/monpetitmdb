@@ -294,11 +294,16 @@ Sommaire : H2 visibles, H3 depliables au clic, auto-deplie si <= 15 entrees, FAQ
 ## Alertes email (Expert)
 - **Table `alertes`** : user_id, nom, filtres (JSONB), frequence (quotidien/hebdomadaire), enabled, last_sent_at
 - **API CRUD** : `/api/alertes` (GET/POST/PATCH/DELETE), max 5 alertes par utilisateur
-- **Cron** : `/api/admin/alertes` — verifie les nouveaux biens depuis last_sent_at, envoie email via Brevo API
+- **Cron** : `/api/admin/alertes` — quotidien 9h, verifie nouveaux biens depuis last_sent_at, envoie email via Brevo API
+- **Frequence** : quotidien (chaque jour) ou hebdomadaire (1x/semaine). Premier envoi = 30 derniers jours.
 - **Filtres** : strategie_mdb, metropole, ville, code_postal, prix min/max, surface min/max, rendement min, score travaux min
-- **Email** : template HTML responsive design MDB, max 20 biens par email, lien vers la fiche
-- **Service** : Brevo API v3 (`https://api.brevo.com/v3/smtp/email`), domaine authentifie (SPF + DKIM + DMARC)
-- **UI** : section "Mes alertes" dans `/parametres` (Expert only), toggle on/off, creation/suppression
+- **Email** : template HTML table-based (compatible Gmail/Outlook), max 10 cards par email
+- **Cards email** : photo (moteurimmo_data.pictureUrls), titre, localisation, prix, pills par strategie (loyer, prix/m2, rendement brut colore, DPE, score travaux, profil locataire, nb lots, monopropriete), bouton "Voir l'analyse"
+- **Rendement brut** : pill coloree (vert >= 7%, jaune 5-7%, rouge < 5%), meme format que DPE
+- **Service** : Brevo API v3 (`https://api.brevo.com/v3/smtp/email`), env var `BREVO_API_KEY` + `BREVO_SENDER_EMAIL`
+- **DNS** : domaine authentifie (SPF include:sendinblue.com + DKIM 1&2 + DMARC) sur OVH
+- **UI creation** : bouton "Creer une alerte" sur `/biens` (pre-rempli avec filtres en cours) + section "Mes alertes" dans `/parametres`
+- **Env vars Vercel** : necessite redeploy apres ajout (pas de hot-reload). Utiliser `process.env['VAR']` bracket notation.
 
 ## Feedback Memo
 
