@@ -20,6 +20,18 @@ function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
 
 const DPE_COLORS: Record<string, string> = { A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' }
 
+function getPhoto(b: any): string {
+  // Meme logique que BienCard: pictureUrls depuis moteurimmo_data, sinon photo_url
+  if (b.moteurimmo_data) {
+    try {
+      const raw = b.moteurimmo_data
+      const md = typeof raw === 'string' ? JSON.parse(typeof JSON.parse(raw) === 'string' ? JSON.parse(raw) : raw) : raw
+      if (md?.pictureUrls?.length > 0) return md.pictureUrls[0]
+    } catch { /* fallback */ }
+  }
+  return b.photo_url || ''
+}
+
 function buildEmailHtml(alerte: any, biens: any[]): string {
   const cardsHtml = biens.slice(0, 10).map(b => {
     const prix = b.prix_fai ? `${fmt(b.prix_fai)}\u00A0\u20AC` : 'Prix NC'
@@ -28,49 +40,57 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
     const rendement = b.rendement_brut ? `${(b.rendement_brut * 100).toFixed(1)}\u00A0%` : ''
     const ville = b.ville || ''
     const cp = b.code_postal ? ` (${b.code_postal})` : ''
-    const quartier = b.quartier ? ` \u2014 ${b.quartier}` : ''
+    const quartier = b.quartier || ''
     const lien = `https://www.monpetitmdb.fr/biens/${b.id}`
     const titre = `${b.type_bien || 'Bien'} ${b.nb_pieces || ''}${surface ? ` \u2014 ${surface}` : ''}`
     const loyer = b.loyer ? `${fmt(b.loyer)}\u00A0\u20AC/mois` : ''
     const dpeColor = b.dpe ? (DPE_COLORS[b.dpe] || '#7a6a60') : ''
-    const estimation = b.estimation_prix_total ? fmt(b.estimation_prix_total) : ''
-    const plusValue = b.estimation_prix_total && b.prix_fai ? Math.round(b.estimation_prix_total - b.prix_fai) : 0
-    const pvPct = b.estimation_prix_total && b.prix_fai ? Math.round((b.estimation_prix_total - b.prix_fai) / b.prix_fai * 100) : 0
+    const pvPct = b.estimation_prix_total && b.prix_fai ? Math.round((b.estimation_prix_total - b.prix_fai) / b.prix_fai * 100) : null
     const scoreTravaux = b.score_travaux ? `${b.score_travaux}/5` : ''
+    const photo = getPhoto(b)
+    const metropole = b.metropole || ''
+    const isLocataire = b.strategie_mdb === 'Locataire en place'
+    const isTravaux = b.strategie_mdb === 'Travaux lourds'
+
+    // Badges HTML (comme BienCard)
+    const badges: string[] = []
+    if (metropole) badges.push(`<span style="display: inline-block; padding: 3px 10px; border-radius: 6px; background: rgba(26,18,16,0.7); color: #fff; font-size: 11px; font-weight: 600;">${metropole}</span>`)
+    if (rendement && isLocataire) badges.push(`<span style="display: inline-block; padding: 3px 10px; border-radius: 6px; background: rgba(192,57,43,0.9); color: #fff; font-size: 11px; font-weight: 700;">${rendement}</span>`)
+
+    // Infos sous le prix
+    const infos: string[] = []
+    if (isLocataire && loyer) infos.push(`<span style="color: #7a6a60; font-size: 12px;">Loyer ${loyer}</span>`)
+    if (isTravaux && scoreTravaux) infos.push(`<span style="padding: 2px 8px; border-radius: 4px; background: #fff3cd; color: #856404; font-size: 11px; font-weight: 600;">Travaux ${scoreTravaux}</span>`)
+    if (b.dpe) infos.push(`<span style="display: inline-block; width: 20px; height: 20px; border-radius: 4px; background: ${dpeColor}; color: #fff; font-weight: 700; font-size: 11px; text-align: center; line-height: 20px;">${b.dpe}</span>`)
+    if (pvPct !== null) infos.push(`<span style="padding: 2px 8px; border-radius: 4px; background: ${pvPct >= 0 ? '#d4f5e0' : '#fde8e8'}; color: ${pvPct >= 0 ? '#1a7a40' : '#c0392b'}; font-size: 11px; font-weight: 600;">${pvPct >= 0 ? '+' : ''}${pvPct}\u00A0%</span>`)
 
     return `
-      <div style="border: 1.5px solid #e8e2d8; border-radius: 12px; overflow: hidden; margin-bottom: 12px;">
-        ${b.photo_url ? `<a href="${lien}" style="display: block;"><img src="${b.photo_url}" alt="${titre}" width="600" style="width: 100%; height: 180px; object-fit: cover; display: block;" /></a>` : ''}
-        <div style="padding: 16px 18px;">
-          <div style="margin-bottom: 8px;">
-            <a href="${lien}" style="font-family: 'Fraunces', Georgia, serif; font-size: 16px; font-weight: 700; color: #1a1210; text-decoration: none; display: block;">
-              ${titre}
-            </a>
-            <div style="font-size: 12px; color: #7a6a60; margin-top: 2px;">${ville}${cp}${quartier}</div>
+      <div style="border: 1.5px solid #e8e2d8; border-radius: 14px; overflow: hidden; margin-bottom: 14px; background: #fff;">
+        <!-- Photo -->
+        <a href="${lien}" style="display: block; position: relative; text-decoration: none;">
+          ${photo
+            ? `<img src="${photo}" alt="${titre}" width="600" style="width: 100%; height: 196px; object-fit: cover; display: block;" />`
+            : `<div style="width: 100%; height: 120px; background: #f0ede8; display: flex; align-items: center; justify-content: center;"><span style="color: #c4b5a6; font-size: 32px;">\u2302</span></div>`
+          }
+          ${badges.length > 0 ? `<div style="position: absolute; top: 10px; left: 10px;">${badges.join(' ')}</div>` : ''}
+        </a>
+        <!-- Contenu -->
+        <div style="padding: 14px 16px;">
+          <a href="${lien}" style="font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 700; color: #1a1210; text-decoration: none; display: block; margin-bottom: 2px;">
+            ${titre}
+          </a>
+          <div style="font-size: 12px; color: #b0a898; margin-bottom: 10px;">${quartier ? `${quartier} \u2014 ` : ''}${ville}${cp}</div>
+
+          <div style="margin-bottom: 10px;">
+            <span style="font-family: 'Fraunces', Georgia, serif; font-size: 20px; font-weight: 800; color: #1a1210;">${prix}</span>
+            ${prixM2 ? `<span style="font-size: 12px; color: #7a6a60; margin-left: 6px;">${prixM2}</span>` : ''}
           </div>
 
-          <div style="display: flex; margin-bottom: 10px;">
-            <div style="font-family: 'Fraunces', Georgia, serif; font-size: 20px; font-weight: 800; color: #1a1210;">
-              ${prix}
-            </div>
-            ${prixM2 ? `<div style="font-size: 12px; color: #7a6a60; margin-left: 8px; align-self: flex-end;">${prixM2}</div>` : ''}
-          </div>
+          ${infos.length > 0 ? `<div style="margin-bottom: 12px;">${infos.join(' \u00A0 ')}</div>` : ''}
 
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <tr>
-              ${rendement ? `<td style="padding: 4px 0;"><span style="color: #7a6a60;">Rendement</span><br><strong style="color: #c0392b; font-size: 13px;">${rendement}</strong></td>` : ''}
-              ${loyer ? `<td style="padding: 4px 0;"><span style="color: #7a6a60;">Loyer HC</span><br><strong style="color: #1a1210; font-size: 13px;">${loyer}</strong></td>` : ''}
-              ${scoreTravaux ? `<td style="padding: 4px 0;"><span style="color: #7a6a60;">Travaux</span><br><strong style="color: #f0a830; font-size: 13px;">${scoreTravaux}</strong></td>` : ''}
-              ${b.dpe ? `<td style="padding: 4px 0;"><span style="color: #7a6a60;">DPE</span><br><span style="display: inline-block; width: 22px; height: 22px; border-radius: 4px; background: ${dpeColor}; color: #fff; font-weight: 700; font-size: 12px; text-align: center; line-height: 22px;">${b.dpe}</span></td>` : ''}
-              ${estimation ? `<td style="padding: 4px 0;"><span style="color: #7a6a60;">Estim. DVF</span><br><strong style="color: ${pvPct >= 0 ? '#1a7a40' : '#c0392b'}; font-size: 13px;">${pvPct >= 0 ? '+' : ''}${pvPct}\u00A0%</strong></td>` : ''}
-            </tr>
-          </table>
-
-          <div style="margin-top: 12px;">
-            <a href="${lien}" style="display: inline-block; padding: 8px 20px; background: #1a1210; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;">
-              Analyser ce bien \u2192
-            </a>
-          </div>
+          <a href="${lien}" style="display: inline-block; padding: 9px 22px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">
+            Analyser ce bien \u2192
+          </a>
         </div>
       </div>`
   }).join('')
@@ -176,7 +196,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<{ o
 function queryBiensForAlerte(filtres: any, sinceDate: string) {
   let query = supabaseAdmin
     .from('biens')
-    .select('id, type_bien, nb_pieces, surface, prix_fai, prix_m2, ville, code_postal, quartier, metropole, rendement_brut, score_travaux, dpe, annee_construction, loyer, strategie_mdb, url, photo_url, estimation_prix_total')
+    .select('id, type_bien, nb_pieces, surface, prix_fai, prix_m2, ville, code_postal, quartier, metropole, rendement_brut, score_travaux, dpe, annee_construction, loyer, strategie_mdb, url, photo_url, estimation_prix_total, moteurimmo_data')
     .eq('statut', 'Toujours disponible')
     .gt('created_at', sinceDate)
 
