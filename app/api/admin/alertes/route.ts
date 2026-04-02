@@ -50,12 +50,15 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
     const isTravaux = b.strategie_mdb === 'Travaux lourds'
     const isIDR = b.strategie_mdb === 'Immeuble de rapport'
 
+    const rendement = b.rendement_brut ? `${(b.rendement_brut * 100).toFixed(1)}\u00A0%` : ''
+
     // Pills selon strategie
     const pillsArr: string[] = []
     if (isIDR) {
       if (b.nb_lots) pillsArr.push(pill('#d4ddf5', '#2a4a8a', `${b.nb_lots} lots`))
       if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
       if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
+      if (rendement) pillsArr.push(pill('#fde8e8', '#c0392b', rendement))
       if (b.monopropriete) pillsArr.push(pill('#d4f5e0', '#1a7a40', 'Monopropri\u00E9t\u00E9'))
     } else if (isTravaux) {
       if (b.score_travaux) pillsArr.push(pill('#fef9e7', '#856404', `Travaux ${b.score_travaux}/5`))
@@ -64,6 +67,7 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
     } else {
       if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
       if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
+      if (rendement) pillsArr.push(pill('#fde8e8', '#c0392b', rendement))
       if (b.dpe) pillsArr.push(pill(DPE_COLORS[b.dpe] || '#7a6a60', '#fff', `DPE ${b.dpe}`))
       if (b.profil_locataire && b.profil_locataire !== 'NC') pillsArr.push(pill('#f7f4f0', '#7a6a60', b.profil_locataire))
     }
@@ -83,13 +87,8 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
             </td></tr>
             <!-- Contenu -->
             <tr><td style="padding: 16px 18px;">
-              <!-- Titre + Metropole -->
-              <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
-                <td style="font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 700; color: #1a1210;">
-                  <a href="${lien}" style="color: #1a1210; text-decoration: none;">${titre}</a>
-                </td>
-                ${metropole ? `<td style="text-align: right; vertical-align: top;"><span style="display: inline-block; padding: 2px 8px; border-radius: 5px; background: #f0ede8; color: #7a6a60; font-size: 10px; font-weight: 600;">${metropole}</span></td>` : ''}
-              </tr></table>
+              <!-- Titre -->
+              <a href="${lien}" style="font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 700; color: #1a1210; text-decoration: none; display: block;">${titre}</a>
               <!-- Localisation -->
               <div style="font-size: 12px; color: #7a6a60; margin-top: 3px;">${ville}${cp}${quartier ? ` - ${quartier}` : ''}</div>
               <!-- Prix -->
