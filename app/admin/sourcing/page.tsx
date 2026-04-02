@@ -1370,7 +1370,7 @@ export default function AdminSourcingPage() {
             const groups = [
               { title: 'Moteur Immo', icon: '\uD83C\uDFE0', color: '#2a4a8a', ids: ['ingest', 'statut'] },
               { title: 'Validation (Regex)', icon: '\uD83D\uDD0D', color: '#f0a830', ids: ['regex'] },
-              { title: 'IA (Claude Haiku)', icon: '\uD83E\uDDE0', color: '#1a7a40', ids: ['extraction', 'score_travaux'] },
+              { title: 'IA (Claude Haiku)', icon: '\uD83E\uDDE0', color: '#1a7a40', ids: ['extraction', 'score_travaux', 'extraction_idr'] },
               { title: 'Estimation DVF', icon: '\uD83D\uDCCA', color: '#2a4a8a', ids: ['estimation'] },
             ]
 
