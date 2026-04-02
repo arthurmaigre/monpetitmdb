@@ -33,11 +33,12 @@ function getPhoto(b: any): string {
 }
 
 function buildEmailHtml(alerte: any, biens: any[]): string {
+  const pill = (bg: string, color: string, text: string) => `<td style="padding: 0 4px 0 0;"><span style="display: inline-block; padding: 4px 10px; border-radius: 6px; background: ${bg}; color: ${color}; font-size: 11px; font-weight: 600; white-space: nowrap;">${text}</span></td>`
+
   const cardsHtml = biens.slice(0, 10).map(b => {
     const prix = b.prix_fai ? `${fmt(b.prix_fai)}\u00A0\u20AC` : 'Prix NC'
     const prixM2 = b.prix_m2 ? `${fmt(b.prix_m2)}\u00A0\u20AC/m\u00B2` : ''
     const surface = b.surface ? `${b.surface}\u00A0m\u00B2` : ''
-    const rendement = b.rendement_brut ? `${(b.rendement_brut * 100).toFixed(1)}\u00A0%` : ''
     const ville = b.ville || ''
     const cp = b.code_postal ? ` - ${b.code_postal}` : ''
     const quartier = b.quartier || ''
@@ -49,110 +50,126 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
     const isTravaux = b.strategie_mdb === 'Travaux lourds'
     const isIDR = b.strategie_mdb === 'Immeuble de rapport'
 
-    // Pill style
-    const pill = (bg: string, color: string, text: string) => `<span style="display: inline-block; padding: 3px 10px; border-radius: 6px; background: ${bg}; color: ${color}; font-size: 11px; font-weight: 600; margin-right: 4px; margin-bottom: 4px;">${text}</span>`
-
-    // Pills selon strategie (meme logique que BienCard)
-    let pills = ''
+    // Pills selon strategie
+    const pillsArr: string[] = []
     if (isIDR) {
-      if (b.nb_lots) pills += pill('#d4ddf5', '#2a4a8a', `${b.nb_lots} lots`)
-      if (b.loyer) pills += pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`)
-      if (prixM2) pills += pill('#f7f4f0', '#7a6a60', prixM2)
-      if (b.monopropriete) pills += pill('#d4f5e0', '#1a7a40', 'Monopropri\u00E9t\u00E9')
+      if (b.nb_lots) pillsArr.push(pill('#d4ddf5', '#2a4a8a', `${b.nb_lots} lots`))
+      if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
+      if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
+      if (b.monopropriete) pillsArr.push(pill('#d4f5e0', '#1a7a40', 'Monopropri\u00E9t\u00E9'))
     } else if (isTravaux) {
-      if (b.score_travaux) pills += pill('#fef9e7', '#856404', `Score travaux : ${b.score_travaux}/5`)
-      if (prixM2) pills += pill('#f7f4f0', '#7a6a60', prixM2)
-      if (b.dpe) pills += pill(DPE_COLORS[b.dpe] || '#7a6a60', '#fff', `DPE ${b.dpe}`)
+      if (b.score_travaux) pillsArr.push(pill('#fef9e7', '#856404', `Travaux ${b.score_travaux}/5`))
+      if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
+      if (b.dpe) pillsArr.push(pill(DPE_COLORS[b.dpe] || '#7a6a60', '#fff', `DPE ${b.dpe}`))
     } else {
-      if (b.loyer) pills += pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`)
-      else pills += pill('#f7f4f0', '#b0a898', 'Loyer NC')
-      if (prixM2) pills += pill('#f7f4f0', '#7a6a60', prixM2)
-      if (b.dpe) pills += pill(DPE_COLORS[b.dpe] || '#7a6a60', '#fff', `DPE ${b.dpe}`)
-      if (b.profil_locataire && b.profil_locataire !== 'NC') pills += pill('#f7f4f0', '#7a6a60', b.profil_locataire)
+      if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
+      if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
+      if (b.dpe) pillsArr.push(pill(DPE_COLORS[b.dpe] || '#7a6a60', '#fff', `DPE ${b.dpe}`))
+      if (b.profil_locataire && b.profil_locataire !== 'NC') pillsArr.push(pill('#f7f4f0', '#7a6a60', b.profil_locataire))
     }
 
     return `
-      <div style="border: 1.5px solid #e8e2d8; border-radius: 14px; overflow: hidden; margin-bottom: 14px; background: #fff;">
-        <a href="${lien}" style="display: block; text-decoration: none;">
-          ${photo
-            ? `<img src="${photo}" alt="${titre}" width="600" style="width: 100%; height: 196px; object-fit: cover; display: block;" />`
-            : `<div style="width: 100%; height: 100px; background: #f0ede8; text-align: center; line-height: 100px;"><span style="color: #c4b5a6; font-size: 32px;">\u2302</span></div>`
-          }
-        </a>
-        <div style="padding: 14px 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <a href="${lien}" style="font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 700; color: #1a1210; text-decoration: none;">
-              ${titre}
-            </a>
-            ${metropole ? `<span style="display: inline-block; padding: 2px 8px; border-radius: 5px; background: #f0ede8; color: #7a6a60; font-size: 10px; font-weight: 600; white-space: nowrap;">${metropole}</span>` : ''}
-          </div>
-          <div style="font-size: 12px; color: #7a6a60; margin-top: 2px;">${ville}${cp}${quartier ? ` - ${quartier}` : ''}</div>
-
-          <div style="font-size: 22px; font-weight: 700; margin: 10px 0 8px; letter-spacing: -0.02em; color: #1a1210;">${prix}</div>
-
-          <div style="margin-bottom: 12px; line-height: 2;">${pills}</div>
-
-          <a href="${lien}" style="display: block; text-align: center; padding: 10px; background: #f7f4f0; color: #1a1210; border-radius: 10px; text-decoration: none; font-size: 12px; font-weight: 600; border: 1.5px solid #e8e2d8;">
-            Voir l\u2019analyse \u2192
-          </a>
-        </div>
-      </div>`
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 16px; border-collapse: collapse;">
+        <tr><td style="border: 1.5px solid #e8e2d8; border-radius: 14px; overflow: hidden; background: #fff;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <!-- Photo -->
+            <tr><td>
+              <a href="${lien}" style="text-decoration: none;">
+                ${photo
+                  ? `<img src="${photo}" alt="${titre}" width="552" style="width: 100%; max-height: 180px; object-fit: cover; display: block;" />`
+                  : `<div style="height: 80px; background: #f0ede8; text-align: center; line-height: 80px; font-size: 28px; color: #c4b5a6;">\u2302</div>`
+                }
+              </a>
+            </td></tr>
+            <!-- Contenu -->
+            <tr><td style="padding: 16px 18px;">
+              <!-- Titre + Metropole -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+                <td style="font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 700; color: #1a1210;">
+                  <a href="${lien}" style="color: #1a1210; text-decoration: none;">${titre}</a>
+                </td>
+                ${metropole ? `<td style="text-align: right; vertical-align: top;"><span style="display: inline-block; padding: 2px 8px; border-radius: 5px; background: #f0ede8; color: #7a6a60; font-size: 10px; font-weight: 600;">${metropole}</span></td>` : ''}
+              </tr></table>
+              <!-- Localisation -->
+              <div style="font-size: 12px; color: #7a6a60; margin-top: 3px;">${ville}${cp}${quartier ? ` - ${quartier}` : ''}</div>
+              <!-- Prix -->
+              <div style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 800; color: #1a1210; margin: 12px 0 10px; letter-spacing: -0.02em;">${prix}</div>
+              <!-- Pills -->
+              ${pillsArr.length > 0 ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 14px;"><tr>${pillsArr.join('')}</tr></table>` : ''}
+              <!-- Bouton -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="text-align: center;">
+                <a href="${lien}" style="display: inline-block; width: 100%; padding: 10px 0; background: #f7f4f0; color: #1a1210; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 600; text-align: center; border: 1.5px solid #e8e2d8;">
+                  Voir l\u2019analyse \u2192
+                </a>
+              </td></tr></table>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>`
   }).join('')
 
-  const filtresResume = [
+  const filtresArr = [
     alerte.filtres?.strategie_mdb,
     alerte.filtres?.metropole,
     alerte.filtres?.ville,
     alerte.filtres?.prix_max ? `< ${fmt(alerte.filtres.prix_max)}\u00A0\u20AC` : '',
     alerte.filtres?.surface_min ? `> ${alerte.filtres.surface_min}\u00A0m\u00B2` : '',
     alerte.filtres?.rendement_min ? `> ${alerte.filtres.rendement_min}\u00A0%` : '',
-  ].filter(Boolean).join(' \u00B7 ')
+  ].filter(Boolean)
 
   return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin: 0; padding: 0; background: #f2ece4; font-family: 'DM Sans', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 24px 16px;">
-    <div style="background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06);">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f2ece4;">
+    <tr><td align="center" style="padding: 24px 16px;">
+      <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background: #fff; border-radius: 16px; overflow: hidden;">
 
-      <div style="background: #1a1210; padding: 20px 28px; display: flex; align-items: center; justify-content: space-between;">
-        <div style="font-family: 'Fraunces', Georgia, serif; font-size: 18px; font-weight: 700; color: #fff;">Mon Petit MDB</div>
-        <div style="font-size: 11px; color: #b0a898;">Alerte ${alerte.frequence === 'hebdomadaire' ? 'hebdomadaire' : 'quotidienne'}</div>
-      </div>
+        <!-- Header -->
+        <tr><td style="background: #1a1210; padding: 20px 28px;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td style="font-family: 'Fraunces', Georgia, serif; font-size: 18px; font-weight: 700; color: #fff;">Mon Petit MDB</td>
+            <td style="text-align: right; font-size: 11px; color: #7a6a60;">${alerte.frequence === 'hebdomadaire' ? 'Alerte hebdomadaire' : 'Alerte quotidienne'}</td>
+          </tr></table>
+        </td></tr>
 
-      <div style="padding: 24px 28px;">
-        <h1 style="font-family: 'Fraunces', Georgia, serif; font-size: 24px; font-weight: 800; color: #1a1210; margin: 0 0 4px;">
-          ${biens.length} nouveau${biens.length > 1 ? 'x' : ''} bien${biens.length > 1 ? 's' : ''}
-        </h1>
-        <p style="color: #7a6a60; font-size: 13px; margin: 0 0 6px;">
-          <strong>${alerte.nom}</strong>
-        </p>
-        <p style="color: #b0a898; font-size: 12px; margin: 0 0 20px;">
-          ${filtresResume}
-        </p>
+        <!-- Titre -->
+        <tr><td style="padding: 28px 28px 0;">
+          <h1 style="font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-weight: 800; color: #1a1210; margin: 0 0 6px;">
+            ${biens.length} nouveau${biens.length > 1 ? 'x' : ''} bien${biens.length > 1 ? 's' : ''}
+          </h1>
+          <p style="font-size: 14px; color: #1a1210; font-weight: 600; margin: 0 0 4px;">${alerte.nom}</p>
+          <p style="font-size: 12px; color: #b0a898; margin: 0 0 24px;">${filtresArr.join(' \u00B7 ')}</p>
+        </td></tr>
 
-        ${cardsHtml}
+        <!-- Cards -->
+        <tr><td style="padding: 0 28px;">
+          ${cardsHtml}
+        </td></tr>
 
-        ${biens.length > 10 ? `<div style="text-align: center; padding: 12px; background: #faf8f5; border-radius: 8px; margin-bottom: 12px;"><span style="color: #7a6a60; font-size: 13px;">Et <strong>${biens.length - 10}</strong> autre${biens.length - 10 > 1 ? 's' : ''} bien${biens.length - 10 > 1 ? 's' : ''} correspondent \u00E0 vos crit\u00E8res</span></div>` : ''}
+        <!-- Plus de biens -->
+        ${biens.length > 10 ? `<tr><td style="padding: 0 28px 8px;"><div style="text-align: center; padding: 12px; background: #faf8f5; border-radius: 8px;"><span style="color: #7a6a60; font-size: 13px;">Et <strong>${biens.length - 10}</strong> autre${biens.length - 10 > 1 ? 's' : ''} bien${biens.length - 10 > 1 ? 's' : ''}</span></div></td></tr>` : ''}
 
-        <div style="text-align: center; margin-top: 8px;">
-          <a href="https://www.monpetitmdb.fr/biens?strategie=${encodeURIComponent(alerte.filtres?.strategie_mdb || '')}" style="display: inline-block; padding: 14px 32px; background: #c0392b; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px;">
+        <!-- CTA principal -->
+        <tr><td style="padding: 8px 28px 28px; text-align: center;">
+          <a href="https://www.monpetitmdb.fr/biens?strategie=${encodeURIComponent(alerte.filtres?.strategie_mdb || '')}" style="display: inline-block; padding: 14px 36px; background: #c0392b; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px;">
             Voir tous les biens \u2192
           </a>
-        </div>
-      </div>
+        </td></tr>
 
-      <div style="padding: 16px 28px; background: #faf8f5; border-top: 1px solid #f0ede8;">
-        <p style="color: #b0a898; font-size: 11px; margin: 0; text-align: center; line-height: 1.6;">
-          Vous recevez cet email car vous avez configur\u00E9 l\u2019alerte \u00AB\u00A0${alerte.nom}\u00A0\u00BB sur Mon Petit MDB.<br>
-          <a href="https://www.monpetitmdb.fr/parametres" style="color: #c0392b; text-decoration: underline;">G\u00E9rer mes alertes</a> \u00B7
-          <a href="https://www.monpetitmdb.fr/parametres" style="color: #c0392b; text-decoration: underline;">Se d\u00E9sabonner</a>
-        </p>
-      </div>
+        <!-- Footer -->
+        <tr><td style="padding: 16px 28px; background: #faf8f5; border-top: 1px solid #f0ede8;">
+          <p style="color: #b0a898; font-size: 11px; margin: 0; text-align: center; line-height: 1.6;">
+            Alerte \u00AB\u00A0${alerte.nom}\u00A0\u00BB sur Mon Petit MDB<br>
+            <a href="https://www.monpetitmdb.fr/parametres" style="color: #c0392b; text-decoration: underline;">G\u00E9rer mes alertes</a> \u00B7
+            <a href="https://www.monpetitmdb.fr/parametres" style="color: #c0392b; text-decoration: underline;">Se d\u00E9sabonner</a>
+          </p>
+        </td></tr>
 
-    </div>
-  </div>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`
 }
