@@ -46,7 +46,7 @@ export default function PricingCta({ plan, label, className }: PricingCtaProps) 
         await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ regime: selectedRegime, regime2: selectedRegime2, strategie_mdb: selectedStrategie }),
+          body: JSON.stringify({ regime: selectedRegime, regime2: selectedRegime2, strategie_mdb: selectedStrategie, _skipCooldown: true }),
         })
       }
 

@@ -39,6 +39,23 @@ export async function PUT(req: NextRequest) {
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key]
   }
+
+  // Cooldown 7 jours pour changement strategie/regime2 en Pro
+  const proRestrictedFields = ['strategie_mdb', 'regime2']
+  const hasProRestricted = proRestrictedFields.some(f => body[f] !== undefined)
+  if (hasProRestricted && !body._skipCooldown) {
+    const { data: current } = await supabaseAdmin.from('profiles').select('plan, pro_config_updated_at').eq('id', user.id).single()
+    if (current?.plan === 'pro' && current?.pro_config_updated_at) {
+      const lastChange = new Date(current.pro_config_updated_at)
+      const daysSince = (Date.now() - lastChange.getTime()) / (1000 * 60 * 60 * 24)
+      if (daysSince < 7) {
+        const nextDate = new Date(lastChange.getTime() + 7 * 24 * 60 * 60 * 1000)
+        return NextResponse.json({ error: `Modification possible \u00E0 partir du ${nextDate.toLocaleDateString('fr-FR')}`, cooldown: true, nextDate: nextDate.toISOString() }, { status: 429 })
+      }
+    }
+    if (current?.plan === 'pro') updates.pro_config_updated_at = new Date().toISOString()
+  }
+
   const { data, error } = await supabaseAdmin
     .from('profiles')
     .update(updates)

@@ -195,11 +195,39 @@ export default function ParametresPage() {
               </div>
             </div>
             <div className="profil-field">
-              <label className="profil-label" htmlFor="regime-select">{"R\u00E9gime fiscal pr\u00E9f\u00E9r\u00E9"}<Tooltip text={"Le r\u00E9gime fiscal d\u00E9termine comment vos revenus locatifs sont impos\u00E9s. Micro = forfait simple, R\u00E9el = d\u00E9duction des charges r\u00E9elles. LMNP = location meubl\u00E9e, Nu = location vide."} /></label>
-              <select id="regime-select" className="profil-select" value={profile?.regime || 'nu_micro_foncier'} onChange={e => update('regime', e.target.value)} aria-label="Régime fiscal">
+              <label className="profil-label" htmlFor="regime-select">{"R\u00E9gime fiscal principal"}<Tooltip text={"Le r\u00E9gime fiscal d\u00E9termine comment vos revenus locatifs sont impos\u00E9s. Micro = forfait simple, R\u00E9el = d\u00E9duction des charges r\u00E9elles. LMNP = location meubl\u00E9e, Nu = location vide."} /></label>
+              <select id="regime-select" className="profil-select" value={profile?.regime || 'nu_micro_foncier'} onChange={e => update('regime', e.target.value)} aria-label="R\u00E9gime fiscal">
                 {REGIME_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
+            {profile?.plan === 'pro' && (
+              <>
+                <div className="profil-field">
+                  <label className="profil-label" htmlFor="regime2-select">{"R\u00E9gime de comparaison"}<Tooltip text={"Le second r\u00E9gime affich\u00E9 dans l\u2019analyse fiscale pour comparer c\u00F4te \u00E0 c\u00F4te. En plan Pro, vous comparez 2 r\u00E9gimes. En Expert, tous les r\u00E9gimes sont accessibles."} /></label>
+                  <select id="regime2-select" className="profil-select" value={profile?.regime2 || 'nu_reel_foncier'} onChange={e => update('regime2', e.target.value)} aria-label="R\u00E9gime de comparaison">
+                    {REGIME_OPTIONS.filter(r => r.value !== profile?.regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                </div>
+                <div className="profil-field">
+                  <label className="profil-label" htmlFor="strategie-select">{"Strat\u00E9gie MDB"}<Tooltip text={"La strat\u00E9gie d\u00E9termine quels biens sont visibles dans le listing. En plan Pro, vous acc\u00E9dez \u00E0 1 strat\u00E9gie. En Expert, toutes les strat\u00E9gies sont accessibles."} /></label>
+                  <select id="strategie-select" className="profil-select" value={profile?.strategie_mdb || 'Locataire en place'} onChange={e => update('strategie_mdb', e.target.value)} aria-label="Strat\u00E9gie MDB">
+                    <option value="Locataire en place">Locataire en place</option>
+                    <option value="Travaux lourds">Travaux lourds</option>
+                    <option value="Immeuble de rapport">Immeuble de rapport</option>
+                  </select>
+                </div>
+                {profile?.pro_config_updated_at && (() => {
+                  const last = new Date(profile.pro_config_updated_at)
+                  const next = new Date(last.getTime() + 7 * 24 * 60 * 60 * 1000)
+                  const canChange = Date.now() >= next.getTime()
+                  return !canChange ? (
+                    <p style={{ fontSize: '11px', color: '#7a6a60', fontStyle: 'italic', margin: '0' }}>
+                      {`Prochain changement de strat\u00E9gie et r\u00E9gime de comparaison possible le ${next.toLocaleDateString('fr-FR')}.`}
+                    </p>
+                  ) : null
+                })()}
+              </>
+            )}
           </div>
 
           <div className="profil-section">
