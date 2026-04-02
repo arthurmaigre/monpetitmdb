@@ -463,7 +463,7 @@ function ExpandableCharges({ label, total, isReel, isFree, details }: { label: s
 
 function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
-  const { tauxCredit, tauxAssurance, dureeAns } = financement
+  const { tauxCredit, tauxAssurance, dureeAns, typeCredit: typeCreditSimu } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
   const hasLoyer = loyer && loyer > 0
   const isMarchand = regime === 'marchand_de_biens'
@@ -573,7 +573,10 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
     impot = revenuImposable <= 42500 ? revenuImposable * 0.15 : 42500 * 0.15 + (revenuImposable - 42500) * 0.25
   }
 
-  const mensualiteCredit = calculerMensualite(colMontantEmprunte, tauxCredit, dureeAns)
+  const colTypeCredit = typeCreditSimu || 'amortissable'
+  const mensualiteCredit = colTypeCredit === 'in_fine'
+    ? colMontantEmprunte * (tauxCredit / 100) / 12
+    : calculerMensualite(colMontantEmprunte, tauxCredit, dureeAns)
   const mensualiteAss = colMontantEmprunte * (tauxAssurance / 100) / 12
   const mensualiteTotale = mensualiteCredit + mensualiteAss
   const chargesRec = charges_rec || 0
@@ -699,14 +702,14 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const interetsCumules = !hasLoyer || isTravauxLourds ? Math.round((interetsAnn + assuranceAnn) * dur) : 0
 
   // Capital restant du
-  const crd = calculerCapitalRestantDu(colMontantEmprunte, tauxCredit, dureeAns, dur)
+  const crd = colTypeCredit === 'in_fine' ? colMontantEmprunte : calculerCapitalRestantDu(colMontantEmprunte, tauxCredit, dureeAns, dur)
 
-  // Bilan = produit revente - CRD - fiscalite PV + cashflow cumule - apport - frais notaire - travaux
+  // Bilan : cashflow achat-revente = emprunt + PV nette - CRD (- interets/frais si pas de loyer)
   const produitRevente = prixReventeApresAgence - crd
   const fondsInvestis = apport || 0
   const coutTotal = prix_fai + fraisNotaireMontant + budgetTravaux
-  const fraisBancairesRevente = (!hasLoyer || isTravauxLourds) ? fraisBancaires : 0
-  const profitNet = Math.round(cashflowCumule + pvNette - interetsCumules - fraisBancairesRevente)
+  const cashflowAchatRevente = Math.round(colMontantEmprunte + pvNette - crd - interetsCumules - ((!hasLoyer || isTravauxLourds) ? fraisBancaires : 0))
+  const profitNet = Math.round(cashflowCumule + cashflowAchatRevente)
   // ROI = rendement sur cout total de l'operation
   const roiTotal = coutTotal > 0 ? Math.round(profitNet / coutTotal * 1000) / 10 : 0
   const ratioROI = coutTotal > 0 ? 1 + profitNet / coutTotal : 0
@@ -773,36 +776,40 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
         <>
           <SectionLabel label="Revenus locatifs (annuel)" />
           <Row label={type_loyer === 'CC' ? "Loyer (CC)" : "Loyer (HC)"} value={`${fmt(loyerAnnuel)} \u20AC`}
-            info={type_loyer === 'CC' ? "Loyer charges comprises. Les charges r\u00E9cup\u00E9rables (eau, ordures, entretien parties communes) sont incluses dans ce montant et d\u00E9duites sur la ligne suivante." : "Loyer hors charges. Les charges r\u00E9cup\u00E9rables sont pay\u00E9es en plus par le locataire et ajout\u00E9es sur la ligne suivante."} />
+            info={type_loyer === 'CC'
+              ? `Loyer Charges Comprises : le montant inclut les charges r\u00E9cup\u00E9rables (eau, ordures, entretien parties communes).\n\nCalcul : ${fmt(Math.round(loyerAnnuel / 12))}\u00A0\u20AC/mois \u00D7 12 = ${fmt(loyerAnnuel)}\u00A0\u20AC/an\n\nLes charges sont d\u00E9duites sur la ligne suivante car elles ne sont pas un revenu pour le propri\u00E9taire.`
+              : `Loyer Hors Charges : le locataire paie ce montant + les charges r\u00E9cup\u00E9rables en plus.\n\nCalcul : ${fmt(Math.round(loyerAnnuel / 12))}\u00A0\u20AC/mois \u00D7 12 = ${fmt(loyerAnnuel)}\u00A0\u20AC/an`} />
           <Row label={"Charges r\u00E9cup."} value={type_loyer === 'CC' ? `-${fmt(chargesRecAnn)} \u20AC` : `+${fmt(chargesRecAnn)} \u20AC`}
-            info={type_loyer === 'CC' ? "Charges r\u00E9cup\u00E9rables incluses dans le loyer CC. Elles sont d\u00E9duites car ce sont des charges du locataire, pas un revenu du propri\u00E9taire." : "Charges r\u00E9cup\u00E9rables pay\u00E9es par le locataire en plus du loyer HC. Elles s\u2019ajoutent aux recettes mais ne sont pas imposables (transit)."} />
+            info={type_loyer === 'CC'
+              ? "Charges r\u00E9cup\u00E9rables : eau, ordures m\u00E9nag\u00E8res, entretien parties communes.\n\nIncluses dans le loyer CC, elles sont d\u00E9duites ici car ce sont des charges du locataire, pas un revenu du propri\u00E9taire."
+              : "Charges r\u00E9cup\u00E9rables : eau, ordures m\u00E9nag\u00E8res, entretien parties communes.\n\nPay\u00E9es par le locataire en plus du loyer HC. Elles transitent par le propri\u00E9taire mais ne sont pas imposables."} />
           {showAbattementRow && (
             regime === 'nu_micro_foncier' ? (
-              <Row label="Abattement forfaitaire (30%)" value={`-${fmt(Math.round(loyerAnnuel * 0.30))} \u20AC`} rouge info={"En micro-foncier, l\u2019administration applique un abattement de 30% sur vos loyers bruts. Cet abattement est cens\u00E9 couvrir toutes vos charges (copro, taxe fonci\u00E8re, int\u00E9r\u00EAts, travaux\u2026). Vous ne pouvez donc rien d\u00E9duire en plus. Simple mais souvent moins avantageux que le r\u00E9el si vous avez des charges \u00E9lev\u00E9es ou du cr\u00E9dit."} />
+              <Row label="Abattement forfaitaire (30%)" value={`-${fmt(Math.round(loyerAnnuel * 0.30))} \u20AC`} rouge info={`R\u00E9duction automatique de 30\u00A0% appliqu\u00E9e par l\u2019administration sur vos loyers bruts.\n\nCalcul : ${fmt(loyerAnnuel)}\u00A0\u20AC \u00D7 30\u00A0% = ${fmt(Math.round(loyerAnnuel * 0.30))}\u00A0\u20AC\n\nCet abattement est cens\u00E9 couvrir toutes vos charges (copro, taxe fonci\u00E8re, int\u00E9r\u00EAts, travaux\u2026). Vous ne pouvez rien d\u00E9duire en plus.\n\nSi vos charges r\u00E9elles d\u00E9passent 30\u00A0% de vos loyers, le r\u00E9gime r\u00E9el est plus avantageux.`} />
             ) : regime === 'lmnp_micro_bic' ? (
-              <Row label="Abattement forfaitaire (50%)" value={`-${fmt(Math.round(loyerAnnuel * 0.50))} \u20AC`} rouge info={"En micro-BIC meubl\u00E9, l\u2019abattement est de 50% sur les recettes brutes. C\u2019est g\u00E9n\u00E9reux mais vous ne pouvez rien d\u00E9duire en plus (ni charges, ni amortissement). Le r\u00E9gime r\u00E9el avec amortissement est souvent plus int\u00E9ressant."} />
+              <Row label="Abattement forfaitaire (50%)" value={`-${fmt(Math.round(loyerAnnuel * 0.50))} \u20AC`} rouge info={`R\u00E9duction automatique de 50\u00A0% appliqu\u00E9e sur vos recettes de location meubl\u00E9e.\n\nCalcul : ${fmt(loyerAnnuel)}\u00A0\u20AC \u00D7 50\u00A0% = ${fmt(Math.round(loyerAnnuel * 0.50))}\u00A0\u20AC\n\nVous ne pouvez rien d\u00E9duire en plus (ni charges, ni amortissement).\n\nLe r\u00E9gime r\u00E9el avec amortissement est souvent plus int\u00E9ressant, surtout si vous avez un cr\u00E9dit.`} />
             ) : (
               <div style={{ padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>&nbsp;</div>
             )
           )}
           <Row label="Charges copro" value={`-${fmt(chargesCoproAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
             info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el (Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS, MdB)."
-              : "Charges de copropri\u00E9t\u00E9 annuelles : entretien parties communes, gardien, ascenseur, assurance immeuble\u2026 Enti\u00E8rement d\u00E9ductibles en r\u00E9gime r\u00E9el."} />
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire.\n\nD\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
+              : `Charges de copropri\u00E9t\u00E9 annuelles : entretien des parties communes, gardien, ascenseur, assurance immeuble\u2026\n\nCalcul : ${fmt(Math.round(chargesCoproAnn / 12))}\u00A0\u20AC/mois \u00D7 12 = ${fmt(chargesCoproAnn)}\u00A0\u20AC/an\n\nEnti\u00E8rement d\u00E9ductibles en r\u00E9gime r\u00E9el.`} />
           <Row label={"Taxe fonci\u00E8re"} value={`-${fmt(taxeFoncAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
             info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
-              : "Imp\u00F4t local annuel pay\u00E9 par le propri\u00E9taire. La part d\u00E9chets m\u00E9nagers (TEOM) est r\u00E9cup\u00E9rable aupr\u00E8s du locataire. Enti\u00E8rement d\u00E9ductible en r\u00E9gime r\u00E9el."} />
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire.\n\nD\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
+              : "Imp\u00F4t local annuel pay\u00E9 par le propri\u00E9taire.\n\nLa part d\u00E9chets m\u00E9nagers (TEOM) est r\u00E9cup\u00E9rable aupr\u00E8s du locataire.\n\nEnti\u00E8rement d\u00E9ductible en r\u00E9gime r\u00E9el."} />
           <Row label={"Int\u00E9r\u00EAts emprunt"} value={`-${fmt(interetsAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
             info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire.\n\nD\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
               : regime === 'nu_reel_foncier'
-                ? "Int\u00E9r\u00EAts d\u2019emprunt annuels. En Nu r\u00E9el foncier, ils sont d\u00E9ductibles sans limite des revenus fonciers. Si vos charges d\u00E9passent vos loyers, le d\u00E9ficit li\u00E9 aux int\u00E9r\u00EAts est reportable sur les revenus fonciers des 10 ann\u00E9es suivantes."
-                : "Int\u00E9r\u00EAts d\u2019emprunt annuels. Enti\u00E8rement d\u00E9ductibles du r\u00E9sultat imposable. C\u2019est une des principales charges qui r\u00E9duisent l\u2019imp\u00F4t les premi\u00E8res ann\u00E9es."} />
+                ? `Part des int\u00E9r\u00EAts pay\u00E9s \u00E0 la banque chaque ann\u00E9e sur votre cr\u00E9dit immobilier.\n\nCalcul : ${fmt(colMontantEmprunte)}\u00A0\u20AC emprunt\u00E9s \u00D7 ${tauxCredit}\u00A0% = ${fmt(interetsAnn)}\u00A0\u20AC/an\n\nD\u00E9ductibles sans limite. Si vos charges d\u00E9passent vos loyers, le d\u00E9ficit li\u00E9 aux int\u00E9r\u00EAts est reportable sur les 10\u00A0ann\u00E9es suivantes.`
+                : `Part des int\u00E9r\u00EAts pay\u00E9s \u00E0 la banque chaque ann\u00E9e sur votre cr\u00E9dit immobilier.\n\nCalcul : ${fmt(colMontantEmprunte)}\u00A0\u20AC emprunt\u00E9s \u00D7 ${tauxCredit}\u00A0% = ${fmt(interetsAnn)}\u00A0\u20AC/an\n\nEnti\u00E8rement d\u00E9ductibles du r\u00E9sultat imposable. C\u2019est une des principales charges qui r\u00E9duisent l\u2019imp\u00F4t les premi\u00E8res ann\u00E9es.`} />
           <Row label="Assurance emprunteur" value={`-${fmt(assuranceAnn)} \u20AC`} rouge tiret={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'}
             info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. D\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
-              : "Assurance d\u00E9c\u00E8s-invalidit\u00E9 exig\u00E9e par la banque lors de l\u2019emprunt. Calcul\u00E9e en % du capital emprunt\u00E9. Enti\u00E8rement d\u00E9ductible en r\u00E9gime r\u00E9el au m\u00EAme titre que les int\u00E9r\u00EAts."} />
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire.\n\nD\u00E9ductible uniquement en r\u00E9gime r\u00E9el."
+              : `Assurance d\u00E9c\u00E8s-invalidit\u00E9 exig\u00E9e par la banque lors de l\u2019emprunt.\n\nCalcul : ${fmt(colMontantEmprunte)}\u00A0\u20AC \u00D7 ${tauxAssurance}\u00A0% = ${fmt(assuranceAnn)}\u00A0\u20AC/an\n\nEnti\u00E8rement d\u00E9ductible en r\u00E9gime r\u00E9el, au m\u00EAme titre que les int\u00E9r\u00EAts.`} />
           <ExpandableCharges
             label={"Autres charges d\u00E9ductibles"}
             total={chargesSupplementaires}
@@ -810,29 +817,29 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
             isFree={isFree}
             details={[
               { label: 'Assurance PNO', value: assurancePNO, info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
-                : "Assurance Propri\u00E9taire Non Occupant. Couvre les risques locatifs (d\u00E9g\u00E2ts des eaux, incendie, responsabilit\u00E9 civile). Obligatoire en copropri\u00E9t\u00E9. D\u00E9ductible dans votre r\u00E9gime." },
+                ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement.\n\nD\u00E9ductible en r\u00E9gime r\u00E9el.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
+                : "Assurance Propri\u00E9taire Non Occupant (PNO) : couvre les risques li\u00E9s \u00E0 la location (d\u00E9g\u00E2ts des eaux, incendie, responsabilit\u00E9 civile).\n\nObligatoire en copropri\u00E9t\u00E9. D\u00E9ductible.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes." },
               { label: `Gestion locative (${fraisGestionPct}%)`, value: Math.round(fraisGestion), info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
-                : "Honoraires de l\u2019agence ou du gestionnaire qui s\u2019occupe de trouver les locataires et g\u00E9rer le bien. G\u00E9n\u00E9ralement 5 \u00E0 10% des loyers HC. D\u00E9ductible dans votre r\u00E9gime." },
+                ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement.\n\nD\u00E9ductible en r\u00E9gime r\u00E9el.\n\n\u2699 Taux modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
+                : `Honoraires de l\u2019agence ou du gestionnaire qui s\u2019occupe de la location (recherche de locataires, \u00E9tat des lieux, quittances\u2026).\n\nCalcul : ${fmt(loyerAnnuel)}\u00A0\u20AC de loyer \u00D7 ${fraisGestionPct}\u00A0% = ${fmt(Math.round(fraisGestion))}\u00A0\u20AC/an\n\nEnti\u00E8rement d\u00E9ductible.\n\n\u2699 Taux modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes.` },
               { label: 'Comptable', value: honorairesComptable, info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
+                ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement.\n\nD\u00E9ductible en r\u00E9gime r\u00E9el.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
                 : regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic'
-                  ? "Honoraires d\u2019expert-comptable. Obligatoire en BIC r\u00E9el pour \u00E9tablir le bilan et la liasse fiscale. D\u00E9ductible dans votre r\u00E9gime."
+                  ? "Honoraires d\u2019expert-comptable pour \u00E9tablir votre bilan et liasse fiscale.\n\nObligatoire en location meubl\u00E9e au r\u00E9gime r\u00E9el. D\u00E9ductible.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
                   : regime === 'sci_is' || regime === 'marchand_de_biens'
-                    ? "Honoraires d\u2019expert-comptable. Obligatoire pour une soci\u00E9t\u00E9 \u00E0 l\u2019IS (bilan, liasse fiscale, AG). D\u00E9ductible dans votre r\u00E9gime."
-                    : "Honoraires d\u2019expert-comptable. Recommand\u00E9 en Nu r\u00E9el foncier pour optimiser la d\u00E9claration 2044. D\u00E9ductible dans votre r\u00E9gime." },
+                    ? "Honoraires d\u2019expert-comptable pour le bilan, la liasse fiscale et les assembl\u00E9es g\u00E9n\u00E9rales.\n\nObligatoire pour une soci\u00E9t\u00E9 \u00E0 l\u2019IS. D\u00E9ductible.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
+                    : "Honoraires d\u2019expert-comptable pour optimiser votre d\u00E9claration de revenus fonciers (formulaire 2044).\n\nRecommand\u00E9 en r\u00E9gime r\u00E9el. D\u00E9ductible.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes." },
               { label: 'CFE', value: cfe, info: !isBICouSCIouMdB
-                ? "Non applicable en location nue (pas d\u2019activit\u00E9 commerciale). La CFE est due uniquement en LMNP/LMP r\u00E9el, SCI IS et MdB."
-                : "Cotisation Fonci\u00E8re des Entreprises. Imp\u00F4t local d\u00FB chaque ann\u00E9e par toute activit\u00E9 professionnelle ou soci\u00E9t\u00E9. Le montant d\u00E9pend de la commune. D\u00E9ductible dans votre r\u00E9gime." },
+                ? "Non applicable en location nue (pas d\u2019activit\u00E9 commerciale).\n\nLa CFE (Cotisation Fonci\u00E8re des Entreprises) est due uniquement en meubl\u00E9 (LMNP/LMP), SCI \u00E0 l\u2019IS et marchand de biens.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
+                : "Cotisation Fonci\u00E8re des Entreprises : imp\u00F4t local d\u00FB chaque ann\u00E9e par toute activit\u00E9 professionnelle ou soci\u00E9t\u00E9.\n\nLe montant d\u00E9pend de la commune (g\u00E9n\u00E9ralement quelques centaines d\u2019euros). D\u00E9ductible.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes." },
               { label: 'Frais OGA', value: fraisOGA, info: !isBIC
                 ? regime === 'sci_is' || regime === 'marchand_de_biens'
-                  ? "Non applicable en soci\u00E9t\u00E9 \u00E0 l\u2019IS. L\u2019OGA est un dispositif r\u00E9serv\u00E9 aux BIC (LMNP et LMP) pour \u00E9viter la majoration de 15% du b\u00E9n\u00E9fice."
-                  : "Non applicable dans votre r\u00E9gime. L\u2019OGA est r\u00E9serv\u00E9 au LMNP et LMP r\u00E9el. L\u2019adh\u00E9sion \u00E9vite la majoration de 15% du b\u00E9n\u00E9fice imposable."
-                : "Organisme de Gestion Agr\u00E9\u00E9. L\u2019adh\u00E9sion \u00E9vite la majoration de 15% du b\u00E9n\u00E9fice imposable en BIC r\u00E9el. Fortement recommand\u00E9 en LMNP/LMP. Co\u00FBt : 150 \u00E0 300 \u20AC/an. D\u00E9ductible dans votre r\u00E9gime." },
+                  ? "Non applicable en soci\u00E9t\u00E9 \u00E0 l\u2019IS.\n\nL\u2019OGA (Organisme de Gestion Agr\u00E9\u00E9) est r\u00E9serv\u00E9 aux loueurs meubl\u00E9s (LMNP / LMP).\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
+                  : "Non applicable dans votre r\u00E9gime.\n\nL\u2019OGA (Organisme de Gestion Agr\u00E9\u00E9) est r\u00E9serv\u00E9 au LMNP et LMP en r\u00E9gime r\u00E9el.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes."
+                : "Organisme de Gestion Agr\u00E9\u00E9 : l\u2019adh\u00E9sion \u00E9vite une majoration de 15\u00A0% de votre b\u00E9n\u00E9fice imposable.\n\nFortement recommand\u00E9 en LMNP/LMP.\nCo\u00FBt : 150 \u00E0 300\u00A0\u20AC/an, d\u00E9ductible.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes." },
               { label: 'Frais bancaires / dossier', value: fraisBancaires, info: regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-                ? "Non d\u00E9ductible en r\u00E9gime micro. D\u00E9ductible en Nu r\u00E9el, LMNP/LMP r\u00E9el, SCI IS et MdB."
-                : "Frais de dossier bancaire et frais de garantie (hypoth\u00E8que ou caution). Pay\u00E9s une seule fois \u00E0 la souscription du pr\u00EAt. D\u00E9ductibles en totalit\u00E9 la 1\u00E8re ann\u00E9e, liss\u00E9s ici pour simplifier. D\u00E9ductible dans votre r\u00E9gime." },
+                ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement.\n\nD\u00E9ductible en r\u00E9gime r\u00E9el."
+                : `Frais de dossier bancaire + frais de garantie (hypoth\u00E8que ou caution).\n\nPay\u00E9s une seule fois \u00E0 la souscription du pr\u00EAt. Liss\u00E9s ici sur la dur\u00E9e pour simplifier la lecture.\n\nD\u00E9ductibles en totalit\u00E9.\n\n\u2699 Montant modifiable dans Mes param\u00E8tres \u2192 Charges r\u00E9currentes.` },
             ]}
           />
           <Row
@@ -843,60 +850,58 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
             rouge={(regime === 'nu_reel_foncier' && travauxDeductibles > 0) || ((regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is') && travauxAmortis > 0)}
             tiret={!isReel}
             info={regime === 'nu_micro_foncier' || regime === 'lmnp_micro_bic'
-              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire. En r\u00E9gime r\u00E9el, les travaux sont d\u00E9ductibles (Nu r\u00E9el) ou amortissables sur 10 ans (LMNP/LMP/SCI IS)."
+              ? "Non d\u00E9ductible en r\u00E9gime micro : d\u00E9j\u00E0 couvert par l\u2019abattement forfaitaire.\n\nEn r\u00E9gime r\u00E9el, les travaux sont d\u00E9ductibles (Nu r\u00E9el) ou amortissables sur 10\u00A0ans (LMNP/LMP/SCI\u00A0IS)."
               : regime === 'marchand_de_biens'
-                ? "En MdB, les travaux sont des charges d\u2019exploitation d\u00E9duites du r\u00E9sultat l\u2019ann\u00E9e de la d\u00E9pense. Pas d\u2019amortissement (le bien est en stock, pas en immobilisation)."
+                ? "En marchand de biens, les travaux sont des charges d\u2019exploitation d\u00E9duites du r\u00E9sultat l\u2019ann\u00E9e de la d\u00E9pense.\n\nPas d\u2019amortissement : le bien est consid\u00E9r\u00E9 comme un stock (destin\u00E9 \u00E0 la revente), pas comme une immobilisation."
                 : regime === 'nu_reel_foncier'
                   ? (budgetTravaux > 0
-                    ? `Budget : ${fmt(budgetTravaux)} \u20AC (score ${scoreUtilise}/5). En Nu r\u00E9el, les travaux d\u2019entretien et d\u2019am\u00E9lioration sont d\u00E9ductibles en totalit\u00E9 l\u2019ann\u00E9e de la d\u00E9pense. Le d\u00E9ficit foncier g\u00E9n\u00E9r\u00E9 est imputable sur le revenu global jusqu\u2019\u00E0 10 700 \u20AC/an. Attention : la construction et l\u2019agrandissement ne sont pas d\u00E9ductibles.`
-                    : "Renseignez un score travaux pour estimer le budget. En Nu r\u00E9el, les travaux d\u2019entretien/am\u00E9lioration sont d\u00E9ductibles via le m\u00E9canisme du d\u00E9ficit foncier (plafonn\u00E9 10 700 \u20AC/an).")
+                    ? `Travaux d\u2019entretien et d\u2019am\u00E9lioration d\u00E9ductibles en totalit\u00E9 l\u2019ann\u00E9e de la d\u00E9pense.\n\nBudget estim\u00E9 : ${fmt(budgetTravaux)}\u00A0\u20AC (score ${scoreUtilise}/5)\n\nSi les charges d\u00E9passent les loyers, le d\u00E9ficit foncier est imputable sur votre revenu global (max 10\u00A0700\u00A0\u20AC/an).\n\nAttention : les travaux de construction ou d\u2019agrandissement ne sont pas d\u00E9ductibles.\n\n\u2699 Budget travaux/m\u00B2 modifiable dans Mes param\u00E8tres \u2192 Budget travaux.`
+                    : "Renseignez un score travaux pour estimer le budget.\n\nEn Nu r\u00E9el, les travaux d\u2019entretien et d\u2019am\u00E9lioration sont d\u00E9ductibles via le d\u00E9ficit foncier (plafonn\u00E9 \u00E0 10\u00A0700\u00A0\u20AC/an sur le revenu global).")
                   : (budgetTravaux > 0
-                    ? `Budget : ${fmt(budgetTravaux)} \u20AC (score ${scoreUtilise}/5). En ${regime === 'sci_is' ? "SCI IS" : "LMNP/LMP r\u00E9el"}, les travaux sont amortis sur 10 ans (${fmt(Math.round(budgetTravaux / 10))} \u20AC/an). L\u2019amortissement r\u00E9duit le r\u00E9sultat imposable chaque ann\u00E9e.`
-                    : `Renseignez un score travaux pour estimer le budget. En ${regime === 'sci_is' ? "SCI IS" : "LMNP/LMP r\u00E9el"}, les travaux sont amortissables sur 10 ans.`)}
+                    ? `Travaux amortis sur 10\u00A0ans : le co\u00FBt est r\u00E9parti et d\u00E9duit chaque ann\u00E9e.\n\nBudget estim\u00E9 : ${fmt(budgetTravaux)}\u00A0\u20AC (score ${scoreUtilise}/5)\nAmortissement annuel : ${fmt(Math.round(budgetTravaux / 10))}\u00A0\u20AC/an\n\nR\u00E9duit le r\u00E9sultat imposable chaque ann\u00E9e.\n\n\u2699 Budget travaux/m\u00B2 modifiable dans Mes param\u00E8tres \u2192 Budget travaux.`
+                    : `Renseignez un score travaux pour estimer le budget.\n\nEn ${regime === 'sci_is' ? "SCI \u00E0 l\u2019IS" : "LMNP/LMP r\u00E9el"}, les travaux sont amortissables sur 10\u00A0ans.`)}
           />
           {showAmortRow && (
             <Row label="Amortissement" value={`-${fmt(amort)} \u20AC`} rouge tiret={!hasAmort} info={
               regime === 'nu_micro_foncier'
-                ? "Non disponible en micro-foncier. L\u2019amortissement est r\u00E9serv\u00E9 au LMNP r\u00E9el, LMP et SCI IS."
+                ? "Non disponible en micro-foncier.\n\nL\u2019amortissement est r\u00E9serv\u00E9 aux r\u00E9gimes r\u00E9els : LMNP r\u00E9el, LMP et SCI \u00E0 l\u2019IS."
                 : regime === 'lmnp_micro_bic'
-                  ? "Non disponible en micro-BIC. L\u2019amortissement est le principal avantage du r\u00E9gime r\u00E9el BIC."
+                  ? "Non disponible en micro-BIC.\n\nL\u2019amortissement est le principal avantage du passage au r\u00E9gime r\u00E9el : il permet de r\u00E9duire fortement le r\u00E9sultat imposable."
                   : regime === 'nu_reel_foncier'
-                    ? "Non disponible en location nue. Le Nu r\u00E9el offre le d\u00E9ficit foncier en contrepartie."
+                    ? "Non disponible en location nue.\n\nEn contrepartie, le Nu r\u00E9el offre le m\u00E9canisme du d\u00E9ficit foncier (d\u00E9duction des charges r\u00E9elles et des travaux)."
                     : regime === 'marchand_de_biens'
-                      ? "Non disponible en MdB. Le bien est un stock, pas une immobilisation."
+                      ? "Non disponible en marchand de biens.\n\nLe bien est consid\u00E9r\u00E9 comme un stock (destin\u00E9 \u00E0 la revente), pas comme une immobilisation. Les travaux sont d\u00E9duits directement en charges."
                       : regime === 'sci_is'
-                        ? `SCI IS : b\u00E2ti 85% sur 30 ans + notaire sur 5 ans. Ici : ${fmt(Math.round(prix_fai * 0.85 / 30))} + ${fmt(Math.round(fraisNotaireMontantLocatif / 5))} \u20AC/an. R\u00E9duit le b\u00E9n\u00E9fice soumis \u00E0 l\u2019IS.`
-                        : `LMNP/LMP r\u00E9el : b\u00E2ti 85% sur 30 ans + mobilier 5 000 \u20AC sur 10 ans. Ici : ${fmt(Math.round(prix_fai * 0.85 / 30))} + ${fmt(Math.round(5000 / 10))} \u20AC/an. R\u00E9duit le revenu imposable, souvent \u00E0 z\u00E9ro. LFI 2025 : r\u00E9int\u00E9gration \u00E0 la revente.`
+                        ? `L\u2019amortissement r\u00E9duit le b\u00E9n\u00E9fice soumis \u00E0 l\u2019imp\u00F4t sur les soci\u00E9t\u00E9s :\n\n\u2022 B\u00E2ti (85\u00A0% du prix) sur 30\u00A0ans : ${fmt(Math.round(prix_fai * 0.85 / 30))}\u00A0\u20AC/an\n\u2022 Frais de notaire sur 5\u00A0ans : ${fmt(Math.round(fraisNotaireMontantLocatif / 5))}\u00A0\u20AC/an`
+                        : `L\u2019amortissement permet de d\u00E9duire chaque ann\u00E9e une partie de la valeur du bien :\n\n\u2022 B\u00E2ti (85\u00A0% du prix) sur 30\u00A0ans : ${fmt(Math.round(prix_fai * 0.85 / 30))}\u00A0\u20AC/an\n\u2022 Mobilier (5\u00A0000\u00A0\u20AC) sur 10\u00A0ans : ${fmt(Math.round(5000 / 10))}\u00A0\u20AC/an\n\nR\u00E9duit fortement le r\u00E9sultat imposable, souvent \u00E0 z\u00E9ro.\n\nAttention : depuis 2025, les amortissements d\u00E9duits sont r\u00E9int\u00E9gr\u00E9s dans le calcul de la plus-value \u00E0 la revente.`
             } />
           )}
           {showSSIRow && (
             <Row label="Cotisations SSI (45%)" value={regime === 'lmp_reel_bic' ? `-${fmt(Math.max(0, revenuImposable) * 0.45)} \u20AC` : ''} rouge={regime === 'lmp_reel_bic'} tiret={regime !== 'lmp_reel_bic'}
               info={regime === 'lmp_reel_bic'
-                ? "En LMP, cotisations sociales ~45% du b\u00E9n\u00E9fice (maladie, retraite, allocations). C\u2019est le principal inconv\u00E9nient du LMP par rapport au LMNP."
-                : "Non applicable dans votre r\u00E9gime. Les cotisations SSI sont dues uniquement en LMP."} />
+                ? "Cotisations sociales des ind\u00E9pendants (S\u00E9curit\u00E9 Sociale des Ind\u00E9pendants) : environ 45\u00A0% du b\u00E9n\u00E9fice.\n\nElles couvrent maladie, retraite et allocations. C\u2019est le principal inconv\u00E9nient du statut LMP par rapport au LMNP."
+                : "Non applicable dans votre r\u00E9gime.\n\nLes cotisations SSI (S\u00E9curit\u00E9 Sociale des Ind\u00E9pendants) sont dues uniquement en Loueur Meubl\u00E9 Professionnel (LMP)."} />
           )}
           <Row label={"R\u00E9sultat imposable"} value={`${fmt(revenuImposable)} \u20AC`} bold
             info={regime === 'nu_micro_foncier'
-              ? "Loyer brut - abattement 30%. Impos\u00E9 \u00E0 votre TMI + pr\u00E9l\u00E8vements sociaux 17,2%."
+              ? `C\u2019est le montant sur lequel vous serez impos\u00E9.\n\nCalcul : loyers ${fmt(loyerAnnuel)}\u00A0\u20AC - abattement 30\u00A0% = ${fmt(revenuImposable)}\u00A0\u20AC\n\nImpos\u00E9 \u00E0 votre tranche marginale (TMI ${tmi}\u00A0%) + pr\u00E9l\u00E8vements sociaux (17,2\u00A0%).`
               : regime === 'lmnp_micro_bic'
-                ? "Recettes brutes - abattement 50%. Impos\u00E9 \u00E0 votre TMI + pr\u00E9l\u00E8vements sociaux 17,2%."
+                ? `C\u2019est le montant sur lequel vous serez impos\u00E9.\n\nCalcul : recettes ${fmt(loyerAnnuel)}\u00A0\u20AC - abattement 50\u00A0% = ${fmt(revenuImposable)}\u00A0\u20AC\n\nImpos\u00E9 \u00E0 votre tranche marginale (TMI ${tmi}\u00A0%) + pr\u00E9l\u00E8vements sociaux (17,2\u00A0%).`
                 : regime === 'nu_reel_foncier'
-                  ? "Loyers - toutes les charges d\u00E9ductibles. Si n\u00E9gatif, c\u2019est un d\u00E9ficit foncier imputable sur votre revenu global (max 10 700 \u20AC/an). Impos\u00E9 \u00E0 votre TMI + PS 17,2%."
+                  ? `C\u2019est le montant sur lequel vous serez impos\u00E9 : loyers - toutes les charges d\u00E9ductibles.\n\n${revenuImposable < 0 ? `R\u00E9sultat n\u00E9gatif = d\u00E9ficit foncier imputable sur votre revenu global (max 10\u00A0700\u00A0\u20AC/an). Le solde est reportable 10\u00A0ans.` : `Impos\u00E9 \u00E0 votre tranche marginale (TMI ${tmi}\u00A0%) + pr\u00E9l\u00E8vements sociaux (17,2\u00A0%).`}`
                   : regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic'
-                    ? "Recettes - charges - amortissement. Gr\u00E2ce \u00E0 l\u2019amortissement, ce r\u00E9sultat est souvent proche de z\u00E9ro. Impos\u00E9 \u00E0 votre TMI + PS 17,2%."
+                    ? `C\u2019est le montant sur lequel vous serez impos\u00E9 : recettes - charges - amortissement.\n\nGr\u00E2ce \u00E0 l\u2019amortissement, ce r\u00E9sultat est souvent proche de z\u00E9ro.\n\nImpos\u00E9 \u00E0 votre tranche marginale (TMI ${tmi}\u00A0%) + pr\u00E9l\u00E8vements sociaux (17,2\u00A0%).`
                     : regime === 'sci_is' || regime === 'marchand_de_biens'
-                      ? `B\u00E9n\u00E9fice de la soci\u00E9t\u00E9. Impos\u00E9 \u00E0 l\u2019IS : 15% jusqu\u2019\u00E0 42 500 \u20AC, 25% au-del\u00E0. Pas de TMI ni de PS \u00E0 ce stade (uniquement quand les dividendes sont distribu\u00E9s).`
+                      ? `B\u00E9n\u00E9fice de la soci\u00E9t\u00E9 sur lequel sera calcul\u00E9 l\u2019imp\u00F4t sur les soci\u00E9t\u00E9s (IS).\n\n\u2022 15\u00A0% jusqu\u2019\u00E0 42\u00A0500\u00A0\u20AC\n\u2022 25\u00A0% au-del\u00E0\n\nPas d\u2019imp\u00F4t sur le revenu ni de pr\u00E9l\u00E8vements sociaux \u00E0 ce stade. Les associ\u00E9s seront impos\u00E9s uniquement lors de la distribution des dividendes.`
                       : ''} />
           <Row label={"Imp\u00F4t"} value={`-${fmt(impot)} \u20AC`} rouge
-            info={regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier'
-              ? `Imp\u00F4t sur le revenu (TMI ${tmi}%) + pr\u00E9l\u00E8vements sociaux (17,2%) = ${tmi + 17.2}% du r\u00E9sultat imposable.`
-              : regime === 'lmnp_micro_bic'
-                ? `Imp\u00F4t sur le revenu (TMI ${tmi}%) + pr\u00E9l\u00E8vements sociaux (17,2%) = ${tmi + 17.2}% du r\u00E9sultat imposable.`
-                : regime === 'lmnp_reel_bic'
-                  ? `Imp\u00F4t sur le revenu \u00E0 votre TMI (${tmi}%) + pr\u00E9l\u00E8vements sociaux (17,2%) = ${tmi + 17.2}% du r\u00E9sultat imposable.`
-                  : regime === 'lmp_reel_bic'
-                    ? `Imp\u00F4t sur le revenu \u00E0 votre TMI (${tmi}%). Les cotisations SSI (45%) remplacent les PS.`
-                    : `Imp\u00F4t sur les soci\u00E9t\u00E9s : 15% jusqu\u2019\u00E0 42 500 \u20AC de b\u00E9n\u00E9fice, 25% au-del\u00E0. Les dividendes seront ensuite soumis au PFU (30%) lors de la distribution.`} />
+            info={regime === 'nu_micro_foncier' || regime === 'nu_reel_foncier' || regime === 'lmnp_micro_bic'
+              ? `Votre tranche marginale (${tmi}\u00A0%) + pr\u00E9l\u00E8vements sociaux (17,2\u00A0%) = ${tmi + 17.2}\u00A0% appliqu\u00E9s au r\u00E9sultat imposable.\n\nCalcul : ${fmt(revenuImposable)}\u00A0\u20AC \u00D7 ${tmi + 17.2}\u00A0% = ${fmt(impot)}\u00A0\u20AC\n\n\u2699 TMI modifiable dans Mes param\u00E8tres \u2192 Fiscalit\u00E9.`
+              : regime === 'lmnp_reel_bic'
+                ? `Votre tranche marginale (${tmi}\u00A0%) + pr\u00E9l\u00E8vements sociaux (17,2\u00A0%) = ${tmi + 17.2}\u00A0% du r\u00E9sultat imposable.\n\nGr\u00E2ce \u00E0 l\u2019amortissement, le r\u00E9sultat est souvent proche de z\u00E9ro.\n\n\u2699 TMI modifiable dans Mes param\u00E8tres \u2192 Fiscalit\u00E9.`
+                : regime === 'lmp_reel_bic'
+                  ? `Votre tranche marginale (${tmi}\u00A0%) appliqu\u00E9e au r\u00E9sultat imposable.\n\nEn LMP, les cotisations sociales (SSI ~45\u00A0%) remplacent les pr\u00E9l\u00E8vements sociaux de 17,2\u00A0%.\n\n\u2699 TMI modifiable dans Mes param\u00E8tres \u2192 Fiscalit\u00E9.`
+                  : `Imp\u00F4t sur les soci\u00E9t\u00E9s (IS) :\n\u2022 15\u00A0% jusqu\u2019\u00E0 42\u00A0500\u00A0\u20AC de b\u00E9n\u00E9fice\n\u2022 25\u00A0% au-del\u00E0\n\nLes dividendes vers\u00E9s aux associ\u00E9s seront ensuite soumis \u00E0 la flat tax (30\u00A0%) lors de la distribution.`} />
         </>
       )}
       {hasLoyer && !isTravauxLourds && (
@@ -972,7 +977,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
           {showReintegrationRow && (
             regime === 'lmnp_reel_bic' ? (
               <Row label={"R\u00E9int\u00E9gration amortissements"} value={`+${fmt(Math.round(reintegrationAmort))} \u20AC`} rouge
-                info={"Depuis la LFI 2025, les amortissements d\u00E9duits pendant la phase locative sont r\u00E9int\u00E9gr\u00E9s dans la base de calcul de la plus-value \u00E0 la revente."} />
+                info={"Depuis 2025, les amortissements d\u00E9duits pendant la location sont rajout\u00E9s \u00E0 la plus-value imposable lors de la revente.\n\nConcr\u00E8tement : vous avez pay\u00E9 moins d\u2019imp\u00F4t pendant la location, mais vous en payez plus \u00E0 la revente."} />
             ) : (
               <div style={{ padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>&nbsp;</div>
             )
@@ -993,7 +998,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
           )}
           {regime === 'sci_is' && (
             <ExpandableTaxRow label={"IS sur PV (15% / 25%)"} total={Math.round(isPV)} isFree={isFree}
-              info={"PV calcul\u00E9e sur la VNC (prix + frais + travaux - amortissements cumul\u00E9s). Pas d\u2019abattement pour dur\u00E9e de d\u00E9tention."}
+              info={"Plus-value calcul\u00E9e sur la Valeur Nette Comptable (VNC) : prix d\u2019achat + frais + travaux - amortissements d\u00E9j\u00E0 d\u00E9duits.\n\nPas d\u2019abattement pour dur\u00E9e de d\u00E9tention en SCI \u00E0 l\u2019IS."}
               details={[
                 { label: 'PV sur VNC', value: `${fmt(Math.round(isPV / (isPV <= 42500 * 0.15 ? 0.15 : 0.25) || 0))}\u00A0\u20AC` },
                 { label: 'IS (15% / 25%)', value: `-${fmt(Math.round(isPV))}\u00A0\u20AC` },
@@ -1026,7 +1031,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
           )}
           {regime === 'sci_is' && (
             <ExpandableTaxRow label={"PFU dividendes (30%)"} total={Math.round(psPV)} isFree={isFree}
-              info={"Flat tax 30% si les b\u00E9n\u00E9fices sont distribu\u00E9s en dividendes. Si les fonds restent dans la SCI, pas de PFU imm\u00E9diat."}
+              info={"Pr\u00E9l\u00E8vement Forfaitaire Unique (PFU), aussi appel\u00E9 \u00AB\u00A0flat tax\u00A0\u00BB : 30\u00A0% (12,8\u00A0% d\u2019imp\u00F4t + 17,2\u00A0% de pr\u00E9l\u00E8vements sociaux).\n\nAppliqu\u00E9 uniquement si les b\u00E9n\u00E9fices sont distribu\u00E9s en dividendes aux associ\u00E9s. Si les fonds restent dans la SCI, pas de PFU \u00E0 payer."}
               details={[
                 { label: 'B\u00E9n\u00E9fice distribuable (apr\u00E8s IS)', value: `${fmt(Math.round(psPV / 0.3 || 0))}\u00A0\u20AC` },
                 { label: 'PFU (30%)', value: `-${fmt(Math.round(psPV))}\u00A0\u20AC` },
@@ -1055,14 +1060,24 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               {`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}
             </div>
             {!isTravauxLourds && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                <span style={{ color: '#555' }}>{"Cash Flow locatif net d\u2019imp\u00F4t cumul\u00E9"}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px', alignItems: 'center' }}>
+                <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help', color: '#555' }}>
+                  {"Cashflow locatif net cumul\u00E9"}
+                  <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>
+                  <span className="pnl-tooltip-text">{`Somme des loyers nets encaiss\u00E9s apr\u00E8s d\u00E9duction des mensualit\u00E9s de cr\u00E9dit et de l\u2019imp\u00F4t, sur ${dur}\u00A0an${dur > 1 ? 's' : ''} de d\u00E9tention.\n\n${fmt(cashflowNetMensuel)}\u00A0\u20AC/mois \u00D7 ${dur * 12}\u00A0mois${fraisBancaires > 0 ? `\n- Frais bancaires : ${fmt(fraisBancaires)}\u00A0\u20AC` : ''}\n= ${fmt(cashflowCumule)}\u00A0\u20AC`}</span>
+                </span>
                 <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-              <span style={{ color: '#555' }}>{pvNette >= 0 ? "Plus-value nette d\u2019imp\u00F4t" : "Moins-value nette d\u2019imp\u00F4t"}</span>
-              <span style={{ fontWeight: 600, color: pvNette >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{pvNette >= 0 ? '+' : ''}{fmt(pvNette)} {'\u20AC'}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px', alignItems: 'center' }}>
+              <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help', color: '#555' }}>
+                {"Cashflow achat-revente net"}
+                <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>
+                <span className="pnl-tooltip-text">{`R\u00E9sultat net de l\u2019op\u00E9ration d\u2019achat-revente apr\u00E8s remboursement du cr\u00E9dit et fiscalit\u00E9.\n\n+ Emprunt re\u00E7u : ${fmt(colMontantEmprunte)}\u00A0\u20AC\n+ PV nette d\u2019imp\u00F4t : ${fmt(pvNette)}\u00A0\u20AC\n- Remboursement CRD : ${fmt(Math.round(crd))}\u00A0\u20AC${interetsCumules > 0 ? `\n- Int\u00E9r\u00EAts cumul\u00E9s : ${fmt(interetsCumules)}\u00A0\u20AC` : ''}\n= ${fmt(cashflowAchatRevente)}\u00A0\u20AC\n\n${colTypeCredit === 'in_fine' ? `Cr\u00E9dit in fine : le capital (${fmt(colMontantEmprunte)}\u00A0\u20AC) est int\u00E9gralement rembours\u00E9 \u00E0 la revente.` : `Cr\u00E9dit amortissable : ${fmt(Math.round(colMontantEmprunte - crd))}\u00A0\u20AC de capital d\u00E9j\u00E0 rembours\u00E9 via les mensualit\u00E9s.`}`}</span>
+              </span>
+              <span style={{ fontWeight: 600, color: cashflowAchatRevente >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>
+                {cashflowAchatRevente >= 0 ? '+' : ''}{fmt(cashflowAchatRevente)} {'\u20AC'}
+              </span>
             </div>
             <div style={{ borderTop: '2px solid rgba(0,0,0,0.1)', paddingTop: '8px' }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: profitNet >= 0 ? '#1a7a40' : '#c0392b', marginBottom: '4px' }} className={isFree ? 'val-blur' : ''}>
@@ -1816,7 +1831,11 @@ export default function FicheBienPage() {
   const [apport, setApport] = useState<number | ''>(0)
   const [taux, setTaux] = useState<number | ''>(3.5)
   const [tauxAssurance, setTauxAssurance] = useState<number | ''>(0.3)
-  const [duree, setDuree] = useState(20)
+  const [dureeAmort, setDureeAmort] = useState(20)
+  const [dureeInFine, setDureeInFine] = useState(2)
+  const [typeCredit, setTypeCredit] = useState<'amortissable' | 'in_fine'>('amortissable')
+  const duree = typeCredit === 'in_fine' ? dureeInFine : dureeAmort
+  const setDuree = typeCredit === 'in_fine' ? setDureeInFine : setDureeAmort
   const [fraisNotaire, setFraisNotaire] = useState(7.5)
   const [fraisNotaireBase, setFraisNotaireBase] = useState(7.5) // valeur profil hors MdB
   const [tmi, setTmi] = useState(30)
@@ -2090,7 +2109,9 @@ export default function FicheBienPage() {
   const ecartPct = prixCibleCombine ? ((prixCibleCombine - bien.prix_fai) / bien.prix_fai * 100).toFixed(1) : null
   const ecartNegatif = Number(ecartPct) <= 0
 
-  const mensualiteCredit = calculerMensualite(montantEmprunte, tauxNum, duree)
+  const mensualiteCredit = typeCredit === 'in_fine'
+    ? montantEmprunte * (tauxNum / 100) / 12
+    : calculerMensualite(montantEmprunte, tauxNum, duree)
   const mensualiteAss = montantEmprunte * (tauxAssuranceNum / 100) / 12
   const mensualiteTotale = mensualiteCredit + mensualiteAss
 
@@ -2103,7 +2124,7 @@ export default function FicheBienPage() {
   const cashflowBrut = loyerNet - mensualiteTotale
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
-  const financement = { montantEmprunte, tauxCredit: tauxNum, tauxAssurance: tauxAssuranceNum, dureeAns: duree }
+  const financement = { montantEmprunte, tauxCredit: tauxNum, tauxAssurance: tauxAssuranceNum, dureeAns: duree, typeCredit }
   const chargesUtilisateur = profil ? {
     assurance_pno: profil.assurance_pno || 0,
     frais_gestion_pct: profil.frais_gestion_pct || 0,
@@ -2116,7 +2137,7 @@ export default function FicheBienPage() {
   return (
     <Layout>
       <style>{`
-        .pnl-tooltip-wrap .pnl-tooltip-text { display: none; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1a1210; color: #fff; font-size: 11px; font-weight: 400; padding: 8px 12px; border-radius: 8px; white-space: normal; width: max-content; max-width: 280px; z-index: 10; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,.15); pointer-events: none; }
+        .pnl-tooltip-wrap .pnl-tooltip-text { display: none; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1a1210; color: #fff; font-size: 11px; font-weight: 400; padding: 8px 12px; border-radius: 8px; white-space: pre-line; width: max-content; max-width: 280px; z-index: 10; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,.15); pointer-events: none; text-transform: none; letter-spacing: normal; }
         .pnl-tooltip-wrap .pnl-tooltip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1a1210; }
         .pnl-tooltip-wrap:hover .pnl-tooltip-text { display: block; }
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
@@ -2537,7 +2558,10 @@ export default function FicheBienPage() {
                 </div>
               )}
               <div className="data-item">
-                <span className="data-label">Rendement brut</span>
+                <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Rendement brut
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{`Indicateur simple de rentabilit\u00E9 locative, avant toute charge et imp\u00F4t.\n\nCalcul : loyer annuel / prix d\u2019achat FAI\n${bien.loyer ? `${fmt(Math.round(bien.loyer * 12))}\u00A0\u20AC / ${fmt(bien.prix_fai)}\u00A0\u20AC = ${(bien.rendement_brut * 100).toFixed(2)}\u00A0%` : ''}\n\nNe tient pas compte des charges, cr\u00E9dit, fiscalit\u00E9 ni travaux. Pour une vision compl\u00E8te, consultez le Cash Flow Net d\u2019Imp\u00F4t dans l\u2019analyse fiscale.`}</span></span>
+                </span>
                 <span className="data-value" style={{ color: '#c0392b' }}>{bien.rendement_brut ? `${(bien.rendement_brut * 100).toFixed(2)} %` : 'NC'}</span>
               </div>
             </div>
@@ -3001,7 +3025,7 @@ export default function FicheBienPage() {
                 <div>
                   {prixCibleCombine && (
                     <div className="param-group">
-                      <label className="param-label">Base de calcul</label>
+                      <label className="param-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce (frais d\u2019agence inclus). Utile pour simuler l\u2019achat au prix demand\u00E9.\n\n\u2022 Prix cible : le prix id\u00E9al calcul\u00E9 selon votre objectif de cashflow ou de plus-value. Utile pour pr\u00E9parer une offre."}</span></span></label>
                       <div className="toggle-row">
                         <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
                         <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
@@ -3024,6 +3048,14 @@ export default function FicheBienPage() {
                     <span className="param-hint">{"Montant emprunt\u00E9"} : {fmt(montantEmprunte)} {'\u20AC'}</span>
                   </div>
                   <div className="param-group">
+                    <label className="param-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Type de cr{'\u00E9'}dit <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Choisissez le type de cr\u00E9dit pour votre simulation.\n\n\u2022 Amortissable : vous remboursez le capital + les int\u00E9r\u00EAts chaque mois. Mensualit\u00E9 plus \u00E9lev\u00E9e mais le capital emprunt\u00E9 diminue au fil du temps. Dur\u00E9e : 5 \u00E0 30\u00A0ans.\n\n\u2022 In fine : vous ne payez que les int\u00E9r\u00EAts chaque mois. Le capital est rembours\u00E9 en une seule fois \u00E0 la revente du bien. Mensualit\u00E9 plus faible, utilis\u00E9 par les marchands de biens. Dur\u00E9e : 1 \u00E0 5\u00A0ans."}</span></span></label>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button type="button" onClick={() => setTypeCredit('amortissable')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: typeCredit === 'amortissable' ? '#1a1210' : '#fff', color: typeCredit === 'amortissable' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Amortissable</button>
+                      <button type="button" onClick={() => setTypeCredit('in_fine')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: typeCredit === 'in_fine' ? '#1a1210' : '#fff', color: typeCredit === 'in_fine' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>In fine</button>
+                    </div>
+                    {typeCredit === 'in_fine' && <span className="param-hint">{"Int\u00E9r\u00EAts seuls chaque mois, capital rembours\u00E9 \u00E0 la revente"}</span>}
+                  </div>
+                  <div className="param-group">
                     <label className="param-label">{"Taux cr\u00E9dit (%)"}</label>
                     <input className="param-input" type="number" step="0.01" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTaux(profil?.taux_credit ?? 3.5) }} />
                   </div>
@@ -3032,17 +3064,26 @@ export default function FicheBienPage() {
                     <input className="param-input" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTauxAssurance(profil?.taux_assurance ?? 0.3) }} />
                   </div>
                   <div className="param-group">
-                    <label className="param-label">{"Dur\u00E9e"} — {duree} ans</label>
+                    <label className="param-label">{"Dur\u00E9e"} — {duree} an{duree > 1 ? 's' : ''}</label>
                     <div className="slider-wrap">
-                      <input type="range" className="slider" min={5} max={30} step={1} value={duree} onChange={e => setDuree(Number(e.target.value))} />
-                      <div className="slider-labels"><span>5 ans</span><span>30 ans</span></div>
+                      {typeCredit === 'in_fine' ? (
+                        <>
+                          <input type="range" className="slider" min={1} max={5} step={1} value={Math.min(duree, 5)} onChange={e => setDuree(Number(e.target.value))} />
+                          <div className="slider-labels"><span>1 an</span><span>5 ans</span></div>
+                        </>
+                      ) : (
+                        <>
+                          <input type="range" className="slider" min={5} max={30} step={1} value={duree} onChange={e => setDuree(Number(e.target.value))} />
+                          <div className="slider-labels"><span>5 ans</span><span>30 ans</span></div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
                 {/* Mensualités */}
                 <div style={{ background: '#f7f4f0', borderRadius: '10px', padding: '16px 18px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>
-                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{"Mensualité crédit"}</span>
+                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{typeCredit === 'in_fine' ? "Int\u00E9r\u00EAts mensuels (in fine)" : "Mensualit\u00E9 cr\u00E9dit"}</span>
                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{fmt(mensualiteCredit)} {'\u20AC'}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>

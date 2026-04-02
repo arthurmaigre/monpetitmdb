@@ -424,6 +424,10 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 - **TVA sur marge MdB** : marge = DVF net vendeur - prix_fai. Le prix_fai inclut les frais agence achat, ce qui sous-estime legerement la marge (favorable au MdB). **Axe d'amelioration** : ajouter un parametre "frais agence achat" pour retrouver le prix net vendeur a l'achat et calculer la marge TVA exacte.
 - **Cashflow brut dans simulateur financement** : affiche toutes les lignes (loyer, charges recup, charges copro, TF, credit, assurance). Donnees manquantes = input editable rouge, jaune si renseigne 1 user, vert si valide
 - **MdB toujours a l'IS** : pas de regime IR pour marchand de biens, pas d'amortissement (biens = stock)
+- **Frais notaire MdB** : simulateur = 2.5% si regime profil MdB, 7.5% sinon. Chaque PnlColonne recalcule son propre financement (colMontantEmprunte) selon son regime (2.5% MdB, fraisNotaireBase sinon). Note sous le titre si different du simulateur.
+- **Pret in fine** : toggle dans simulateur (amortissable/in fine). In fine = interets seuls, capital rembourse a la revente, duree 1-5 ans. Passe dans `financement.typeCredit`. PnlColonne adapte mensualite + CRD.
+- **Bilan revente** : cashflow locatif cumule + cashflow achat-revente net (emprunt + PV nette - CRD). Infobulles avec detail du calcul.
+- **Infobulles** : format uniforme (definition + calcul chiffre + subtilite). Acronymes explicites. Mentions "Modifiable dans Mes parametres → section". `text-transform: none` sur tooltip pour eviter heritage uppercase.
 - **TVA sur marge MdB** : marge × 20/120 (TVA "en dedans", pas × 20%)
 - **profil_locataire = "NC"** : traite comme vide dans l'UI (Non communique en grise)
 - **Admin conditionne** : lien Administration visible uniquement si `profiles.role = 'admin'`
