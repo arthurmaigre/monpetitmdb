@@ -97,9 +97,9 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
 // Send email via Brevo API
 // ──────────────────────────────────────────────────────────────────────────────
 
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+async function sendEmail(to: string, subject: string, html: string): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.BREVO_API_KEY
-  if (!apiKey) { console.error('BREVO_API_KEY manquante'); return false }
+  if (!apiKey) return { ok: false, error: 'BREVO_API_KEY manquante' }
 
   try {
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -118,13 +118,11 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     })
     if (!res.ok) {
       const err = await res.text()
-      console.error('Brevo error:', res.status, err)
-      return false
+      return { ok: false, error: `Brevo ${res.status}: ${err}` }
     }
-    return true
-  } catch (e) {
-    console.error('Brevo fetch error:', e)
-    return false
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: `Fetch error: ${e.message}` }
   }
 }
 
@@ -172,6 +170,7 @@ export async function GET(req: NextRequest) {
 
   let totalSent = 0
   let totalBiens = 0
+  const emailErrors: any[] = []
 
   for (const alerte of alertes) {
     // Charger le profil de l'utilisateur
@@ -201,17 +200,19 @@ export async function GET(req: NextRequest) {
     // Envoyer l'email
     const subject = `${biens.length} nouveau${biens.length > 1 ? 'x' : ''} bien${biens.length > 1 ? 's' : ''} \u2014 ${alerte.nom}`
     const html = buildEmailHtml(alerte, biens)
-    const sent = await sendEmail(email, subject, html)
+    const emailResult = await sendEmail(email, subject, html)
 
-    if (sent) {
+    if (emailResult.ok) {
       totalSent++
-      // Mettre a jour last_sent_at
       await supabaseAdmin.from('alertes').update({ last_sent_at: new Date().toISOString() }).eq('id', alerte.id)
+    } else {
+      emailErrors.push({ alerte: alerte.nom, error: emailResult.error })
     }
   }
 
   // Mettre a jour cron_config
-  const result = { processed: alertes.length, sent: totalSent, biens: totalBiens }
+  const result: any = { processed: alertes.length, sent: totalSent, biens: totalBiens }
+  if (emailErrors.length > 0) result.errors = emailErrors
   await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: result }).eq('id', 'alertes')
 
   return NextResponse.json(result)
