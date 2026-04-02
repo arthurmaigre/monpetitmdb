@@ -103,9 +103,8 @@ async function sendEmail(to: string, subject: string, html: string): Promise<{ o
   if (!apiKey) {
     // Debug: lister toutes les vars qui contiennent BREVO ou MDB
     const allKeys = Object.keys(process.env)
-    const brevoKeys = allKeys.filter(k => k.toUpperCase().includes('BREVO') || k.toUpperCase().includes('MDB_BREVO'))
-    const total = allKeys.length
-    return { ok: false, error: `Cle manquante. process.env['BREVO_API_KEY']=${typeof process.env['BREVO_API_KEY']}. Total vars: ${total}. BREVO vars: [${brevoKeys.join(',')}]` }
+    const bKeys = allKeys.filter(k => k.startsWith('B') || k.startsWith('M')).sort().join(', ')
+    return { ok: false, error: `Cle manquante. Vars B/M: [${bKeys}]` }
   }
 
   try {
