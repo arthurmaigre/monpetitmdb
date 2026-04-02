@@ -25,6 +25,8 @@ async function runEstimationBatch(limit: number) {
   for (const bien of (biens || [])) {
     if (!bien.surface || !bien.prix_fai || !bien.ville) {
       skipped++
+      // Marquer comme traite pour ne pas re-selectionner (sera retente dans 30j)
+      await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
       continue
     }
 
@@ -92,9 +94,13 @@ async function runEstimationBatch(limit: number) {
           .eq('id', bien.id)
         done++
       } else {
+        // Pas de comparables DVF — marquer comme traite (retente dans 30j)
+        await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
         errors++
       }
     } catch {
+      // Erreur API — marquer comme traite (retente dans 30j)
+      await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
       errors++
     }
 
