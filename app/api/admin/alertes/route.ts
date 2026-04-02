@@ -99,7 +99,10 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
 
 async function sendEmail(to: string, subject: string, html: string): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.BREVO_API_KEY
-  if (!apiKey) return { ok: false, error: 'BREVO_API_KEY manquante' }
+  if (!apiKey) {
+    const envKeys = Object.keys(process.env).filter(k => k.includes('BREVO')).join(', ')
+    return { ok: false, error: `BREVO_API_KEY manquante. Variables BREVO trouvees: [${envKeys || 'aucune'}]` }
+  }
 
   try {
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
