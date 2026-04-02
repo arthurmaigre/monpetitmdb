@@ -101,10 +101,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<{ o
   const apiKey = process.env['BREVO_API_KEY']
   const senderEmail = process.env['BREVO_SENDER_EMAIL'] || 'arthur@monpetitmdb.fr'
   if (!apiKey) {
-    // Debug: lister toutes les vars qui contiennent BREVO ou MDB
-    const allKeys = Object.keys(process.env)
-    const bKeys = allKeys.filter(k => k.startsWith('B') || k.startsWith('M')).sort().join(', ')
-    return { ok: false, error: `Cle manquante. Vars B/M: [${bKeys}]` }
+    return { ok: false, error: 'BREVO_API_KEY manquante' }
   }
 
   try {
@@ -162,22 +159,6 @@ function queryBiensForAlerte(filtres: any, sinceDate: string) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  // Debug temporaire : test direct env var
-  const brevoTest = process.env['BREVO_API_KEY']
-  if (!brevoTest) {
-    // Essayer de lire dynamiquement
-    const envName = 'BREVO' + '_API_' + 'KEY'
-    const brevoDyn = process.env[envName]
-    return NextResponse.json({
-      debug: true,
-      brevo_direct: typeof brevoTest,
-      brevo_dynamic: typeof brevoDyn,
-      brevo_dyn_val: brevoDyn ? brevoDyn.slice(0, 10) + '...' : 'undefined',
-      all_env_count: Object.keys(process.env).length,
-      sample_keys: Object.keys(process.env).slice(0, 20).sort()
-    })
-  }
-
   const isAuthorized = await checkAdminOrCron(req)
   if (!isAuthorized) return NextResponse.json({ error: 'Non autoris\u00E9' }, { status: 401 })
 
