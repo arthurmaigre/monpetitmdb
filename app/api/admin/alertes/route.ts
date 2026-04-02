@@ -98,10 +98,13 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function sendEmail(to: string, subject: string, html: string): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = process.env.MDB_BREVO_KEY
+  // Lire la cle Brevo depuis cron_config.params (contourne le bug env vars Vercel)
+  const { data: cronConfig } = await supabaseAdmin.from('cron_config').select('params').eq('id', 'alertes').single()
+  const apiKey = (cronConfig?.params as any)?.brevo_api_key
   if (!apiKey) {
-    return { ok: false, error: 'MDB_BREVO_KEY manquante' }
+    return { ok: false, error: 'brevo_api_key manquante dans cron_config.params. Ajoutez-la via: UPDATE cron_config SET params = jsonb_set(params, \'{brevo_api_key}\', \'"votre_cle"\') WHERE id = \'alertes\'' }
   }
+  const senderEmail = (cronConfig?.params as any)?.brevo_sender_email || 'arthur@monpetitmdb.fr'
 
   try {
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -112,7 +115,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<{ o
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: 'Mon Petit MDB', email: process.env.BREVO_SENDER_EMAIL || 'alertes@monpetitmdb.fr' },
+        sender: { name: 'Mon Petit MDB', email: senderEmail },
         to: [{ email: to }],
         subject,
         htmlContent: html,
