@@ -178,8 +178,17 @@ export async function GET(req: NextRequest) {
     const profile = (alerte as any).profiles
     if (profile?.plan !== 'expert') continue
 
-    // Date de reference : dernier envoi ou 24h
-    const sinceDate = alerte.last_sent_at || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // Verifier la frequence : hebdomadaire = skip si dernier envoi < 7 jours
+    if (alerte.frequence === 'hebdomadaire' && alerte.last_sent_at) {
+      const daysSince = (Date.now() - new Date(alerte.last_sent_at).getTime()) / (1000 * 60 * 60 * 24)
+      if (daysSince < 7) continue
+    }
+
+    // Date de reference : dernier envoi ou 24h (quotidien) / 7j (hebdomadaire)
+    const defaultSince = alerte.frequence === 'hebdomadaire'
+      ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const sinceDate = alerte.last_sent_at || defaultSince
 
     // Chercher les nouveaux biens
     const { data: biens, error: biensError } = await queryBiensForAlerte(alerte.filtres || {}, sinceDate)
