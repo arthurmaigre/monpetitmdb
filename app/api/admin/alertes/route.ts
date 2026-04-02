@@ -100,7 +100,10 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
 async function sendEmail(to: string, subject: string, html: string): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.BREVO_API_KEY
   if (!apiKey) {
-    return { ok: false, error: `BREVO_API_KEY manquante. Type: ${typeof process.env.BREVO_API_KEY}. Debut: ${(process.env.BREVO_API_KEY || '').slice(0, 8)}` }
+    const hasCron = !!process.env.CRON_SECRET
+    const hasAnth = !!process.env.ANTHROPIC_API_KEY
+    const hasSupa = !!process.env.SUPABASE_SECRET_KEY
+    return { ok: false, error: `BREVO_API_KEY manquante. Autres vars: CRON=${hasCron}, ANTHROPIC=${hasAnth}, SUPA=${hasSupa}` }
   }
 
   try {
