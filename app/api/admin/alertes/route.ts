@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
   // Charger toutes les alertes actives
   const { data: alertes, error: alertesError } = await supabaseAdmin
     .from('alertes')
-    .select('*, profiles!inner(email, plan)')
+    .select('*')
     .eq('enabled', true)
 
   if (alertesError) return NextResponse.json({ error: alertesError.message }, { status: 500 })
@@ -174,8 +174,12 @@ export async function GET(req: NextRequest) {
   let totalBiens = 0
 
   for (const alerte of alertes) {
-    // Verifier que l'utilisateur est Expert
-    const profile = (alerte as any).profiles
+    // Charger le profil de l'utilisateur
+    const { data: profile } = await supabaseAdmin.from('profiles').select('plan, email:id').eq('id', alerte.user_id).single()
+    // Recuperer l'email depuis auth.users
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(alerte.user_id)
+    const email = authUser?.user?.email
+    if (!email) continue
     if (profile?.plan !== 'expert') continue
 
     // Verifier la frequence : hebdomadaire = skip si dernier envoi < 7 jours
@@ -199,7 +203,7 @@ export async function GET(req: NextRequest) {
     // Envoyer l'email
     const subject = `${biens.length} nouveau${biens.length > 1 ? 'x' : ''} bien${biens.length > 1 ? 's' : ''} \u2014 ${alerte.nom}`
     const html = buildEmailHtml(alerte, biens)
-    const sent = await sendEmail(profile.email, subject, html)
+    const sent = await sendEmail(email, subject, html)
 
     if (sent) {
       totalSent++
