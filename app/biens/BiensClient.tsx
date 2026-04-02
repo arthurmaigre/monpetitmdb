@@ -65,6 +65,12 @@ export default function BiensPage() {
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [userPlan, setUserPlan] = useState<string>('free')
   const [userStrategie, setUserStrategie] = useState<string>('')
+  const [showAlertModal, setShowAlertModal] = useState(false)
+  const [alertNom, setAlertNom] = useState('')
+  const [alertFrequence, setAlertFrequence] = useState('quotidien')
+  const [alertSaving, setAlertSaving] = useState(false)
+  const [alertSuccess, setAlertSuccess] = useState(false)
+  const [alertError, setAlertError] = useState('')
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
   const [tableWidth, setTableWidth] = useState(0)
@@ -223,6 +229,41 @@ export default function BiensPage() {
     }
     load()
   }, [])
+
+  function openAlertModal() {
+    const filtresResume = [strategie, metropole !== 'Toutes' ? metropole : '', selectedCommune?.nom_commune, prixMax ? `< ${Number(prixMax).toLocaleString('fr-FR')}\u00A0\u20AC` : ''].filter(Boolean).join(' \u2014 ')
+    setAlertNom(filtresResume || 'Nouvelle alerte')
+    setAlertFrequence('quotidien')
+    setAlertError(''); setAlertSuccess(false)
+    setShowAlertModal(true)
+  }
+
+  async function createAlertFromFilters() {
+    if (!userToken || !alertNom) return
+    setAlertSaving(true); setAlertError('')
+    const body: Record<string, any> = { nom: alertNom, strategie_mdb: strategie || 'Locataire en place', frequence: alertFrequence }
+    if (metropole && metropole !== 'Toutes') body.metropole = metropole
+    if (selectedCommune?.nom_commune) body.ville = selectedCommune.nom_commune
+    if (selectedCommune?.code_postal && selectedCommune.code_postal !== 'tous') body.code_postal = selectedCommune.code_postal
+    if (prixMin) body.prix_min = prixMin
+    if (prixMax) body.prix_max = prixMax
+    if (surfaceMin) body.surface_min = surfaceMin
+    if (surfaceMax) body.surface_max = surfaceMax
+    if (rendMin) body.rendement_min = rendMin
+    if (scoreTravauxMin) body.score_travaux_min = scoreTravauxMin
+    try {
+      const res = await fetch('/api/alertes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) { setAlertError(data.error || 'Erreur'); setAlertSaving(false); return }
+      setAlertSuccess(true)
+      setTimeout(() => setShowAlertModal(false), 1500)
+    } catch { setAlertError('Erreur r\u00E9seau') }
+    setAlertSaving(false)
+  }
 
   function handleCommuneSearch(value: string) {
     setCommuneSearch(value)
@@ -539,6 +580,11 @@ export default function BiensPage() {
               {(strategie === 'Travaux lourds' ? TRIS_TRAVAUX : TRIS).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
+          {userPlan === 'expert' && strategie && (
+            <button onClick={openAlertModal} style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #c0392b', background: '#fff', fontSize: '12px', fontWeight: 600, color: '#c0392b', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+              {"\uD83D\uDD14 Cr\u00E9er une alerte"}
+            </button>
+          )}
           <div className="view-toggle">
             <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
             <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
@@ -930,6 +976,55 @@ export default function BiensPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {/* Modal alerte */}
+      {showAlertModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }} onClick={() => setShowAlertModal(false)}>
+          <div style={{ background: '#fff', borderRadius: '16px', maxWidth: '440px', width: '92%', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 700, color: '#1a1210', margin: 0 }}>{"\uD83D\uDD14 Cr\u00E9er une alerte"}</h2>
+                <button onClick={() => setShowAlertModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#7a6a60', lineHeight: 1 }}>{'\u00D7'}</button>
+              </div>
+              <p style={{ fontSize: '13px', color: '#7a6a60', margin: '0 0 16px' }}>{"Recevez par email les nouveaux biens correspondant \u00E0 ces crit\u00E8res."}</p>
+            </div>
+            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>Nom de l'alerte</label>
+                <input value={alertNom} onChange={e => setAlertNom(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', background: '#faf8f5', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ background: '#faf8f5', borderRadius: '8px', padding: '12px', fontSize: '13px', color: '#555', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>{"Crit\u00E8res (filtres en cours)"}</div>
+                {strategie && <div>{"\u2022 Strat\u00E9gie : "}<strong>{strategie}</strong></div>}
+                {metropole && metropole !== 'Toutes' && <div>{"\u2022 M\u00E9tropole : "}<strong>{metropole}</strong></div>}
+                {selectedCommune?.nom_commune && <div>{"\u2022 Commune : "}<strong>{selectedCommune.nom_commune}</strong></div>}
+                {prixMin && <div>{"\u2022 Prix min : "}<strong>{Number(prixMin).toLocaleString('fr-FR')}{"\u00A0\u20AC"}</strong></div>}
+                {prixMax && <div>{"\u2022 Prix max : "}<strong>{Number(prixMax).toLocaleString('fr-FR')}{"\u00A0\u20AC"}</strong></div>}
+                {surfaceMin && <div>{"\u2022 Surface min : "}<strong>{surfaceMin}{"\u00A0m\u00B2"}</strong></div>}
+                {surfaceMax && <div>{"\u2022 Surface max : "}<strong>{surfaceMax}{"\u00A0m\u00B2"}</strong></div>}
+                {rendMin && <div>{"\u2022 Rendement min : "}<strong>{rendMin}{"\u00A0%"}</strong></div>}
+                {scoreTravauxMin && <div>{"\u2022 Score travaux min : "}<strong>{scoreTravauxMin}</strong></div>}
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Fr\u00E9quence"}</label>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button type="button" onClick={() => setAlertFrequence('quotidien')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: alertFrequence === 'quotidien' ? '#1a1210' : '#fff', color: alertFrequence === 'quotidien' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Quotidien</button>
+                  <button type="button" onClick={() => setAlertFrequence('hebdomadaire')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: alertFrequence === 'hebdomadaire' ? '#1a1210' : '#fff', color: alertFrequence === 'hebdomadaire' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Hebdomadaire</button>
+                </div>
+              </div>
+              {alertError && <p style={{ color: '#c0392b', fontSize: '13px', margin: 0 }}>{alertError}</p>}
+              {alertSuccess ? (
+                <div style={{ background: '#d4f5e0', color: '#1a7a40', borderRadius: '8px', padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px' }}>
+                  {"\u2713 Alerte cr\u00E9\u00E9e avec succ\u00E8s"}
+                </div>
+              ) : (
+                <button onClick={createAlertFromFilters} disabled={alertSaving || !alertNom} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: 'none', background: '#c0392b', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: alertSaving ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: alertSaving || !alertNom ? 0.7 : 1 }}>
+                  {alertSaving ? "Cr\u00E9ation..." : "Cr\u00E9er l'alerte"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
