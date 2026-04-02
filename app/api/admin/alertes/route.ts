@@ -93,7 +93,12 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
               <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 12px 0 10px;">
                 <tr>
                   <td style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 800; color: #1a1210; letter-spacing: -0.02em;">${prix}</td>
-                  ${rendement ? `<td style="text-align: right; vertical-align: bottom;"><span style="font-size: 11px; color: #7a6a60; display: block;">Rendement brut</span><span style="font-size: 16px; font-weight: 800; color: #c0392b;">${rendement}</span></td>` : ''}
+                  ${rendement ? (() => {
+                    const r = b.rendement_brut * 100
+                    const rdtColor = r >= 7 ? '#1a7a40' : r >= 5 ? '#f0a830' : '#c0392b'
+                    const rdtBg = r >= 7 ? '#d4f5e0' : r >= 5 ? '#fef9e7' : '#fde8e8'
+                    return `<td style="text-align: right; vertical-align: bottom;"><span style="display: inline-block; padding: 6px 14px; border-radius: 8px; background: ${rdtBg};"><span style="font-size: 10px; color: #7a6a60; display: block; text-align: center;">Rdt brut</span><span style="font-size: 16px; font-weight: 800; color: ${rdtColor}; display: block; text-align: center;">${rendement}</span></span></td>`
+                  })() : ''}
                 </tr>
               </table>
               <!-- Pills -->
