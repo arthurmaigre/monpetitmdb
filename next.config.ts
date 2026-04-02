@@ -1,3 +1,4 @@
+// Force rebuild pour variables Brevo
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
