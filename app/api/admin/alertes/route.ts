@@ -54,10 +54,19 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
 
     // Pills selon strategie
     const pillsArr: string[] = []
+    // Pill rendement avec code couleur
+    const rdtPill = rendement ? (() => {
+      const r = b.rendement_brut * 100
+      const bg = r >= 7 ? '#d4f5e0' : r >= 5 ? '#fef9e7' : '#fde8e8'
+      const color = r >= 7 ? '#1a7a40' : r >= 5 ? '#856404' : '#c0392b'
+      return pill(bg, color, `${rendement} Rdt brut`)
+    })() : ''
+
     if (isIDR) {
       if (b.nb_lots) pillsArr.push(pill('#d4ddf5', '#2a4a8a', `${b.nb_lots} lots`))
       if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
       if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
+      if (rdtPill) pillsArr.push(rdtPill)
       if (b.monopropriete) pillsArr.push(pill('#d4f5e0', '#1a7a40', 'Monopropri\u00E9t\u00E9'))
     } else if (isTravaux) {
       if (b.score_travaux) pillsArr.push(pill('#fef9e7', '#856404', `Travaux ${b.score_travaux}/5`))
@@ -66,6 +75,7 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
     } else {
       if (b.loyer) pillsArr.push(pill('#f7f4f0', '#7a6a60', `${fmt(b.loyer)}\u00A0\u20AC/mois`))
       if (prixM2) pillsArr.push(pill('#f7f4f0', '#7a6a60', prixM2))
+      if (rdtPill) pillsArr.push(rdtPill)
       if (b.dpe) pillsArr.push(pill(DPE_COLORS[b.dpe] || '#7a6a60', '#fff', `DPE ${b.dpe}`))
       if (b.profil_locataire && b.profil_locataire !== 'NC') pillsArr.push(pill('#f7f4f0', '#7a6a60', b.profil_locataire))
     }
@@ -93,12 +103,7 @@ function buildEmailHtml(alerte: any, biens: any[]): string {
               <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 12px 0 10px;">
                 <tr>
                   <td style="font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 800; color: #1a1210; letter-spacing: -0.02em;">${prix}</td>
-                  ${rendement ? (() => {
-                    const r = b.rendement_brut * 100
-                    const rdtColor = r >= 7 ? '#1a7a40' : r >= 5 ? '#f0a830' : '#c0392b'
-                    const rdtBg = r >= 7 ? '#d4f5e0' : r >= 5 ? '#fef9e7' : '#fde8e8'
-                    return `<td style="text-align: right; vertical-align: bottom;"><span style="display: inline-block; padding: 6px 14px; border-radius: 8px; background: ${rdtBg};"><span style="font-size: 10px; color: #7a6a60; display: block; text-align: center;">Rdt brut</span><span style="font-size: 16px; font-weight: 800; color: ${rdtColor}; display: block; text-align: center;">${rendement}</span></span></td>`
-                  })() : ''}
+                  <td></td>
                 </tr>
               </table>
               <!-- Pills -->
