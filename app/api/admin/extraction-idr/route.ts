@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { cursor: initialCursor } = body
     const startTime = Date.now()
-    const MAX_MS = 50000
+    const MAX_MS = 25000
 
     // Count remaining
     const { count: totalRemaining } = await supabaseAdmin

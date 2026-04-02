@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { cursor: initialCursor, withPhotos = false } = body
     const startTime = Date.now()
-    const MAX_MS = 50000
+    const MAX_MS = 25000 // 25s max (cron-job.org timeout 30s)
 
     // Count remaining
     const { count: totalRemaining } = await supabaseAdmin
