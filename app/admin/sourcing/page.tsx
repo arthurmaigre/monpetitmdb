@@ -1372,6 +1372,7 @@ export default function AdminSourcingPage() {
               { title: 'Validation (Regex)', icon: '\uD83D\uDD0D', color: '#f0a830', ids: ['regex'] },
               { title: 'IA (Claude Haiku)', icon: '\uD83E\uDDE0', color: '#1a7a40', ids: ['extraction', 'score_travaux', 'extraction_idr'] },
               { title: 'Estimation DVF', icon: '\uD83D\uDCCA', color: '#2a4a8a', ids: ['estimation'] },
+              { title: 'Alertes email', icon: '\uD83D\uDD14', color: '#c0392b', ids: ['alertes'] },
             ]
 
             const progressMap: Record<string, { done: number; total: number }> = {
