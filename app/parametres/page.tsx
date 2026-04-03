@@ -32,6 +32,7 @@ export default function ParametresPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [alertes, setAlertes] = useState<any[]>([])
+  const [maxAlertes, setMaxAlertes] = useState(5)
   const [showAlertForm, setShowAlertForm] = useState(false)
   const [alertForm, setAlertForm] = useState<Record<string, any>>({ nom: '', strategie_mdb: 'Locataire en place', frequence: 'quotidien' })
   const [alertSaving, setAlertSaving] = useState(false)
@@ -47,9 +48,9 @@ export default function ParametresPage() {
         const data = await res.json()
         setProfile(data.profile)
         setPlan(data.profile?.plan || 'free')
-        if (data.profile?.plan === 'expert') {
+        if (data.profile?.plan === 'pro' || data.profile?.plan === 'expert') {
           const aRes = await fetch('/api/alertes', { headers: { Authorization: `Bearer ${session.access_token}` } })
-          if (aRes.ok) { const aData = await aRes.json(); setAlertes(aData.alertes || []) }
+          if (aRes.ok) { const aData = await aRes.json(); setAlertes(aData.alertes || []); setMaxAlertes(aData.maxAlertes || 1) }
         }
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement du profil')
@@ -257,11 +258,17 @@ export default function ParametresPage() {
                   </select>
                 </div>
                 <div className="profil-field">
-                  <label className="profil-label" htmlFor="strategie-select">{"Strat\u00E9gie MDB"}<Tooltip text={"La strat\u00E9gie d\u00E9termine quels biens sont visibles dans le listing. En plan Pro, vous acc\u00E9dez \u00E0 1 strat\u00E9gie. En Expert, toutes les strat\u00E9gies sont accessibles."} /></label>
-                  <select id="strategie-select" className="profil-select" value={profile?.strategie_mdb || 'Locataire en place'} onChange={e => update('strategie_mdb', e.target.value)} aria-label="Strat\u00E9gie MDB">
+                  <label className="profil-label" htmlFor="strategie-select">{"Strat\u00E9gie MDB principale"}<Tooltip text={"Les strat\u00E9gies d\u00E9terminent quels biens sont visibles dans le listing. En plan Pro, vous acc\u00E9dez \u00E0 2 strat\u00E9gies. En Expert, toutes les strat\u00E9gies sont accessibles."} /></label>
+                  <select id="strategie-select" className="profil-select" value={profile?.strategie_mdb || 'Locataire en place'} onChange={e => update('strategie_mdb', e.target.value)} aria-label={"Strat\u00E9gie MDB principale"}>
                     <option value="Locataire en place">Locataire en place</option>
                     <option value="Travaux lourds">Travaux lourds</option>
-                    <option value="Immeuble de rapport">Immeuble de rapport</option>
+                    <option value="Division">Division</option>
+                  </select>
+                </div>
+                <div className="profil-field">
+                  <label className="profil-label" htmlFor="strategie2-select">{"Strat\u00E9gie MDB secondaire"}<Tooltip text={"Votre seconde strat\u00E9gie. Immeuble de rapport est r\u00E9serv\u00E9 au plan Expert."} /></label>
+                  <select id="strategie2-select" className="profil-select" value={profile?.strategie_mdb_2 || 'Travaux lourds'} onChange={e => update('strategie_mdb_2', e.target.value)} aria-label={"Strat\u00E9gie MDB secondaire"}>
+                    {['Locataire en place', 'Travaux lourds', 'Division'].filter(s => s !== profile?.strategie_mdb).map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 {profile?.pro_config_updated_at && (() => {
@@ -270,7 +277,7 @@ export default function ParametresPage() {
                   const canChange = Date.now() >= next.getTime()
                   return !canChange ? (
                     <p style={{ fontSize: '11px', color: '#7a6a60', fontStyle: 'italic', margin: '0' }}>
-                      {`Prochain changement de strat\u00E9gie et r\u00E9gime de comparaison possible le ${next.toLocaleDateString('fr-FR')}.`}
+                      {`Prochain changement de strat\u00E9gies et r\u00E9gime de comparaison possible le ${next.toLocaleDateString('fr-FR')}.`}
                     </p>
                   ) : null
                 })()}
@@ -417,8 +424,8 @@ export default function ParametresPage() {
           </button>
         </form>
 
-        {/* Section Alertes — Expert uniquement */}
-        {plan === 'expert' && (
+        {/* Section Alertes — Pro (1 alerte) et Expert (5 alertes) */}
+        {(plan === 'pro' || plan === 'expert') && (
           <div style={{ marginTop: '32px' }}>
             <div className="profil-section">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -426,7 +433,7 @@ export default function ParametresPage() {
                   <h2 className="profil-section-title" style={{ margin: 0 }}>Mes alertes</h2>
                   <p className="profil-section-desc" style={{ margin: '4px 0 0' }}>{"Recevez par email les nouveaux biens correspondant \u00E0 vos crit\u00E8res."}</p>
                 </div>
-                {alertes.length < 5 && (
+                {alertes.length < maxAlertes && (
                   <button onClick={() => setShowAlertForm(true)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#c0392b', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
                     + Nouvelle alerte
                   </button>

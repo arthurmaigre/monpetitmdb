@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autoris\u00E9' }, { status: 401 })
 
   const { data: profile } = await supabaseAdmin.from('profiles').select('plan').eq('id', user.id).single()
-  if (profile?.plan !== 'expert') return NextResponse.json({ error: 'R\u00E9serv\u00E9 au plan Expert' }, { status: 403 })
+  const plan = profile?.plan || 'free'
+  if (plan !== 'pro' && plan !== 'expert') return NextResponse.json({ error: 'R\u00E9serv\u00E9 aux plans Pro et Expert' }, { status: 403 })
 
   const { data, error } = await supabaseAdmin
     .from('alertes')
@@ -30,7 +31,8 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ alertes: data })
+  const maxAlertes = plan === 'expert' ? 5 : 1
+  return NextResponse.json({ alertes: data, maxAlertes })
 }
 
 // POST — créer une alerte
@@ -39,11 +41,12 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autoris\u00E9' }, { status: 401 })
 
   const { data: profile } = await supabaseAdmin.from('profiles').select('plan').eq('id', user.id).single()
-  if (profile?.plan !== 'expert') return NextResponse.json({ error: 'R\u00E9serv\u00E9 au plan Expert' }, { status: 403 })
+  const plan = profile?.plan || 'free'
+  if (plan !== 'pro' && plan !== 'expert') return NextResponse.json({ error: 'R\u00E9serv\u00E9 aux plans Pro et Expert' }, { status: 403 })
 
-  // Max 5 alertes par utilisateur
+  const maxAlertes = plan === 'expert' ? 5 : 1
   const { count } = await supabaseAdmin.from('alertes').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
-  if ((count ?? 0) >= 5) return NextResponse.json({ error: 'Maximum 5 alertes' }, { status: 400 })
+  if ((count ?? 0) >= maxAlertes) return NextResponse.json({ error: `Maximum ${maxAlertes} alerte${maxAlertes > 1 ? 's' : ''}` }, { status: 400 })
 
   const body = await req.json()
   const { nom, strategie_mdb, metropole, ville, code_postal, prix_min, prix_max, surface_min, surface_max, rendement_min, score_travaux_min, frequence } = body

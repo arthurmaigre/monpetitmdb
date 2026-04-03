@@ -19,10 +19,10 @@ const REGIMES = [
   { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
 ]
 
-const STRATEGIES = [
+const STRATEGIES_PRO = [
   { value: 'Locataire en place', label: 'Locataire en place' },
   { value: 'Travaux lourds', label: 'Travaux lourds' },
-  { value: 'Immeuble de rapport', label: 'Immeuble de rapport' },
+  { value: 'Division', label: 'Division' },
 ]
 
 export default function PricingCta({ plan, label, className }: PricingCtaProps) {
@@ -31,6 +31,7 @@ export default function PricingCta({ plan, label, className }: PricingCtaProps) 
   const [selectedRegime, setSelectedRegime] = useState('lmnp_reel_bic')
   const [selectedRegime2, setSelectedRegime2] = useState('nu_reel_foncier')
   const [selectedStrategie, setSelectedStrategie] = useState('Locataire en place')
+  const [selectedStrategie2, setSelectedStrategie2] = useState('Travaux lourds')
 
   async function goToCheckout() {
     setLoading(true)
@@ -46,7 +47,7 @@ export default function PricingCta({ plan, label, className }: PricingCtaProps) 
         await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ regime: selectedRegime, regime2: selectedRegime2, strategie_mdb: selectedStrategie, _skipCooldown: true }),
+          body: JSON.stringify({ regime: selectedRegime, regime2: selectedRegime2, strategie_mdb: selectedStrategie, strategie_mdb_2: selectedStrategie2, _skipCooldown: true }),
         })
       }
 
@@ -118,9 +119,16 @@ export default function PricingCta({ plan, label, className }: PricingCtaProps) 
 
             <div style={{ padding: '0 28px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={labelStyle}>{"Strat\u00E9gie MDB"}</label>
-                <select value={selectedStrategie} onChange={e => setSelectedStrategie(e.target.value)} style={inputStyle}>
-                  {STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                <label style={labelStyle}>{"Strat\u00E9gie MDB principale"}</label>
+                <select value={selectedStrategie} onChange={e => { setSelectedStrategie(e.target.value); if (e.target.value === selectedStrategie2) { const alt = STRATEGIES_PRO.find(s => s.value !== e.target.value); if (alt) setSelectedStrategie2(alt.value) } }} style={inputStyle}>
+                  {STRATEGIES_PRO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>{"Strat\u00E9gie MDB secondaire"}</label>
+                <select value={selectedStrategie2} onChange={e => setSelectedStrategie2(e.target.value)} style={inputStyle}>
+                  {STRATEGIES_PRO.filter(s => s.value !== selectedStrategie).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
                 <span style={{ fontSize: '11px', color: '#b0a898', marginTop: '4px', display: 'block' }}>{"D\u00E9termine les biens visibles dans le listing"}</span>
               </div>

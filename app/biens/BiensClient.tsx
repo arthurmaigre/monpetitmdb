@@ -65,6 +65,7 @@ export default function BiensPage() {
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [userPlan, setUserPlan] = useState<string>('free')
   const [userStrategie, setUserStrategie] = useState<string>('')
+  const [userStrategie2, setUserStrategie2] = useState<string>('')
   const [showAlertModal, setShowAlertModal] = useState(false)
   const [alertNom, setAlertNom] = useState('')
   const [alertFrequence, setAlertFrequence] = useState('quotidien')
@@ -223,6 +224,7 @@ export default function BiensPage() {
         const pData = await pRes.json()
         if (pData.profile?.plan) setUserPlan(pData.profile.plan)
         if (pData.profile?.strategie_mdb) setUserStrategie(pData.profile.strategie_mdb)
+        if (pData.profile?.strategie_mdb_2) setUserStrategie2(pData.profile.strategie_mdb_2)
         if (pData.profile?.budget_travaux_m2) setBudgetTravauxM2(pData.profile.budget_travaux_m2)
       }
       if (!strategie) setLoading(false)
@@ -310,9 +312,9 @@ export default function BiensPage() {
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  // Pro : 1 seule strategie (choisie a l'abonnement, stockee dans profil). Expert/Free : toutes.
-  const proStrategie = userStrategie || STRATEGIES_VISIBLES[0]
-  const strategies = userPlan === 'pro' ? [proStrategie] : STRATEGIES_VISIBLES
+  // Pro : 2 strategies (choisies a l'abonnement, stockees dans profil). Expert/Free : toutes.
+  const proStrategies = [userStrategie || STRATEGIES_VISIBLES[0], userStrategie2].filter(Boolean)
+  const strategies = userPlan === 'pro' ? proStrategies : STRATEGIES_VISIBLES
 
   // Filtres cote client (les autres sont cote serveur)
   let filtered = allBiens.filter(b => {
@@ -580,7 +582,7 @@ export default function BiensPage() {
               {(strategie === 'Travaux lourds' ? TRIS_TRAVAUX : TRIS).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
-          {userPlan === 'expert' && strategie && (
+          {(userPlan === 'pro' || userPlan === 'expert') && strategie && (
             <button onClick={openAlertModal} style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #c0392b', background: '#fff', fontSize: '12px', fontWeight: 600, color: '#c0392b', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
               {"\uD83D\uDD14 Cr\u00E9er une alerte"}
             </button>

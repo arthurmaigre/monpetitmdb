@@ -1,5 +1,6 @@
 import PricingCta from '@/components/PricingCta'
 import LandingHeader from '@/components/LandingHeader'
+import EarlyAdopterBadge from '@/components/EarlyAdopterBadge'
 
 export default function Home() {
   return (
@@ -578,6 +579,7 @@ export default function Home() {
               <h2>Commencez gratuitement</h2>
               <p>{"Passez au Pro quand vous \u00EAtes pr\u00EAt \u00E0 investir s\u00E9rieusement."}</p>
             </div>
+            <EarlyAdopterBadge />
             <div className="plans">
               {/* FREE */}
               <div className="plan">
@@ -605,14 +607,15 @@ export default function Home() {
                 <div className="plan-div" />
                 <ul className="plan-feats">
                   <li><span className="pck">{'\u2713'}</span>Tout le plan Free</li>
-                  <li><span className="pck">{'\u2713'}</span>{"1 strat\u00E9gie MDB au choix"}</li>
+                  <li><span className="pck">{'\u2713'}</span>{"2 strat\u00E9gies MDB au choix"}</li>
                   <li><span className="pck">{'\u2713'}</span>Watchlist (50 biens max)</li>
                   <li><span className="pck">{'\u2713'}</span>Simulateur fiscal complet</li>
                   <li><span className="pck">{'\u2713'}</span>{"Estimation march\u00E9 DVF"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Sc\u00E9nario de revente"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison 2 r\u00E9gimes"}</li>
+                  <li><span className="pck">{'\u2713'}</span>1 alerte email</li>
                   <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA (50 msg/jour)</li>
-                  <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Toutes les strat\u00E9gies"}</span></li>
+                  <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Immeuble de rapport"}</span></li>
                 </ul>
                 <PricingCta plan="pro" label="Essayer 14 jours gratuits" className="plan-cta" />
               </div>
@@ -624,12 +627,12 @@ export default function Home() {
                 <div className="plan-div" />
                 <ul className="plan-feats">
                   <li><span className="pck">{'\u2713'}</span>Tout le plan Pro</li>
-                  <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB"}</li>
+                  <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB (dont IDR)"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Watchlist illimit\u00E9e"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison tous les r\u00E9gimes"}</li>
+                  <li><span className="pck">{'\u2713'}</span>5 alertes email</li>
                   <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA illimit\u00E9</li>
                   <li><span className="pck">{'\u2713'}</span>Export Excel</li>
-                  <li><span className="pck">{'\u2713'}</span>Alertes nouvelles annonces</li>
                   <li><span className="pck">{'\u2713'}</span>{"Support prioritaire"}</li>
                 </ul>
                 <PricingCta plan="expert" label="Commencer avec Expert" className="plan-cta" />

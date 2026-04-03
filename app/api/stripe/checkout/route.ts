@@ -30,12 +30,25 @@ export async function POST(req: NextRequest) {
   const priceId = PRICE_IDS[plan]
   if (!priceId) return NextResponse.json({ error: 'Plan invalide' }, { status: 400 })
 
+  // Early adopter : coupon -30% a vie, limite a 100 utilisateurs
+  const earlyAdopterCoupon = process.env.STRIPE_COUPON_EARLY_ADOPTER
+  let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined
+  if (earlyAdopterCoupon) {
+    try {
+      const coupon = await stripe.coupons.retrieve(earlyAdopterCoupon)
+      if (coupon.valid) {
+        discounts = [{ coupon: earlyAdopterCoupon }]
+      }
+    } catch { /* coupon invalide ou expire, on continue sans */ }
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
     customer_email: user.email,
     metadata: { supabase_user_id: user.id, plan },
     line_items: [{ price: priceId, quantity: 1 }],
+    ...(discounts ? { discounts } : {}),
     success_url: `${req.headers.get('origin')}/mon-profil?payment=success`,
     cancel_url: `${req.headers.get('origin')}/mon-profil?payment=cancel`,
   })
