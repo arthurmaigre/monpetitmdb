@@ -54,9 +54,14 @@ async function runEstimationBatch(limit: number) {
   let errors = 0
   let skipped = 0
 
+  const errorDetails: { id: string, ville: string, raison: string }[] = []
+  const skipDetails: { id: string, raison: string }[] = []
+
   async function processBien(bien: NonNullable<typeof biens>[number]): Promise<'done' | 'error' | 'skipped'> {
     if (!bien.surface || !bien.prix_fai || !bien.ville) {
+      const manquant = [!bien.surface && 'surface', !bien.prix_fai && 'prix_fai', !bien.ville && 'ville'].filter(Boolean).join(', ')
       await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
+      skipDetails.push({ id: bien.id, raison: `donnees manquantes: ${manquant}` })
       return 'skipped'
     }
 
@@ -107,10 +112,12 @@ async function runEstimationBatch(limit: number) {
         return 'done'
       } else {
         await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
+        errorDetails.push({ id: bien.id, ville: bien.ville, raison: 'aucun comparable DVF trouve' })
         return 'error'
       }
-    } catch {
+    } catch (e) {
       await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
+      errorDetails.push({ id: bien.id, ville: bien.ville || '?', raison: e instanceof Error ? e.message : String(e) })
       return 'error'
     }
   }
@@ -123,5 +130,5 @@ async function runEstimationBatch(limit: number) {
     else skipped++
   }
 
-  return { total, done, errors, skipped }
+  return { total, done, errors, skipped, errorDetails, skipDetails }
 }
