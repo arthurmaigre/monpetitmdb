@@ -998,8 +998,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ display: 'flex', gap: '3px' }}>
-                  <button onClick={() => setOptionTVA(false)} style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', border: !optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: !optionTVA ? '#fde8e8' : '#faf8f5', color: !optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>{"Exon\u00E9r\u00E9"}</button>
-                  <button onClick={() => setOptionTVA(true)} style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', border: optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: optionTVA ? '#fde8e8' : '#faf8f5', color: optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>TVA</button>
+                  <button onClick={() => setOptionTVA(false)} style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', border: !optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: !optionTVA ? '#fde8e8' : '#faf8f5', color: !optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>Non</button>
+                  <button onClick={() => setOptionTVA(true)} style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', border: optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: optionTVA ? '#fde8e8' : '#faf8f5', color: optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>Oui</button>
                 </span>
                 <span style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', fontWeight: 600, color: tvaMarge > 0 ? '#c0392b' : '#555', minWidth: '70px', textAlign: 'right' }} className={isFree ? 'val-blur' : ''}>
                   -{fmt(Math.round(tvaMarge))} {'\u20AC'}
