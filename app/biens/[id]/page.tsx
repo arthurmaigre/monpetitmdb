@@ -467,6 +467,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
   const hasLoyer = loyer && loyer > 0
   const isMarchand = regime === 'marchand_de_biens'
+  const [optionTVA, setOptionTVA] = useState(true)
 
   // Frais de notaire propres a cette colonne : 2.5% MdB, sinon valeur profil
   const colFraisNotairePct = isMarchand ? 2.5 : (fraisNotaireBase || 7.5)
@@ -670,11 +671,12 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
     const beneficeDistribuable = pvSCI - isPV
     psPV = beneficeDistribuable > 0 ? beneficeDistribuable * 0.30 : 0
   } else if (regime === 'marchand_de_biens') {
-    // MdB toujours a l'IS : TVA sur marge + IS sur benefice
+    // MdB toujours a l'IS : IS sur benefice + TVA sur marge optionnelle (art. 268 CGI)
     // Marge TVA = prix de vente net vendeur - prix d'achat net vendeur (hors frais agence)
-    const marge = Math.max(0, prixReventeApresAgence - prixNetVendeurAchat)
-    tvaMarge = marge * 20 / 120
-    // Interets deja deduits du resultat courant en phase locative → pas re-deduits ici
+    if (optionTVA) {
+      const marge = Math.max(0, prixReventeApresAgence - prixNetVendeurAchat)
+      tvaMarge = marge * 20 / 120
+    }
     const benefice = Math.max(0, prixReventeApresAgence - prix_fai - budgetTravaux - fraisNotaireMontant - tvaMarge)
     isPV = benefice <= 42500 ? benefice * 0.15 : 42500 * 0.15 + (benefice - 42500) * 0.25
   }
@@ -995,8 +997,22 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               ]} />
           )}
           {regime === 'marchand_de_biens' && (
-            <Row label={"TVA sur marge (20%)"} value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge
-              info={`TVA calcul\u00E9e \u00AB\u00A0en dedans\u00A0\u00BB : marge (${fmt(prixReventeNetVendeur)} - ${fmt(prixNetVendeurAchat)} = ${fmt(Math.round(Math.max(0, prixReventeNetVendeur - prixNetVendeurAchat)))}\u00A0\u20AC) \u00D7 20/120 = ${fmt(Math.round(tvaMarge))}\u00A0\u20AC.`} />
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
+                <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Option TVA sur marge
+                  {!isFree && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Pour un bien ancien achet\u00E9 \u00E0 un particulier, la TVA sur marge est optionnelle (art. 260-5\u00B0 bis CGI).\n\nSans option : pas de TVA collect\u00E9e, pas de TVA r\u00E9cup\u00E9rable sur travaux.\nAvec option : TVA sur marge (20/120), mais TVA r\u00E9cup\u00E9rable sur travaux.\n\nInt\u00E9ressant si TVA r\u00E9cup\u00E9rable sur travaux > TVA sur marge."}</span></span>}
+                </span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button onClick={() => setOptionTVA(false)} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: !optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: !optionTVA ? '#fde8e8' : '#faf8f5', color: !optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>{"Exon\u00E9r\u00E9"}</button>
+                  <button onClick={() => setOptionTVA(true)} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: optionTVA ? '#fde8e8' : '#faf8f5', color: optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>TVA marge</button>
+                </div>
+              </div>
+              {optionTVA && (
+                <Row label={"TVA sur marge (20/120)"} value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge
+                  info={`TVA calcul\u00E9e \u00AB\u00A0en dedans\u00A0\u00BB : marge (${fmt(prixReventeNetVendeur)} - ${fmt(prixNetVendeurAchat)} = ${fmt(Math.round(Math.max(0, prixReventeNetVendeur - prixNetVendeurAchat)))}\u00A0\u20AC) \u00D7 20/120 = ${fmt(Math.round(tvaMarge))}\u00A0\u20AC.`} />
+              )}
+            </>
           )}
           {regime === 'sci_is' && (
             <ExpandableTaxRow label={"IS sur PV (15% / 25%)"} total={Math.round(isPV)} isFree={isFree}
