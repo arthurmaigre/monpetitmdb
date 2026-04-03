@@ -175,7 +175,7 @@ async function fetchDVFForPeriod(
   anneeMin: number, anneeMax?: number | null,
   nbPieces?: number | null
 ): Promise<DVFTransaction[]> {
-  let url = `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&nature_mutation=Vente&type_local=${dvfType}&anneemut_min=${anneeMin}&page_size=100`
+  let url = `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&nature_mutation=Vente&type_local=${dvfType}&anneemut_min=${anneeMin}&page_size=500`
   if (anneeMax) url += `&anneemut_max=${anneeMax}`
   // Filtre par nombre de pieces exact pour comparer des biens similaires
   if (nbPieces && nbPieces >= 1) {
@@ -185,7 +185,7 @@ async function fetchDVFForPeriod(
   const transactions: DVFTransaction[] = []
   let pages = 0
 
-  while (url && pages < 5) {
+  while (url && pages < 2) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
       if (!res.ok) break
