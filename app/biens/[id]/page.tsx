@@ -777,6 +777,20 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
         return null
       })()}
 
+      {/* === TOGGLE TVA MdB === */}
+      {isMarchand && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', marginBottom: '12px', background: '#faf8f5', borderRadius: '8px', border: '1px solid #e8e2d8' }}>
+          <span style={{ fontSize: '12px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            TVA sur marge
+            {!isFree && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Pour un bien ancien achet\u00E9 \u00E0 un particulier, la TVA sur marge est optionnelle (art. 260-5\u00B0 bis CGI).\n\nSans option : pas de TVA collect\u00E9e, pas de TVA r\u00E9cup\u00E9rable sur travaux.\nAvec option : TVA sur marge (20/120), mais TVA r\u00E9cup\u00E9rable sur travaux.\n\nInt\u00E9ressant si TVA r\u00E9cup\u00E9rable sur travaux > TVA sur marge."}</span></span>}
+          </span>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button onClick={() => setOptionTVA(false)} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: !optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: !optionTVA ? '#fde8e8' : '#fff', color: !optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>{"Exon\u00E9r\u00E9"}</button>
+            <button onClick={() => setOptionTVA(true)} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: optionTVA ? '#fde8e8' : '#fff', color: optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>TVA marge</button>
+          </div>
+        </div>
+      )}
+
       {/* === PARTIE LOCATIVE (annuelle) === */}
       {hasLoyer && !isTravauxLourds && (
         <>
@@ -996,23 +1010,9 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                 { label: abattements.abattementIR > 0 ? `Abattement IR (${dur} ans / -${Math.round(abattements.abattementIR)}%)` : `Abattement IR (${dur} an${dur > 1 ? 's' : ''} / 0%)`, value: abattements.abattementIR > 0 ? `-${fmt(Math.round(pvBaseIR * 0.19 - irPV))}\u00A0\u20AC` : '0\u00A0\u20AC', vert: abattements.abattementIR > 0 },
               ]} />
           )}
-          {regime === 'marchand_de_biens' && (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
-                <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Option TVA sur marge
-                  {!isFree && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Pour un bien ancien achet\u00E9 \u00E0 un particulier, la TVA sur marge est optionnelle (art. 260-5\u00B0 bis CGI).\n\nSans option : pas de TVA collect\u00E9e, pas de TVA r\u00E9cup\u00E9rable sur travaux.\nAvec option : TVA sur marge (20/120), mais TVA r\u00E9cup\u00E9rable sur travaux.\n\nInt\u00E9ressant si TVA r\u00E9cup\u00E9rable sur travaux > TVA sur marge."}</span></span>}
-                </span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button onClick={() => setOptionTVA(false)} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: !optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: !optionTVA ? '#fde8e8' : '#faf8f5', color: !optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>{"Exon\u00E9r\u00E9"}</button>
-                  <button onClick={() => setOptionTVA(true)} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: optionTVA ? '1.5px solid #c0392b' : '1px solid #e8e2d8', background: optionTVA ? '#fde8e8' : '#faf8f5', color: optionTVA ? '#c0392b' : '#7a6a60', fontFamily: "'DM Sans', sans-serif" }}>TVA marge</button>
-                </div>
-              </div>
-              {optionTVA && (
-                <Row label={"TVA sur marge (20/120)"} value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge
-                  info={`TVA calcul\u00E9e \u00AB\u00A0en dedans\u00A0\u00BB : marge (${fmt(prixReventeNetVendeur)} - ${fmt(prixNetVendeurAchat)} = ${fmt(Math.round(Math.max(0, prixReventeNetVendeur - prixNetVendeurAchat)))}\u00A0\u20AC) \u00D7 20/120 = ${fmt(Math.round(tvaMarge))}\u00A0\u20AC.`} />
-              )}
-            </>
+          {regime === 'marchand_de_biens' && optionTVA && (
+            <Row label={"TVA sur marge (20/120)"} value={`-${fmt(Math.round(tvaMarge))} \u20AC`} rouge
+              info={`TVA calcul\u00E9e \u00AB\u00A0en dedans\u00A0\u00BB : marge (${fmt(prixReventeNetVendeur)} - ${fmt(prixNetVendeurAchat)} = ${fmt(Math.round(Math.max(0, prixReventeNetVendeur - prixNetVendeurAchat)))}\u00A0\u20AC) \u00D7 20/120 = ${fmt(Math.round(tvaMarge))}\u00A0\u20AC.`} />
           )}
           {regime === 'sci_is' && (
             <ExpandableTaxRow label={"IS sur PV (15% / 25%)"} total={Math.round(isPV)} isFree={isFree}
