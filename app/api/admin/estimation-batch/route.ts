@@ -54,12 +54,10 @@ async function runEstimationBatch(limit: number) {
   let errors = 0
   let skipped = 0
 
-  for (const bien of (biens || [])) {
+  async function processBien(bien: typeof biens[number]): Promise<'done' | 'error' | 'skipped'> {
     if (!bien.surface || !bien.prix_fai || !bien.ville) {
-      // Marquer comme traite pour eviter boucle infinie (retente dans 30j)
       await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
-      skipped++
-      continue
+      return 'skipped'
     }
 
     try {
@@ -106,19 +104,23 @@ async function runEstimationBatch(limit: number) {
             estimation_details: estimation
           })
           .eq('id', bien.id)
-        done++
+        return 'done'
       } else {
-        // Pas de comparables DVF — marquer comme traite (retente dans 30j)
         await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
-        errors++
+        return 'error'
       }
     } catch {
-      // Erreur API — marquer comme traite (retente dans 30j)
       await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
-      errors++
+      return 'error'
     }
+  }
 
-    // Pas de pause — l'API DVF est deja lente (rayon adaptatif)
+  // Traiter tous les biens en parallele
+  const results = await Promise.all((biens || []).map(processBien))
+  for (const r of results) {
+    if (r === 'done') done++
+    else if (r === 'error') errors++
+    else skipped++
   }
 
   return { total, done, errors, skipped }
