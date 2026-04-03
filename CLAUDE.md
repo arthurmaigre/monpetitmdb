@@ -4,7 +4,8 @@
 SaaS de sourcing immobilier pour investisseurs particuliers (methodologie marchand de biens).
 Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Immeuble de rapport** (ex-Decoupe).
 Territoire : France entiere, 22 metropoles.
-Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 1 strategie, 2 regimes) / Expert 49€ (illimite, toutes strategies, tous regimes).
+Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 2 strategies, 2 regimes, 1 alerte email) / Expert 49€ (illimite, toutes strategies dont IDR, tous regimes, 5 alertes email).
+Early adopter : -30% a vie pour les 100 premiers abonnes (coupon Stripe `STRIPE_COUPON_EARLY_ADOPTER`).
 
 ## Stack
 - **Frontend** : Next.js App Router, TypeScript — Vercel
@@ -165,7 +166,8 @@ monpetitmdb/
 
 ## Table `profiles` — colonnes
 - `id` (FK auth.users), `role` ("admin" | "user"), `plan` ("free" | "pro" | "expert")
-- **Fiscalite** : `tmi` (int), `regime` (text)
+- **Strategie** : `strategie_mdb` (text), `strategie_mdb_2` (text) — Pro : 2 strategies (sans IDR), Expert : toutes. Cooldown 7j via `pro_config_updated_at`.
+- **Fiscalite** : `tmi` (int), `regime` (text), `regime2` (text)
 - **Financement** : `apport`, `taux_credit`, `taux_assurance`, `duree_ans`, `frais_notaire`, `objectif_cashflow`
 - **Charges recurrentes** : `assurance_pno`, `frais_gestion_pct`, `honoraires_comptable`, `cfe`, `frais_oga`
 - **Budget travaux** : `budget_travaux_m2` (JSONB : {"1": 200, "2": 500, "3": 800, "4": 1200, "5": 1800})
@@ -291,7 +293,7 @@ Sommaire : H2 visibles, H3 depliables au clic, auto-deplie si <= 15 entrees, FAQ
 - **Wording** : "Cash Flow Avant Impot" (ex cashflow brut), "Cash Flow Net d'Impot" (dans PnlColonne), "Estimation Prix de Revente" (ex Estimation marche DVF)
 - **Titres majuscules** : Caracteristiques du Bien, Donnees Locatives, Estimation Prix de Revente, etc.
 
-## Alertes email (Expert)
+## Alertes email (Pro : 1, Expert : 5)
 - **Table `alertes`** : user_id, nom, filtres (JSONB), frequence (quotidien/hebdomadaire), enabled, last_sent_at
 - **API CRUD** : `/api/alertes` (GET/POST/PATCH/DELETE), max 5 alertes par utilisateur
 - **Cron** : `/api/admin/alertes` — quotidien 9h, verifie nouveaux biens depuis last_sent_at, envoie email via Brevo API
@@ -344,6 +346,11 @@ Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monp
 - `/api/admin/extraction` — `*/2 4-12 * * *` (15 biens/appel)
 - `/api/admin/score-travaux` — `*/2 12-20 * * *` (15 biens/appel)
 - `/api/admin/extraction-idr` — `* 20-23 * * *` (3-5 biens/appel, Immeuble de rapport)
+
+### Estimation DVF batch
+- `/api/admin/estimation-batch?limit=7` — `* * * * *` (toutes les minutes, biens en parallele via Promise.all)
+- Timeout 10s par appel API, page_size 500, max 2 pages DVF
+- Biens skip/erreur marques `estimation_date=now()` pour eviter boucle infinie (retente 30j)
 
 ### Alertes email
 - `/api/admin/alertes` — `0 9 * * *` (quotidien, match nouveaux biens + envoi Brevo)
@@ -419,6 +426,7 @@ STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 STRIPE_PRICE_PRO / STRIPE_PRICE_EXPERT
+STRIPE_COUPON_EARLY_ADOPTER (coupon Stripe -30% a vie, 100 premiers abonnes)
 CRON_SECRET (pour auth Vercel Cron)
 MOTEURIMMO_API_KEY (pour ingestion depuis API routes)
 BREVO_API_KEY (email transactionnel alertes)
