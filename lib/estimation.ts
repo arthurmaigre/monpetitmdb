@@ -109,7 +109,7 @@ export async function geocodeAddress(
 
   for (const qs of queries) {
     try {
-      const res = await fetch(`https://api-adresse.data.gouv.fr/search/?${qs}`)
+      const res = await fetch(`https://api-adresse.data.gouv.fr/search/?${qs}`, { signal: AbortSignal.timeout(10000) })
       if (!res.ok) continue
       const data = await res.json()
       if (data.features && data.features.length > 0) {
@@ -187,7 +187,7 @@ async function fetchDVFForPeriod(
 
   while (url && pages < 5) {
     try {
-      const res = await fetch(url)
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
       if (!res.ok) break
       const data = await res.json()
 
