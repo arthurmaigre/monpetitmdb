@@ -759,19 +759,13 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
         const otherNotairePct = otherRegime === 'marchand_de_biens' ? 2.5 : (fraisNotaireBase || 7.5)
         const otherHasNote = otherNotairePct !== (fraisNotaire || 7.5)
         if (thisHasNote) return (
-          <div style={{ fontSize: '11px', color: '#7a6a60', background: '#faf8f5', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, fontStyle: 'italic' }}>
-            {isMarchand
-              ? `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de 2,5\u00A0% de frais de notaire (taux r\u00E9duit MdB), soit un emprunt de ${fmt(colMontantEmprunte)}\u00A0\u20AC.`
-              : `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de ${colFraisNotairePct}\u00A0% de frais de notaire, soit un emprunt de ${fmt(colMontantEmprunte)}\u00A0\u20AC.`
-            }
+          <div style={{ fontSize: '11px', color: '#7a6a60', background: '#faf8f5', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, fontStyle: 'italic', minHeight: '44px' }}>
+            {`Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s avec ${colFraisNotairePct}\u00A0% de frais de notaire${isMarchand ? ' (MdB)' : ''}, soit un emprunt de ${fmt(colMontantEmprunte)}\u00A0\u20AC.`}
           </div>
         )
         if (otherHasNote) return (
-          <div style={{ fontSize: '11px', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, visibility: 'hidden' }} aria-hidden="true">
-            {otherRegime === 'marchand_de_biens'
-              ? `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de 2,5\u00A0% de frais de notaire (taux r\u00E9duit MdB), soit un emprunt de 000\u00A0000\u00A0\u20AC.`
-              : `Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s sur la base de 7,5\u00A0% de frais de notaire, soit un emprunt de 000\u00A0000\u00A0\u20AC.`
-            }
+          <div style={{ fontSize: '11px', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, visibility: 'hidden', minHeight: '44px' }} aria-hidden="true">
+            {"Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s avec 0,0\u00A0% de frais de notaire (MdB), soit un emprunt de 000\u00A0000\u00A0\u20AC."}
           </div>
         )
         return null
