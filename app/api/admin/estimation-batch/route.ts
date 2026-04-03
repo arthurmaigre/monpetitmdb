@@ -54,7 +54,7 @@ async function runEstimationBatch(limit: number) {
   let errors = 0
   let skipped = 0
 
-  async function processBien(bien: typeof biens[number]): Promise<'done' | 'error' | 'skipped'> {
+  async function processBien(bien: NonNullable<typeof biens>[number]): Promise<'done' | 'error' | 'skipped'> {
     if (!bien.surface || !bien.prix_fai || !bien.ville) {
       await supabaseAdmin.from('biens').update({ estimation_date: new Date().toISOString(), estimation_confiance: null }).eq('id', bien.id)
       return 'skipped'
