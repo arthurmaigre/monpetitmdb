@@ -996,7 +996,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                 { label: abattements.abattementIR > 0 ? `Abattement IR (${dur} ans / -${Math.round(abattements.abattementIR)}%)` : `Abattement IR (${dur} an${dur > 1 ? 's' : ''} / 0%)`, value: abattements.abattementIR > 0 ? `-${fmt(Math.round(pvBaseIR * 0.19 - irPV))}\u00A0\u20AC` : '0\u00A0\u20AC', vert: abattements.abattementIR > 0 },
               ]} />
           )}
-          {regime === 'marchand_de_biens' && (
+          {isMarchand && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
               <span style={{ fontSize: '13px', color: '#555', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 TVA sur marge
