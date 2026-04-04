@@ -603,7 +603,7 @@ export default function Home() {
                 <div className="plan-badge">Le plus populaire</div>
                 <div className="plan-name">Pro</div>
                 <div className="plan-price">19 {'\u20AC'}</div>
-                <div className="plan-period">par mois {'\u2014'} sans engagement<span className="plan-trial">{"14 jours d\u2019essai gratuit \u2014 sans carte bancaire"}</span></div>
+                <div className="plan-period">par mois {'\u2014'} sans engagement</div>
                 <div className="plan-div" />
                 <ul className="plan-feats">
                   <li><span className="pck">{'\u2713'}</span>Tout le plan Free</li>
@@ -617,7 +617,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA (50 msg/jour)</li>
                   <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Immeuble de rapport"}</span></li>
                 </ul>
-                <PricingCta plan="pro" label="Essayer 14 jours gratuits" className="plan-cta" />
+                <PricingCta plan="pro" label="Passer au Pro" className="plan-cta" />
               </div>
               {/* EXPERT */}
               <div className="plan">

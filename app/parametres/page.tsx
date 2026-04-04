@@ -289,6 +289,13 @@ export default function ParametresPage() {
             <h2 className="profil-section-title">Financement</h2>
             <p className="profil-section-desc">{"Param\u00E8tres de cr\u00E9dit utilis\u00E9s pour calculer la mensualit\u00E9 et le cashflow."}</p>
             <div className="profil-grid">
+              <div className="profil-field" style={{ gridColumn: '1 / -1' }}>
+                <label className="profil-label">{"Type de cr\u00E9dit"}<Tooltip text={"Amortissable : vous remboursez capital + int\u00E9r\u00EAts chaque mois. In fine : vous ne payez que les int\u00E9r\u00EAts, le capital est rembours\u00E9 en une fois \u00E0 la revente."} /></label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => update('type_credit', 'amortissable')} style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: `2px solid ${(profile?.type_credit || 'amortissable') === 'amortissable' ? '#c0392b' : '#e8e2d8'}`, background: (profile?.type_credit || 'amortissable') === 'amortissable' ? '#fdf5f4' : '#fff', color: (profile?.type_credit || 'amortissable') === 'amortissable' ? '#c0392b' : '#7a6a60', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Amortissable</button>
+                  <button type="button" onClick={() => update('type_credit', 'in_fine')} style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: `2px solid ${profile?.type_credit === 'in_fine' ? '#c0392b' : '#e8e2d8'}`, background: profile?.type_credit === 'in_fine' ? '#fdf5f4' : '#fff', color: profile?.type_credit === 'in_fine' ? '#c0392b' : '#7a6a60', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>In fine</button>
+                </div>
+              </div>
               <div className="profil-field">
                 <label className="profil-label" htmlFor="apport-input">Apport ({'\u20AC'})<Tooltip text={"La somme que vous investissez de votre poche, sans emprunt. Plus l\u2019apport est \u00E9lev\u00E9, moins vous empruntez et plus le cashflow est favorable."} /></label>
                 <input id="apport-input" className="profil-input" type="number" value={profile?.apport ?? ''} onChange={e => updateNum('apport', e.target.value)} aria-label="Montant de l'apport" />

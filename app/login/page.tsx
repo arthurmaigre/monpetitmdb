@@ -33,12 +33,21 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError('Email ou mot de passe incorrect')
       setLoading(false)
     } else {
+      // Verifier si onboarding fait
+      try {
+        const res = await fetch('/api/profile', { headers: { Authorization: `Bearer ${data.session.access_token}` } })
+        const profile = await res.json()
+        if (!profile.profile?.strategie_mdb) {
+          window.location.href = '/onboarding'
+          return
+        }
+      } catch { /* fallback /biens */ }
       window.location.href = '/biens'
     }
   }

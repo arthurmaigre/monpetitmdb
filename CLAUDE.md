@@ -5,13 +5,13 @@ SaaS de sourcing immobilier pour investisseurs particuliers (methodologie marcha
 Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Immeuble de rapport** (ex-Decoupe).
 Territoire : France entiere, 22 metropoles.
 Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 2 strategies, 2 regimes, 1 alerte email) / Expert 49€ (illimite, toutes strategies dont IDR, tous regimes, 5 alertes email).
-Early adopter : -30% a vie pour les 100 premiers abonnes (coupon Stripe `STRIPE_COUPON_EARLY_ADOPTER`).
+Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD` (Stripe promotion code sur coupon `STRIPE_COUPON_EARLY_ADOPTER`). `allow_promotion_codes: true` au checkout.
 
 ## Stack
 - **Frontend** : Next.js App Router, TypeScript — Vercel
 - **DB** : Supabase Pro (West EU / Ireland) — auth + tables + storage
 - **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
-- **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode test)
+- **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
 - **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
 - **Sourcing API** : Moteur Immo (aggregateur 60+ plateformes) — module `moteurimmo_client.py`
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
@@ -46,7 +46,8 @@ monpetitmdb/
 │   │   ├── admin/estimation/   # Config estimateur (GET/PUT)
 │   │   ├── editorial/calendar/ # CRUD calendrier editorial (GET/PATCH)
 │   │   └── feedback/           # Feedbacks utilisateurs via Memo (GET/POST/DELETE)
-│   ├── auth/callback/          # OAuth callback client-side (PKCE + implicit)
+│   ├── auth/callback/          # OAuth callback client-side (PKCE + implicit), redirige /onboarding si nouveau user
+│   ├── onboarding/             # Tunnel inscription 5 etapes (infos, fiscalite, financement, abonnement, strategies)
 │   ├── page.tsx                # Landing page (hero, strategies, pricing, screenshot)
 │   ├── admin/                  # Dashboard admin (index)
 │   ├── admin/biens/            # Admin gestion biens
@@ -166,11 +167,13 @@ monpetitmdb/
 
 ## Table `profiles` — colonnes
 - `id` (FK auth.users), `role` ("admin" | "user"), `plan` ("free" | "pro" | "expert")
+- **Identite** : `prenom` (text), `nom` (text), `entreprise` (text, optionnel)
 - **Strategie** : `strategie_mdb` (text), `strategie_mdb_2` (text) — Pro : 2 strategies (sans IDR), Expert : toutes. Cooldown 7j via `pro_config_updated_at`.
 - **Fiscalite** : `tmi` (int), `regime` (text), `regime2` (text)
-- **Financement** : `apport`, `taux_credit`, `taux_assurance`, `duree_ans`, `frais_notaire`, `objectif_cashflow`
+- **Financement** : `type_credit` ("amortissable" | "in_fine", default "amortissable"), `apport` (float, montant), `apport_pct` (float, % autofinancement), `taux_credit`, `taux_assurance`, `duree_ans`, `frais_notaire`, `objectif_cashflow`
 - **Charges recurrentes** : `assurance_pno`, `frais_gestion_pct`, `honoraires_comptable`, `cfe`, `frais_oga`
 - **Budget travaux** : `budget_travaux_m2` (JSONB : {"1": 200, "2": 500, "3": 800, "4": 1200, "5": 1800})
+- **Stripe** : `stripe_customer_id` (text)
 
 ## Autres tables
 - `articles` — contenu, statut (draft/review/approved/published), slug, SEO, `cover_url` (image)
@@ -387,6 +390,20 @@ Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
 - **Email/password** : actif avec confirmation email
 - Page `/privacy` : politique de confidentialite RGPD + suppression donnees
 - Callback client-side PKCE (`app/auth/callback/page.tsx`)
+- **Onboarding** : detection nouveau user (pas de `strategie_mdb`) → redirect `/onboarding`
+
+## Tunnel d'onboarding (`/onboarding`)
+5 etapes apres la creation de compte :
+1. **Vos informations** : prenom, nom (pre-rempli Google OAuth), toggle "Je suis professionnel" → entreprise
+2. **Votre fiscalite** : TMI + regime fiscal (obligatoire)
+3. **Votre financement** : type credit (amortissable/in fine), apport (montant € ou % autofinancement), taux credit, taux assurance, duree (skippable)
+4. **Votre abonnement** : Free/Pro/Expert (meme format que landing), badge EarlyAdopterBadge avec code `EARLYBIRD`, checkout Stripe avec retour `/onboarding?step=5&plan=xxx`
+5. **Votre projet** : strategies adaptees au plan (Free=1, Pro=2 hors IDR, Expert=toutes)
+
+## Admin — Gestion utilisateurs (`/admin/users`)
+- **Colonnes** : utilisateur (prenom/nom/email), plan (editable), role (editable), strategie, Stripe (badge statut + dernier paiement + renouvellement), derniere connexion (last_sign_in_at + "il y a Xj"), inscription
+- **Suppression compte** : modale confirmation, annule abo Stripe, supprime watchlist + alertes + profil + auth user
+- **Stripe data** : fetch subscriptions + invoices en temps reel via API Stripe pour les users avec stripe_customer_id
 
 ## Commandes
 ```bash

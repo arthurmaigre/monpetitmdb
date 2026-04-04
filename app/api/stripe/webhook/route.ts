@@ -50,6 +50,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (event.type === 'invoice.payment_failed') {
+    const invoice = event.data.object as Stripe.Invoice
+    const customerId = invoice.customer as string
+    console.warn(`[Stripe] Paiement echoue pour customer ${customerId} — Stripe retentera automatiquement`)
+  }
+
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object as Stripe.Subscription
     const customerId = subscription.customer as string
