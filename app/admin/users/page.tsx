@@ -100,7 +100,7 @@ export default function AdminUsersPage() {
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .table-wrap { background: #fff; border-radius: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1100px; }
         thead tr { background: #f7f4f0; border-bottom: 2px solid #ede8e0; }
         th { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
         tbody tr { border-bottom: 1px solid #f0ede8; transition: background 0.1s; }
@@ -139,7 +139,9 @@ export default function AdminUsersPage() {
                   <th>Plan</th>
                   <th>Role</th>
                   <th>{"Strat\u00E9gie"}</th>
-                  <th>Stripe</th>
+                  <th>Statut</th>
+                  <th>Dernier paiement</th>
+                  <th>{"Renouvellement"}</th>
                   <th>{"Derni\u00E8re connexion"}</th>
                   <th>Inscription</th>
                   <th></th>
@@ -157,28 +159,32 @@ export default function AdminUsersPage() {
                     <td style={{ fontSize: '12px', color: '#7a6a60' }}>{u.strategie_mdb || '\u2014'}</td>
                     <td>
                       {u.stripe ? (
-                        <div>
-                          <span className="stripe-badge" style={{ background: u.stripe.cancel_pending ? '#f39c12' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.color || '#7a6a60') }}>
-                            {u.stripe.cancel_pending ? 'Annulation en cours' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.label || u.stripe.subscription_status || 'Inconnu')}
-                          </span>
-                          {u.stripe.cancel_pending && u.stripe.cancel_date && (
-                            <div className="stripe-info" style={{ color: '#f39c12' }}>
-                              {"Fin le "}{new Date(u.stripe.cancel_date).toLocaleDateString('fr-FR')}
-                            </div>
-                          )}
-                          {u.stripe.last_payment_date && (
-                            <div className="stripe-info">
-                              Dernier paiement : {u.stripe.last_payment_amount}{'\u20AC'} le {new Date(u.stripe.last_payment_date).toLocaleDateString('fr-FR')}
-                            </div>
-                          )}
-                          {!u.stripe.cancel_pending && u.stripe.current_period_end && (
-                            <div className="stripe-info">
-                              Renouvellement : {new Date(u.stripe.current_period_end).toLocaleDateString('fr-FR')}
-                            </div>
-                          )}
-                        </div>
+                        <span className="stripe-badge" style={{ background: u.stripe.cancel_pending ? '#f39c12' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.color || '#7a6a60') }}>
+                          {u.stripe.cancel_pending ? 'Annulation' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.label || u.stripe.subscription_status || 'Inconnu')}
+                        </span>
                       ) : (
                         <span style={{ color: '#bbb', fontSize: '12px' }}>{'\u2014'}</span>
+                      )}
+                    </td>
+                    <td style={{ fontSize: '12px', color: '#7a6a60' }}>
+                      {u.stripe?.last_payment_date ? (
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{u.stripe.last_payment_amount}{'\u20AC'}</div>
+                          <div style={{ fontSize: '11px' }}>{new Date(u.stripe.last_payment_date).toLocaleDateString('fr-FR')}</div>
+                        </div>
+                      ) : '\u2014'}
+                    </td>
+                    <td style={{ fontSize: '12px' }}>
+                      {u.stripe?.cancel_pending && u.stripe.cancel_date ? (
+                        <div style={{ color: '#f39c12', fontWeight: 500 }}>
+                          Fin le {new Date(u.stripe.cancel_date).toLocaleDateString('fr-FR')}
+                        </div>
+                      ) : u.stripe?.current_period_end ? (
+                        <div style={{ color: '#7a6a60' }}>
+                          {new Date(u.stripe.current_period_end).toLocaleDateString('fr-FR')}
+                        </div>
+                      ) : (
+                        <span style={{ color: '#bbb' }}>{'\u2014'}</span>
                       )}
                     </td>
                     <td>
