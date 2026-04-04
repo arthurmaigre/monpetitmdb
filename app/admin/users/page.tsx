@@ -158,12 +158,12 @@ export default function AdminUsersPage() {
                     <td>
                       {u.stripe ? (
                         <div>
-                          <span className="stripe-badge" style={{ background: u.stripe.cancel_at_period_end ? '#f39c12' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.color || '#7a6a60') }}>
-                            {u.stripe.cancel_at_period_end ? 'Annulation en cours' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.label || u.stripe.subscription_status || 'Inconnu')}
+                          <span className="stripe-badge" style={{ background: u.stripe.cancel_pending ? '#f39c12' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.color || '#7a6a60') }}>
+                            {u.stripe.cancel_pending ? 'Annulation en cours' : (STRIPE_STATUS_LABELS[u.stripe.subscription_status]?.label || u.stripe.subscription_status || 'Inconnu')}
                           </span>
-                          {u.stripe.cancel_at_period_end && u.stripe.current_period_end && (
+                          {u.stripe.cancel_pending && u.stripe.cancel_date && (
                             <div className="stripe-info" style={{ color: '#f39c12' }}>
-                              {"Fin le "}{new Date(u.stripe.current_period_end).toLocaleDateString('fr-FR')}
+                              {"Fin le "}{new Date(u.stripe.cancel_date).toLocaleDateString('fr-FR')}
                             </div>
                           )}
                           {u.stripe.last_payment_date && (
@@ -171,7 +171,7 @@ export default function AdminUsersPage() {
                               Dernier paiement : {u.stripe.last_payment_amount}{'\u20AC'} le {new Date(u.stripe.last_payment_date).toLocaleDateString('fr-FR')}
                             </div>
                           )}
-                          {!u.stripe.cancel_at_period_end && u.stripe.current_period_end && (
+                          {!u.stripe.cancel_pending && u.stripe.current_period_end && (
                             <div className="stripe-info">
                               Renouvellement : {new Date(u.stripe.current_period_end).toLocaleDateString('fr-FR')}
                             </div>

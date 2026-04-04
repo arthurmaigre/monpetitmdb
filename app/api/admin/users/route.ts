@@ -55,9 +55,14 @@ export async function GET(req: NextRequest) {
         ])
         const sub = subs.data[0] as any
         const inv = invoices.data[0] as any
+        const cancelPending = sub?.cancel_at_period_end || !!sub?.cancel_at
+        const cancelDate = sub?.cancel_at ? new Date(sub.cancel_at * 1000).toISOString()
+          : (sub?.cancel_at_period_end && sub?.current_period_end) ? new Date(sub.current_period_end * 1000).toISOString()
+          : null
         stripeData[u.id] = {
           subscription_status: sub?.status || null,
-          cancel_at_period_end: sub?.cancel_at_period_end || false,
+          cancel_pending: cancelPending,
+          cancel_date: cancelDate,
           current_period_end: sub?.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
           last_payment_date: inv?.created ? new Date(inv.created * 1000).toISOString() : null,
           last_payment_amount: inv?.amount_paid != null ? inv.amount_paid / 100 : null,
