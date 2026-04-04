@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
         const inv = invoices.data[0] as any
         stripeData[u.id] = {
           subscription_status: sub?.status || null,
+          cancel_at_period_end: sub?.cancel_at_period_end || false,
           current_period_end: sub?.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
           last_payment_date: inv?.created ? new Date(inv.created * 1000).toISOString() : null,
           last_payment_amount: inv?.amount_paid != null ? inv.amount_paid / 100 : null,
