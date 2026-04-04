@@ -47,6 +47,11 @@ export async function POST(req: NextRequest) {
         .from('profiles')
         .update({ plan })
         .eq('stripe_customer_id', customerId)
+    } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ plan: 'free' })
+        .eq('stripe_customer_id', customerId)
     }
   }
 
