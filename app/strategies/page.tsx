@@ -149,7 +149,7 @@ export default function StrategiesPage() {
       <div className="strat-intro">
         <div>
           <div className="strat-eyebrow">{"M\u00E9thodologie MDB"}</div>
-          <h1>{"4 fa\u00E7ons d\u2019investir comme un marchand de biens"}</h1>
+          <h1>{"4 strat\u00E9gies pour vos op\u00E9rations immobili\u00E8res"}</h1>
         </div>
         <div className="strat-intro-right">
           <p>

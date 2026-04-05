@@ -6,7 +6,7 @@ import Layout from '@/components/Layout'
 const faqs = [
   {
     question: "Qu\u2019est-ce que Mon Petit MDB\u00A0?",
-    answer: "Mon Petit MDB est une plateforme de sourcing immobilier destin\u00E9e aux investisseurs particuliers. Elle applique la m\u00E9thodologie marchand de biens pour analyser plus de 90\u00A0000 biens issus de 60+ plateformes, avec 3 strat\u00E9gies d\u2019investissement (locataire en place, travaux lourds, immeuble de rapport) et 7 r\u00E9gimes fiscaux."
+    answer: "Mon Petit MDB est une plateforme de sourcing et d\u2019analyse immobili\u00E8re destin\u00E9e aux marchands de biens et investisseurs. Elle applique la m\u00E9thodologie marchand de biens pour analyser plus de 90\u00A0000 biens issus de 60+ plateformes, avec 3 strat\u00E9gies (locataire en place, travaux lourds, immeuble de rapport) et 7 r\u00E9gimes fiscaux."
   },
   {
     question: "Quels sont les tarifs\u00A0?",

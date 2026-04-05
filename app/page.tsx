@@ -255,10 +255,10 @@ export default function Home() {
         <section>
           <div className="hero">
             <div>
-              <div className="eyebrow">Plateforme de sourcing immobilier</div>
-              <h1>Investissez comme un <em>marchand de biens</em></h1>
+              <div className="eyebrow">{"Sourcing immobilier \u2014 France enti\u00E8re"}</div>
+              <h1>{"Trouvez, analysez, d\u00E9cidez \u2014 comme un "}<em>marchand de biens</em></h1>
               <p className="hero-desc">
-                {"Mon Petit MDB agr\u00E8ge 60+ plateformes, estime les prix via les donn\u00E9es DVF et simule la fiscalit\u00E9 de vos investissements \u2014 7 r\u00E9gimes fiscaux, du micro-foncier au marchand de biens."}
+                {"Mon Petit MDB agr\u00E8ge 60+ plateformes, estime les prix via les donn\u00E9es DVF et simule chaque op\u00E9ration : achat-revente, investissement locatif ou les deux. 7 r\u00E9gimes fiscaux, du micro-foncier au marchand de biens."}
               </p>
               <div className="hero-btns">
                 <a href="/biens" className="btn-hero">{"Voir les biens disponibles \u2014 Gratuit"}</a>
@@ -332,7 +332,7 @@ export default function Home() {
         <section className="strats fade-in" id="strats">
           <div className="strats-in">
             <div className="eyebrow-w">{"4 strat\u00E9gies disponibles"}</div>
-            <h2>{"Choisissez votre angle d\u2019investissement"}</h2>
+            <h2>{"Choisissez votre strat\u00E9gie"}</h2>
             <p className="strats-desc">{"Mon Petit MDB filtre et analyse les annonces selon votre strat\u00E9gie. Chaque bien est \u00E9valu\u00E9 selon ses propres crit\u00E8res."}</p>
             <div className="strat-grid">
               <div className="strat-card">
@@ -399,8 +399,8 @@ export default function Home() {
         <section className="ss fade-in">
           <div className="ss-in">
             <div className="ss-hdr">
-              <h2>{"L\u2019outil de vos investissements"}</h2>
-              <p>{"Interface pens\u00E9e pour les investisseurs particuliers, pas pour les experts"}</p>
+              <h2>{"L\u2019outil de vos op\u00E9rations immobili\u00E8res"}</h2>
+              <p>{"Interface pens\u00E9e pour aller vite, pas pour les experts-comptables"}</p>
             </div>
             <div className="app">
               <div className="app-bar">
@@ -543,7 +543,7 @@ export default function Home() {
         {/* TEMOIGNAGES */}
         <section className="testi fade-in">
           <div className="testi-hdr">
-            <div className="eyebrow" style={{ justifyContent: 'center' }}>{"Ils investissent avec Mon Petit MDB"}</div>
+            <div className="eyebrow" style={{ justifyContent: 'center' }}>{"Ils utilisent Mon Petit MDB"}</div>
             <h2>{"Ce qu\u2019en disent nos utilisateurs"}</h2>
           </div>
           <div className="testi-grid">
@@ -577,7 +577,7 @@ export default function Home() {
             <div className="pricing-hdr">
               <div className="eyebrow" style={{ justifyContent: 'center' }}>Tarifs transparents</div>
               <h2>Commencez gratuitement</h2>
-              <p>{"Passez au Pro quand vous \u00EAtes pr\u00EAt \u00E0 investir s\u00E9rieusement."}</p>
+              <p>{"Passez au Pro quand vous \u00EAtes pr\u00EAt \u00E0 passer \u00E0 l'action."}</p>
             </div>
             <EarlyAdopterBadge />
             <div className="plans">
@@ -643,9 +643,9 @@ export default function Home() {
 
         {/* CTA FINAL */}
         <section className="cta-final fade-in">
-          <div className="eyebrow" style={{ justifyContent: 'center' }}>{"Pr\u00EAt \u00E0 investir ?"}</div>
-          <h2>{"Trouvez votre prochaine "}<em>{"opportunit\u00E9"}</em></h2>
-          <p>{"Rejoignez les investisseurs qui utilisent Mon Petit MDB pour sourcer, analyser et comparer les biens \u2014 gratuitement."}</p>
+          <div className="eyebrow" style={{ justifyContent: 'center' }}>{"Pr\u00EAt \u00E0 sourcer ?"}</div>
+          <h2>{"Trouvez votre prochaine "}<em>{"op\u00E9ration"}</em></h2>
+          <p>{"Rejoignez les marchands de biens et investisseurs qui utilisent Mon Petit MDB pour sourcer, analyser et comparer les biens \u2014 gratuitement."}</p>
           <a href="/register" className="btn-hero">{"Cr\u00E9er mon compte gratuit"}</a>
         </section>
 
@@ -654,7 +654,7 @@ export default function Home() {
           <div className="ft-top">
             <div>
               <div className="ft-logo">Mon Petit <span>MDB</span></div>
-              <p className="ft-tag">{"La m\u00E9thodologie marchand de biens accessible \u00E0 tous les investisseurs particuliers."}</p>
+              <p className="ft-tag">{"Sourcing et analyse immobili\u00E8re pour marchands de biens et investisseurs."}</p>
             </div>
             <div className="ft-links">
               <div className="ft-col">

@@ -629,7 +629,7 @@ export default function Layout({ children }: Props) {
             <div className="mdb-footer-brand">
               <div className="mdb-footer-logo">Mon Petit <span>MDB</span></div>
               <p className="mdb-footer-tagline">
-                Sourcing immobilier pour investisseurs particuliers. Méthodologie marchand de biens.
+{"Sourcing et analyse immobili\u00E8re. M\u00E9thodologie marchand de biens."}
               </p>
               <div className="mdb-footer-social" aria-label="Réseaux sociaux">
                 <a href="#" className="mdb-footer-social-link" aria-label="LinkedIn">in</a>

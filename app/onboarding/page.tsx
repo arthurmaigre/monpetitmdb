@@ -404,7 +404,7 @@ export default function OnboardingPage() {
           <div className="ob-card wide">
             <div style={{ textAlign: 'center', marginBottom: '40px' }}>
               <h1 className="ob-title">Choisissez votre abonnement</h1>
-              <p className="ob-sub" style={{ marginBottom: 16 }}>{"Commencez gratuitement. Passez au Pro quand vous \u00EAtes pr\u00EAt \u00E0 investir s\u00E9rieusement."}</p>
+              <p className="ob-sub" style={{ marginBottom: 16 }}>{"Commencez gratuitement. Passez au Pro quand vous \u00EAtes pr\u00EAt \u00E0 passer \u00E0 l'action."}</p>
               <EarlyAdopterBadge />
             </div>
             <div className="ob-plans">

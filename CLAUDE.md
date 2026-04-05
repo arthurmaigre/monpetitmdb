@@ -1,7 +1,7 @@
 # Mon Petit MDB — CLAUDE.md
 
 ## Projet
-SaaS de sourcing immobilier pour investisseurs particuliers (methodologie marchand de biens).
+SaaS de sourcing et analyse immobiliere pour marchands de biens et investisseurs (methodologie marchand de biens).
 Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Immeuble de rapport** (ex-Decoupe).
 Territoire : France entiere, 22 metropoles.
 Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 2 strategies, 2 regimes, 1 alerte email) / Expert 49€ (illimite, toutes strategies dont IDR, tous regimes, 5 alertes email).

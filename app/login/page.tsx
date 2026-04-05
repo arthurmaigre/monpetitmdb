@@ -100,7 +100,7 @@ export default function LoginPage() {
       <div className="auth-wrap">
         <div className="auth-box">
           <h1 className="auth-title">Connexion</h1>
-          <p className="auth-sub">Accédez à votre espace investisseur</p>
+          <p className="auth-sub">{"Acc\u00E9dez \u00E0 votre espace"}</p>
 
           {error && <div className="auth-error">{error}</div>}
 
