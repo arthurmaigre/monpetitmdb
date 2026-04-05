@@ -265,6 +265,13 @@ export async function GET(request: NextRequest) {
     countQuery = countQuery.gte('score_travaux', 1)
   }
 
+  const keyword = searchParams.get('keyword')
+  if (keyword) {
+    const kw = `%${keyword}%`
+    query = query.or(`moteurimmo_data->>title.ilike.${kw},moteurimmo_data->>description.ilike.${kw},ville.ilike.${kw},adresse.ilike.${kw}`)
+    countQuery = countQuery.or(`moteurimmo_data->>title.ilike.${kw},moteurimmo_data->>description.ilike.${kw},ville.ilike.${kw},adresse.ilike.${kw}`)
+  }
+
   query = query.range(from, from + limit - 1)
 
   const [{ data, error }, { count: totalCount }] = await Promise.all([query, countQuery])

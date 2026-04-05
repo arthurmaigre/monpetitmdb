@@ -49,6 +49,9 @@ export default function BiensPage() {
   const [surfaceMax, setSurfaceMax] = useState(saved.current?.surfaceMax || '')
   const [rendMin, setRendMin] = useState(saved.current?.rendMin || '')
   const [scoreTravauxMin, setScoreTravauxMin] = useState(saved.current?.scoreTravauxMin || '')
+  const [keyword, setKeyword] = useState(saved.current?.keyword || '')
+  const keywordTimeout = useRef<any>(null)
+  const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
   const [tri, setTri] = useState(saved.current?.tri || 'recent')
   const [totalBiens, setTotalBiens] = useState(0)
   const [hasMore, setHasMore] = useState(false)
@@ -94,10 +97,10 @@ export default function BiensPage() {
     try {
       sessionStorage.setItem('biens_filters', JSON.stringify({
         strategie, metropole, ville, communeSearch, selectedCommune,
-        typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, tri, view,
+        typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keyword: keywordSearch, tri, view,
       }))
     } catch {}
-  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, tri, view])
+  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, tri, view])
 
   // Sauvegarder la position de scroll avant de quitter
   useEffect(() => {
@@ -148,6 +151,7 @@ export default function BiensPage() {
     if (surfaceMax) params.set('surface_max', surfaceMax)
     if (rendMin) params.set('rendement_min', rendMin)
     if (scoreTravauxMin) params.set('score_travaux_min', scoreTravauxMin)
+    if (keywordSearch.trim()) params.set('keyword', keywordSearch.trim())
     return `/api/biens?${params.toString()}`
   }
 
@@ -173,7 +177,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, view])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -575,6 +579,21 @@ export default function BiensPage() {
               </select>
             </div>
           )}
+          <div className="filter-sep" />
+          <div className="filter-group" style={{ flex: 1 }}>
+            <label className="filter-label">{"Recherche par mots-cl\u00E9s"}</label>
+            <input
+              type="text"
+              placeholder={"Ex : terrasse, garage, vue mer..."}
+              value={keyword}
+              onChange={e => {
+                setKeyword(e.target.value)
+                if (keywordTimeout.current) clearTimeout(keywordTimeout.current)
+                keywordTimeout.current = setTimeout(() => setKeywordSearch(e.target.value), 500)
+              }}
+              style={{ width: '100%', minWidth: '180px' }}
+            />
+          </div>
           <div className="filter-sep" />
           <div className="filter-group">
             <label className="filter-label">Trier par</label>
