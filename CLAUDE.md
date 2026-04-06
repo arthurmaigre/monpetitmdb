@@ -13,7 +13,7 @@ Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD`
 - **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
 - **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
-- **Sourcing API** : Moteur Immo (aggregateur 60+ plateformes) — module `moteurimmo_client.py`
+- **Sourcing API** : Moteur Immo (coupe 2026-04-06) → **migration Stream Estate** (agregateur, webhooks + saved searches). Module legacy `moteurimmo_client.py`
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
 - **Editorial** : Claude Opus (redaction) + Sonnet (fact-check) + Unsplash (photos)
@@ -35,8 +35,9 @@ monpetitmdb/
 │   │   ├── watchlist/          # GET/POST/DELETE watchlist
 │   │   ├── stripe/             # checkout, portal, webhook (Stripe)
 │   │   ├── chat/               # Chat IA (streaming, Haiku)
-│   │   ├── moteurimmo/webhook/ # Webhook reception nouvelles annonces
-│   │   ├── admin/ingest/       # Ingestion Moteur Immo (micro-batch)
+│   │   ├── moteurimmo/webhook/ # Webhook Moteur Immo (legacy, API coupee)
+│   │   ├── stream-estate/webhook/ # Webhook Stream Estate (nouveau sourcing)
+│   │   ├── admin/ingest/       # Ingestion Moteur Immo (legacy, desactive)
 │   │   ├── admin/regex/        # Validation regex faux positifs
 │   │   ├── admin/extraction/   # Extraction donnees locatives IA (Haiku)
 │   │   ├── admin/score-travaux/# Score travaux IA (Haiku, optionnel photos)
@@ -155,8 +156,12 @@ monpetitmdb/
 - `nb_lots` (int, editable), `monopropriete` (boolean), `compteurs_individuels` (boolean)
 - `lots_data` (JSONB) — tableau de lots : `{ lots: [{ type, surface, loyer, etat, dpe, etage }] }`
 
-**Moteur Immo**
-- `moteurimmo_data` (JSONB) — JSON brut complet
+**Sourcing (Moteur Immo legacy + Stream Estate)**
+- `moteurimmo_data` (JSONB) — JSON brut complet (memes cles title/description/pictureUrls/origin/duplicates quelle que soit la source)
+- `source_provider` ("moteurimmo" | "stream_estate" | "manual") — origine du bien
+- `stream_estate_id` (UUID) — identifiant Stream Estate pour matching cross-source
+- `publisher_type` ("particulier" | "professionnel") — type d'annonceur (Stream Estate)
+- `price_history` (JSONB) — historique baisses de prix (Stream Estate)
 
 **Pipeline IA (tracabilite)**
 - `regex_statut` ("valide" | "faux_positif"), `regex_date` (timestamptz)
@@ -249,13 +254,23 @@ Type bail : nu | meuble | commercial | pre-89
 - Chaque cron verifie `cron_config.enabled` avant execution
 - Config modifiable depuis `/admin/sourcing` (table `cron_config`)
 
-## Sourcing Moteur Immo
+## Sourcing — Migration Moteur Immo → Stream Estate
 
+### Moteur Immo (legacy — API coupee 2026-04-06)
 Module : `scrapper/moteurimmo_client.py`
-API : POST https://moteurimmo.fr/api/ads (auth par apiKey)
-Pagination par date (tranches 30j)
-96 000+ biens ingeres, 4 strategies, France entiere
-Flag `--until` pour limiter la periode (ex: `--since 2022-01-01 --until 2025-01-01`)
+API : POST https://moteurimmo.fr/api/ads (auth par apiKey) — **COUPE** (concurrent direct)
+96 000+ biens ingeres, 4 strategies, France entiere. Donnees IA conservees en base.
+URLs en base = URLs Moteur Immo (`moteurimmo.fr/ad/xxx`) — a verifier.
+
+### Stream Estate (nouveau sourcing — en cours de migration)
+API REST + MCP tools + webhooks. Agregateur annonces immo.
+4 saved searches (1 par strategie) avec webhooks vers `/api/stream-estate/webhook`.
+Events : `property.ad.create`, `ad.update.expired`, `ad.update.price`.
+Dedup multi-source : URL source → sinon matching geo (code_postal + type + nb_pieces + surface +-1m2 + prix +-2%).
+`moteurimmo_data` reutilise avec memes cles (title, description, pictureUrls, origin, duplicates) + champ `source: 'stream_estate'`.
+Colonnes IA (loyer, score_travaux, estimation) **jamais ecrasees** par l'upsert SE.
+Env vars : `STREAM_ESTATE_API_KEY`, `STREAM_ESTATE_WEBHOOK_SECRET`.
+Doc migration complet : `.claude/projects/.../memory/project_migration_stream_estate.md`
 
 ## Editorial CMS (/editorial)
 
@@ -327,18 +342,14 @@ Sommaire : H2 visibles, H3 depliables au clic, auto-deplie si <= 15 entrees, FAQ
 ## Crons (cron-job.org)
 Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monpetitmdb.fr/api/admin/...`
 
-### Moteur Immo — Ingestion (4 strategies × 2/jour)
-- `?strategie=Locataire+en+place&hours=12` — `0 3 * * *` et `0 15 * * *`
-- `?strategie=Travaux+lourds&hours=12` — idem
-- `?strategie=Division&hours=12` — idem
-- `?strategie=D%C3%A9coupe&hours=12` — idem
+### Moteur Immo — Ingestion (DESACTIVE — API coupee)
+- ~~`?strategie=Locataire+en+place&hours=12` — `0 3 * * *` et `0 15 * * *`~~
+- Remplace par webhooks Stream Estate (saved searches)
 
-### Moteur Immo — Verification statut
-- `/api/admin/statut` — `* * * * *` (toutes les minutes, 75 biens/appel)
-- Verifie chaque bien via `/api/ad/{uniqueId}`, marque "Annonce expiree" si `deletionDate`
-- Cycle 1→2→3→1 stocke dans `cron_config.params.cycle`
-- Colonne `verif_cycle_id` + `derniere_verif_statut` sur table `biens`
-- Colonne `moteurimmo_unique_id` (indexee) pour matching rapide
+### Moteur Immo — Verification statut (DESACTIVE — API coupee)
+- ~~`/api/admin/statut` — `* * * * *`~~
+- Remplace par event `ad.update.expired` de Stream Estate
+- Biens MI anciens : backfill progressif ou expiration auto 90j sans MAJ
 
 ### Validation Regex
 - `/api/admin/regex` — `30 3 * * *` et `30 15 * * *` (2x/jour apres ingestion)
