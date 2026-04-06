@@ -295,6 +295,7 @@ Sommaire : H2 visibles, H3 depliables au clic, auto-deplie si <= 15 entrees, FAQ
   - Vert : valide par 2+ users, crayon pour re-editer
 - **Wording** : "Cash Flow Avant Impot" (ex cashflow brut), "Cash Flow Net d'Impot" (dans PnlColonne), "Estimation Prix de Revente" (ex Estimation marche DVF)
 - **Titres majuscules** : Caracteristiques du Bien, Donnees Locatives, Estimation Prix de Revente, etc.
+- **Intro strategie** : bloc pedagogique en haut de fiche (explication methode + lien "En savoir plus" vers `/strategies#sX`)
 
 ## Alertes email (Pro : 1, Expert : 5)
 - **Table `alertes`** : user_id, nom, filtres (JSONB), frequence (quotidien/hebdomadaire), enabled, last_sent_at
@@ -474,7 +475,7 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 - **Pret in fine** : toggle dans simulateur (amortissable/in fine). In fine = interets seuls, capital rembourse a la revente, duree 1-5 ans. Passe dans `financement.typeCredit`. PnlColonne adapte mensualite + CRD.
 - **Bilan revente** : cashflow locatif cumule + cashflow achat-revente net (emprunt + PV nette - CRD). Infobulles avec detail du calcul.
 - **Infobulles** : format uniforme (definition + calcul chiffre + subtilite). Acronymes explicites. Mentions "Modifiable dans Mes parametres → section". `text-transform: none` sur tooltip pour eviter heritage uppercase.
-- **TVA sur marge MdB** : optionnelle pour bien ancien achete a un particulier (art. 260-5° bis CGI). Toggle Oui/Non dans PnlColonne. Si Oui : marge × 20/120 (TVA "en dedans"). Si Non : exonere, pas de TVA collectee ni recuperable sur travaux.
+- **TVA sur marge MdB** : optionnelle pour bien ancien achete a un particulier (art. 260-5° bis CGI). Toggle Oui/Non dans PnlColonne. Si Oui : marge × 20/120 (TVA "en dedans") + TVA recuperable sur travaux (budget HT = TTC/1.2). Si Non : exonere, pas de TVA collectee ni recuperable sur travaux.
 - **profil_locataire = "NC"** : traite comme vide dans l'UI (Non communique en grise)
 - **Admin conditionne** : lien Administration visible uniquement si `profiles.role = 'admin'`
 - **Pages avec sessionStorage** : utiliser `dynamic(() => import('./Client'), { ssr: false })` pour eviter hydration mismatch (ex: `/biens`)

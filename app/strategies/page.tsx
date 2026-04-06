@@ -6,7 +6,17 @@ import Layout from '@/components/Layout'
 export default function StrategiesPage() {
   const [activeSection, setActiveSection] = useState('s1')
 
-  useEffect(() => { document.title = "Strat\u00E9gies d\u2019investissement immobilier | Mon Petit MDB" }, [])
+  useEffect(() => {
+    document.title = "Strat\u00E9gies d\u2019investissement immobilier | Mon Petit MDB"
+    const hash = window.location.hash.replace('#', '')
+    if (hash && ['s1', 's2', 's3', 's4'].includes(hash)) {
+      setTimeout(() => {
+        const el = document.getElementById(hash)
+        if (el) window.scrollTo({ top: el.offsetTop - 130, behavior: 'smooth' })
+        setActiveSection(hash)
+      }, 300)
+    }
+  }, [])
 
   useEffect(() => {
     const blocks = ['s1', 's2', 's3', 's4']

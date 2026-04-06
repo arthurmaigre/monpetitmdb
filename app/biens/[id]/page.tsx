@@ -521,6 +521,9 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const scoreUtilise = scorePerso || bien.score_travaux
   const budgetTravaux = scoreUtilise && bien.surface
     ? (budgetTravauxM2?.[String(scoreUtilise)] || 0) * bien.surface : 0
+  // MdB + TVA sur marge : le budget parametres est TTC, le MdB recupere la TVA → cout reel HT
+  const budgetTravauxEffectif = (isMarchand && optionTVA) ? budgetTravaux / 1.2 : budgetTravaux
+  const tvaRecupereeTravaux = (isMarchand && optionTVA) ? budgetTravaux - budgetTravauxEffectif : 0
   const travauxAnnualises = budgetTravaux > 0 ? budgetTravaux / 10 : 0
   const travauxDeductibles = regime === 'nu_reel_foncier' ? budgetTravaux : 0
   const travauxAmortis = (regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is') ? travauxAnnualises : 0
@@ -608,7 +611,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // En Nu reel : deduits a 100% en locatif (deficit foncier) → deduits aussi de la PV (pas de double deduction car pas d'amortissement)
   // En LMNP/LMP/SCI : amortis sur 10 ans en locatif → deduits de la PV + reintegration des amortissements cumules
   // En micro/MdB : pas deduits en locatif → deduits de la PV normalement
-  const travauxPV = budgetTravaux
+  const travauxPV = budgetTravauxEffectif
   const pvBruteSimple = prixReventeApresAgence - prixNetVendeurAchat
   const pvBrute = prixReventeApresAgence - prix_fai - fraisNotaireMontant - travauxPV
 
@@ -677,7 +680,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
       const marge = Math.max(0, prixReventeApresAgence - prixNetVendeurAchat)
       tvaMarge = marge * 20 / 120
     }
-    const benefice = Math.max(0, prixReventeApresAgence - prix_fai - budgetTravaux - fraisNotaireMontant - tvaMarge)
+    const benefice = Math.max(0, prixReventeApresAgence - prix_fai - budgetTravauxEffectif - fraisNotaireMontant - tvaMarge)
     isPV = benefice <= 42500 ? benefice * 0.15 : 42500 * 0.15 + (benefice - 42500) * 0.25
   }
   // Surtaxe PV > 50k (regimes des particuliers uniquement)
@@ -713,7 +716,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // Bilan : cashflow achat-revente = emprunt + PV nette - CRD (- interets/frais si pas de loyer)
   const produitRevente = prixReventeApresAgence - crd
   const fondsInvestis = apport || 0
-  const coutTotal = prix_fai + fraisNotaireMontant + budgetTravaux
+  const coutTotal = prix_fai + fraisNotaireMontant + budgetTravauxEffectif
   const cashflowAchatRevente = Math.round(colMontantEmprunte + pvNette - crd - interetsCumules - ((!hasLoyer || isTravauxLourds) ? fraisBancaires : 0))
   const profitNet = Math.round(cashflowCumule + cashflowAchatRevente)
   // ROI = rendement sur cout total de l'operation
@@ -945,11 +948,13 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               ? `Frais de notaire r\u00E9duits \u00E0 ~2,5% pour les marchands de biens (droits de mutation r\u00E9duits). C\u2019est un avantage significatif par rapport aux 7-8% d\u2019un particulier.`
               : `Frais de notaire (droits de mutation + \u00E9moluments). En ancien : 7-8% du prix. En neuf : 2-3%. Ces frais augmentent le co\u00FBt total de l\u2019op\u00E9ration et r\u00E9duisent la plus-value nette.`} />
           <Row
-            label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})` : 'Travaux'}
-            value={budgetTravaux > 0 ? `-${fmt(budgetTravaux)} \u20AC` : `0 \u20AC`}
-            rouge={budgetTravaux > 0}
+            label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})${isMarchand && optionTVA ? ' HT' : ''}` : 'Travaux'}
+            value={budgetTravauxEffectif > 0 ? `-${fmt(budgetTravauxEffectif)} \u20AC` : `0 \u20AC`}
+            rouge={budgetTravauxEffectif > 0}
             info={regime === 'marchand_de_biens'
-                ? "Co\u00FBt total des travaux de r\u00E9novation.\n\nEn marchand de biens, les travaux sont une charge d\u2019exploitation qui r\u00E9duit le b\u00E9n\u00E9fice imposable. C\u2019est le levier principal de cr\u00E9ation de valeur."
+                ? (optionTVA
+                  ? `Co\u00FBt des travaux HT (TVA r\u00E9cup\u00E9r\u00E9e).\n\nBudget TTC : ${fmt(budgetTravaux)}\u00A0\u20AC\nTVA r\u00E9cup\u00E9r\u00E9e (20\u00A0%) : -${fmt(Math.round(tvaRecupereeTravaux))}\u00A0\u20AC\nCo\u00FBt r\u00E9el HT : ${fmt(Math.round(budgetTravauxEffectif))}\u00A0\u20AC\n\nEn optant pour la TVA sur marge, le MdB r\u00E9cup\u00E8re la TVA sur les travaux, ce qui r\u00E9duit le co\u00FBt effectif de la r\u00E9novation.`
+                  : "Co\u00FBt total des travaux de r\u00E9novation TTC.\n\nSans option TVA sur marge, la TVA sur les travaux n\u2019est pas r\u00E9cup\u00E9rable. Les travaux restent une charge d\u2019exploitation qui r\u00E9duit le b\u00E9n\u00E9fice imposable.")
                 : regime === 'lmnp_reel_bic' || regime === 'lmp_reel_bic' || regime === 'sci_is'
                   ? `Co\u00FBt total des travaux, d\u00E9duit du prix de revient.\n\nCes travaux sont aussi amortis sur 10\u00A0ans en phase locative (${fmt(travauxAmortis)}\u00A0\u20AC/an). Les amortissements cumul\u00E9s sont r\u00E9int\u00E9gr\u00E9s dans la plus-value imposable.`
                   : regime === 'nu_reel_foncier'
@@ -2189,8 +2194,10 @@ export default function FicheBienPage() {
         .two-cols { display: flex; gap: 24px; align-items: flex-start; }
         .two-cols > .col { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
         .simu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-        .strat-intro { background: #fff; border-radius: 12px; border: 1px solid #e8e2d8; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: #7a6a60; line-height: 1.6; }
+        .strat-intro { background: #fff; border-radius: 12px; border: 1px solid #e8e2d8; padding: 18px 22px; margin-bottom: 20px; font-size: 13px; color: #7a6a60; line-height: 1.7; display: flex; flex-direction: column; gap: 10px; }
         .strat-intro strong { color: #1a1210; }
+        .strat-intro-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; font-weight: 600; color: #c0392b; text-decoration: none; transition: color 0.15s; }
+        .strat-intro-cta:hover { color: #a5301f; }
         .data-missing { color: #c0392b; font-style: italic; font-weight: 400; font-size: 13px; }
         .param-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
         .param-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -2372,16 +2379,54 @@ export default function FicheBienPage() {
         {/* Intro stratégie */}
         <div className="strat-intro">
           {bien.strategie_mdb === 'Locataire en place' && (
-            <><strong>{"Strat\u00E9gie Locataire en place"}</strong>{" \u2014 Ce bien est vendu avec un locataire d\u00E9j\u00E0 en place, ce qui g\u00E9n\u00E8re des revenus locatifs imm\u00E9diats mais implique souvent une d\u00E9cote sur le prix. L\u2019analyse ci-dessous calcule d\u2019abord le "}<strong>{"cash flow avant imp\u00F4t"}</strong>{" (revenus - charges - cr\u00E9dit), puis l\u2019"}<strong>analyse fiscale</strong>{" d\u00E9termine le cash flow net d\u2019imp\u00F4t et la plus-value \u00E0 la revente. Pensez \u00E0 compl\u00E9ter les donn\u00E9es manquantes pour affiner les calculs."}</>
+            <>
+              <div>
+                <strong>Stratégie Locataire en place</strong> — Les biens vendus occupés sont parmi les plus difficiles à vendre sur le marché immobilier&nbsp;: peu d{"'"}acquéreurs souhaitent acheter un logement qu{"'"}ils ne peuvent pas habiter immédiatement. C{"'"}est précisément ce qui permet de négocier des prix avec une <strong>forte décote</strong> par rapport au marché libre.
+              </div>
+              <div>
+                Une fois le bien acheté, le marchand de biens propose généralement une <strong>prime d{"'"}éviction</strong> (entre 4 et 8 mois de loyer selon les pratiques) afin de permettre au locataire de partir et de se reloger, pour ensuite <strong>revendre le bien au prix du marché</strong>. Cette stratégie implique de faire beaucoup d{"'"}offres avant d{"'"}obtenir un retour positif&nbsp;: il n{"'"}est donc pas nécessaire de visiter avant de faire une offre, mais seulement une fois celle-ci acceptée, pour vérifier la conformité avec les informations transmises par le vendeur.
+              </div>
+              <div>
+                Même si l{"'"}objectif est d{"'"}acheter et revendre le plus rapidement possible, cette stratégie génère un <strong>revenu locatif dès l{"'"}acquisition</strong>. L{"'"}analyse ci-dessous calcule le <strong>cash flow avant impôt</strong> (loyer − charges − crédit), puis l{"'"}<strong>analyse fiscale</strong> détermine le cash flow net d{"'"}impôt et simule la plus-value à la revente sur 1 à 5&nbsp;ans. Complétez les données manquantes (en rouge) pour affiner les résultats.
+              </div>
+              <a href="/strategies#s1" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
+            </>
           )}
           {bien.strategie_mdb === 'Travaux lourds' && (
-            <><strong>{"Strat\u00E9gie Travaux lourds"}</strong>{" \u2014 Ce bien n\u00E9cessite des travaux importants. L\u2019estimation DVF correspond au prix march\u00E9 "}<strong>{"apr\u00E8s r\u00E9novation"}</strong>{" (pas de d\u00E9cote travaux). L\u2019analyse calcule la "}<strong>plus-value brute</strong>{" (estimation - prix - travaux - frais) et la fiscalit\u00E9 selon le r\u00E9gime choisi."}</>
+            <>
+              <div>
+                <strong>Stratégie Travaux lourds</strong> — Ce bien nécessite des travaux importants, ce qui entraîne un prix d{"'"}achat fortement décoté. L{"'"}objectif est de le rénover pour le revendre au <strong>prix marché</strong> ou le louer avec un rendement optimisé. Le <strong>score travaux IA</strong> (de 1 = bon état à 5 = très lourds) est généré automatiquement par analyse de la description de l{"'"}annonce. À chaque score correspond un <strong>budget travaux au m²</strong> paramétrable dans <a href="/parametres" style={{color: '#c0392b', fontWeight: 600}}>Mes paramètres</a> → Budget travaux.
+              </div>
+              <div>
+                L{"'"}<strong>estimation DVF</strong> correspond au prix marché <strong>après rénovation</strong> (sans décote travaux). L{"'"}analyse calcule la <strong>plus-value nette avant impôt</strong> (estimation − prix − travaux − frais) et la fiscalité selon le régime choisi.
+              </div>
+              <div>
+                En régime <strong>marchand de biens</strong>, l{"'"}option <strong>TVA sur marge</strong> (art. 260-5° bis CGI) peut être particulièrement avantageuse sur ce type de bien&nbsp;: en optant pour la TVA, vous payez 20&nbsp;% sur la marge (revente − achat), mais vous pouvez <strong>récupérer la TVA sur les travaux</strong> (20&nbsp;% du montant HT). Lorsque le budget travaux est élevé, la TVA récupérée peut dépasser la TVA due sur la marge. L{"'"}analyse fiscale ci-dessous intègre ce calcul avec un toggle TVA activable dans la colonne MdB.
+              </div>
+              <a href="/strategies#s2" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
+            </>
           )}
           {bien.strategie_mdb === 'Division' && (
-            <><strong>{"Strat\u00E9gie Division"}</strong>{" \u2014 Ce bien pr\u00E9sente un potentiel de division en plusieurs lots ind\u00E9pendants. L\u2019analyse estime la rentabilit\u00E9 locative globale et le sc\u00E9nario de revente lot par lot."}</>
+            <>
+              <div>
+                <strong>Stratégie Division</strong> — Ce bien présente un potentiel de division en plusieurs lots indépendants. L{"'"}idée est de <strong>multiplier les loyers</strong> en créant plusieurs logements à partir d{"'"}un seul bien (ex&nbsp;: un T5 divisé en 3 studios). Le rendement locatif peut être multiplié par 2 à 3 après travaux.
+              </div>
+              <div>
+                L{"'"}analyse estime la rentabilité locative globale et le scénario de revente lot par lot. Vérifiez le PLU et les règles de copropriété avant de vous engager.
+              </div>
+              <a href="/strategies#s3" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
+            </>
           )}
           {bien.strategie_mdb === 'Immeuble de rapport' && (
-            <><strong>{"Strat\u00E9gie Immeuble de rapport"}</strong>{" \u2014 Cet immeuble se compose de plusieurs lots. L\u2019analyse d\u00E9taille les revenus locatifs par lot, le cashflow global, et propose un sc\u00E9nario de revente \u00E0 la d\u00E9coupe avec estimation par lot."}</>
+            <>
+              <div>
+                <strong>Stratégie Immeuble de rapport</strong> — Cet immeuble se compose de <strong>plusieurs lots</strong> achetés en bloc. L{"'"}approche marchand de biens consiste à acheter l{"'"}ensemble, rénover si nécessaire, créer la copropriété, puis <strong>revendre lot par lot</strong> pour dégager une marge nette de 15 à 25&nbsp;%.
+              </div>
+              <div>
+                L{"'"}analyse détaille les revenus locatifs par lot, le cashflow global, et propose un scénario de revente à la découpe avec estimation DVF par lot. Régime obligatoire&nbsp;: <strong>IS</strong> (frais notaire 2,5&nbsp;%, TVA sur marge 20/120).
+              </div>
+              <a href="/strategies#s4" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
+            </>
           )}
         </div>
 
