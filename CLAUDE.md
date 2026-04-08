@@ -191,6 +191,7 @@ monpetitmdb/
 - `ref_communes` — code postal, nom commune, metropole (22 metropoles reelles)
 - `ref_prix_parking` — prix median parking/box par ville (DVF)
 - `estimation_config` — config estimateur (JSONB, id=1)
+- `stream_estate_searches` — mapping search IRI → strategie_mdb (4 saved searches)
 
 ## Analyse fiscale — 7 regimes
 
@@ -262,14 +263,32 @@ API : POST https://moteurimmo.fr/api/ads (auth par apiKey) — **COUPE** (concur
 96 000+ biens ingeres, 4 strategies, France entiere. Donnees IA conservees en base.
 URLs en base = URLs Moteur Immo (`moteurimmo.fr/ad/xxx`) — a verifier.
 
-### Stream Estate (nouveau sourcing — en cours de migration)
+### Stream Estate (nouveau sourcing — OPERATIONNEL depuis 2026-04-08)
 API REST + MCP tools + webhooks. Agregateur annonces immo.
-4 saved searches (1 par strategie) avec webhooks vers `/api/stream-estate/webhook`.
-Events : `property.ad.create`, `ad.update.expired`, `ad.update.price`.
-Dedup multi-source : URL source → sinon matching geo (code_postal + type + nb_pieces + surface +-1m2 + prix +-2%).
+Webhook : `/api/stream-estate/webhook/route.ts` — pas d'auth (SE n'envoie pas de header secret).
+4 saved searches (1 par strategie) avec expressions (mots-cles identiques a MI).
+Events : `property.ad.create`, `ad.update.expired`, `ad.update.price`, `property.ad.update`.
+Notifications : desactivees en attente de credits SE.
+
+**Dedup 4 niveaux** a l'ingestion :
+1. URL source directe (`biens.url`)
+2. `stream_estate_id` (bien deja rattache)
+3. `moteurimmo_data.duplicates` (URL connue comme doublon MI)
+4. Matching geo fallback (code_postal + type_bien + nb_pieces + surface +-1m2 + prix +-2%)
+
 `moteurimmo_data` reutilise avec memes cles (title, description, pictureUrls, origin, duplicates) + champ `source: 'stream_estate'`.
 Colonnes IA (loyer, score_travaux, estimation) **jamais ecrasees** par l'upsert SE.
-Env vars : `STREAM_ESTATE_API_KEY`, `STREAM_ESTATE_WEBHOOK_SECRET`.
+`charges_copro` SE = annuel → divise par 12 a l'insertion (base = mensuel).
+
+**Strategie** : lookup table `stream_estate_searches` (search IRI → strategie_mdb, cache 5min). Fallback detection regex contenu.
+
+**Saved searches** (notifications OFF) :
+- `/searches/d12ba9a4-4643-468f-b393-8196b2e29e17` → Locataire en place (3 expressions)
+- `/searches/cfe1717e-e3bc-4359-9bd9-ec0c26b53573` → Travaux lourds (12 expressions)
+- `/searches/7019ec35-2582-4b31-b85d-991793d5fbb3` → Division (10 expressions)
+- `/searches/dd4125d9-aa91-4529-a607-61d4b2347431` → Immeuble de rapport (8 expressions)
+
+Env vars : `STREAM_ESTATE_API_KEY`, `STREAM_ESTATE_WEBHOOK_SECRET` (inutilise mais present).
 Doc migration complet : `.claude/projects/.../memory/project_migration_stream_estate.md`
 
 ## Editorial CMS (/editorial)
@@ -346,10 +365,12 @@ Tous en GET, header `Authorization: Bearer <CRON_SECRET>`, URL `https://www.monp
 - ~~`?strategie=Locataire+en+place&hours=12` — `0 3 * * *` et `0 15 * * *`~~
 - Remplace par webhooks Stream Estate (saved searches)
 
-### Moteur Immo — Verification statut (DESACTIVE — API coupee)
-- ~~`/api/admin/statut` — `* * * * *`~~
-- Remplace par event `ad.update.expired` de Stream Estate
-- Biens MI anciens : backfill progressif ou expiration auto 90j sans MAJ
+### Verification statut annonces (REECRIT 2026-04-08)
+- `/api/admin/statut` — reecrit pour checker URLs source par HEAD HTTP (remplace API MI coupee)
+- **Probleme** : LBC renvoie 403 sur toutes les requetes HEAD/GET automatiques
+- **Biens SE** : geres automatiquement par event `ad.update.expired` du webhook SE
+- **Biens MI sans stream_estate_id** : a repenser (backfill SE ou auto-expire 90j)
+- **Cron desactive** en attendant une solution fiable
 
 ### Validation Regex
 - `/api/admin/regex` — `30 3 * * *` et `30 15 * * *` (2x/jour apres ingestion)
