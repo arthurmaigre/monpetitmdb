@@ -27,171 +27,112 @@ async function checkAdminOrCron(req: NextRequest): Promise<boolean> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// POST /api/admin/statut
+// Check if a source URL is still active (HEAD request)
+// Returns: 'active' | 'expired' | 'error'
+// ──────────────────────────────────────────────────────────────────────────────
+
+async function checkUrlStatus(url: string): Promise<'active' | 'expired' | 'error'> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+
+    const resp = await fetch(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; MonPetitMDB/1.0; status-check)',
+      },
+    })
+    clearTimeout(timeout)
+
+    // 404, 410 (Gone) → annonce supprimee
+    if (resp.status === 404 || resp.status === 410) return 'expired'
+
+    // 200, 301, 302 (redirect suivis) → encore en ligne
+    if (resp.ok) return 'active'
+
+    // 403 (bloque) → on ne peut pas savoir, skip
+    if (resp.status === 403) return 'error'
+
+    // Autres codes (500, 503...) → erreur temporaire, skip
+    return 'error'
+  } catch {
+    // Timeout, DNS error, network → skip
+    return 'error'
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// GET /api/admin/statut — Verification statut annonces par URL source
+//
+// Biens SE : geres par event ad.update.expired (webhook)
+// Biens MI sans stream_estate_id : verifies par HEAD sur l'URL source
+// Biens manuels : ignores (pas d'URL verifiable)
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   const isAdmin = await checkAdminOrCron(req)
-  if (!isAdmin) return NextResponse.json({ error: 'Non autoris\u00E9' }, { status: 401 })
+  if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const { data: config } = await supabaseAdmin.from('cron_config').select('enabled').eq('id', 'statut').single()
   if (config && !config.enabled) return NextResponse.json({ skipped: true, reason: 'cron disabled' })
 
-  const apiKey = process.env.MOTEURIMMO_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'MOTEURIMMO_API_KEY manquante' }, { status: 500 })
+  const { searchParams } = new URL(req.url)
+  const limitParam = searchParams.get('limit')
+  const batchSize = limitParam ? Math.min(Number(limitParam), 50) : 25
 
-  // Get current cycle from cron_config params
-  const { data: cronConfig } = await supabaseAdmin.from('cron_config').select('params').eq('id', 'statut').single()
-  const currentCycle = (cronConfig?.params as any)?.cycle || 1
-
-  // Fetch 75 biens NOT YET verified in current cycle (cycle_id < currentCycle)
+  // Fetch biens actifs non-SE, non-manuels, les plus anciennement verifies en premier
   const { data: biens, error: fetchErr } = await supabaseAdmin
     .from('biens')
-    .select('id, moteurimmo_unique_id, verif_cycle_id')
+    .select('id, url')
     .eq('statut', 'Toujours disponible')
-    .not('moteurimmo_unique_id', 'is', null)
-    .lt('verif_cycle_id', currentCycle)
+    .not('url', 'like', 'manual://%')
+    .or('stream_estate_id.is.null')
     .order('derniere_verif_statut', { ascending: true, nullsFirst: true })
-    .limit(75)
+    .limit(batchSize)
 
-  // If no biens left to verify — cycle complete, start next cycle
   if (fetchErr || !biens || biens.length === 0) {
-    const nextCycle = currentCycle >= 3 ? 1 : currentCycle + 1
+    const resultData = { checked: 0, expired: 0, errors: 0, active: 0 }
     await supabaseAdmin.from('cron_config').update({
       last_run: new Date().toISOString(),
-      last_result: { checked: 0, expired: 0, errors: 0, mode: 'active', cycle: currentCycle, cycle_complete: true },
-      params: { ...(cronConfig?.params || {}), cycle: nextCycle },
+      last_result: resultData,
     }).eq('id', 'statut')
-    return NextResponse.json({ checked: 0, expired: 0, errors: 0, mode: 'active', cycle: currentCycle, cycle_complete: true, next_cycle: nextCycle })
+    return NextResponse.json(resultData)
   }
 
-  const nextCycle = currentCycle
-
-  let checked = 0, expired = 0, errorCount = 0
+  let checked = 0, expired = 0, active = 0, errorCount = 0
 
   for (const bien of biens) {
-    try {
-      const resp = await fetch(`https://moteurimmo.fr/api/ad/${bien.moteurimmo_unique_id}?apiKey=${apiKey}`)
-      if (!resp.ok) { errorCount++; continue }
+    if (!bien.url) { errorCount++; continue }
 
-      const data = await resp.json()
-      const ad = data.ad
-      checked++
+    const status = await checkUrlStatus(bien.url)
+    checked++
 
-      if (ad?.deletionDate) {
-        await supabaseAdmin.from('biens')
-          .update({ statut: 'Annonce expir\u00E9e', derniere_verif_statut: new Date().toISOString(), verif_cycle_id: nextCycle })
-          .eq('id', bien.id)
-        expired++
-      } else {
-        await supabaseAdmin.from('biens')
-          .update({ derniere_verif_statut: new Date().toISOString(), verif_cycle_id: nextCycle })
-          .eq('id', bien.id)
-      }
-    } catch {
+    if (status === 'expired') {
+      await supabaseAdmin.from('biens')
+        .update({ statut: 'Annonce expiree', derniere_verif_statut: new Date().toISOString() })
+        .eq('id', bien.id)
+      expired++
+    } else if (status === 'active') {
+      await supabaseAdmin.from('biens')
+        .update({ derniere_verif_statut: new Date().toISOString() })
+        .eq('id', bien.id)
+      active++
+    } else {
+      // error → on met a jour la date pour ne pas re-verifier en boucle
+      await supabaseAdmin.from('biens')
+        .update({ derniere_verif_statut: new Date().toISOString() })
+        .eq('id', bien.id)
       errorCount++
     }
   }
 
-  const resultData = { checked, expired, errors: errorCount, mode: 'active', cycle: nextCycle }
-  await supabaseAdmin.from('cron_config').update({ last_run: new Date().toISOString(), last_result: resultData }).eq('id', 'statut')
+  const resultData = { checked, expired, active, errors: errorCount }
+  await supabaseAdmin.from('cron_config').update({
+    last_run: new Date().toISOString(),
+    last_result: resultData,
+  }).eq('id', 'statut')
 
   return NextResponse.json(resultData)
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const isAdmin = await checkAdminOrCron(req)
-    if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-
-    const body = await req.json()
-    const apiKey = process.env.MOTEURIMMO_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'MOTEURIMMO_API_KEY non configurée' }, { status: 500 })
-    }
-
-    // Default: 7 days ago
-    const since = body.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-
-    // Paginate through Moteur Immo deletedAds API
-    const allUniqueIds: string[] = []
-    let page = 1
-
-    while (page <= 100) {
-      const resp = await fetch('https://moteurimmo.fr/api/deletedAds', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          types: ['sale'],
-          categories: ['house', 'flat', 'block'],
-          apiKey,
-          creationDateAfter: since,
-          page,
-          maxLength: 100,
-        }),
-      })
-
-      if (!resp.ok) {
-        const errText = await resp.text().catch(() => 'Unknown error')
-        return NextResponse.json(
-          { error: `Moteur Immo API error: ${resp.status} ${errText}` },
-          { status: 502 }
-        )
-      }
-
-      const data = await resp.json()
-      const deletedAds = data.ads || []
-      if (!Array.isArray(deletedAds) || deletedAds.length === 0) break
-
-      const ids = deletedAds
-        .map((ad: { uniqueId?: string }) => ad.uniqueId)
-        .filter((id: string | undefined): id is string => !!id)
-      allUniqueIds.push(...ids)
-
-      if (deletedAds.length < 100) break
-      page++
-    }
-
-    let checked = allUniqueIds.length
-    let expired = 0
-    let errorCount = 0
-
-    // Match by moteurimmo_unique_id column (indexed) in batches of 100
-    for (let i = 0; i < allUniqueIds.length; i += 100) {
-      const batch = allUniqueIds.slice(i, i + 100)
-      try {
-        const { data: updated, error } = await supabaseAdmin
-          .from('biens')
-          .update({
-            statut: 'Annonce expir\u00E9e',
-            derniere_verif_statut: new Date().toISOString(),
-          })
-          .in('moteurimmo_unique_id', batch)
-          .eq('statut', 'Toujours disponible')
-          .select('id')
-
-        if (error) {
-          console.error(`Statut update error batch ${i}:`, error.message)
-          errorCount++
-        } else {
-          expired += updated?.length || 0
-        }
-      } catch (e) {
-        console.error(`Statut batch ${i} exception:`, e)
-        errorCount++
-      }
-    }
-
-    return NextResponse.json({
-      checked,
-      expired,
-      errors: errorCount,
-    })
-  } catch (err) {
-    console.error('Statut check error:', err)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erreur interne' },
-      { status: 500 }
-    )
-  }
 }
