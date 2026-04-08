@@ -38,13 +38,36 @@ const STRATEGY_KEYWORDS: { strategie: string; patterns: RegExp[] }[] = [
   },
 ]
 
-function detectStrategie(text: string, propertyType?: number): string {
+function detectStrategieFromContent(text: string, propertyType?: number): string {
   for (const { strategie, patterns } of STRATEGY_KEYWORDS) {
     if (patterns.some(re => re.test(text))) return strategie
   }
   // Fallback : immeuble → IDR, sinon Travaux lourds
   if (propertyType === 2) return 'Immeuble de rapport'
   return 'Travaux lourds'
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Lookup strategie depuis table stream_estate_searches (cache en memoire)
+// ──────────────────────────────────────────────────────────────────────────────
+
+let _searchMap: Map<string, string> | null = null
+let _searchMapTs = 0
+
+async function getStrategieFromSearch(searchIri: string | undefined): Promise<string | null> {
+  if (!searchIri) return null
+  // Cache 5 min
+  if (!_searchMap || Date.now() - _searchMapTs > 5 * 60 * 1000) {
+    const { data } = await supabaseAdmin
+      .from('stream_estate_searches')
+      .select('search_iri, strategie_mdb')
+    _searchMap = new Map()
+    if (data) {
+      for (const row of data) _searchMap.set(row.search_iri, row.strategie_mdb)
+    }
+    _searchMapTs = Date.now()
+  }
+  return _searchMap.get(searchIri) || null
 }
 
 function mapPublisherType(type: number | undefined): string | null {
@@ -272,8 +295,11 @@ async function handlePropertyAdCreate(payload: any) {
   if (!advert.url) return { action: 'skip', reason: 'no url' }
 
   const metropoleMap = await getMetropoleMap()
+  // Strategie : d'abord via la saved search (table), sinon detection par contenu
+  const searchIri = payload.match?.search || null
+  const strategieFromSearch = await getStrategieFromSearch(searchIri)
   const text = [advert.title || '', advert.description || ''].join(' ')
-  const strategie = detectStrategie(text, property.propertyType)
+  const strategie = strategieFromSearch || detectStrategieFromContent(text, property.propertyType)
 
   const bien = buildBienPayload(property, advert, strategie, metropoleMap)
   const existing = await findExistingBien(advert.url, property, advert)
