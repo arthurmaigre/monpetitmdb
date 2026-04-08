@@ -15,12 +15,36 @@ const SE_PROPERTY_TYPE_MAP: Record<number, string> = {
   6: 'Local commercial',
 }
 
-function mapStrategie(searchTitle: string): string {
-  if (searchTitle.includes('Locataire en place')) return 'Locataire en place'
-  if (searchTitle.includes('Travaux lourds')) return 'Travaux lourds'
-  if (searchTitle.includes('Division')) return 'Division'
-  if (searchTitle.includes('Immeuble de rapport')) return 'Immeuble de rapport'
-  return 'Travaux lourds' // fallback
+// ──────────────────────────────────────────────────────────────────────────────
+// Detection strategie depuis le contenu (meme logique que webhook MI)
+// ──────────────────────────────────────────────────────────────────────────────
+
+const STRATEGY_KEYWORDS: { strategie: string; patterns: RegExp[] }[] = [
+  {
+    strategie: 'Locataire en place',
+    patterns: [/locataire\s+en\s+place/i, /vendu\s+lou[eé]/i, /bail\s+en\s+cours/i, /vendu\s+occup[eé]/i, /occup[eé]/i],
+  },
+  {
+    strategie: 'Travaux lourds',
+    patterns: [/[àa]\s+r[eé]nover/i, /gros\s+travaux/i, /r[eé]novation\s+(compl[eè]te|totale)/i, /inhabitable/i, /travaux\s+importants/i],
+  },
+  {
+    strategie: 'Division',
+    patterns: [/(appartement|maison|bien|propri[eé]t[eé])\s+.{0,15}divisible/i, /divisible\s+en\s+\d+/i, /possibilit[eé]\s+de\s+division/i, /division\s+possible/i, /potentiel\s+de\s+division/i],
+  },
+  {
+    strategie: 'Immeuble de rapport',
+    patterns: [/immeuble\s+de\s+rapport/i, /monopropri[eé]t[eé]/i, /vent(e|u)\s+en\s+bloc/i],
+  },
+]
+
+function detectStrategie(text: string, propertyType?: number): string {
+  for (const { strategie, patterns } of STRATEGY_KEYWORDS) {
+    if (patterns.some(re => re.test(text))) return strategie
+  }
+  // Fallback : immeuble → IDR, sinon Travaux lourds
+  if (propertyType === 2) return 'Immeuble de rapport'
+  return 'Travaux lourds'
 }
 
 function mapPublisherType(type: number | undefined): string | null {
@@ -30,10 +54,28 @@ function mapPublisherType(type: number | undefined): string | null {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Extract property + advert from SE webhook payload
+// Payload structure (doc SE) :
+//   Match : { match: { propertyDocument: {...}, search: "/searches/xxx" } }
+//   Event : { event: "ad.update.price", adEvent: {...}, match: { propertyDocument: {...} } }
+// ──────────────────────────────────────────────────────────────────────────────
+
+function extractPropertyAndAdvert(payload: any): { property: any; advert: any } | null {
+  const propertyDoc = payload.match?.propertyDocument || payload.propertyDocument
+  if (!propertyDoc) return null
+
+  const adverts = propertyDoc.adverts || []
+  const advert = adverts[0]
+  if (!advert) return null
+
+  return { property: propertyDoc, advert }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Build bien payload from SE property (colonnes IA JAMAIS incluses)
 // ──────────────────────────────────────────────────────────────────────────────
 
-async function buildBienPayload(
+function buildBienPayload(
   property: any,
   advert: any,
   strategie: string,
@@ -56,25 +98,29 @@ async function buildBienPayload(
     etage: advert.floor !== undefined && advert.floor !== null
       ? (advert.floor === 0 ? 'RDC' : String(advert.floor))
       : null,
-    annee_construction: property.constructionYear || null,
+    annee_construction: advert.constructionYear || property.constructionYear || null,
     dpe: advert.energy?.category || null,
     dpe_valeur: advert.energy?.value || null,
     ges: advert.greenHouseGas?.category || null,
     ville: property.city?.name || null,
     code_postal,
     metropole: code_postal ? (metropoleMap.get(code_postal) || null) : null,
-    photo_url: advert.pictures?.[0] || null,
-    latitude: property.location?.lat || null,
-    longitude: property.location?.lon || null,
-    surface_terrain: advert.landSurface || null,
+    photo_url: advert.pictures?.[0] || property.pictures?.[0] || null,
+    latitude: property.location?.lat ?? property.locations?.lat ?? null,
+    longitude: property.location?.lon ?? property.locations?.lon ?? null,
+    surface_terrain: advert.landSurface || property.landSurface || null,
     // Stream Estate specific
     stream_estate_id: property.uuid,
     source_provider: 'stream_estate',
     publisher_type: mapPublisherType(advert.publisher?.type),
     price_history: advert.events?.length ? advert.events : null,
-    // Ascenseur si disponible
-    ...(property.elevator === true ? { ascenseur: true } : {}),
-    ...(property.elevator === false ? { ascenseur: false } : {}),
+    // Ascenseur
+    ...(advert.elevator === true || property.elevator === true ? { ascenseur: true } : {}),
+    ...(advert.elevator === false || property.elevator === false ? { ascenseur: false } : {}),
+    // condominiumFees SE = annuel → diviser par 12 pour stocker mensuel
+    ...(advert.condominiumFees ? { charges_copro: Math.round(advert.condominiumFees / 12) } : {}),
+    // taxe fonciere (annuel, stocke annuel en base)
+    ...(advert.propertyTax ? { taxe_fonc_ann: advert.propertyTax } : {}),
     // moteurimmo_data reutilise avec memes cles (compatible pipeline IA)
     moteurimmo_data: {
       uniqueId: property.uuid,
@@ -91,6 +137,7 @@ async function buildBienPayload(
       source: 'stream_estate',
       priceHistory: advert.events || null,
       stations: property.stations || null,
+      features: advert.features || null,
     },
   }
 
@@ -98,7 +145,7 @@ async function buildBienPayload(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Dedup : URL → duplicates MI → matching geo
+// Dedup : URL → stream_estate_id → duplicates MI → matching geo
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function findExistingBien(
@@ -176,7 +223,7 @@ const PROTECTED_FIELDS = new Set([
   'photo_storage_path',
 ])
 
-// charges_copro et taxe_fonc_ann : inclure seulement si NULL en base
+// charges_copro et taxe_fonc_ann : inclure seulement si NULL en base (pour biens MI existants)
 const CONDITIONAL_FIELDS = new Set(['charges_copro', 'taxe_fonc_ann'])
 
 function stripProtectedFields(
@@ -186,14 +233,14 @@ function stripProtectedFields(
   const clean: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(bien)) {
     if (PROTECTED_FIELDS.has(key)) continue
-    if (CONDITIONAL_FIELDS.has(key) && existingSource) continue // on gerera via SQL conditionnel
+    if (CONDITIONAL_FIELDS.has(key) && existingSource === 'moteurimmo') continue
     clean[key] = value
   }
   return clean
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Load metropole map
+// Load metropole map (cached en memoire pour la duree du lambda)
 // ──────────────────────────────────────────────────────────────────────────────
 
 let _metropoleMap: Map<string, string> | null = null
@@ -218,37 +265,25 @@ async function getMetropoleMap(): Promise<Map<string, string>> {
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function handlePropertyAdCreate(payload: any) {
-  const property = payload.property || payload
-  const adverts = property.adverts || []
-  if (!adverts.length) return { action: 'skip', reason: 'no adverts' }
+  const extracted = extractPropertyAndAdvert(payload)
+  if (!extracted) return { action: 'skip', reason: 'no propertyDocument or adverts' }
+  const { property, advert } = extracted
 
-  const advert = adverts[0]
   if (!advert.url) return { action: 'skip', reason: 'no url' }
 
   const metropoleMap = await getMetropoleMap()
-  const strategie = payload.searchTitle
-    ? mapStrategie(payload.searchTitle)
-    : 'Travaux lourds'
+  const text = [advert.title || '', advert.description || ''].join(' ')
+  const strategie = detectStrategie(text, property.propertyType)
 
-  const bien = await buildBienPayload(property, advert, strategie, metropoleMap)
+  const bien = buildBienPayload(property, advert, strategie, metropoleMap)
   const existing = await findExistingBien(advert.url, property, advert)
 
   if (existing) {
     // UPDATE — rattacher + MAJ donnees (colonnes IA protegees)
     const updatePayload = stripProtectedFields(bien, existing.source_provider)
 
-    // charges_copro / taxe_fonc_ann : update seulement si NULL en base
-    const condSql: string[] = []
-    if (bien.charges_copro != null) {
-      condSql.push('charges_copro')
-    }
-    if (bien.taxe_fonc_ann != null) {
-      condSql.push('taxe_fonc_ann')
-    }
-
-    // Si le bien existait en MI, on conditionne charges_copro/taxe_fonc_ann
-    if (existing.source_provider === 'moteurimmo' && condSql.length > 0) {
-      // Fetch current values
+    // Pour les biens MI : charges_copro/taxe_fonc_ann seulement si NULL en base
+    if (existing.source_provider === 'moteurimmo') {
       const { data: current } = await supabaseAdmin
         .from('biens')
         .select('charges_copro, taxe_fonc_ann')
@@ -256,8 +291,7 @@ async function handlePropertyAdCreate(payload: any) {
         .single() as { data: { charges_copro: number | null; taxe_fonc_ann: number | null } | null }
       if (current) {
         if (current.charges_copro == null && bien.charges_copro != null) {
-          // SE condominiumFees est probablement annuel → diviser par 12
-          updatePayload.charges_copro = Math.round((bien.charges_copro as number) / 12)
+          updatePayload.charges_copro = bien.charges_copro
         }
         if (current.taxe_fonc_ann == null && bien.taxe_fonc_ann != null) {
           updatePayload.taxe_fonc_ann = bien.taxe_fonc_ann
@@ -278,11 +312,6 @@ async function handlePropertyAdCreate(payload: any) {
   }
 
   // INSERT nouveau bien
-  // charges_copro SE probablement annuel → diviser par 12
-  if (bien.charges_copro != null) {
-    bien.charges_copro = Math.round((bien.charges_copro as number) / 12)
-  }
-
   const { data: inserted, error } = await supabaseAdmin
     .from('biens')
     .insert(bien)
@@ -290,7 +319,6 @@ async function handlePropertyAdCreate(payload: any) {
     .single()
 
   if (error) {
-    // Doublon URL race condition
     if (error.code === '23505') {
       return { action: 'duplicate', url: advert.url }
     }
@@ -302,44 +330,32 @@ async function handlePropertyAdCreate(payload: any) {
 }
 
 async function handleAdUpdatePrice(payload: any) {
-  const property = payload.property || payload
-  const advert = property.adverts?.[0] || payload.advert
-  if (!advert?.price) return { action: 'skip', reason: 'no price' }
+  const extracted = extractPropertyAndAdvert(payload)
+  if (!extracted) return { action: 'skip', reason: 'no propertyDocument' }
+  const { property, advert } = extracted
+
+  const adEvent = payload.adEvent
+  const newPrix = adEvent?.fieldNewValue ? Number(adEvent.fieldNewValue) : advert.price
+  if (!newPrix) return { action: 'skip', reason: 'no price' }
 
   const uuid = property.uuid
   const url = advert.url
+  const surface = property.surface || advert.surface
 
   // Match par stream_estate_id d'abord, puis par URL
-  let query = supabaseAdmin.from('biens').select('id, prix_fai')
-  if (uuid) {
-    const { data } = await query.eq('stream_estate_id', uuid).limit(1).single()
-    if (data) {
-      const newPrix = advert.price
-      const surface = property.surface || advert.surface
-      const { error } = await supabaseAdmin
-        .from('biens')
-        .update({
-          prix_fai: newPrix,
-          prix_m2: newPrix && surface ? Math.round((newPrix / surface) * 100) / 100 : null,
-          price_history: advert.events || null,
-        })
-        .eq('id', data.id)
+  const targets = [
+    uuid ? { column: 'stream_estate_id', value: uuid } : null,
+    url ? { column: 'url', value: url } : null,
+  ].filter(Boolean)
 
-      if (error) return { action: 'error', error: error.message }
-      return { action: 'price_updated', id: data.id, old: data.prix_fai, new: newPrix }
-    }
-  }
-
-  if (url) {
+  for (const target of targets) {
     const { data } = await supabaseAdmin
       .from('biens')
       .select('id, prix_fai')
-      .eq('url', url)
+      .eq(target!.column, target!.value)
       .limit(1)
       .single()
     if (data) {
-      const newPrix = advert.price
-      const surface = property.surface || advert.surface
       const { error } = await supabaseAdmin
         .from('biens')
         .update({
@@ -358,35 +374,20 @@ async function handleAdUpdatePrice(payload: any) {
 }
 
 async function handleAdUpdateExpired(payload: any) {
-  const property = payload.property || payload
-  const advert = property.adverts?.[0] || payload.advert
-  const uuid = property.uuid
-  const url = advert?.url
+  const extracted = extractPropertyAndAdvert(payload)
+  const uuid = extracted?.property?.uuid
+  const url = extracted?.advert?.url
 
-  // Match par stream_estate_id d'abord, puis par URL
-  if (uuid) {
+  const targets = [
+    uuid ? { column: 'stream_estate_id', value: uuid } : null,
+    url ? { column: 'url', value: url } : null,
+  ].filter(Boolean)
+
+  for (const target of targets) {
     const { data } = await supabaseAdmin
       .from('biens')
       .select('id')
-      .eq('stream_estate_id', uuid)
-      .limit(1)
-      .single()
-    if (data) {
-      const { error } = await supabaseAdmin
-        .from('biens')
-        .update({ statut: 'Annonce expiree', derniere_verif_statut: new Date().toISOString() })
-        .eq('id', data.id)
-
-      if (error) return { action: 'error', error: error.message }
-      return { action: 'expired', id: data.id }
-    }
-  }
-
-  if (url) {
-    const { data } = await supabaseAdmin
-      .from('biens')
-      .select('id')
-      .eq('url', url)
+      .eq(target!.column, target!.value)
       .limit(1)
       .single()
     if (data) {
@@ -405,34 +406,52 @@ async function handleAdUpdateExpired(payload: any) {
 
 // ──────────────────────────────────────────────────────────────────────────────
 // POST /api/stream-estate/webhook
+// Auth : restriction IP (SE prod: 144.76.91.183) — pas de header secret
 // ──────────────────────────────────────────────────────────────────────────────
+
+const ALLOWED_IPS = new Set([
+  '144.76.91.183',  // Stream Estate production
+  '178.238.226.136', // Stream Estate sandbox
+])
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth par webhook secret
-    const secret = req.headers.get('x-webhook-secret')
-      || req.headers.get('authorization')?.replace('Bearer ', '')
-    if (!process.env['STREAM_ESTATE_WEBHOOK_SECRET'] || secret !== process.env['STREAM_ESTATE_WEBHOOK_SECRET']) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Auth par IP source (recommande par Stream Estate)
+    const forwarded = req.headers.get('x-forwarded-for')
+    const ip = forwarded ? forwarded.split(',')[0].trim() : req.headers.get('x-real-ip')
+    if (ip && !ALLOWED_IPS.has(ip)) {
+      console.warn(`[SE webhook] rejected IP: ${ip}`)
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const payload = await req.json()
-    const event = payload.event || payload.type
+    const event = payload.event
 
     let result: any
 
-    switch (event) {
-      case 'property.ad.create':
-        result = await handlePropertyAdCreate(payload)
-        break
-      case 'ad.update.price':
-        result = await handleAdUpdatePrice(payload)
-        break
-      case 'ad.update.expired':
-        result = await handleAdUpdateExpired(payload)
-        break
-      default:
-        result = { action: 'ignored', event }
+    if (event) {
+      // Event payload : { event, adEvent, match: { propertyDocument } }
+      switch (event) {
+        case 'ad.update.price':
+          result = await handleAdUpdatePrice(payload)
+          break
+        case 'ad.update.expired':
+          result = await handleAdUpdateExpired(payload)
+          break
+        case 'property.ad.create':
+          result = await handlePropertyAdCreate(payload)
+          break
+        case 'property.ad.update':
+          result = await handlePropertyAdCreate(payload) // traite comme create (upsert)
+          break
+        default:
+          result = { action: 'ignored', event }
+      }
+    } else if (payload.match?.propertyDocument || payload.propertyDocument) {
+      // Match payload (nouveau bien) : { match: { propertyDocument, search } }
+      result = await handlePropertyAdCreate(payload)
+    } else {
+      result = { action: 'ignored', reason: 'unknown payload structure' }
     }
 
     return NextResponse.json({ ok: true, ...result })
