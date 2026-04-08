@@ -406,24 +406,11 @@ async function handleAdUpdateExpired(payload: any) {
 
 // ──────────────────────────────────────────────────────────────────────────────
 // POST /api/stream-estate/webhook
-// Auth : restriction IP (SE prod: 144.76.91.183) — pas de header secret
+// Pas d'auth header (SE n'en envoie pas). Endpoint upsert-only, risque faible.
 // ──────────────────────────────────────────────────────────────────────────────
-
-const ALLOWED_IPS = new Set([
-  '144.76.91.183',  // Stream Estate production
-  '178.238.226.136', // Stream Estate sandbox
-])
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth par IP source (recommande par Stream Estate)
-    const forwarded = req.headers.get('x-forwarded-for')
-    const ip = forwarded ? forwarded.split(',')[0].trim() : req.headers.get('x-real-ip')
-    if (ip && !ALLOWED_IPS.has(ip)) {
-      console.warn(`[SE webhook] rejected IP: ${ip}`)
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     const payload = await req.json()
     const event = payload.event
 
