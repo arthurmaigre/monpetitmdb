@@ -40,6 +40,59 @@ export interface Bien {
   updated_at: string
 }
 
+export interface Enchere {
+  id: number
+  source: string
+  id_source: string
+  url: string
+  sources: { source: string; id_source: string; url: string; scraped_at: string }[]
+  statut: 'a_venir' | 'adjuge' | 'vendu' | 'surenchere' | 'retire' | 'expire'
+  type_bien: string
+  adresse: string
+  ville: string
+  code_postal: string
+  departement: string
+  surface: number
+  nb_pieces: number
+  nb_lots: number
+  description: string
+  occupation: string
+  tribunal: string
+  mise_a_prix: number
+  prix_adjuge: number
+  frais_preemption: number
+  date_audience: string
+  date_visite: string
+  date_surenchere: string
+  mise_a_prix_surenchere: number
+  consignation: number
+  publication: string
+  avocat_nom: string
+  avocat_cabinet: string
+  avocat_tel: string
+  avocat_email: string
+  latitude: number
+  longitude: number
+  photo_url: string
+  documents: { type: string; url: string; label: string }[]
+  lots_data: { lots: { type?: string; surface?: number; loyer?: number; etage?: string; occupation?: string; dpe?: string }[] } | null
+  score_travaux: number
+  score_commentaire: string
+  loyer: number
+  charges_copro: number
+  taxe_fonc_ann: number
+  estimation_prix_m2: number
+  estimation_prix_total: number
+  estimation_confiance: 'A' | 'B' | 'C' | 'D'
+  estimation_nb_comparables: number
+  estimation_rayon_m: number
+  estimation_date: string
+  estimation_details: any
+  enrichissement_data: any
+  created_at: string
+  updated_at: string
+}
+
 export interface ParamsFinancement {
   apport: number
   tauxCredit: number

@@ -24,6 +24,51 @@ export type RegimeFiscal =
   | 'reel'
   | 'lmnp'
 
+// ═══════════════════════════════════════════════════════════════
+// Frais d'acquisition enchère judiciaire
+// ═══════════════════════════════════════════════════════════════
+
+export function calculerFraisEnchere(prixAdjuge: number, fraisPrealables?: number): {
+  emoluments_ht: number
+  emoluments_ttc: number
+  droits_enregistrement: number
+  frais_prealables: number
+  total: number
+  pct: number
+} {
+  // Émoluments avocat (barème réglementé)
+  let emoluments = 0
+  const tranches = [
+    { plafond: 6500, taux: 0.072 },
+    { plafond: 17000, taux: 0.03 },
+    { plafond: 60000, taux: 0.02 },
+    { plafond: Infinity, taux: 0.01 },
+  ]
+  let reste = prixAdjuge
+  let seuil = 0
+  for (const { plafond, taux } of tranches) {
+    const assiette = Math.min(reste, plafond - seuil)
+    if (assiette <= 0) break
+    emoluments += assiette * taux
+    reste -= assiette
+    seuil = plafond
+  }
+
+  const emoluments_ttc = Math.round(emoluments * 1.2) // TVA 20%
+  const droits_enregistrement = Math.round(prixAdjuge * 0.058) // 5,8%
+  const fp = fraisPrealables || 0
+  const total = emoluments_ttc + droits_enregistrement + fp
+
+  return {
+    emoluments_ht: Math.round(emoluments),
+    emoluments_ttc,
+    droits_enregistrement,
+    frais_prealables: fp,
+    total,
+    pct: prixAdjuge > 0 ? Math.round(total / prixAdjuge * 1000) / 10 : 0,
+  }
+}
+
 export interface ParamsChargesUtilisateur {
   assurance_pno?: number        // €/an, default 0
   frais_gestion_pct?: number    // % des loyers, default 0

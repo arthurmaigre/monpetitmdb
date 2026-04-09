@@ -5,12 +5,13 @@ import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
+import EnchereCard from '@/components/EnchereCard'
 
 const MapView = dynamic(() => import('./MapView'), { ssr: false, loading: () => <div style={{ height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#faf8f5', borderRadius: '16px', color: '#7a6a60' }}>Chargement de la carte...</div> })
 import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
-import { Bien } from '@/lib/types'
+import { Bien, Enchere } from '@/lib/types'
 import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, STRATEGIES_VISIBLES } from '@/lib/constants'
 import { calculerCashflow } from '@/lib/calculs'
 
@@ -49,6 +50,9 @@ export default function BiensPage() {
   const [surfaceMax, setSurfaceMax] = useState(saved.current?.surfaceMax || '')
   const [rendMin, setRendMin] = useState(saved.current?.rendMin || '')
   const [scoreTravauxMin, setScoreTravauxMin] = useState(saved.current?.scoreTravauxMin || '')
+  // Filtres enchères
+  const [enchereStatut, setEnchereStatut] = useState(saved.current?.enchereStatut || '')
+  const [enchereOccupation, setEnchereOccupation] = useState(saved.current?.enchereOccupation || '')
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const keywordTimeout = useRef<any>(null)
   const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
@@ -133,11 +137,34 @@ export default function BiensPage() {
     }
   }, [loading, allBiens])
 
+  const isEncheres = strategie === 'Enchères'
+
   // Construire l'URL API avec filtres
   function buildApiUrl(page: number, mapMode = false) {
     const params = new URLSearchParams()
     params.set('page', String(page))
     params.set('limit', mapMode ? '2000' : String(PAGE_SIZE))
+
+    if (isEncheres) {
+      // API enchères — filtres spécifiques
+      if (selectedCommune) {
+        params.set('locationType', selectedCommune.type || 'commune')
+        params.set('locationValue', selectedCommune.nom_commune)
+        params.set('locationCP', selectedCommune.code_postal)
+      }
+      if (typeBien !== 'Tous') params.set('type_bien', typeBien)
+      if (prixMin) params.set('prix_min', prixMin)
+      if (prixMax) params.set('prix_max', prixMax)
+      if (surfaceMin) params.set('surface_min', surfaceMin)
+      if (surfaceMax) params.set('surface_max', surfaceMax)
+      if (keywordSearch.trim()) params.set('keyword', keywordSearch.trim())
+      if (enchereStatut) params.set('statut', enchereStatut)
+      if (enchereOccupation) params.set('occupation', enchereOccupation)
+      params.set('tri', 'date_audience_asc')
+      return `/api/encheres?${params.toString()}`
+    }
+
+    // API biens classiques
     if (strategie) params.set('strategie', strategie)
     if (selectedCommune) {
       params.set('locationType', selectedCommune.type || 'commune')
@@ -171,13 +198,14 @@ export default function BiensPage() {
     fetch(buildApiUrl(1, view === 'map'))
       .then(r => { if (!r.ok) throw new Error('Erreur serveur'); return r.json() })
       .then(d => {
-        setAllBiens(d.biens || [])
+        // L'API enchères retourne "encheres", l'API biens retourne "biens"
+        setAllBiens(d.biens || d.encheres || [])
         setTotalBiens(d.total || 0)
         setHasMore(d.hasMore || false)
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -188,7 +216,7 @@ export default function BiensPage() {
     fetch(buildApiUrl(nextPage))
       .then(r => r.json())
       .then(d => {
-        setAllBiens(prev => [...prev, ...(d.biens || [])])
+        setAllBiens(prev => [...prev, ...(d.biens || d.encheres || [])])
         setCurrentPage(nextPage)
         setHasMore(d.hasMore || false)
         setLoadingMore(false)
@@ -579,6 +607,28 @@ export default function BiensPage() {
               </select>
             </div>
           )}
+          {isEncheres && (
+            <>
+              <div className="filter-group">
+                <label className="filter-label">Statut</label>
+                <select value={enchereStatut} onChange={e => setEnchereStatut(e.target.value)}>
+                  <option value="">Tous</option>
+                  <option value="a_venir">À venir</option>
+                  <option value="surenchere">En surenchère</option>
+                  <option value="adjuge">Adjugé</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label className="filter-label">Occupation</label>
+                <select value={enchereOccupation} onChange={e => setEnchereOccupation(e.target.value)}>
+                  <option value="">Tous</option>
+                  <option value="libre">Bien Libre</option>
+                  <option value="occupe">Bien Occupé</option>
+                  <option value="loue">Bien Loué</option>
+                </select>
+              </div>
+            </>
+          )}
           <div className="filter-sep" />
           <div className="filter-group" style={{ flex: 1 }}>
             <label className="filter-label">{"Recherche par mots-cl\u00E9s"}</label>
@@ -711,19 +761,23 @@ export default function BiensPage() {
             ) : view === 'grid' ? (
               <div className="grid">
                 {filtered.map(bien => (
-                  <BienCard
-                    key={bien.id}
-                    bien={bien}
-                    inWatchlist={watchlistIds.has(bien.id)}
-                    userToken={userToken}
-                    onWatchlistChange={(bienId, added) => {
-                      setWatchlistIds(prev => {
-                        const next = new Set(prev)
-                        added ? next.add(bienId) : next.delete(bienId)
-                        return next
-                      })
-                    }}
-                  />
+                  isEncheres ? (
+                    <EnchereCard key={bien.id} enchere={bien as any} />
+                  ) : (
+                    <BienCard
+                      key={bien.id}
+                      bien={bien}
+                      inWatchlist={watchlistIds.has(bien.id)}
+                      userToken={userToken}
+                      onWatchlistChange={(bienId, added) => {
+                        setWatchlistIds(prev => {
+                          const next = new Set(prev)
+                          added ? next.add(bienId) : next.delete(bienId)
+                          return next
+                        })
+                      }}
+                    />
+                  )
                 ))}
               </div>
             ) : (

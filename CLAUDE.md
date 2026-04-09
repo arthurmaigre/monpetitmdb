@@ -2,7 +2,7 @@
 
 ## Projet
 SaaS de sourcing et analyse immobiliere pour marchands de biens et investisseurs (methodologie marchand de biens).
-Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Immeuble de rapport** (ex-Decoupe).
+Strategies : **Locataire en place** / **Travaux lourds** / **Division** / **Immeuble de rapport** (ex-Decoupe) / **Encheres** (ventes aux encheres judiciaires).
 Territoire : France entiere, 22 metropoles.
 Modele freemium : Free (10 biens watchlist) / Pro 19€ (50 biens, 2 strategies, 2 regimes, 1 alerte email) / Expert 49€ (illimite, toutes strategies dont IDR, tous regimes, 5 alertes email).
 Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD` (Stripe promotion code sur coupon `STRIPE_COUPON_EARLY_ADOPTER`). `allow_promotion_codes: true` au checkout.
@@ -14,6 +14,7 @@ Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD`
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
 - **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
 - **Sourcing API** : Moteur Immo (coupe 2026-04-06) → **migration Stream Estate** (agregateur, webhooks + saved searches). Module legacy `moteurimmo_client.py`
+- **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Table `encheres` Supabase. Extraction Sonnet v3 + PDFs.
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
 - **Editorial** : Claude Opus (redaction) + Sonnet (fact-check) + Unsplash (photos)
@@ -37,6 +38,9 @@ monpetitmdb/
 │   │   ├── chat/               # Chat IA (streaming, Haiku)
 │   │   ├── moteurimmo/webhook/ # Webhook Moteur Immo (legacy, API coupee)
 │   │   ├── stream-estate/webhook/ # Webhook Stream Estate (nouveau sourcing)
+│   │   ├── encheres/            # GET liste encheres + filtres
+│   │   ├── encheres/[id]/       # GET/PATCH fiche enchere
+│   │   ├── estimation/encheres/[id]/ # Estimation DVF encheres
 │   │   ├── admin/ingest/       # Ingestion Moteur Immo (legacy, desactive)
 │   │   ├── admin/regex/        # Validation regex faux positifs
 │   │   ├── admin/extraction/   # Extraction donnees locatives IA (Haiku)
@@ -106,6 +110,13 @@ monpetitmdb/
 │   ├── batch_score_travaux.py      # Score travaux IA (Haiku)
 │   ├── batch_regex_validation.py   # Validation regex faux positifs
 │   ├── batch_nuit.py               # Script nuit (enchaine tous les batches)
+│   ├── encheres_supabase.py        # Module Supabase encheres (upsert, fusion cross-source)
+│   ├── scraper_licitor.py          # Scraper Licitor (~385 encheres, requests, GPS)
+│   ├── scraper_avoventes.py        # Scraper Avoventes (~210 encheres, Playwright + requests)
+│   ├── scraper_vench.py            # Scraper Vench (~440 encheres, requests + login abo)
+│   ├── scraper_encheres.py         # CLI unifie (3 sources)
+│   ├── batch_encheres_extraction.py # Extraction Sonnet v3 + PDFs (PV + CCV)
+│   ├── sql_create_encheres.sql     # Script SQL creation table
 │   └── .env                        # Cles API (ne pas committer)
 └── public/
 ```
@@ -180,6 +191,27 @@ monpetitmdb/
 - **Budget travaux** : `budget_travaux_m2` (JSONB : {"1": 200, "2": 500, "3": 800, "4": 1200, "5": 1800})
 - **Stripe** : `stripe_customer_id` (text)
 
+## Table `encheres` — Ventes aux encheres judiciaires
+
+**Sources** : Licitor (~385), Avoventes (~210, Playwright), Vench (~440, abo actif)
+**631 biens uniques** apres fusion cross-source (48% multi-source).
+
+**Colonnes principales** :
+- `id`, `source`, `id_source`, `url`, `sources` (JSONB multi-source avec URLs)
+- `statut` : a_venir | adjuge | vendu | surenchere | retire | expire
+- `type_bien`, `adresse`, `ville`, `code_postal`, `departement`, `surface`, `nb_pieces` (text "T3"), `nb_lots`
+- `tribunal`, `mise_a_prix`, `prix_adjuge`, `date_audience`, `date_visite`, `date_surenchere`, `mise_a_prix_surenchere`, `consignation`
+- `avocat_nom`, `avocat_cabinet`, `avocat_tel`
+- `occupation` (libre/occupe/loue), `description`, `photo_url`, `documents` (JSONB PDFs)
+- `lots_data` (JSONB multi-lots), `score_travaux`, `loyer`, `charges_copro`, `taxe_fonc_ann`
+- `estimation_*` (DVF cache), `enrichissement_*` (Sonnet v3)
+- `latitude`, `longitude`, `created_at`, `updated_at`
+
+**Pipeline** : scraping 3 sites → fusion cross-source → extraction Sonnet v3 + PDFs (PV+CCV) → upsert Supabase
+**Frais enchere** : droits mutation 5.8% + emoluments avocat (bareme progressif) + frais prealables + CSI 0.1% ≈ 12%
+**Dedup** : intra-source (source, id_source), cross-source (ville + date_audience + prix ±5%)
+**Statut cycle de vie** : a_venir → surenchere (10j post-audience) → adjuge → vendu. Expire si disparait de tous les listings.
+
 ## Autres tables
 - `articles` — contenu, statut (draft/review/approved/published), slug, SEO, `cover_url` (image)
 - `cron_config` — id, enabled, schedule, last_run, last_result, params (config Vercel Cron)
@@ -224,6 +256,21 @@ Puis fiscalite PV selon regime (avec abattements duree si applicable)
 Bilan net = PV nette + cashflow locatif cumule
 Duree detention : 1-5 ans
 Comparaison 2 regimes cote a cote
+
+## Strategie Encheres — Frontend
+
+Integree dans `/biens` comme les autres strategies (pas de page separee).
+- Filtre strategie "Encheres" dans BiensClient.tsx → appel `/api/encheres` au lieu de `/api/biens`
+- `EnchereCard.tsx` : card avec countdown J-XX, mise a prix / prix adjuge, pills (occupation, TJ, prix/m2)
+- Fiche bien `/biens/[id]?source=encheres` : meme page que les autres strategies, avec blocs specifiques :
+  - Infos enchere dans Caracteristiques (tribunal, audience, visite, avocat, prix adjuge, statut)
+  - Badge countdown sur la photo/illustration
+  - Bloc surenchere orange (date limite, nouvelle mise a prix, consignation)
+  - Prix cible enchere max (objectif 20% PV brute)
+  - Documents juridiques (PDFs CCV, PV, DDT telechargeables)
+  - Boutons sources (Licitor, Avoventes, Vench) dans PlatformLinks
+- Filtres specifiques : statut (a venir/surenchere/adjuge), occupation (libre/occupe/loue)
+- `calculerFraisEnchere()` dans calculs.ts : emoluments avocat (bareme progressif) + droits mutation 5.8% + CSI 0.1%
 
 ## Navigation (Layout.tsx)
 

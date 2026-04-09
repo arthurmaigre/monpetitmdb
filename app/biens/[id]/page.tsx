@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV } from '@/lib/calculs'
+import TypeBienIllustration from '@/components/TypeBienIllustration'
 
 function getPhotos(bien: any): string[] {
   const photos: string[] = []
@@ -18,12 +19,17 @@ function getPhotos(bien: any): string[] {
   return photos
 }
 
-function PhotoCarousel({ bien }: { bien: any }) {
+function PhotoCarousel({ bien, overlay }: { bien: any, overlay?: React.ReactNode }) {
   const [idx, setIdx] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
   const photos = getPhotos(bien)
 
-  if (photos.length === 0) return <div className="fiche-photo-empty">Pas de photo</div>
+  if (photos.length === 0) return (
+    <div className="fiche-photo-empty" style={{ position: 'relative' }}>
+      <TypeBienIllustration type={bien.type_bien} size={96} />
+      {overlay}
+    </div>
+  )
 
   const prev = () => setIdx(i => i > 0 ? i - 1 : photos.length - 1)
   const next = () => setIdx(i => i < photos.length - 1 ? i + 1 : 0)
@@ -39,6 +45,7 @@ function PhotoCarousel({ bien }: { bien: any }) {
       style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}
     >
       <img src={photos[idx]} alt="" className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in' }} />
+      {overlay}
       {/* Fullscreen overlay */}
       {fullscreen && (
         <div onClick={() => setFullscreen(false)} style={{
@@ -72,6 +79,9 @@ function PhotoCarousel({ bien }: { bien: any }) {
 }
 
 const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: string }> = {
+  licitor: { name: 'Licitor', color: '#1565C0', abbrev: 'LIC' },
+  avoventes: { name: 'Avoventes', color: '#6A1B9A', abbrev: 'AVO' },
+  vench: { name: 'Vench', color: '#2E7D32', abbrev: 'VEN' },
   leboncoin: { name: 'Leboncoin', color: '#F56B2A', abbrev: 'LBC' },
   seloger: { name: 'SeLoger', color: '#E5002B', abbrev: 'SL' },
   bienici: { name: 'Bien\'ici', color: '#00B8D4', abbrev: 'BI' },
@@ -134,13 +144,23 @@ function PlatformLinks({ bien }: { bien: any }) {
   const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
   const links: { origin: string, url: string }[] = []
 
-  // Annonce principale
-  if (bien.url) {
+  // Sources enchères (table sources JSONB)
+  if (bien.sources) {
+    const sources = typeof bien.sources === 'string' ? JSON.parse(bien.sources) : bien.sources
+    if (Array.isArray(sources)) {
+      for (const s of sources) {
+        if (s.url) links.push({ origin: s.source, url: s.url })
+      }
+    }
+  }
+
+  // Annonce principale (biens classiques)
+  if (links.length === 0 && bien.url) {
     const origin = mi?.origin || getPlatformFromUrl(bien.url)
     links.push({ origin, url: bien.url })
   }
 
-  // Duplicates
+  // Duplicates (biens classiques)
   if (mi?.duplicates) {
     for (const d of mi.duplicates) {
       if (d.url && !links.some(l => l.url === d.url)) {
@@ -1494,7 +1514,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode }) {
+function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra, estimationApiBase }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode, estimationApiBase?: string }) {
   const [estimation, setEstimation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -1507,7 +1527,8 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`/api/estimation/${bienId}${force ? '?force=true' : ''}`)
+      const base = estimationApiBase || '/api/estimation'
+      const res = await fetch(`${base}/${bienId}${force ? '?force=true' : ''}`)
       const data = await res.json()
       if (data.estimation) {
         setEstimation(data.estimation)
@@ -1789,6 +1810,13 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 export default function FicheBienPage() {
   const params = useParams()
   const id = params.id as string
+  // Détecter si c'est une enchère (via query param ?source=encheres)
+  const [isEnchere] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('source') === 'encheres'
+  })
+  const apiBase = isEnchere ? '/api/encheres' : '/api/biens'
+  const estimationBase = isEnchere ? '/api/estimation/encheres' : '/api/estimation'
   const [bien, setBien] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
@@ -1868,14 +1896,34 @@ export default function FicheBienPage() {
     async function load() {
       try {
       const [bienRes, editsRes, sessionRes] = await Promise.all([
-        fetch(`/api/biens/${id}`),
-        fetch(`/api/biens/${id}/edits`),
+        fetch(`${apiBase}/${id}`),
+        fetch(`/api/biens/${id}/edits`).catch(() => ({ ok: true, json: async () => ({ champs: {} }) })),
         supabase.auth.getSession()
       ])
       if (!bienRes.ok) { setFetchError(true); setLoading(false); return }
       const bienData = await bienRes.json()
-      const editsData = await editsRes.json()
-      setBien(bienData.bien)
+      const editsData = typeof editsRes === 'object' && 'json' in editsRes ? await (editsRes as any).json() : { champs: {} }
+      // Pour les enchères, adapter les champs pour la compatibilité avec les composants biens
+      const rawBien = bienData.bien || bienData.enchere
+      if (isEnchere && rawBien) {
+        // Mapper les champs enchères → biens pour les calculs
+        rawBien.prix_fai = rawBien.mise_a_prix || rawBien.prix_fai
+        rawBien.strategie_mdb = 'Enchères'
+        rawBien.statut = rawBien.statut || 'a_venir'
+        // Extraire les données enrichissement_data
+        const enrich = typeof rawBien.enrichissement_data === 'string'
+          ? JSON.parse(rawBien.enrichissement_data) : rawBien.enrichissement_data || {}
+        if (!rawBien.dpe && enrich.dpe) rawBien.dpe = enrich.dpe
+        if (!rawBien.nb_chambres && enrich.nb_chambres) rawBien.nb_chambres = enrich.nb_chambres
+        if (!rawBien.etage && enrich.etage) rawBien.etage = enrich.etage
+        if (!rawBien.annee_construction && enrich.annee_construction) rawBien.annee_construction = enrich.annee_construction
+        // Équipements
+        if (enrich.has_cave) rawBien.has_cave = true
+        if (enrich.has_parking) rawBien.parking_type = 'parking_ouvert'
+        if (enrich.has_piscine) rawBien.has_piscine = true
+        if (enrich.has_ascenseur) rawBien.ascenseur = true
+      }
+      setBien(rawBien)
       setChampsStatut(editsData.champs || {})
 
       const session = sessionRes.data.session
@@ -1988,17 +2036,21 @@ export default function FicheBienPage() {
 
   async function handleUpdate(champ: string, valeur: any) {
     if (!userToken) return
-    const res = await fetch(`/api/biens/${id}`, {
+    const res = await fetch(`${apiBase}/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
       body: JSON.stringify({ [champ]: valeur })
     })
     if (res.ok) {
       const data = await res.json()
-      setBien((prev: any) => ({ ...prev, ...data.bien }))
-      const editsRes = await fetch(`/api/biens/${id}/edits`)
-      const editsData = await editsRes.json()
-      setChampsStatut(editsData.champs || {})
+      const updated = data.bien || data.enchere
+      if (isEnchere && updated) updated.prix_fai = updated.mise_a_prix || updated.prix_fai
+      setBien((prev: any) => ({ ...prev, ...updated }))
+      try {
+        const editsRes = await fetch(`/api/biens/${id}/edits`)
+        const editsData = await editsRes.json()
+        setChampsStatut(editsData.champs || {})
+      } catch {}
     }
   }
 
@@ -2083,9 +2135,9 @@ export default function FicheBienPage() {
   )
   if (!bien) return <Layout><p style={{ textAlign: 'center', padding: '80px', color: '#7a6a60' }}>Bien introuvable</p></Layout>
 
-  const peutCalculer = bien.loyer && bien.prix_fai
+  const peutCalculer = isEnchere ? !!bien.prix_fai : (bien.loyer && bien.prix_fai)
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
-  const isIDR = bien.strategie_mdb === 'Immeuble de rapport'
+  const isIDR = bien.strategie_mdb === 'Immeuble de rapport' || (isEnchere && (bien.nb_lots || 0) > 1)
   const lotsData = bien.lots_data as { lots?: { type?: string; surface?: number; loyer?: number; type_loyer?: string; etat?: string; dpe?: string; etage?: string }[] } | null
   const lots = lotsData?.lots || []
   const nbLotsEffectif = bien.nb_lots || lots.length
@@ -2164,8 +2216,8 @@ export default function FicheBienPage() {
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
-        .fiche-photo { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 16px; }
-        .fiche-photo-empty { width: 100%; aspect-ratio: 16/9; border-radius: 16px; background: #ede8e0; display: flex; align-items: center; justify-content: center; color: #b0a898; }
+        .fiche-photo { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 16px; max-height: 320px; }
+        .fiche-photo-empty { width: 100%; aspect-ratio: 16/9; border-radius: 16px; background: #ede8e0; display: flex; align-items: center; justify-content: center; color: #b0a898; max-height: 320px; }
         .fiche-info { display: flex; flex-direction: column; gap: 14px; }
         .fiche-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 800; color: #1a1210; }
         .fiche-sub { font-size: 14px; color: #7a6a60; margin-top: -8px; }
@@ -2173,7 +2225,7 @@ export default function FicheBienPage() {
         .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #f0ede8; color: #7a6a60; }
         .tag-strat { background: #d4ddf5; color: #2a4a8a; }
         .tag-statut { background: #d4f5e0; color: #1a7a40; }
-        .prix-bloc { display: flex; flex-direction: column; gap: 3px; }
+        .prix-bloc { display: flex; flex-direction: column; gap: 1px; }
         .prix-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
         .prix-fai { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 800; color: #c0392b; }
         .prix-cible-val { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: #1a1210; }
@@ -2276,19 +2328,125 @@ export default function FicheBienPage() {
         </nav>
 
         <div className="hero-grid">
-          <PhotoCarousel bien={bien} />
+          <PhotoCarousel bien={bien} overlay={isEnchere && bien.date_audience ? (() => {
+            const days = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000)
+            let label = '', bg = '#6c757d'
+            if (days > 0) {
+              label = days === 0 ? "Aujourd'hui" : `J-${days}`
+              bg = days <= 7 ? '#c0392b' : days <= 14 ? '#e67e22' : '#6c757d'
+            } else {
+              const deadline = bien.date_surenchere
+                ? new Date(bien.date_surenchere)
+                : new Date(new Date(bien.date_audience).getTime() + 10 * 86400000)
+              const remaining = Math.ceil((deadline.getTime() - Date.now()) / 86400000)
+              if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e67e22' }
+              else { label = 'Adjugé'; bg = '#2a4a8a' }
+            }
+            return label ? (
+              <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
+            ) : null
+          })() : undefined} />
 
           <div className="fiche-info">
-            <h1 className="fiche-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</h1>
-            <p className="fiche-sub">{bien.quartier ? `${bien.quartier} - ` : ''}{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</p>
+            <h1 className="fiche-title">{bien.type_bien || 'Bien'} {bien.nb_pieces ? (String(bien.nb_pieces).startsWith('T') ? bien.nb_pieces : `T${bien.nb_pieces}`) : ''}{bien.surface ? ` - ${Math.round(bien.surface)} m\u00B2` : ''}</h1>
+            <p className="fiche-sub">{bien.quartier ? `${bien.quartier} - ` : ''}{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}{bien.adresse ? ` — ${bien.adresse}` : ''}</p>
             <div className="fiche-tags">
-              {bien.strategie_mdb && <span className="tag tag-strat">{bien.strategie_mdb}</span>}
-              {bien.statut && <span className="tag tag-statut">{bien.statut}</span>}
-              {bien.prix_m2 && <span className="tag">{fmt(bien.prix_m2)} {'\u20AC'}/m{'\u00B2'}</span>}
+              {isEnchere ? (
+                <>
+                  {(() => {
+                    const statutMap: Record<string, { label: string; bg: string; color: string }> = {
+                      a_venir: { label: 'À venir', bg: '#d4f5e0', color: '#1a7a40' },
+                      surenchere: { label: 'En surenchère', bg: '#ffecd2', color: '#8a5a00' },
+                      adjuge: { label: 'Adjugé', bg: '#d4ddf5', color: '#2a4a8a' },
+                      vendu: { label: 'Vendu', bg: '#6c757d', color: '#fff' },
+                      retire: { label: 'Retiré', bg: '#f5d4d4', color: '#8a2a2a' },
+                      expire: { label: 'Expiré', bg: '#e9ecef', color: '#6c757d' },
+                    }
+                    // Ne pas afficher le badge statut si le countdown le couvre déjà
+                    if (['a_venir', 'surenchere', 'adjuge'].includes(bien.statut)) return null
+                    const s = statutMap[bien.statut] || statutMap.a_venir
+                    return <span className="tag" style={{ background: s.bg, color: s.color, fontWeight: 700 }}>{s.label}</span>
+                  })()}
+                  {bien.occupation && bien.occupation !== 'NC' && (
+                    <span className="tag" style={{
+                      background: bien.occupation === 'libre' ? '#d4f5e0' : bien.occupation === 'loue' ? '#d4ddf5' : '#ffecd2',
+                      color: bien.occupation === 'libre' ? '#1a7a40' : bien.occupation === 'loue' ? '#2a4a8a' : '#8a5a00',
+                    }}>{bien.occupation === 'libre' ? 'Bien Libre' : bien.occupation === 'loue' ? 'Bien Loué' : 'Bien Occupé'}</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  {bien.strategie_mdb && <span className="tag tag-strat">{bien.strategie_mdb}</span>}
+                  {bien.statut && <span className="tag tag-statut">{bien.statut}</span>}
+                  {bien.prix_m2 && <span className="tag">{fmt(bien.prix_m2)} {'\u20AC'}/m{'\u00B2'}</span>}
+                </>
+              )}
             </div>
             <div className="prix-bloc">
-              <span className="prix-label">Prix FAI</span>
-              <span className="prix-fai">{fmt(bien.prix_fai)} {'\u20AC'}</span>
+              {isEnchere ? (
+                <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+                  {/* Prix adjugé ou mise à prix */}
+                  <div>
+                    {bien.prix_adjuge && bien.prix_adjuge > 0 ? (
+                      <>
+                        <span className="prix-label" style={{ marginBottom: '-4px', textTransform: 'none' }}>Prix adjugé</span>
+                        <span className="prix-fai">{fmt(bien.prix_adjuge)} {'\u20AC'}</span>
+                        <span style={{ fontSize: '13px', color: '#7a6a60', display: 'block', marginTop: '-2px' }}>Mise à prix : {fmt(bien.prix_fai)} {'\u20AC'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="prix-label" style={{ marginBottom: '-4px', textTransform: 'none' }}>Mise à prix</span>
+                        <span className="prix-fai">{fmt(bien.prix_fai)} {'\u20AC'}</span>
+                      </>
+                    )}
+                  </div>
+                  {/* Prix cible enchère (max pour 20% PV brute) */}
+                  {estimationData?.prix_total && (
+                    <div style={{ textAlign: 'right' }}>
+                      <span className="prix-label" style={{ marginBottom: '-2px' }}>Enchère max (objectif 20% PV)</span>
+                      {(() => {
+                        const dvf = estimationData.prix_total
+                        const travaux = (bien.score_travaux || scorePerso) && bien.surface
+                          ? (budgetTravauxM2[String(bien.score_travaux || scorePerso)] || 0) * bien.surface : 0
+                        const fraisPct = 0.12 // ~12% frais enchère
+                        const objectif = 0.20
+                        const prixCible = Math.round((dvf - travaux * (1 + objectif)) / ((1 + fraisPct) * (1 + objectif)))
+                        const isAbordable = bien.prix_fai <= prixCible
+                        return (
+                          <>
+                            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 700, color: isAbordable ? '#1a7a40' : '#c0392b', display: 'block' }}>
+                              {fmt(prixCible)} {'\u20AC'}
+                            </span>
+                            <span style={{ fontSize: '12px', color: isAbordable ? '#1a7a40' : '#c0392b', fontWeight: 600 }}>
+                              {isAbordable ? 'Mise à prix sous le seuil' : 'Attention, marge réduite'}
+                            </span>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <span className="prix-label" style={{ marginBottom: '-2px' }}>Prix FAI</span>
+                  <span className="prix-fai">{fmt(bien.prix_fai)} {'\u20AC'}</span>
+                </>
+              )}
+              {/* Surenchère */}
+              {isEnchere && (bien.date_surenchere || bien.mise_a_prix_surenchere) && (
+                <div style={{ marginTop: '10px', padding: '10px 14px', background: '#ffecd2', borderRadius: '8px', border: '1px solid #f0d090' }}>
+                  <div style={{ fontWeight: 700, color: '#8a5a00', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>Surenchère possible</div>
+                  {bien.date_surenchere && (
+                    <div style={{ color: '#8a5a00' }}>Jusqu{"'"}au <strong>{new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</strong></div>
+                  )}
+                  {bien.mise_a_prix_surenchere && (
+                    <div style={{ color: '#8a5a00', marginTop: '2px' }}>Nouvelle mise à prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
+                  )}
+                  {bien.consignation && (
+                    <div style={{ color: '#8a5a00', marginTop: '2px' }}>Consignation : <strong>{bien.consignation.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
+                  )}
+                </div>
+              )}
               {/* Prix cible avec dropdown */}
               {(prixCibleCashflow || prixCiblePV) && (
                 <>
@@ -2363,7 +2521,9 @@ export default function FicheBienPage() {
 
         <div style={{ marginTop: '-16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <PlatformLinks bien={bien} />
-          <button onClick={() => setShowContact(true)} style={{ fontSize: '12px', fontWeight: 600, color: '#c0392b', padding: '6px 14px', border: '1px solid #e8e2d8', borderRadius: '8px', background: '#fff', transition: 'all 150ms ease', whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"Compl\u00E9ter les donn\u00E9es manquantes \u2192"}</button>
+          {!isEnchere && (
+            <button onClick={() => setShowContact(true)} style={{ fontSize: '12px', fontWeight: 600, color: '#c0392b', padding: '6px 14px', border: '1px solid #e8e2d8', borderRadius: '8px', background: '#fff', transition: 'all 150ms ease', whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"Compl\u00E9ter les donn\u00E9es manquantes \u2192"}</button>
+          )}
         </div>
 
         {/* Sticky navigation */}
@@ -2428,6 +2588,16 @@ export default function FicheBienPage() {
               <a href="/strategies#s4" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
             </>
           )}
+          {isEnchere && (
+            <>
+              <div>
+                <strong>Vente aux enchères judiciaires</strong> — Ce bien est vendu par voie judiciaire (saisie immobilière ou liquidation). La mise à prix est fixée par le tribunal. L{"'"}adjudication se fait au plus offrant lors de l{"'"}audience.
+              </div>
+              <div>
+                L{"'"}analyse compare la mise à prix avec l{"'"}estimation DVF pour calculer la <strong>décote</strong> potentielle. Les frais d{"'"}acquisition incluent les émoluments du commissaire de justice et les frais de poursuites.
+              </div>
+            </>
+          )}
         </div>
 
         <div id="nav-donnees" className="section">
@@ -2442,6 +2612,19 @@ export default function FicheBienPage() {
             })()}
           </div>
           <div className="data-grid">
+            {/* Infos enchère dans les caractéristiques */}
+            {isEnchere && (
+              <>
+                <div className="data-subtitle">Enchère</div>
+                {bien.tribunal && <div className="data-item"><span className="data-label">Tribunal</span><span className="data-value">{bien.tribunal}</span></div>}
+                {bien.date_audience && <div className="data-item"><span className="data-label">Audience</span><span className="data-value">{new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (passée)' })()}</span></div>}
+                {bien.date_visite && <div className="data-item"><span className="data-label">Visite</span><span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div>}
+                {bien.avocat_nom && <div className="data-item"><span className="data-label">Avocat</span><span className="data-value">{bien.avocat_nom}{bien.avocat_cabinet ? ` (${bien.avocat_cabinet})` : ''}</span></div>}
+                {bien.avocat_tel && <div className="data-item"><span className="data-label">Téléphone avocat</span><span className="data-value">{bien.avocat_tel}</span></div>}
+                {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
+                {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
+              </>
+            )}
             <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>
             <div className="data-item">
               <span className="data-label">{"Ann\u00E9e de construction"}</span>
@@ -2534,7 +2717,7 @@ export default function FicheBienPage() {
           )}
         </div>
 
-        {bien.strategie_mdb === 'Travaux lourds' ? (
+        {bien.strategie_mdb === 'Travaux lourds' || (isEnchere && !bien.loyer) ? (
           <div className="section">
             <h2 className="section-title">{"Donn\u00E9es du Bien"}</h2>
             <div className="data-grid">
@@ -2711,7 +2894,7 @@ export default function FicheBienPage() {
                   {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/2 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
                 </div>
               )}
-              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked}
+              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined}
                 extra={isIDR && nbLotsEffectif > 0 ? (
                   <div style={{ marginTop: '4px', textAlign: 'center' }}>
                     <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
@@ -2792,7 +2975,7 @@ export default function FicheBienPage() {
         {!peutCalculer && !isTravauxLourds && !bien.prix_fai && (
           <div className="section"><div className="nc-warning">Le prix est manquant — impossible de calculer.</div></div>
         )}
-        {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && peutCalculer && !isTravauxLourds && (
+        {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && peutCalculer && !isTravauxLourds && bien.loyer && (
           <div className="section">
               <h2 className="section-title">{"Cash Flow Avant Imp\u00F4t"}</h2>
                   <table className="results-table">
@@ -3078,6 +3261,32 @@ export default function FicheBienPage() {
           )}
         </div>
 
+        {/* Documents PDF enchères — colonne droite, après travaux */}
+        {isEnchere && bien.documents && (() => {
+          const docs = typeof bien.documents === 'string' ? JSON.parse(bien.documents) : bien.documents
+          if (!docs || docs.length === 0) return null
+          const icons: Record<string, string> = { ccv: '\uD83D\uDCCB', pv: '\uD83D\uDCDD', diag: '\uD83C\uDFE5', affiche: '\uD83D\uDCE2', autre: '\uD83D\uDCC4' }
+          return (
+            <div className="section">
+              <h2 className="section-title">Documents Juridiques</h2>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {docs.map((doc: any, i: number) => (
+                  <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    padding: '6px 12px', background: '#faf8f5', borderRadius: '8px',
+                    border: '1px solid #e8e2d8', textDecoration: 'none',
+                    color: '#1a1210', fontSize: '12px', fontWeight: 500,
+                  }}>
+                    <span style={{ fontSize: '14px' }}>{icons[doc.type] || icons.autre}</span>
+                    {doc.label || doc.type}
+                    <span style={{ color: '#7a6a60', marginLeft: '4px' }}>↗</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
           <>
             <div id="nav-financement" className="section">
@@ -3240,6 +3449,7 @@ export default function FicheBienPage() {
         <ModalPanel open={showContact} onClose={() => setShowContact(false)} title={"R\u00E9cup\u00E9rer les donn\u00E9es manquantes"}>
           <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />
         </ModalPanel>
+
 
       </div>
     </Layout>
