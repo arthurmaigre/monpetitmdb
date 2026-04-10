@@ -139,7 +139,9 @@ LOTS_DATA (si multi-lots uniquement) :
 
 DESCRIPTION_PROPRE : 2-3 phrases résumant le bien. Pas d'infos juridiques, DVF, ni publicités.
 
-RÈGLE D'OR : n'invente rien. Si une info n'est pas dans le texte, laisse null.
+PRIORITÉ DES SOURCES : en cas de conflit entre le texte de la page web et le contenu d'un PDF (CCV, PV descriptif), le PDF fait foi (document officiel du tribunal).
+
+RÈGLE D'OR : n'invente rien. Si une info n'est pas dans le texte ni les PDFs, laisse null.
 """
 
 
