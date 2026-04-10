@@ -800,7 +800,7 @@ export default function BiensPage() {
                           <th>Mise à prix<span></span></th>
                           <th>Prix adjugé<span></span></th>
                           <th>Occupation<span></span></th>
-                          <th>Frais estimés<span></span></th>
+                          <th>Sources<span></span></th>
                         </>
                       ) : (
                         <>
@@ -897,7 +897,28 @@ export default function BiensPage() {
                             <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#7a6a60' }}>{frais ? `~${frais.pct} %` : '-'}</td>
+                            <td>{(() => {
+                              const LOGOS: Record<string, { name: string; color: string; abbrev: string }> = {
+                                licitor: { name: 'Licitor', color: '#1565C0', abbrev: 'LIC' },
+                                avoventes: { name: 'Avoventes', color: '#6A1B9A', abbrev: 'AVO' },
+                                vench: { name: 'Vench', color: '#2E7D32', abbrev: 'VEN' },
+                              }
+                              let srcs = e.sources || []
+                              if (typeof srcs === 'string') try { srcs = JSON.parse(srcs) } catch { srcs = [] }
+                              if (!Array.isArray(srcs) || srcs.length === 0) {
+                                const p = LOGOS[e.source]
+                                return p ? <a href={e.url} target="_blank" rel="noopener noreferrer" title={p.name} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '4px', background: p.color, color: '#fff', fontSize: '8px', fontWeight: 700, textDecoration: 'none' }}>{p.abbrev}</a> : '-'
+                              }
+                              const unique = new Map<string, { source: string; url: string }>()
+                              for (const s of srcs) { if (s.url && s.source) unique.set(s.source, s) }
+                              return <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                {Array.from(unique.values()).map((s, i) => {
+                                  const p = LOGOS[s.source]
+                                  if (!p) return null
+                                  return <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" title={p.name} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '4px', background: p.color, color: '#fff', fontSize: '8px', fontWeight: 700, textDecoration: 'none' }}>{p.abbrev}</a>
+                                })}
+                              </div>
+                            })()}</td>
                           </>
                         })() : (
                         <>
