@@ -197,13 +197,8 @@ async function findExistingBien(
   }
 
   // 3. Check dans les duplicates MI (l'URL SE est-elle connue comme doublon MI ?)
-  const { data: byDup } = await supabaseAdmin
-    .from('biens')
-    .select('id, source_provider')
-    .contains('moteurimmo_data', { duplicates: [{ url }] })
-    .limit(1)
-    .single()
-  if (byDup) return byDup
+  // Désactivé : .contains() sur JSONB timeout sur 96k lignes
+  // La dedup se fait déjà par URL (étape 1) et stream_estate_id (étape 2)
 
   // 4. Matching geographique + prix (fallback)
   const code_postal = property.city?.zipcode

@@ -105,20 +105,24 @@ export async function POST(req: NextRequest) {
     const MAX_MS = 25000 // 25s max (cron-job.org timeout 30s)
 
     // Count remaining
-    const { count: totalRemaining } = await supabaseAdmin
+    // Vérifier s'il reste des biens à traiter (sans count exact qui timeout)
+    const { data: checkData } = await supabaseAdmin
       .from('biens')
-      .select('id', { count: 'exact', head: true })
+      .select('id')
       .eq('strategie_mdb', 'Locataire en place')
       .eq('statut', 'Toujours disponible')
+      .eq('regex_statut', 'valide')
       .not('moteurimmo_data', 'is', null)
       .is('extraction_statut', null)
+      .limit(1)
 
-    if (!totalRemaining || totalRemaining === 0) {
+    if (!checkData || checkData.length === 0) {
       return NextResponse.json({
         processed: 0, loyer_found: 0, profil_found: 0,
         errors: 0, next_cursor: null, remaining: 0,
       })
     }
+    const totalRemaining = -1 // inconnu, évite le timeout
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -135,6 +139,7 @@ export async function POST(req: NextRequest) {
       .select('id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data')
       .eq('strategie_mdb', 'Locataire en place')
       .eq('statut', 'Toujours disponible')
+      .eq('regex_statut', 'valide')
       .not('moteurimmo_data', 'is', null)
       .is('extraction_statut', null)
       .order('created_at', { ascending: true })
