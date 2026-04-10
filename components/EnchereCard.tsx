@@ -8,6 +8,9 @@ import TypeBienIllustration from './TypeBienIllustration'
 interface Props {
   enchere: Enchere
   compact?: boolean
+  inWatchlist?: boolean
+  userToken?: string | null
+  onWatchlistChange?: (enchereId: string, added: boolean) => void
 }
 
 function formatPrix(n: number) {
@@ -69,7 +72,8 @@ const STATUT_STYLES: Record<string, { bg: string; color: string; label: string }
   expire: { bg: '#e9ecef', color: '#6c757d', label: 'Expiré' },
 }
 
-export default function EnchereCard({ enchere, compact = false }: Props) {
+export default function EnchereCard({ enchere, compact = false, inWatchlist: initialInWatchlist, userToken, onWatchlistChange }: Props) {
+  const [inWl, setInWl] = useState(initialInWatchlist || false)
   const [imgLoaded, setImgLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
   const photo = enchere.photo_url || null
@@ -158,6 +162,40 @@ export default function EnchereCard({ enchere, compact = false }: Props) {
           }}>
             {statutStyle.label}
           </span>
+        )}
+
+        {/* Watchlist heart (bottom right of photo) */}
+        {userToken && (
+          <button
+            onClick={async (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const method = inWl ? 'DELETE' : 'POST'
+              const res = await fetch('/api/watchlist', {
+                method,
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+                body: JSON.stringify({ bien_id: enchere.id, source_table: 'encheres' })
+              })
+              if (res.ok || res.status === 409) {
+                const newState = !inWl
+                setInWl(newState)
+                onWatchlistChange?.(String(enchere.id), newState)
+              }
+            }}
+            style={{
+              position: 'absolute', bottom: theme.spacing[3], right: theme.spacing[3],
+              background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: '50%',
+              width: '32px', height: '32px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontSize: '18px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              transition: `all ${theme.transitions.fast}`,
+              color: inWl ? theme.colors.primary : theme.colors.textTertiary,
+            }}
+            title={inWl ? 'Retirer de la watchlist' : 'Ajouter à la watchlist'}
+          >
+            {inWl ? '\u2665' : '\u2661'}
+          </button>
         )}
       </div>
 

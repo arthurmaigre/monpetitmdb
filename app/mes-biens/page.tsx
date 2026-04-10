@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
+import EnchereCard from '@/components/EnchereCard'
 import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
@@ -91,19 +92,30 @@ export default function MesBiensPage() {
         if (!wRes.ok) throw new Error('Impossible de charger la watchlist')
         const wData = await wRes.json()
         const items = wData.watchlist || []
-        setWatchlistIds(new Set(items.map((w: any) => w.bien_id)))
+        setWatchlistIds(new Set(items.map((w: any) => String(w.bien_id))))
         const suiviInit: Record<string, string> = {}
-        items.forEach((w: any) => { suiviInit[w.bien_id] = w.suivi || 'a_analyser' })
+        items.forEach((w: any) => { suiviInit[String(w.bien_id)] = w.suivi || 'a_analyser' })
         setSuiviMap(suiviInit)
 
         if (items.length === 0) { setLoading(false); return }
 
-        const biensRes = await fetch('/api/biens?ids=' + items.map((w: any) => w.bien_id).join(','))
-        if (!biensRes.ok) throw new Error('Impossible de charger les biens')
-        const biensData = await biensRes.json()
-        setBiens(biensData.biens || [])
+        // Séparer les IDs par source_table
+        const biensIds = items.filter((w: any) => w.source_table !== 'encheres').map((w: any) => w.bien_id)
+        const encheresIds = items.filter((w: any) => w.source_table === 'encheres').map((w: any) => w.bien_id)
 
-        const strategies = [...new Set((biensData.biens || []).map((x: any) => x.strategie_mdb).filter(Boolean))]
+        // Charger biens classiques + enchères en parallèle
+        const [biensRes, encheresRes] = await Promise.all([
+          biensIds.length > 0 ? fetch('/api/biens?ids=' + biensIds.join(',')) : Promise.resolve(null),
+          encheresIds.length > 0 ? fetch('/api/encheres?ids=' + encheresIds.join(',')) : Promise.resolve(null)
+        ])
+        const biensData = biensRes && biensRes.ok ? await biensRes.json() : { biens: [] }
+        const encheresData = encheresRes && encheresRes.ok ? await encheresRes.json() : { encheres: [] }
+
+        const encheresAvecStrategie = (encheresData.encheres || []).map((e: any) => ({ ...e, strategie_mdb: 'Enchères' }))
+        const allBiens = [...(biensData.biens || []), ...encheresAvecStrategie]
+        setBiens(allBiens)
+
+        const strategies = [...new Set(allBiens.map((x: any) => x.strategie_mdb).filter(Boolean))]
         if (strategies.length > 0) setActiveTab(strategies[0] as string)
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement')
@@ -736,6 +748,16 @@ export default function MesBiensPage() {
               <div className="grid">
                 {filteredBiens.map(bien => {
                   const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || SUIVI_OPTIONS[0]
+                  if (activeTab === 'Enchères') {
+                    return showArchived ? (
+                      <div key={bien.id} style={{ position: 'relative', opacity: 0.7 }}>
+                        <EnchereCard enchere={bien as any} />
+                        <button onClick={() => handleRestore(bien.id)} style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', padding: '10px', borderRadius: '8px', border: 'none', background: '#27ae60', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"\u21A9 Restaurer"}</button>
+                      </div>
+                    ) : (
+                      <EnchereCard key={bien.id} enchere={bien as any} inWatchlist={true} userToken={userToken} onWatchlistChange={(id, added) => { if (!added) handleRemove(String(id)) }} />
+                    )
+                  }
                   return showArchived ? (
                     <div key={bien.id} style={{ position: 'relative', opacity: 0.7 }}>
                       <BienCard bien={bien} inWatchlist={false} userToken={userToken} />
@@ -773,30 +795,43 @@ export default function MesBiensPage() {
                       <th className="sticky-col-head" style={{ left: '170px', width: '80px', minWidth: '80px' }}><span></span></th>
                       <th className="sticky-col-head" style={{ left: '250px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
                       <th>Commune<span></span></th>
-                      <th>{"M\u00E9tropole"}<span></span></th>
-                      <th>Prix FAI<span></span></th>
-                      {activeTab !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
-                      {activeTab !== 'Travaux lourds' && <th>{"\u00C9cart"}<span></span></th>}
-                      <th>Prix/m2<span></span></th>
-                      {activeTab === 'Travaux lourds' ? (
+                      {activeTab === 'Enchères' ? (
                         <>
-                          <th>Score travaux<span></span></th>
-                          <th>Estimation travaux<span></span></th>
-                          <th>DPE<span></span></th>
-                          <th>{"Ann\u00E9e"}<span></span></th>
-                          <th>+/- Value<span></span></th>
+                          <th>Tribunal<span></span></th>
+                          <th>Date audience<span></span></th>
+                          <th>Statut<span></span></th>
+                          <th>Mise à prix<span></span></th>
+                          <th>Prix adjugé<span></span></th>
+                          <th>Occupation<span></span></th>
                         </>
                       ) : (
                         <>
-                          <th>Loyer<span>/mois</span></th>
-                          <th>Type loyer<span></span></th>
-                          <th>{"Charges r\u00E9cup."}<span>/mois</span></th>
-                          <th>Charges copro<span>/mois</span></th>
-                          <th>{"Taxe fonci\u00E8re"}<span>/an</span></th>
-                          <th>Rendement brut<span></span></th>
-                          <th>+/- Value<span></span></th>
-                          <th>Cashflow brut<span>/mois</span></th>
-                          <th>Locataire<span></span></th>
+                          <th>{"M\u00E9tropole"}<span></span></th>
+                          <th>Prix FAI<span></span></th>
+                          {activeTab !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
+                          {activeTab !== 'Travaux lourds' && <th>{"\u00C9cart"}<span></span></th>}
+                          <th>Prix/m2<span></span></th>
+                          {activeTab === 'Travaux lourds' ? (
+                            <>
+                              <th>Score travaux<span></span></th>
+                              <th>Estimation travaux<span></span></th>
+                              <th>DPE<span></span></th>
+                              <th>{"Ann\u00E9e"}<span></span></th>
+                              <th>+/- Value<span></span></th>
+                            </>
+                          ) : (
+                            <>
+                              <th>Loyer<span>/mois</span></th>
+                              <th>Type loyer<span></span></th>
+                              <th>{"Charges r\u00E9cup."}<span>/mois</span></th>
+                              <th>Charges copro<span>/mois</span></th>
+                              <th>{"Taxe fonci\u00E8re"}<span>/an</span></th>
+                              <th>Rendement brut<span></span></th>
+                              <th>+/- Value<span></span></th>
+                              <th>Cashflow brut<span>/mois</span></th>
+                              <th>Locataire<span></span></th>
+                            </>
+                          )}
                         </>
                       )}
                       <th>Actions<span></span></th>
@@ -828,6 +863,33 @@ export default function MesBiensPage() {
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
+                        {activeTab === 'Enchères' ? (() => {
+                          const e = bien as any
+                          const statutLabels: Record<string, { label: string; bg: string; color: string }> = {
+                            a_venir: { label: 'À venir', bg: '#e8f4fd', color: '#1a6aa0' },
+                            surenchere: { label: 'Surenchère', bg: '#fff3e0', color: '#e65100' },
+                            adjuge: { label: 'Adjugé', bg: '#d4f5e0', color: '#1a7a40' },
+                            vendu: { label: 'Vendu', bg: '#d4f5e0', color: '#1a7a40' },
+                            expire: { label: 'Expiré', bg: '#f0ede8', color: '#7a6a60' },
+                          }
+                          const s = statutLabels[e.statut] || { label: e.statut || '-', bg: '#f0ede8', color: '#7a6a60' }
+                          const occupationLabels: Record<string, { label: string; color: string }> = {
+                            libre: { label: 'Libre', color: '#1a7a40' },
+                            occupe: { label: 'Occupé', color: '#8a5a00' },
+                            loue: { label: 'Loué', color: '#2a4a8a' },
+                          }
+                          const occ = occupationLabels[e.occupation] || { label: e.occupation || '-', color: '#7a6a60' }
+                          const dateAudience = e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
+                          return <>
+                            <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
+                            <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
+                            <td className="td-prix">{e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</td>
+                            <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
+                            <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
+                          </>
+                        })() : (
+                        <>
                         <td><MetroBadge metropole={bien.metropole} /></td>
                         {(() => {
                           const peutCalculer = bien.loyer && bien.prix_fai
@@ -906,8 +968,10 @@ export default function MesBiensPage() {
                             )}
                           </>
                         })()}
+                        </>
+                        )}
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <a href={`/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
+                          <a href={activeTab === 'Enchères' ? `/biens/${bien.id}?source=encheres` : `/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
                           {' '}
                           <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{"R\u00E9cup\u00E9rer les donn\u00E9es"}</a>
                         </td>

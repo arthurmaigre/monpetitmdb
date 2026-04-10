@@ -453,7 +453,7 @@ export default function ParametresPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>Nom de l'alerte *</label>
-                      <input className="profil-input" value={alertForm.nom || ''} onChange={e => setAlertForm(f => ({ ...f, nom: e.target.value }))} placeholder={"ex: Locataire Lyon < 200k\u20AC"} />
+                      <input className="profil-input" value={alertForm.nom || ''} onChange={e => setAlertForm(f => ({ ...f, nom: e.target.value }))} placeholder={"Locataire Lyon < 200k\u20AC"} />
                     </div>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Strat\u00E9gie *"}</label>
@@ -465,7 +465,7 @@ export default function ParametresPage() {
                     </div>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"M\u00E9tropole"}</label>
-                      <input className="profil-input" value={alertForm.metropole || ''} onChange={e => setAlertForm(f => ({ ...f, metropole: e.target.value }))} placeholder="ex: Lyon" />
+                      <input className="profil-input" value={alertForm.metropole || ''} onChange={e => setAlertForm(f => ({ ...f, metropole: e.target.value }))} placeholder="Lyon" />
                     </div>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', marginBottom: '4px', display: 'block' }}>{"Prix min (\u20AC)"}</label>

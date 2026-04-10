@@ -1,23 +1,24 @@
 """
 batch_encheres_extraction.py — Extraction IA (Sonnet) pour les enchères judiciaires
 
-2 modes :
-1. Extraction texte : analyse la description brute → données structurées
-2. Analyse PDFs : télécharge CCV/PVD → extraction Sonnet (plus coûteux)
+Sonnet est la SOURCE AUTORITAIRE pour toutes les colonnes texte.
+Le scraping ne fournit que les données fiables (prix, dates, GPS, URLs).
+Sonnet lit le raw_text + PDFs et peuple proprement toutes les colonnes structurées.
 
 Usage :
-  python batch_encheres_extraction.py                     # Texte seul
-  python batch_encheres_extraction.py --with-pdfs         # Texte + PDFs
-  python batch_encheres_extraction.py --limit 10          # Limiter
-  python batch_encheres_extraction.py --dry-run           # Afficher le prompt sans appeler l'API
+  python batch_encheres_extraction.py                     # Texte + PDFs
+  python batch_encheres_extraction.py --no-pdfs            # Texte seul (moins cher)
+  python batch_encheres_extraction.py --limit 10
+  python batch_encheres_extraction.py --reprocess          # Re-traiter les "ok" existants
+  python batch_encheres_extraction.py --dry-run
 """
-import os, sys, json, logging, time, argparse, re, base64
+import os, sys, json, logging, time, argparse, re
 from pathlib import Path
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
-import requests
 
+import requests
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -33,80 +34,145 @@ MAX_TOKENS = 1500
 WORKERS = 3
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Prompt Sonnet
+# Prompt Sonnet — SOURCE AUTORITAIRE pour toutes les colonnes texte
 # ══════════════════════════════════════════════════════════════════════════════
 
 SYSTEM_PROMPT = """Tu es un expert en ventes aux enchères immobilières judiciaires en France.
-On te donne la description brute d'un bien mis aux enchères (et optionnellement le contenu de documents PDF : cahier des conditions de vente, PV descriptif, diagnostics).
+On te donne le texte brut scrapé d'une annonce d'enchère judiciaire (et optionnellement le contenu de documents PDF : cahier des conditions de vente, PV descriptif).
 
-Extrais les informations structurées suivantes au format JSON strict.
+Tu dois extraire TOUTES les informations structurées au format JSON strict.
 Retourne UNIQUEMENT le JSON, sans commentaire ni explication.
 
 {
   "type_bien": "Appartement|Maison|Immeuble|Terrain|Local commercial|Parking|Bureau|Mixte|Autre",
-  "surface": null,            // float en m², surface du LOT PRINCIPAL uniquement
-  "nb_pieces": null,          // int, nombre de pièces principales
-  "nb_chambres": null,        // int
-  "nb_lots": null,            // int si vente en plusieurs lots
-  "etage": null,              // string ex "RDC", "2ème", "R+3"
+  "surface": null,
+  "nb_pieces": null,
+  "nb_chambres": null,
+  "nb_lots": null,
+  "etage": null,
   "occupation": "libre|occupe|loue|NC",
-  "loyer_mensuel": null,      // float HC si loué, en €/mois
-  "profil_locataire": null,   // string : "Particulier|Commercial|..." ou null
-  "etat_interieur": null,     // string : "bon|correct|travaux légers|travaux lourds|ruine"
-  "dpe": null,                // lettre A-G
-  "annee_construction": null, // int
-  "has_cave": null,           // bool
-  "has_parking": null,        // bool
-  "has_jardin": null,         // bool
-  "has_terrasse": null,       // bool
-  "has_piscine": null,        // bool
-  "has_ascenseur": null,      // bool
-  "tribunal": null,           // string complet "Tribunal Judiciaire de XXX"
-  "adresse_complete": null,   // string : "N rue XXX, CP VILLE"
-  "code_postal": null,        // string 5 chiffres
-  "ville": null,              // string, nom propre avec accents (ex: "Saint-André-d'Huiriat")
-  "lots_data": null,          // array de lots SI multi-lots, sinon null
-  "description_propre": null  // 2-3 phrases résumant le bien, sans les infos juridiques/DVF
+  "loyer_mensuel": null,
+  "profil_locataire": null,
+  "etat_interieur": null,
+  "dpe": null,
+  "annee_construction": null,
+  "has_cave": null,
+  "has_parking": null,
+  "has_jardin": null,
+  "has_terrasse": null,
+  "has_piscine": null,
+  "has_ascenseur": null,
+  "tribunal": null,
+  "adresse_complete": null,
+  "code_postal": null,
+  "ville": null,
+  "departement": null,
+  "avocat_nom": null,
+  "avocat_cabinet": null,
+  "avocat_tel": null,
+  "frais_prealables": null,
+  "lots_data": null,
+  "description_propre": null
 }
 
-Si le bien est vendu en PLUSIEURS LOTS ou est DIVISÉ en plusieurs logements, remplis lots_data :
-[{"type": "Appartement", "surface": 52.23, "etage": "1er", "occupation": "occupe", "loyer": 450},
- {"type": "Appartement", "surface": 51.94, "etage": "2ème", "occupation": "libre", "loyer": null}]
-Dans ce cas, "surface" = surface TOTALE habitable (somme des lots), et "nb_lots" = nombre de lots.
-Pour un lot simple (1 appart + cave + parking), lots_data = null et surface = surface Carrez de l'habitation.
+RÈGLES DE NORMALISATION STRICTES :
 
-Règles STRICTES :
-- Surface : surface TOTALE habitable de ce qui est vendu. Pour un lot simple, c'est la surface Carrez. Pour un multi-lots, c'est la somme des surfaces habitables. Ne PAS inclure parking, cave, terrain dans la surface. Ne PAS confondre surface terrain (ares, ha) avec surface habitable (m²). "1.699 m²" en notation française pour un terrain = 1699 m².
-- Occupation : "libre" si le texte dit "libre", "vacant", "inoccupé". "occupe" si occupé sans bail. "loue" si bail en cours avec loyer. Ne PAS déduire "occupé" de mots comme "occupation" dans un contexte juridique général.
-- Type bien : "Mixte" si le bien combine habitation + commerce. "Autre" uniquement si vraiment inclassable (parts sociales SCI, droits indivis...).
-- Loyer : toujours hors charges (HC). Si CC donné, soustrais les charges si connues.
-- Ville : nom propre complet avec accents et traits d'union (ex: "Pont-à-Mousson", pas "Pont A Mousson").
-- N'invente rien. Si une info n'est pas dans le texte, laisse null.
+TRIBUNAL :
+- Format exact : "Tribunal Judiciaire de Ville" (majuscule initiale sur chaque mot de la ville)
+- "TJ de Tours" → "Tribunal Judiciaire de Tours"
+- "Tribunal de Grande Instance de Paris" → "Tribunal Judiciaire de Paris"
+- Ne PAS inclure l'adresse du tribunal, la salle, l'étage
+
+VILLE :
+- Nom propre complet avec accents et traits d'union
+- "SAINT JEAN DE VEDAS" → "Saint-Jean-de-Védas"
+- "PONT A MOUSSON" → "Pont-à-Mousson"
+- "tours" → "Tours"
+- Ne PAS inclure le code postal, le département, ni "Cedex"
+
+CODE_POSTAL : exactement 5 chiffres. Ne PAS confondre avec le CP de l'avocat ou du tribunal.
+
+DEPARTEMENT : nom du département (ex: "Indre-et-Loire", "Loire-Atlantique"), PAS le numéro.
+
+TYPE_BIEN :
+- "Appartement" : tout logement en copropriété (studio, T1-T5, duplex)
+- "Maison" : pavillon, villa, corps de ferme, propriété
+- "Immeuble" : immeuble entier (même divisé en lots)
+- "Terrain" : terrain nu, parcelle
+- "Local commercial" : boutique, commerce, local d'activité
+- "Parking" : garage, box, place de parking
+- "Bureau" : local professionnel/bureau
+- "Mixte" : habitation + commerce dans le même lot
+- "Autre" : parts de SCI, droits indivis, cave seule, etc.
+
+SURFACE :
+- Surface habitable totale en m² (float). Pour multi-lots, somme des surfaces habitables.
+- Ne PAS confondre surface terrain (ares, hectares) avec surface habitable.
+- "1.699 m²" en notation française pour un terrain = 1699 m², ne pas stocker dans surface.
+
+OCCUPATION :
+- "libre" si le texte dit "libre", "vacant", "inoccupé"
+- "occupe" si occupé sans bail
+- "loue" si bail en cours avec loyer
+- "NC" si pas d'information claire
+- Ne PAS déduire "occupé" du contexte juridique général
+
+LOYER : toujours hors charges (HC), en €/mois. Si CC, soustraire charges si connues.
+
+AVOCAT :
+- avocat_nom : "Prénom NOM" ou "NOM" (pas de "Maître", "Me")
+- avocat_cabinet : nom du cabinet (SELARL, SCP, etc.) sans adresse
+- avocat_tel : numéro tel formaté "0X XX XX XX XX"
+
+FRAIS_PREALABLES : montant en euros (float) des frais préalables / frais de procédure / frais de poursuite mentionnés dans l'annonce ou le CCV. Souvent intitulé "frais préalables", "frais de poursuite", "frais taxés". null si non mentionné.
+
+LOTS_DATA (si multi-lots uniquement) :
+[{"type": "Appartement", "surface": 52.23, "etage": "1er", "occupation": "occupe", "loyer": 450}, ...]
+
+DESCRIPTION_PROPRE : 2-3 phrases résumant le bien. Pas d'infos juridiques, DVF, ni publicités.
+
+RÈGLE D'OR : n'invente rien. Si une info n'est pas dans le texte, laisse null.
 """
+
+
+def load_learning_examples() -> list[dict]:
+    """Charge les exemples vérifiés depuis encheres_learning.json."""
+    learning_path = Path(__file__).parent / "encheres_learning.json"
+    if not learning_path.exists():
+        return []
+    try:
+        data = json.loads(learning_path.read_text(encoding="utf-8"))
+        return data.get("examples", [])
+    except Exception as e:
+        log.warning(f"Erreur chargement learning: {e}")
+        return []
+
+
+def build_system_prompt() -> str:
+    """Construit le system prompt avec les exemples few-shot."""
+    examples = load_learning_examples()
+    if not examples:
+        return SYSTEM_PROMPT
+
+    examples_text = "\n\n--- EXEMPLES VÉRIFIÉS ---\n"
+    for i, ex in enumerate(examples, 1):
+        examples_text += f"\nExemple {i} : {ex.get('input_summary', '')}\n"
+        examples_text += f"Résultat attendu : {json.dumps(ex.get('expected_output', {}), ensure_ascii=False)}\n"
+
+    return SYSTEM_PROMPT + examples_text
 
 
 def build_user_message(item: dict, pdf_texts: list[str] = None) -> str:
     """Construit le message utilisateur pour Sonnet."""
     parts = []
-
     parts.append(f"Source : {item.get('source', '?')}")
     parts.append(f"URL : {item.get('url', '?')}")
 
     if item.get("description"):
-        parts.append(f"\n--- DESCRIPTION ---\n{item['description']}")
-
-    # Ajouter les données déjà extraites (pour contexte)
-    existing = {}
-    for key in ["ville", "code_postal", "tribunal", "surface", "nb_pieces",
-                 "occupation", "type_bien", "adresse"]:
-        if item.get(key):
-            existing[key] = item[key]
-    if existing:
-        parts.append(f"\n--- DONNÉES DÉJÀ EXTRAITES ---\n{json.dumps(existing, ensure_ascii=False)}")
+        parts.append(f"\n--- TEXTE BRUT SCRAPÉ ---\n{item['description']}")
 
     if pdf_texts:
         for i, pdf_text in enumerate(pdf_texts, 1):
-            # Limiter à 3000 chars par PDF pour le coût
             truncated = pdf_text[:3000]
             parts.append(f"\n--- DOCUMENT PDF {i} ---\n{truncated}")
 
@@ -120,18 +186,14 @@ def build_user_message(item: dict, pdf_texts: list[str] = None) -> str:
 def download_pdf_text(url: str) -> str | None:
     """Télécharge un PDF et en extrait le texte."""
     try:
-        r = requests.get(url, timeout=30, headers={
-            "User-Agent": "Mozilla/5.0"
-        })
+        r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
-
-        # Essayer d'extraire le texte avec PyPDF2 ou pdfplumber
         try:
             import pdfplumber
             import io
             with pdfplumber.open(io.BytesIO(r.content)) as pdf:
                 text_parts = []
-                for page in pdf.pages[:10]:  # Max 10 pages
+                for page in pdf.pages[:10]:
                     t = page.extract_text()
                     if t:
                         text_parts.append(t)
@@ -139,7 +201,6 @@ def download_pdf_text(url: str) -> str | None:
         except ImportError:
             log.warning("pdfplumber non installé — pip install pdfplumber")
             return None
-
     except Exception as e:
         log.warning(f"Erreur téléchargement PDF {url}: {e}")
         return None
@@ -161,17 +222,53 @@ def get_anthropic_client():
     return client_anthropic
 
 
-def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = False) -> dict | None:
-    """Appelle Sonnet pour extraire les données structurées.
+# Tous les champs attendus dans l'output Sonnet
+ALL_EXPECTED_FIELDS = [
+    "type_bien", "surface", "nb_pieces", "nb_chambres", "nb_lots", "etage",
+    "occupation", "loyer_mensuel", "profil_locataire",
+    "etat_interieur", "dpe", "annee_construction",
+    "has_cave", "has_parking", "has_jardin", "has_terrasse", "has_piscine", "has_ascenseur",
+    "tribunal", "adresse_complete", "code_postal", "ville", "departement",
+    "avocat_nom", "avocat_cabinet", "avocat_tel",
+    "frais_prealables", "lots_data", "description_propre",
+]
 
-    Par défaut, analyse aussi les PDFs PV + CCV quand disponibles.
-    """
+VALIDATION_PROMPT = """Voici le JSON extrait d'une enchère judiciaire. Vérifie la COHÉRENCE et le FORMAT de TOUS les champs. Ne relis PAS les sources, analyse UNIQUEMENT ce JSON.
 
-    # Télécharger les PDFs automatiquement si disponibles
-    # Priorité : PV descriptif > CCV. Ignorer DDT (trop lourd), affiche (image), insertion (doublon)
-    PDF_TYPES_PRIORITY = ("pv", "ccv")
+{first_result}
+
+Contrôles :
+1. TRIBUNAL : format exact "Tribunal Judiciaire de Ville" (majuscule initiale). Ne doit PAS contenir d'adresse, salle, étage.
+2. VILLE : nom propre avec accents et tirets. Pas de MAJUSCULES, pas de "Cedex", pas de code postal dedans.
+3. CODE_POSTAL : exactement 5 chiffres. Cohérent avec la ville et le département.
+4. DEPARTEMENT : nom complet ("Loire-Atlantique", pas "44"). Cohérent avec le code postal.
+5. TYPE_BIEN : valeur parmi Appartement/Maison/Immeuble/Terrain/Local commercial/Parking/Bureau/Mixte/Autre. Cohérent avec surface/nb_pieces.
+6. SURFACE : float en m² habitables. >500m² suspect pour un appartement. null vaut mieux qu'une valeur douteuse terrain.
+7. OCCUPATION : uniquement "libre", "occupe", "loue" ou "NC". Pas d'interprétation.
+8. AVOCAT_NOM : sans "Maître"/"Me"/"Mtre" en préfixe. Juste le nom.
+9. AVOCAT_TEL : format "0X XX XX XX XX" si présent.
+10. FRAIS_PREALABLES : nombre > 0 si présent. Pas de texte.
+11. DESCRIPTION_PROPRE : résumé court (2-3 phrases), pas de texte juridique brut ni de navigation web.
+12. NB_PIECES / NB_CHAMBRES : entiers positifs, cohérents entre eux (chambres < pièces).
+13. DPE : lettre A-G uniquement.
+14. ANNEE_CONSTRUCTION : entier 4 chiffres entre 1600 et 2026.
+15. LOYER_MENSUEL : nombre > 0, cohérent avec la surface (pas 50€ pour 100m²).
+16. ADRESSE_COMPLETE : adresse du BIEN, pas de l'avocat ni du tribunal.
+
+Retourne UNIQUEMENT une liste JSON des problèmes trouvés. Chaque problème au format "champ: description du problème".
+Si AUCUN problème, retourne une liste vide [].
+
+Exemples de réponses :
+["tribunal: manquant", "ville: en majuscules TOURS au lieu de Tours", "surface: 1699 semble être un terrain pas une surface habitable"]
+ou
+[]"""
+
+
+def _get_pdf_texts(item: dict) -> list[str]:
+    """Télécharge et extrait le texte des PDFs PV et CCV."""
+    PDF_TYPES_PRIORITY = ("pv", "ccv", "autre")
     pdf_texts = []
-    if with_pdfs and item.get("documents"):
+    if item.get("documents"):
         docs = item["documents"]
         if isinstance(docs, str):
             docs = json.loads(docs)
@@ -179,11 +276,19 @@ def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = Fals
             for doc in docs:
                 if doc.get("type") == doc_type:
                     text = download_pdf_text(doc["url"])
-                    if text and len(text) > 100:  # Ignorer les PDFs image (0 texte)
+                    if text and len(text) > 100:
                         pdf_texts.append(text)
                         log.info(f"  PDF {doc_type}: {len(text)} chars")
-                    break  # 1 seul PDF par type
+                    break
+    return pdf_texts
 
+
+def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = False) -> dict | None:
+    """Appelle Sonnet pour extraire les données structurées.
+    Pass 1 : extraction complète.
+    Pass 2 : validation + correction de TOUS les champs (qualité, cohérence, champs manquants).
+    """
+    pdf_texts = _get_pdf_texts(item) if with_pdfs else []
     user_msg = build_user_message(item, pdf_texts if pdf_texts else None)
 
     if dry_run:
@@ -192,22 +297,23 @@ def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = Fals
 
     try:
         ai_client = get_anthropic_client()
+
+        # ── Pass 1 : extraction ──────────────────────────────────────
         response = ai_client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
-            system=SYSTEM_PROMPT,
+            system=build_system_prompt(),
             messages=[{"role": "user", "content": user_msg}],
         )
-
         text = response.content[0].text.strip()
-
-        # Parser le JSON (Sonnet peut wrapper dans ```json```)
         text = re.sub(r"^```json\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
-
         data = json.loads(text)
-        return data
 
+        # ── Normalisation programmatique (gratuit, pas d'appel API) ──
+        data = _normalize_output(data)
+
+        return data
     except json.JSONDecodeError as e:
         log.warning(f"JSON invalide: {e}")
         return None
@@ -216,8 +322,171 @@ def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = Fals
         return None
 
 
-def process_enchere(enchere_id: int, with_pdfs: bool = False, dry_run: bool = False):
-    """Traite une enchère : extraction Sonnet + mise à jour DB."""
+def _normalize_output(data: dict) -> dict:
+    """Normalisation programmatique de l'output Sonnet (gratuit, pas d'API)."""
+
+    # Tribunal : "TJ X" / "tj x" / "Tribunal judiciaire de x" → "Tribunal Judiciaire de X"
+    tj = data.get("tribunal")
+    if tj:
+        tj = tj.strip()
+        tj = re.sub(r"^(?:TJ|TGI|Tribunal de Grande Instance|Tribunal d'Instance)\s+(?:de\s+|d')?", "", tj, flags=re.I)
+        tj = re.sub(r"^Tribunal\s+Judiciaire\s+(?:de\s+|d')?", "", tj, flags=re.I)
+        # Nettoyer : retirer adresse, salle, étage
+        tj = re.sub(r"\s*[-,]?\s*(?:\d+\s+(?:rue|avenue|place|boulevard)|salle|étage|RDC).*", "", tj, flags=re.I)
+        tj = tj.strip().rstrip(",.")
+        if tj:
+            data["tribunal"] = f"TJ de {tj.title()}"
+        else:
+            data["tribunal"] = None
+
+    # Ville : normaliser casse "TOURS" → "Tours", "saint jean" → "Saint-Jean"
+    ville = data.get("ville")
+    if ville:
+        ville = ville.strip()
+        ville = re.sub(r"\s*\d{5}\s*", "", ville)  # retirer CP incrusté
+        ville = re.sub(r"\s+[Cc]edex.*", "", ville)  # retirer Cedex
+        if ville.isupper() or ville.islower():
+            ville = ville.title()
+        data["ville"] = ville
+
+    # Département : "44" → laisser (on ne peut pas deviner le nom), mais nettoyer
+    dept = data.get("departement")
+    if dept:
+        dept = dept.strip().rstrip(",.")
+        data["departement"] = dept
+
+    # Code postal : garder uniquement 5 chiffres
+    cp = data.get("code_postal")
+    if cp:
+        m = re.search(r"\d{5}", str(cp))
+        data["code_postal"] = m.group(0) if m else None
+
+    # Type bien : normaliser
+    type_map = {
+        "studio": "Appartement", "duplex": "Appartement", "triplex": "Appartement",
+        "pavillon": "Maison", "villa": "Maison", "propriété": "Maison",
+        "corps de ferme": "Maison", "ferme": "Maison",
+        "commerce": "Local commercial", "boutique": "Local commercial",
+        "garage": "Parking", "box": "Parking",
+    }
+    tb = data.get("type_bien")
+    if tb:
+        normalized = type_map.get(tb.lower(), tb)
+        if normalized not in ("Appartement", "Maison", "Immeuble", "Terrain", "Local commercial", "Parking", "Bureau", "Mixte", "Autre"):
+            normalized = "Autre"
+        data["type_bien"] = normalized
+
+    # Avocat nom : retirer "Maître", "Me", "Mtre"
+    avocat = data.get("avocat_nom")
+    if avocat:
+        avocat = re.sub(r"^(?:Ma[îi]tre|Me|Mtre|M[eE]\.?)\s+", "", avocat.strip())
+        data["avocat_nom"] = avocat
+
+    # Occupation : normaliser
+    occ = data.get("occupation")
+    if occ:
+        occ_map = {"libre": "libre", "vacant": "libre", "inoccupé": "libre",
+                    "occupé": "occupe", "occupe": "occupe", "occupee": "occupe",
+                    "loué": "loue", "loue": "loue", "louée": "loue",
+                    "nc": "NC", "": "NC"}
+        data["occupation"] = occ_map.get(occ.lower().strip(), occ)
+
+    # DPE : lettre majuscule A-G
+    dpe = data.get("dpe")
+    if dpe:
+        dpe = str(dpe).strip().upper()
+        data["dpe"] = dpe if dpe in "ABCDEFG" and len(dpe) == 1 else None
+
+    return data
+
+
+def _validation_pass(first_result: dict) -> list:
+    """Pass 2 : contrôle qualité du JSON → retourne uniquement la liste des issues."""
+    try:
+        prompt = VALIDATION_PROMPT.format(first_result=json.dumps(first_result, ensure_ascii=False, indent=2))
+
+        ai_client = get_anthropic_client()
+        response = ai_client.messages.create(
+            model=MODEL,
+            max_tokens=300,
+            system="Retourne UNIQUEMENT une liste JSON de strings. Pas de commentaire.",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = response.content[0].text.strip()
+        text = re.sub(r"^```json\s*", "", text)
+        text = re.sub(r"\s*```\s*$", "", text)
+        match = re.search(r"\[[\s\S]*\]", text)
+        if not match:
+            return []
+        return json.loads(match.group(0))
+    except Exception as e:
+        log.warning(f"  Pass 2 échoué: {e}")
+        return []
+
+
+def _targeted_retry(item: dict, missing_fields: list, pdf_texts: list) -> dict | None:
+    """Pass 3 : relit les sources UNIQUEMENT pour les champs manquants critiques."""
+    field_instructions = {
+        "tribunal": 'TRIBUNAL : cherche "Tribunal Judiciaire de", "TJ", "TGI", "devant le tribunal". Format exact : "Tribunal Judiciaire de Ville".',
+        "ville": "VILLE : cherche le code postal 5 chiffres suivi du nom de commune, ou l'adresse du bien (PAS celle de l'avocat). Format : nom propre avec accents et tirets.",
+        "type_bien": 'TYPE_BIEN : cherche "appartement", "maison", "immeuble", "terrain", "local", "parking", "studio" dans la description.',
+        "frais_prealables": 'FRAIS_PREALABLES : cherche "frais préalables", "frais de poursuite", "frais taxés", "montant des frais". C\'est un montant en euros, souvent dans le CCV.',
+    }
+    instructions = "\n".join(field_instructions[f] for f in missing_fields if f in field_instructions)
+
+    try:
+        parts = [f"Cherche SPÉCIFIQUEMENT ces informations dans le texte ci-dessous :\n{instructions}\n\nRetourne un JSON avec uniquement les champs trouvés. null si introuvable."]
+        if item.get("description"):
+            parts.append(f"\n--- TEXTE ---\n{item['description'][:2000]}")
+        for i, pdf_text in enumerate(pdf_texts, 1):
+            parts.append(f"\n--- PDF {i} ---\n{pdf_text[:4000]}")
+
+        ai_client = get_anthropic_client()
+        response = ai_client.messages.create(
+            model=MODEL,
+            max_tokens=300,
+            system="Retourne UNIQUEMENT du JSON valide.",
+            messages=[{"role": "user", "content": "\n".join(parts)}],
+        )
+        text = response.content[0].text.strip()
+        text = re.sub(r"^```json\s*", "", text)
+        text = re.sub(r"\s*```\s*$", "", text)
+        match = re.search(r"\{[\s\S]*\}", text)
+        if not match:
+            return None
+        return json.loads(match.group(0))
+    except Exception as e:
+        log.warning(f"  Pass 3 échoué: {e}")
+        return None
+
+
+def _auto_log_example(item: dict, corrected_data: dict, fields_corrected: list):
+    """Ajoute automatiquement un exemple au fichier learning quand l'auto-correction réussit."""
+    corrected_values = {f: corrected_data.get(f) for f in fields_corrected if corrected_data.get(f)}
+    if not corrected_values:
+        return
+
+    learning = load_learning_examples()
+    # Limiter à 50 exemples max pour ne pas exploser le prompt
+    if len(learning) >= 50:
+        return
+
+    learning_path = Path(__file__).parent / "encheres_learning.json"
+    try:
+        data = json.loads(learning_path.read_text(encoding="utf-8")) if learning_path.exists() else {"version": 1, "examples": []}
+        data["examples"].append({
+            "note": f"Auto-corrigé: {', '.join(fields_corrected)} (ID {item.get('id')})",
+            "input_summary": f"{item.get('source', '?')}, {item.get('type_bien') or '?'} à {corrected_data.get('ville') or item.get('ville') or '?'}, MAP {item.get('mise_a_prix') or '?'}€",
+            "expected_output": corrected_values,
+        })
+        learning_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        log.info(f"  Exemple auto-logué ({len(data['examples'])} total)")
+    except Exception as e:
+        log.warning(f"  Erreur log exemple: {e}")
+
+
+def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = False):
+    """Traite une enchère : extraction Sonnet → mise à jour toutes les colonnes texte."""
     c = get_client()
     if not c:
         return
@@ -230,6 +499,17 @@ def process_enchere(enchere_id: int, with_pdfs: bool = False, dry_run: bool = Fa
             return
         item = r.data[0]
 
+        # Skip si pas de description (raw_text)
+        if not item.get("description") or len(item.get("description", "")) < 30:
+            c.table(TABLE).update({
+                "enrichissement_statut": "no_data",
+                "enrichissement_date": now,
+            }).eq("id", enchere_id).execute()
+            with lock:
+                stats["no_data"] += 1
+                stats["total"] += 1
+            return
+
         data = extract_with_sonnet(item, with_pdfs=with_pdfs, dry_run=dry_run)
 
         if dry_run:
@@ -239,65 +519,86 @@ def process_enchere(enchere_id: int, with_pdfs: bool = False, dry_run: bool = Fa
 
         if not data:
             c.table(TABLE).update({
-                "enrichissement_statut": "no_data",
+                "enrichissement_statut": "echec",
                 "enrichissement_date": now,
             }).eq("id", enchere_id).execute()
             with lock:
-                stats["no_data"] += 1
+                stats["errors"] += 1
+                stats["total"] += 1
             return
 
-        # Construire l'update
+        # ── Construire l'update ──────────────────────────────────────────
         update = {
             "enrichissement_statut": "ok",
             "enrichissement_date": now,
             "enrichissement_data": json.dumps(data, ensure_ascii=False),
         }
 
-        # === Champs que Sonnet CORRIGE toujours (Sonnet est plus fiable que le scraping) ===
-        # Ville : Sonnet met les accents corrects ("Pont-à-Mousson" vs "Pont A Mousson")
-        if data.get("ville"):
-            update["ville"] = data["ville"]
+        # Sonnet est AUTORITAIRE sur ces champs — écrase toujours
+        AUTHORITATIVE = {
+            "ville": "ville",
+            "tribunal": "tribunal",
+            "type_bien": "type_bien",
+            "occupation": "occupation",
+            "description_propre": "description",  # remplace le raw_text par le résumé propre
+            "code_postal": "code_postal",
+            "departement": "departement",
+            "adresse_complete": "adresse",
+            "avocat_nom": "avocat_nom",
+            "avocat_cabinet": "avocat_cabinet",
+            "avocat_tel": "avocat_tel",
+        }
+        for sonnet_key, db_key in AUTHORITATIVE.items():
+            val = data.get(sonnet_key)
+            if val and val != "NC" and val != "Autre":
+                update[db_key] = val
 
-        # Occupation : Sonnet lit la description, le scraping capte parfois le footer
-        if data.get("occupation") and data["occupation"] != "NC":
-            update["occupation"] = data["occupation"]
-
-        # Type bien : Sonnet corrige les "Autre" en vrai type
-        if data.get("type_bien") and data["type_bien"] != "Autre":
-            update["type_bien"] = data["type_bien"]
-
-        # Tribunal : Sonnet normalise le nom propre (supprime adresse, salle, etc.)
-        if data.get("tribunal"):
-            update["tribunal"] = data["tribunal"]
-
-        # Description : toujours remplacer la brute par la version propre
-        if data.get("description_propre"):
-            update["description"] = data["description_propre"]
-
-        # === Champs que Sonnet COMPLETE uniquement si absents en base ===
-        fill_if_null = {
+        # Champs complétés si absents en base
+        FILL_IF_NULL = {
             "surface": "surface",
             "nb_pieces": "nb_pieces",
             "nb_lots": "nb_lots",
-            "tribunal": "tribunal",
-            "code_postal": "code_postal",
+            "nb_chambres": "nb_chambres",
+            "etat_interieur": "etat_interieur",
+            "dpe": "dpe",
+            "annee_construction": "annee_construction",
         }
-        for ai_key, db_key in fill_if_null.items():
-            if data.get(ai_key) is not None and not item.get(db_key):
-                update[db_key] = data[ai_key]
+        for sonnet_key, db_key in FILL_IF_NULL.items():
+            val = data.get(sonnet_key)
+            if val is not None and not item.get(db_key):
+                update[db_key] = val
 
-        # Adresse : compléter si absente
-        if data.get("adresse_complete") and not item.get("adresse"):
-            update["adresse"] = data["adresse_complete"]
+        # Loyer (si occupation = loué et loyer détecté)
+        if data.get("loyer_mensuel") and not item.get("loyer"):
+            update["loyer"] = data["loyer_mensuel"]
 
-        # Lots data : compléter si absent
+        # Frais préalables
+        if data.get("frais_prealables") and not item.get("frais_prealables"):
+            update["frais_prealables"] = data["frais_prealables"]
+
+        # Lots data
         if data.get("lots_data") and not item.get("lots_data"):
             update["lots_data"] = json.dumps(data["lots_data"], ensure_ascii=False)
+
+        # Booleans (amenities)
+        for key in ["has_cave", "has_parking", "has_jardin", "has_terrasse",
+                     "has_piscine", "has_ascenseur"]:
+            if data.get(key) is not None:
+                update[key] = data[key]
+
+        # Score travaux déduit de etat_interieur (si pas déjà en base)
+        if data.get("etat_interieur") and not item.get("score_travaux"):
+            score_map = {"bon": 1, "correct": 2, "travaux légers": 3,
+                         "travaux lourds": 4, "ruine": 5}
+            score = score_map.get(data["etat_interieur"])
+            if score:
+                update["score_travaux"] = score
 
         c.table(TABLE).update(update).eq("id", enchere_id).execute()
 
         with lock:
             stats["enriched"] += 1
+            stats["total"] += 1
 
     except Exception as e:
         log.error(f"Erreur traitement {enchere_id}: {e}")
@@ -310,24 +611,32 @@ def process_enchere(enchere_id: int, with_pdfs: bool = False, dry_run: bool = Fa
             pass
         with lock:
             stats["errors"] += 1
+            stats["total"] += 1
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Main
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None):
+def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None,
+        reprocess: bool = False):
     """Lance l'extraction Sonnet sur les enchères non encore enrichies.
-    PDFs (PV + CCV) analysés automatiquement quand disponibles."""
+    --reprocess : re-traite aussi les "ok" existants (utile si prompt amélioré).
+    """
     c = get_client()
     if not c:
         log.error("Supabase non connecté")
         return stats
 
-    # Récupérer les enchères non enrichies
-    q = c.table(TABLE).select("id, source, id_source") \
-        .is_("enrichissement_statut", "null") \
-        .order("created_at")
+    # Récupérer les enchères à traiter
+    q = c.table(TABLE).select("id, source, id_source")
+
+    if reprocess:
+        # Re-traiter tout (utile après amélioration du prompt)
+        q = q.order("created_at")
+    else:
+        # Seulement les non-enrichis
+        q = q.is_("enrichissement_statut", "null").order("created_at")
 
     if limit:
         q = q.limit(limit)
@@ -335,8 +644,8 @@ def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None):
     r = q.execute()
     ids = [row["id"] for row in (r.data or [])]
 
-    log.info(f"═══ Extraction Sonnet — {len(ids)} enchères à traiter ═══")
-    log.info(f"Mode: {'DRY-RUN' if dry_run else 'PRODUCTION'} | PDFs: {'OUI' if with_pdfs else 'NON'}")
+    log.info(f"Extraction Sonnet — {len(ids)} enchères à traiter")
+    log.info(f"Mode: {'DRY-RUN' if dry_run else 'PRODUCTION'} | PDFs: {'OUI' if with_pdfs else 'NON'} | Reprocess: {'OUI' if reprocess else 'NON'}")
 
     if not ids:
         log.info("Rien à traiter")
@@ -362,9 +671,11 @@ def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extraction Sonnet — enchères judiciaires")
-    parser.add_argument("--no-pdfs", action="store_true", help="Désactiver l'analyse PDFs (PV + CCV)")
-    parser.add_argument("--dry-run", action="store_true", help="Afficher les prompts sans appeler l'API")
-    parser.add_argument("--limit", type=int, help="Limiter le nombre d'enchères")
+    parser.add_argument("--no-pdfs", action="store_true", help="Désactiver l'analyse PDFs")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--limit", type=int)
+    parser.add_argument("--reprocess", action="store_true", help="Re-traiter les enrichis existants")
     args = parser.parse_args()
 
-    run(with_pdfs=not args.no_pdfs, dry_run=args.dry_run, limit=args.limit)
+    run(with_pdfs=not args.no_pdfs, dry_run=args.dry_run, limit=args.limit,
+        reprocess=args.reprocess)

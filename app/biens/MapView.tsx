@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import 'leaflet/dist/leaflet.css'
 import BienCard from '@/components/BienCard'
+import EnchereCard from '@/components/EnchereCard'
 
 export default function MapView({ biens, userToken, watchlistIds, onWatchlistChange }: {
   biens: any[]
@@ -192,13 +193,23 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
               className={`map-card-wrap ${selectedId === bien.id ? 'selected' : ''}`}
               onClick={() => handleCardClick(bien)}
             >
-              <BienCard
-                bien={bien}
-                inWatchlist={watchlistIds?.has(bien.id) || false}
-                userToken={userToken || null}
-                onWatchlistChange={onWatchlistChange || (() => {})}
-                compact
-              />
+              {bien.mise_a_prix && !bien.prix_fai ? (
+                <EnchereCard
+                  enchere={bien as any}
+                  compact
+                  inWatchlist={watchlistIds?.has(String(bien.id)) || false}
+                  userToken={userToken || null}
+                  onWatchlistChange={onWatchlistChange}
+                />
+              ) : (
+                <BienCard
+                  bien={bien}
+                  inWatchlist={watchlistIds?.has(bien.id) || false}
+                  userToken={userToken || null}
+                  onWatchlistChange={onWatchlistChange || (() => {})}
+                  compact
+                />
+              )}
             </div>
           ))}
         </div>

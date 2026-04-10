@@ -15,14 +15,14 @@ async function getUser(req: NextRequest) {
   return user
 }
 
-// GET — liste des bien_id en watchlist
+// GET — liste des bien_id en watchlist (avec source_table)
 export async function GET(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
 
   const { data, error } = await supabaseAdmin
     .from('watchlist')
-    .select('bien_id, created_at, score_travaux_perso, suivi')
+    .select('bien_id, created_at, score_travaux_perso, suivi, source_table')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -30,19 +30,22 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ watchlist: data })
 }
 
-// POST — ajouter un bien
+// POST — ajouter un bien ou une enchère
 export async function POST(req: NextRequest) {
   const user = await getUser(req)
-  if (!user) return NextResponse.json({ error: 'Non autoris\u00E9' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { bien_id } = await req.json()
+  const body = await req.json()
+  const { bien_id, source_table } = body
   if (!bien_id) return NextResponse.json({ error: 'bien_id requis' }, { status: 400 })
 
-  // V\u00E9rifier la limite watchlist selon le plan
+  const table = source_table === 'encheres' ? 'encheres' : 'biens'
+
+  // Vérifier la limite watchlist selon le plan
   const WATCHLIST_LIMITS: Record<string, number | null> = {
     free: 10,
     pro: 50,
-    expert: null, // illimit\u00E9
+    expert: null,
   }
 
   const { data: profile } = await supabaseAdmin
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   const plan = profile?.plan || 'free'
-  const limit = WATCHLIST_LIMITS[plan] ?? 10
+  const limit = plan in WATCHLIST_LIMITS ? WATCHLIST_LIMITS[plan] : 10
 
   if (limit !== null) {
     const { count, error: countError } = await supabaseAdmin
@@ -73,9 +76,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Vérifier doublon (même bien_id + même source_table)
+  const { data: existing } = await supabaseAdmin
+    .from('watchlist')
+    .select('bien_id')
+    .eq('user_id', user.id)
+    .eq('bien_id', bien_id)
+    .eq('source_table', table)
+    .maybeSingle()
+
+  if (existing) return NextResponse.json({ error: 'Déjà dans la watchlist' }, { status: 409 })
+
   const { data, error } = await supabaseAdmin
     .from('watchlist')
-    .insert({ user_id: user.id, bien_id })
+    .insert({ user_id: user.id, bien_id, source_table: table })
     .select()
     .single()
 
@@ -91,7 +105,7 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
 
   const body = await req.json()
-  const { bien_id, score_travaux_perso, suivi } = body
+  const { bien_id, score_travaux_perso, suivi, source_table } = body
   if (!bien_id) return NextResponse.json({ error: 'bien_id requis' }, { status: 400 })
   if (score_travaux_perso !== undefined && score_travaux_perso !== null && (score_travaux_perso < 1 || score_travaux_perso > 5)) {
     return NextResponse.json({ error: 'Score entre 1 et 5' }, { status: 400 })
@@ -100,6 +114,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Statut de suivi invalide' }, { status: 400 })
   }
 
+  const table = source_table === 'encheres' ? 'encheres' : 'biens'
   const updates: Record<string, any> = {}
   if (score_travaux_perso !== undefined) updates.score_travaux_perso = score_travaux_perso
   if (suivi !== undefined) updates.suivi = suivi
@@ -110,6 +125,7 @@ export async function PATCH(req: NextRequest) {
     .select('bien_id')
     .eq('user_id', user.id)
     .eq('bien_id', bien_id)
+    .eq('source_table', table)
     .maybeSingle()
 
   if (existing) {
@@ -118,11 +134,12 @@ export async function PATCH(req: NextRequest) {
       .update(updates)
       .eq('user_id', user.id)
       .eq('bien_id', bien_id)
+      .eq('source_table', table)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   } else {
     const { error } = await supabaseAdmin
       .from('watchlist')
-      .insert({ user_id: user.id, bien_id, ...updates })
+      .insert({ user_id: user.id, bien_id, source_table: table, ...updates })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -134,14 +151,18 @@ export async function DELETE(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
 
-  const { bien_id } = await req.json()
+  const body = await req.json()
+  const { bien_id, source_table } = body
   if (!bien_id) return NextResponse.json({ error: 'bien_id requis' }, { status: 400 })
+
+  const table = source_table === 'encheres' ? 'encheres' : 'biens'
 
   const { error } = await supabaseAdmin
     .from('watchlist')
     .update({ suivi: 'archive' })
     .eq('user_id', user.id)
     .eq('bien_id', bien_id)
+    .eq('source_table', table)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

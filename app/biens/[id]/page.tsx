@@ -1640,7 +1640,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
               type="text"
               value={adresse}
               onChange={e => setAdresse(e.target.value)}
-              placeholder={"Ex : 12 rue de la Paix"}
+              placeholder={"12 rue de la Paix"}
               style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
               autoFocus
             />
@@ -2056,20 +2056,21 @@ export default function FicheBienPage() {
 
   async function toggleWatchlist() {
     if (!userToken) return
+    const sourceTable = isEnchere ? 'encheres' : 'biens'
     if (inWatchlist) {
       await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-        body: JSON.stringify({ bien_id: id })
+        body: JSON.stringify({ bien_id: id, source_table: sourceTable })
       })
       setInWatchlist(false)
     } else {
-      await fetch('/api/watchlist', {
+      const res = await fetch('/api/watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-        body: JSON.stringify({ bien_id: id })
+        body: JSON.stringify({ bien_id: id, source_table: sourceTable })
       })
-      setInWatchlist(true)
+      if (res.ok || res.status === 409) setInWatchlist(true)
     }
   }
 
@@ -2215,7 +2216,7 @@ export default function FicheBienPage() {
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+        .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
         .fiche-photo { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 16px; max-height: 320px; }
         .fiche-photo-empty { width: 100%; aspect-ratio: 16/9; border-radius: 16px; background: #ede8e0; display: flex; align-items: center; justify-content: center; color: #b0a898; max-height: 320px; }
         .fiche-info { display: flex; flex-direction: column; gap: 14px; }
@@ -2225,16 +2226,16 @@ export default function FicheBienPage() {
         .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #f0ede8; color: #7a6a60; }
         .tag-strat { background: #d4ddf5; color: #2a4a8a; }
         .tag-statut { background: #d4f5e0; color: #1a7a40; }
-        .prix-bloc { display: flex; flex-direction: column; gap: 1px; }
+        .prix-bloc { display: flex; flex-direction: column; gap: 0; }
         .prix-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
-        .prix-fai { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 800; color: #c0392b; }
+        .prix-fai { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 800; color: #c0392b; line-height: 1; display: block; }
         .prix-cible-val { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: #1a1210; }
         .ecart-badge { display: inline-block; margin-top: 2px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
         .ecart-neg { background: #d4f5e0; color: #1a7a40; }
         .ecart-pos { background: #fde8e8; color: #a33; }
         .lbc-btn { display: inline-block; padding: 9px 18px; border: 2px solid #e8e2d8; border-radius: 10px; font-size: 13px; font-weight: 600; color: #1a1210; text-decoration: none; transition: all 0.15s; }
         .lbc-btn:hover { border-color: #c0392b; color: #c0392b; }
-        .section { background: #fff; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 24px; }
+        .section { background: #fff; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 16px; }
         .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a1210; }
         .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
         .data-subtitle { grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 8px; border-top: 1px solid #e8e2d8; margin-top: 4px; }
@@ -2328,28 +2329,35 @@ export default function FicheBienPage() {
         </nav>
 
         <div className="hero-grid">
-          <PhotoCarousel bien={bien} overlay={isEnchere && bien.date_audience ? (() => {
-            const days = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000)
-            let label = '', bg = '#6c757d'
-            if (days > 0) {
-              label = days === 0 ? "Aujourd'hui" : `J-${days}`
-              bg = days <= 7 ? '#c0392b' : days <= 14 ? '#e67e22' : '#6c757d'
-            } else {
-              const deadline = bien.date_surenchere
-                ? new Date(bien.date_surenchere)
-                : new Date(new Date(bien.date_audience).getTime() + 10 * 86400000)
-              const remaining = Math.ceil((deadline.getTime() - Date.now()) / 86400000)
-              if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e67e22' }
-              else { label = 'Adjugé'; bg = '#2a4a8a' }
-            }
-            return label ? (
-              <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
-            ) : null
-          })() : undefined} />
+          <div>
+            <PhotoCarousel bien={bien} overlay={isEnchere && bien.date_audience ? (() => {
+              const days = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000)
+              let label = '', bg = '#6c757d'
+              if (days > 0) {
+                label = days === 0 ? "Aujourd'hui" : `J-${days}`
+                bg = days <= 7 ? '#c0392b' : days <= 14 ? '#e67e22' : '#6c757d'
+              } else {
+                const deadline = bien.date_surenchere
+                  ? new Date(bien.date_surenchere)
+                  : new Date(new Date(bien.date_audience).getTime() + 10 * 86400000)
+                const remaining = Math.ceil((deadline.getTime() - Date.now()) / 86400000)
+                if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e67e22' }
+                else { label = 'Adjugé'; bg = '#2a4a8a' }
+              }
+              return label ? (
+                <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
+              ) : null
+            })() : undefined} />
+            {isEnchere && (
+              <div style={{ marginTop: '8px' }}>
+                <PlatformLinks bien={bien} />
+              </div>
+            )}
+          </div>
 
           <div className="fiche-info">
             <h1 className="fiche-title">{bien.type_bien || 'Bien'} {bien.nb_pieces ? (String(bien.nb_pieces).startsWith('T') ? bien.nb_pieces : `T${bien.nb_pieces}`) : ''}{bien.surface ? ` - ${Math.round(bien.surface)} m\u00B2` : ''}</h1>
-            <p className="fiche-sub">{bien.quartier ? `${bien.quartier} - ` : ''}{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}{bien.adresse ? ` — ${bien.adresse}` : ''}</p>
+            <p className="fiche-sub">{bien.quartier ? `${bien.quartier} - ` : ''}{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}{!isEnchere && bien.adresse ? ` — ${bien.adresse}` : ''}</p>
             <div className="fiche-tags">
               {isEnchere ? (
                 <>
@@ -2371,6 +2379,7 @@ export default function FicheBienPage() {
                     <span className="tag" style={{
                       background: bien.occupation === 'libre' ? '#d4f5e0' : bien.occupation === 'loue' ? '#d4ddf5' : '#ffecd2',
                       color: bien.occupation === 'libre' ? '#1a7a40' : bien.occupation === 'loue' ? '#2a4a8a' : '#8a5a00',
+                      fontWeight: 700,
                     }}>{bien.occupation === 'libre' ? 'Bien Libre' : bien.occupation === 'loue' ? 'Bien Loué' : 'Bien Occupé'}</span>
                   )}
                 </>
@@ -2384,71 +2393,78 @@ export default function FicheBienPage() {
             </div>
             <div className="prix-bloc">
               {isEnchere ? (
-                <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
-                  {/* Prix adjugé ou mise à prix */}
-                  <div>
-                    {bien.prix_adjuge && bien.prix_adjuge > 0 ? (
+                <>
+                  {/* Ligne prix : labels au-dessus, montants alignés */}
+                  {(() => {
+                    const hasAdjuge = bien.prix_adjuge && bien.prix_adjuge > 0
+                    const dvf = estimationData?.prix_total || 0
+                    const travaux = dvf && (bien.score_travaux || scorePerso) && bien.surface
+                      ? (budgetTravauxM2[String(bien.score_travaux || scorePerso)] || 0) * bien.surface : 0
+                    const enchMax = dvf ? Math.round((dvf - travaux * 1.2) / (1.12 * 1.2)) : null
+                    return enchMax ? (
                       <>
-                        <span className="prix-label" style={{ marginBottom: '-4px', textTransform: 'none' }}>Prix adjugé</span>
-                        <span className="prix-fai">{fmt(bien.prix_adjuge)} {'\u20AC'}</span>
-                        <span style={{ fontSize: '13px', color: '#7a6a60', display: 'block', marginTop: '-2px' }}>Mise à prix : {fmt(bien.prix_fai)} {'\u20AC'}</span>
+                        <div style={{ display: 'flex', gap: '40px' }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>{hasAdjuge ? 'Prix Adjugé' : 'Mise à prix'}</div>
+                            <span className="prix-fai">{fmt(hasAdjuge ? bien.prix_adjuge : bien.prix_fai)} {'\u20AC'}</span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>Enchère Max (Objectif 20% PV)</div>
+                            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '30px', fontWeight: 800, color: '#1a7a40', lineHeight: 1, display: 'block' }}>
+                              {fmt(enchMax)} {'\u20AC'}
+                            </span>
+                          </div>
+                        </div>
+                        {hasAdjuge && (
+                          <div style={{ marginTop: '4px', fontSize: '13px', color: '#7a6a60' }}>Mise à prix : {fmt(bien.prix_fai)} {'\u20AC'}</div>
+                        )}
                       </>
                     ) : (
                       <>
-                        <span className="prix-label" style={{ marginBottom: '-4px', textTransform: 'none' }}>Mise à prix</span>
-                        <span className="prix-fai">{fmt(bien.prix_fai)} {'\u20AC'}</span>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>{hasAdjuge ? 'Prix Adjugé' : 'Mise à prix'}</div>
+                        <span className="prix-fai">{fmt(hasAdjuge ? bien.prix_adjuge : bien.prix_fai)} {'\u20AC'}</span>
+                        {hasAdjuge && (
+                          <div style={{ marginTop: '4px', fontSize: '13px', color: '#7a6a60' }}>Mise à prix : {fmt(bien.prix_fai)} {'\u20AC'}</div>
+                        )}
                       </>
-                    )}
-                  </div>
-                  {/* Prix cible enchère (max pour 20% PV brute) */}
-                  {estimationData?.prix_total && (
-                    <div style={{ textAlign: 'right' }}>
-                      <span className="prix-label" style={{ marginBottom: '-2px' }}>Enchère max (objectif 20% PV)</span>
-                      {(() => {
-                        const dvf = estimationData.prix_total
-                        const travaux = (bien.score_travaux || scorePerso) && bien.surface
-                          ? (budgetTravauxM2[String(bien.score_travaux || scorePerso)] || 0) * bien.surface : 0
-                        const fraisPct = 0.12 // ~12% frais enchère
-                        const objectif = 0.20
-                        const prixCible = Math.round((dvf - travaux * (1 + objectif)) / ((1 + fraisPct) * (1 + objectif)))
-                        const isAbordable = bien.prix_fai <= prixCible
-                        return (
-                          <>
-                            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 700, color: isAbordable ? '#1a7a40' : '#c0392b', display: 'block' }}>
-                              {fmt(prixCible)} {'\u20AC'}
-                            </span>
-                            <span style={{ fontSize: '12px', color: isAbordable ? '#1a7a40' : '#c0392b', fontWeight: 600 }}>
-                              {isAbordable ? 'Mise à prix sous le seuil' : 'Attention, marge réduite'}
-                            </span>
-                          </>
-                        )
-                      })()}
+                    )
+                  })()}
+                  {/* Surenchère */}
+                  {(bien.date_surenchere || bien.mise_a_prix_surenchere) && (
+                    <div style={{ marginTop: '10px', padding: '8px 12px', background: '#fffaf0', borderRadius: '8px', border: '1.5px solid #f0d090', fontSize: '13px', color: '#6a4a00', alignSelf: 'flex-start' }}>
+                      <div><strong style={{ color: '#8a5a00' }}>Surenchère possible</strong>{bien.date_surenchere ? <> jusqu{"'"}au {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
+                      {bien.mise_a_prix_surenchere && (
+                        <div style={{ marginTop: '3px' }}>Nouvelle mise à prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
+                      )}
+                      {bien.consignation && (
+                        <div style={{ marginTop: '3px', color: '#9a7a50' }}>Consignation : <strong style={{ color: '#6a4a00' }}>{bien.consignation.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
+                      )}
                     </div>
                   )}
-                </div>
+                  {/* Watchlist */}
+                  {userToken && (
+                    <div style={{ marginTop: '10px' }}>
+                      <button onClick={toggleWatchlist} style={{
+                        display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
+                        borderRadius: '10px', border: inWatchlist ? '2px solid #c0392b' : '2px solid #e8e2d8',
+                        background: inWatchlist ? '#fde8e8' : '#fff', color: inWatchlist ? '#c0392b' : '#7a6a60',
+                        fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                        transition: 'all 0.15s',
+                      }}>
+                        <span style={{ fontSize: '16px' }}>{inWatchlist ? '\u2665' : '\u2661'}</span>
+                        Watchlist
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
                   <span className="prix-label" style={{ marginBottom: '-2px' }}>Prix FAI</span>
                   <span className="prix-fai">{fmt(bien.prix_fai)} {'\u20AC'}</span>
                 </>
               )}
-              {/* Surenchère */}
-              {isEnchere && (bien.date_surenchere || bien.mise_a_prix_surenchere) && (
-                <div style={{ marginTop: '10px', padding: '10px 14px', background: '#ffecd2', borderRadius: '8px', border: '1px solid #f0d090' }}>
-                  <div style={{ fontWeight: 700, color: '#8a5a00', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>Surenchère possible</div>
-                  {bien.date_surenchere && (
-                    <div style={{ color: '#8a5a00' }}>Jusqu{"'"}au <strong>{new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</strong></div>
-                  )}
-                  {bien.mise_a_prix_surenchere && (
-                    <div style={{ color: '#8a5a00', marginTop: '2px' }}>Nouvelle mise à prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
-                  )}
-                  {bien.consignation && (
-                    <div style={{ color: '#8a5a00', marginTop: '2px' }}>Consignation : <strong>{bien.consignation.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
-                  )}
-                </div>
-              )}
-              {/* Prix cible avec dropdown */}
-              {(prixCibleCashflow || prixCiblePV) && (
+              {/* Prix cible — masqué si enchère max présente (redondant) */}
+              {(prixCibleCashflow || prixCiblePV) && !(isEnchere && estimationData?.prix_total) && (
                 <>
                   <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {!isTravauxLourds && prixCibleCashflow && prixCiblePV ? (
@@ -2504,7 +2520,7 @@ export default function FicheBienPage() {
                 </>
               )}
             </div>
-            {userToken && (
+            {!isEnchere && userToken && (
               <button onClick={toggleWatchlist} style={{
                 display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
                 borderRadius: '10px', border: inWatchlist ? '2px solid #c0392b' : '2px solid #e8e2d8',
@@ -2520,7 +2536,7 @@ export default function FicheBienPage() {
         </div>
 
         <div style={{ marginTop: '-16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          <PlatformLinks bien={bien} />
+          {!isEnchere && <PlatformLinks bien={bien} />}
           {!isEnchere && (
             <button onClick={() => setShowContact(true)} style={{ fontSize: '12px', fontWeight: 600, color: '#c0392b', padding: '6px 14px', border: '1px solid #e8e2d8', borderRadius: '8px', background: '#fff', transition: 'all 150ms ease', whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"Compl\u00E9ter les donn\u00E9es manquantes \u2192"}</button>
           )}
@@ -2626,6 +2642,12 @@ export default function FicheBienPage() {
               </>
             )}
             <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>
+            {bien.adresse && (
+              <div className="data-item" style={{ gridColumn: '1 / -1' }}>
+                <span className="data-label">Adresse</span>
+                <span className="data-value">{bien.adresse}{bien.code_postal ? `, ${bien.code_postal}` : ''} {bien.ville || ''}</span>
+              </div>
+            )}
             <div className="data-item">
               <span className="data-label">{"Ann\u00E9e de construction"}</span>
               <span className={`data-value ${!bien.annee_construction ? 'nc' : ''}`}>{bien.annee_construction || 'NC'}</span>

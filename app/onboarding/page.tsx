@@ -365,9 +365,9 @@ export default function OnboardingPage() {
                 <button type="button" className="ob-credit-btn" onClick={() => setModeApport('pct')} style={{ border: `2px solid ${modeApport === 'pct' ? theme.colors.primary : theme.colors.sand}`, background: modeApport === 'pct' ? '#fdf5f4' : theme.colors.card, color: modeApport === 'pct' ? theme.colors.primary : theme.colors.muted }}>Autofinancement (%)</button>
               </div>
               {modeApport === 'montant' ? (
-                <input className="ob-input" type="number" placeholder="Ex : 50 000" value={apport} onChange={e => setApport(e.target.value)} />
+                <input className="ob-input" type="number" placeholder="50 000" value={apport} onChange={e => setApport(e.target.value)} />
               ) : (
-                <input className="ob-input" type="number" step="1" min="0" max="100" placeholder="Ex : 20" value={apportPct} onChange={e => setApportPct(e.target.value)} />
+                <input className="ob-input" type="number" step="1" min="0" max="100" placeholder="20" value={apportPct} onChange={e => setApportPct(e.target.value)} />
               )}
               <div style={{ fontSize: '12px', color: theme.colors.muted, marginTop: '6px' }}>
                 {modeApport === 'montant' ? "Montant fixe que vous investissez de votre poche" : "Pourcentage du prix d'achat financ\u00E9 sur fonds propres"}
@@ -376,15 +376,15 @@ export default function OnboardingPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
               <div className="ob-field">
                 <label className="ob-label">{"Taux de cr\u00E9dit (%)"}</label>
-                <input className="ob-input" type="number" step="0.1" placeholder="Ex : 3.5" value={tauxCredit} onChange={e => setTauxCredit(e.target.value)} />
+                <input className="ob-input" type="number" step="0.1" placeholder="3.5" value={tauxCredit} onChange={e => setTauxCredit(e.target.value)} />
               </div>
               <div className="ob-field">
                 <label className="ob-label">Taux assurance (%)</label>
-                <input className="ob-input" type="number" step="0.01" placeholder="Ex : 0.34" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value)} />
+                <input className="ob-input" type="number" step="0.01" placeholder="0.34" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value)} />
               </div>
               <div className="ob-field">
                 <label className="ob-label">{"Dur\u00E9e (ann\u00E9es)"}</label>
-                <input className="ob-input" type="number" placeholder="Ex : 20" value={dureeAns} onChange={e => setDureeAns(e.target.value)} />
+                <input className="ob-input" type="number" placeholder="20" value={dureeAns} onChange={e => setDureeAns(e.target.value)} />
               </div>
             </div>
             <div className="ob-actions">

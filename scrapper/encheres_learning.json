@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "description": "Exemples vérifiés pour l'extraction Sonnet enchères. Ajoutés manuellement ou via corrections admin.",
+  "examples": [
+    {
+      "note": "Exemple avec TJ dans le texte + frais préalables dans le CCV",
+      "input_summary": "Vente aux enchères Tribunal Judiciaire de Coutances, maison à Avranches, mise à prix 94 000€, bien occupé",
+      "expected_output": {
+        "type_bien": "Maison",
+        "ville": "Avranches",
+        "code_postal": "50300",
+        "departement": "Manche",
+        "tribunal": "Tribunal Judiciaire de Coutances",
+        "occupation": "occupe",
+        "surface": null,
+        "frais_prealables": null
+      }
+    },
+    {
+      "note": "Exemple avec TJ abrégé à normaliser + surface dans le PV",
+      "input_summary": "TJ Nîmes, appartement T3 65m² à Bernis 30620, mise à prix 87 000€, libre, frais préalables 4 200€",
+      "expected_output": {
+        "type_bien": "Appartement",
+        "ville": "Bernis",
+        "code_postal": "30620",
+        "departement": "Gard",
+        "tribunal": "Tribunal Judiciaire de Nîmes",
+        "occupation": "libre",
+        "surface": 65.0,
+        "nb_pieces": 3,
+        "frais_prealables": 4200
+      }
+    },
+    {
+      "note": "Exemple TJ Pontoise, ville avec tiret, frais dans CCV",
+      "input_summary": "TJ Pontoise, maison à Villiers-le-Bel, mise à prix 24 200€, frais taxés 8 150,50€",
+      "expected_output": {
+        "type_bien": "Maison",
+        "ville": "Villiers-le-Bel",
+        "code_postal": "95400",
+        "departement": "Val-d'Oise",
+        "tribunal": "Tribunal Judiciaire de Pontoise",
+        "frais_prealables": 8150.50
+      }
+    }
+  ]
+}

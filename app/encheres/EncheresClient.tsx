@@ -334,7 +334,7 @@ export default function EncheresPage() {
               {/* Tribunal */}
               <div>
                 <label style={labelStyle}>Tribunal</label>
-                <input style={inputStyle} placeholder="Ex: Bobigny" value={tribunal} onChange={e => setTribunal(e.target.value)} />
+                <input style={inputStyle} placeholder="Bobigny" value={tribunal} onChange={e => setTribunal(e.target.value)} />
               </div>
 
               {/* Date audience */}

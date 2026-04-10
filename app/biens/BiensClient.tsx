@@ -13,7 +13,7 @@ import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien, Enchere } from '@/lib/types'
 import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, STRATEGIES_VISIBLES } from '@/lib/constants'
-import { calculerCashflow } from '@/lib/calculs'
+import { calculerCashflow, calculerFraisEnchere } from '@/lib/calculs'
 
 function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
@@ -252,7 +252,7 @@ export default function BiensPage() {
           fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
         ])
         const wData = await wRes.json()
-        setWatchlistIds(new Set((wData.watchlist || []).map((w: any) => w.bien_id)))
+        setWatchlistIds(new Set((wData.watchlist || []).map((w: any) => String(w.bien_id))))
         const pData = await pRes.json()
         if (pData.profile?.plan) setUserPlan(pData.profile.plan)
         if (pData.profile?.strategie_mdb) setUserStrategie(pData.profile.strategie_mdb)
@@ -588,7 +588,7 @@ export default function BiensPage() {
             <label className="filter-label">{"Surface max (m\u00B2)"}</label>
             <input type="number" placeholder={"150"} value={surfaceMax} onChange={e => setSurfaceMax(e.target.value)} style={{ width: '80px' }} />
           </div>
-          {strategie !== 'Travaux lourds' && (
+          {strategie !== 'Travaux lourds' && strategie !== 'Enchères' && (
             <div className="filter-group">
               <label className="filter-label">Rdt brut min</label>
               <input type="number" placeholder="5 %" step="0.5" value={rendMin} onChange={e => setRendMin(e.target.value)} style={{ width: '80px' }} />
@@ -634,7 +634,7 @@ export default function BiensPage() {
             <label className="filter-label">{"Recherche par mots-cl\u00E9s"}</label>
             <input
               type="text"
-              placeholder={"Ex : terrasse, garage, vue mer..."}
+              placeholder={"Terrasse, garage, vue mer..."}
               value={keyword}
               onChange={e => {
                 setKeyword(e.target.value)
@@ -762,12 +762,12 @@ export default function BiensPage() {
               <div className="grid">
                 {filtered.map(bien => (
                   isEncheres ? (
-                    <EnchereCard key={bien.id} enchere={bien as any} />
+                    <EnchereCard key={bien.id} enchere={bien as any} inWatchlist={watchlistIds.has(String(bien.id))} userToken={userToken} onWatchlistChange={(id, added) => { setWatchlistIds(prev => { const next = new Set(prev); added ? next.add(String(id)) : next.delete(String(id)); return next }) }} />
                   ) : (
                     <BienCard
                       key={bien.id}
                       bien={bien}
-                      inWatchlist={watchlistIds.has(bien.id)}
+                      inWatchlist={watchlistIds.has(String(bien.id))}
                       userToken={userToken}
                       onWatchlistChange={(bienId, added) => {
                         setWatchlistIds(prev => {
@@ -791,30 +791,44 @@ export default function BiensPage() {
                       <th className="sticky-col-head" style={{ left: '40px', width: '80px', minWidth: '80px' }}><span></span></th>
                       <th className="sticky-col-head" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
                       <th>Commune<span></span></th>
-                      <th className="col-optional">{"M\u00E9tropole"}<span></span></th>
-                      <th>Prix FAI<span></span></th>
-                      {strategie !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
-                      {strategie !== 'Travaux lourds' && <th>Écart<span></span></th>}
-                      <th>Prix/m2<span></span></th>
-                      {strategie === 'Travaux lourds' ? (
+                      {!isEncheres && <th className="col-optional">{"M\u00E9tropole"}<span></span></th>}
+                      {isEncheres ? (
                         <>
-                          <th>Score travaux<span></span></th>
-                          <th>{"Estimation travaux"}<span></span></th>
-                          <th>DPE<span></span></th>
-                          <th>Année<span></span></th>
-                          <th>+/- Value<span></span></th>
+                          <th>Tribunal<span></span></th>
+                          <th>Date audience<span></span></th>
+                          <th>Statut<span></span></th>
+                          <th>Mise à prix<span></span></th>
+                          <th>Prix adjugé<span></span></th>
+                          <th>Occupation<span></span></th>
+                          <th>Frais estimés<span></span></th>
                         </>
                       ) : (
                         <>
-                          <th>Loyer<span>/mois</span></th>
-                          <th className="col-optional">Type loyer<span></span></th>
-                          <th className="col-optional">{"Charges r\u00E9cup."}<span>/mois</span></th>
-                          <th>Charges copro<span>/mois</span></th>
-                          <th>Taxe foncière<span>/an</span></th>
-                          <th>Rendement brut<span></span></th>
-                          <th>+/- Value<span></span></th>
-                          <th>Cashflow brut<span>/mois</span></th>
-                          <th>Locataire<span></span></th>
+                          <th>Prix FAI<span></span></th>
+                          {strategie !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
+                          {strategie !== 'Travaux lourds' && <th>Écart<span></span></th>}
+                          <th>Prix/m2<span></span></th>
+                          {strategie === 'Travaux lourds' ? (
+                            <>
+                              <th>Score travaux<span></span></th>
+                              <th>{"Estimation travaux"}<span></span></th>
+                              <th>DPE<span></span></th>
+                              <th>Année<span></span></th>
+                              <th>+/- Value<span></span></th>
+                            </>
+                          ) : (
+                            <>
+                              <th>Loyer<span>/mois</span></th>
+                              <th className="col-optional">Type loyer<span></span></th>
+                              <th className="col-optional">{"Charges r\u00E9cup."}<span>/mois</span></th>
+                              <th>Charges copro<span>/mois</span></th>
+                              <th>Taxe foncière<span>/an</span></th>
+                              <th>Rendement brut<span></span></th>
+                              <th>+/- Value<span></span></th>
+                              <th>Cashflow brut<span>/mois</span></th>
+                              <th>Locataire<span></span></th>
+                            </>
+                          )}
                         </>
                       )}
                       <th>Actions<span></span></th>
@@ -828,17 +842,17 @@ export default function BiensPage() {
                             className="td-heart"
                             onClick={async () => {
                               if (!userToken) { window.location.href = '/login'; return }
-                              const isIn = watchlistIds.has(bien.id)
+                              const isIn = watchlistIds.has(String(bien.id))
                               const method = isIn ? 'DELETE' : 'POST'
                               const res = await fetch('/api/watchlist', {
                                 method,
                                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-                                body: JSON.stringify({ bien_id: bien.id })
+                                body: JSON.stringify({ bien_id: bien.id, source_table: isEncheres ? 'encheres' : 'biens' })
                               })
                               if (res.ok) {
                                 setWatchlistIds(prev => {
                                   const next = new Set(prev)
-                                  isIn ? next.delete(bien.id) : next.add(bien.id)
+                                  isIn ? next.delete(String(bien.id)) : next.add(String(bien.id))
                                   return next
                                 })
                               } else if (res.status === 403) {
@@ -846,17 +860,47 @@ export default function BiensPage() {
                                 if (data.upgrade) setUpgradeMsg({ limit: data.limit, plan: data.plan })
                               }
                             }}
-                            style={{ color: watchlistIds.has(bien.id) ? '#c0392b' : '#c0b0a0' }}
-                            title={watchlistIds.has(bien.id) ? 'Retirer' : "Ajouter \u00E0 la watchlist"}>
-                            {watchlistIds.has(bien.id) ? '♥' : '♡'}
+                            style={{ color: watchlistIds.has(String(bien.id)) ? '#c0392b' : '#c0b0a0' }}
+                            title={watchlistIds.has(String(bien.id)) ? 'Retirer' : "Ajouter \u00E0 la watchlist"}>
+                            {watchlistIds.has(String(bien.id)) ? '♥' : '♡'}
                           </button>
                         </td>
                         <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); const urls = (bien as any).pictureUrls?.length > 0 ? (bien as any).pictureUrls : bien.photo_url ? [bien.photo_url] : []; setHoverPhoto({ urls, x: r.right + 16, y: r.top, idx: 0 }) }} /> : <div className="list-thumb-empty">-</div>}</td>
                         <td className="sticky-col" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
-                          <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}</span>
+                          <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${Math.round(bien.surface)} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{(bien as any).code_postal ? ` - ${(bien as any).code_postal}` : ''}</td>
+                        {isEncheres ? (() => {
+                          const e = bien as any
+                          const miseAPrix = e.mise_a_prix || 0
+                          const frais = miseAPrix ? calculerFraisEnchere(miseAPrix) : null
+                          const statutLabels: Record<string, { label: string; bg: string; color: string }> = {
+                            a_venir: { label: 'À venir', bg: '#e8f4fd', color: '#1a6aa0' },
+                            surenchere: { label: 'Surenchère', bg: '#fff3e0', color: '#e65100' },
+                            adjuge: { label: 'Adjugé', bg: '#d4f5e0', color: '#1a7a40' },
+                            vendu: { label: 'Vendu', bg: '#d4f5e0', color: '#1a7a40' },
+                            expire: { label: 'Expiré', bg: '#f0ede8', color: '#7a6a60' },
+                          }
+                          const s = statutLabels[e.statut] || { label: e.statut || '-', bg: '#f0ede8', color: '#7a6a60' }
+                          const occupationLabels: Record<string, { label: string; color: string }> = {
+                            libre: { label: 'Libre', color: '#1a7a40' },
+                            occupe: { label: 'Occupé', color: '#8a5a00' },
+                            loue: { label: 'Loué', color: '#2a4a8a' },
+                          }
+                          const occ = occupationLabels[e.occupation] || { label: e.occupation || '-', color: '#7a6a60' }
+                          const dateAudience = e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
+                          return <>
+                            <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
+                            <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
+                            <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>
+                            <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
+                            <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#7a6a60' }}>{frais ? `~${frais.pct} %` : '-'}</td>
+                          </>
+                        })() : (
+                        <>
                         <td className="col-optional"><MetroBadge metropole={bien.metropole} /></td>
                         {(() => {
                           const peutCalculer = bien.loyer && bien.prix_fai
@@ -935,10 +979,14 @@ export default function BiensPage() {
                             )}
                           </>
                         })()}
+                        </>
+                        )}
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <a href={`/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
-                          {' '}
-                          <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">Récupérer les données</a>
+                          <a href={isEncheres ? `/biens/${bien.id}?source=encheres` : `/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
+                          {!isEncheres && <>
+                            {' '}
+                            <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">Récupérer les données</a>
+                          </>}
                         </td>
                       </tr>
                     ))}

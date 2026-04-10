@@ -19,6 +19,18 @@ const ENCHERES_SELECT = `
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
 
+  // Watchlist mode : charger des IDs spécifiques
+  const ids = searchParams.get('ids')
+  if (ids) {
+    const idList = ids.split(',').filter(Boolean)
+    const { data, error } = await supabaseAdmin
+      .from('encheres')
+      .select(ENCHERES_SELECT)
+      .in('id', idList)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ encheres: data || [] })
+  }
+
   const page = parseInt(searchParams.get('page') || '1')
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 2000)
   const from = (page - 1) * limit

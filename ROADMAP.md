@@ -2,102 +2,83 @@
 
 ## FAIT
 
-### Sourcing
-- [x] Scraper Leboncoin (legacy, 7 metropoles)
-- [x] Integration Moteur Immo (60+ plateformes, France entiere)
-- [x] 4 strategies : Locataire en place, Travaux lourds, Division, Decoupe
-- [x] Ingestion par date (pagination 30j) pour gros volumes
-- [x] ~80 000+ biens en base
-- [x] 22 metropoles avec vrais perimetres communaux (geo.api.gouv.fr)
-- [x] Multi-photos depuis moteurimmo_data.pictureUrls
-- [x] Description complete stockee pour analyse IA
+### Sourcing biens classiques
+- [x] Scraper Leboncoin (legacy, supprimé)
+- [x] Integration Moteur Immo (legacy, API coupée 2026-04-06)
+- [x] Migration Stream Estate (webhooks + saved searches, opérationnel)
+- [x] 4 strategies : Locataire en place, Travaux lourds, Division, Immeuble de rapport
+- [x] ~96 000+ biens en base, 22 metropoles
+
+### Sourcing enchères judiciaires
+- [x] 3 scrapers : Licitor (~390), Avoventes (~210, Playwright), Vench (~430)
+- [x] Pipeline : scraping minimaliste (données fiables + raw_text) → Sonnet extraction → dedup cross-source
+- [x] Cron VPS Hetzner (7x/jour : 0h, 10h, 12h, 14h, 16h, 18h, 20h)
+- [x] Verrou anti-chevauchement entre crons
+- [x] Extraction Sonnet : normalisation TJ, ville, type_bien, adresse, occupation + PDFs
+- [x] Normalisation programmatique post-Sonnet (gratuit, pas d'API)
+- [x] Auto-learning : exemples corrigés logués dans encheres_learning.json
+- [x] ~1000+ enchères en base, 700 avec tribunal, 900 avec ville
 
 ### Estimation DVF
 - [x] Moteur estimation 3 couches (base DVF + correcteurs + confiance)
-- [x] Filtre par nombre de pieces exact (T2 vs T2)
-- [x] Rayon adaptatif 50m -> 1100m (ville vs campagne)
-- [x] Poids egal pre-COVID / post-COVID
+- [x] Rayon adaptatif 50m -> 1100m
 - [x] Estimation = prix marche "en bon etat" (pas de decote travaux)
-- [x] Batch estimation + bouton recalculer + force cache
+- [x] Estimation enchères (API séparée)
 
 ### Analyse fiscale & revente
-- [x] 5 regimes : micro-foncier, reel, LMNP, SCI IS, MdB (IS)
-- [x] Scenario revente waterfall (DVF - agence - achat - notaire - travaux - fiscalite)
-- [x] Duree detention 1-5 ans, frais agence modifiable
-- [x] Comparaison 2 regimes cote a cote
-- [x] Badge +/- Value sur cartes et liste
+- [x] 7 regimes : micro-foncier, reel, LMNP micro, LMNP reel, LMP, SCI IS, MdB
+- [x] Scenario revente waterfall + duree detention 1-5 ans
+- [x] Enchère max (objectif 20% PV) pour les enchères
+- [x] Frais enchère : émoluments avocat barème + droits mutation 5.8% + CSI
 
-### Frontend
+### Frontend enchères
+- [x] EnchereCard avec countdown, mise à prix, statut, occupation, watchlist
+- [x] Vue liste enchères : Tribunal, Date audience, Statut, Mise à prix, Prix adjugé, Occupation
+- [x] Vue carte avec EnchereCard dans le panneau latéral
+- [x] Fiche enchère : Prix Adjugé + Enchère Max alignés, surenchère, sources sous photo
+- [x] Watchlist enchères (source_table = 'encheres') + onglet Enchères dans mes-biens
+
+### Frontend général
 - [x] Recherche localisation (ville, CP, departement, region, metropole)
-- [x] Scroll infini (50/page, IntersectionObserver)
-- [x] Filtres cote serveur (strategie, localisation, prix, type bien)
-- [x] Carrousel photos (fiches bien + cartes)
-- [x] Persistance filtres + scroll (sessionStorage)
-- [x] Header compact avec navigation active + user pill
-- [x] Watchlist avec onglets par strategie
-- [x] Score travaux min en filtre pour travaux lourds
-- [x] Code postal sur cartes et liste
+- [x] Scroll infini, filtres SSR, carrousel photos
+- [x] Watchlist avec onglets par strategie + onglet Enchères
+- [x] Carte interactive Leaflet
+- [x] Chat IA Memo (Haiku, streaming)
+- [x] Blog / CMS éditorial (Opus + Sonnet + Unsplash)
 
-### Auth & profil
-- [x] Auth Supabase (login, register)
-- [x] Profil fiscal (TMI, regime, financement, budget travaux)
-- [x] Message contact vendeur auto-genere
-- [x] Enrichissement communautaire des donnees
+### Auth & paiement
+- [x] Supabase Auth (email + Google + Facebook)
+- [x] Onboarding 5 étapes
+- [x] Stripe Checkout + Portal + Webhooks (Free / Pro 19€ / Expert 49€)
+- [x] Early adopter -30% (code EARLYBIRD)
+- [x] Alertes email (Brevo, 1 Pro / 5 Expert)
 
 ### Admin
-- [x] Dashboard admin stats
-- [x] Gestion biens + users
-- [x] Config estimateur DVF (/admin/estimation)
-
-### Editorial CMS
-- [x] Generation articles via Opus + fact-checking Sonnet
-- [x] Photos Unsplash avec navigation pour choisir
-- [x] Calendrier editorial 52 semaines genere par IA
-- [x] Backlog 8 sujets + workflow draft/review/approved/published
-- [x] Sources officielles + references Mon Petit MDB
-- [x] Auteur + date publication modifiables
-- [x] Police Lora pour articles
+- [x] Dashboard stats + gestion biens/users
+- [x] Pipeline IA configurable (cron_config)
+- [x] Feedbacks Memo
 
 ## EN COURS
 
-- [ ] Ingestion Decoupe + Locataire en place/Travaux lourds 2022-2023
-- [ ] Tests score travaux + extraction donnees IA (prompts valides sur 200 biens)
+- [ ] Qualité données enchères (frais préalables, adresses manquantes)
+- [ ] Nettoyage fichiers legacy LBC (fait côté scrapper, reste références CLAUDE.md)
 
-## A FAIRE — Priorite haute
+## A FAIRE — Priorité haute
 
-### Batch IA post-ingestion
-- [ ] Validation regex batch (4 strategies, prompts valides sur 2500 annonces)
-- [ ] Score travaux batch (Haiku, ~52k biens)
-- [ ] Extraction donnees batch (Haiku, ~20k biens : loyer HC/CC, charges, TF, bail, profil)
-- [ ] Upload photos batch (biens sans photo_storage_path)
-- [ ] Estimation DVF batch sur nouveaux biens
+- [ ] Filtre rendement brut retiré pour enchères (fait)
+- [ ] Estimation DVF enchères : debug biens sans estimation malgré adresse
+- [ ] Dedup cross-source post-Sonnet : intégrer dans le cron
+- [ ] Alertes email pour les enchères (nouvelle audience à venir)
 
-### Mise en ligne
-- [ ] Deploiement Vercel (env vars + domain monpetitmdb.io)
-- [ ] 6-8 articles de lancement (antidates)
-- [ ] Page blog publique (articles publies visibles par tous)
-- [ ] Landing page / page d'accueil
-- [ ] SEO : metadata, sitemap, og:image
+## A FAIRE — Priorité moyenne
 
-### Monetisation
-- [ ] Page tarifs (Free / Pro ~19 EUR / Expert ~49 EUR)
-- [ ] Stripe integration
-- [ ] Gestion acces par plan (strategies, simulateur, export)
+- [ ] Export PDF analyses enchères
+- [ ] Comparateur enchères côte à côte
+- [ ] Historique prix adjugés par tribunal/zone
+- [ ] Score travaux IA pour enchères (Sonnet via etat_interieur)
 
-## A FAIRE — Priorite moyenne
-
-- [ ] Webhooks Moteur Immo (nouvelles annonces en temps reel)
-- [ ] Google Custom Search pour fact-checking articles
-- [ ] Verification statut annonces (retirees / expirees)
-- [ ] Alertes email (nouveaux biens matchant les criteres utilisateur)
-- [ ] Page "Comment ca marche"
-- [ ] Afficher description complete sur fiche bien
-
-## A FAIRE — Priorite basse
+## A FAIRE — Priorité basse
 
 - [ ] Publication LinkedIn / Instagram automatique
 - [ ] Editeur rich text (TipTap) pour articles
-- [ ] Export PDF analyses de biens
-- [ ] Comparateur de biens cote a cote
-- [ ] Carte interactive (Mapbox/Leaflet)
-- [ ] Analytics utilisateur
+- [ ] Analytics utilisateur avancé

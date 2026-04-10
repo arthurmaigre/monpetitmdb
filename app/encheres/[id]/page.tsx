@@ -1026,7 +1026,7 @@ function EstimationSection({ enchereId, prixFai, surface, adresseInitiale, ville
               type="text"
               value={adresse}
               onChange={e => setAdresse(e.target.value)}
-              placeholder={"Ex : 12 rue de la Paix"}
+              placeholder={"12 rue de la Paix"}
               style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
               autoFocus
             />
