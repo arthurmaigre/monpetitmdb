@@ -12,7 +12,7 @@ import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien, Enchere } from '@/lib/types'
-import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, STRATEGIES_VISIBLES } from '@/lib/constants'
+import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, TRIS_ENCHERES, STRATEGIES_VISIBLES } from '@/lib/constants'
 import { calculerCashflow, calculerFraisEnchere } from '@/lib/calculs'
 
 function formatPrix(n: number) {
@@ -54,6 +54,7 @@ export default function BiensPage() {
   const [enchereStatut, setEnchereStatut] = useState(saved.current?.enchereStatut || '')
   const [enchereOccupation, setEnchereOccupation] = useState(saved.current?.enchereOccupation || '')
   const [enchereSources, setEnchereSources] = useState<Set<string>>(new Set(saved.current?.enchereSources || []))
+  const [avocatModal, setAvocatModal] = useState<any>(null)
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const keywordTimeout = useRef<any>(null)
   const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
@@ -163,7 +164,7 @@ export default function BiensPage() {
       if (enchereStatut) params.set('statut', enchereStatut)
       if (enchereOccupation) params.set('occupation', enchereOccupation)
       if (enchereSources.size > 0 && enchereSources.size < 3) params.set('source', Array.from(enchereSources).join(','))
-      params.set('tri', 'date_audience_asc')
+      params.set('tri', tri)
       return `/api/encheres?${params.toString()}`
     }
 
@@ -187,8 +188,9 @@ export default function BiensPage() {
 
   // Adapter le tri par defaut selon la strategie
   useEffect(() => {
-    if (strategie === 'Travaux lourds') setTri('prixm2_asc')
-    else if (tri === 'prixm2_asc' || tri === 'prixm2_desc' || tri === 'score_desc') setTri('recent')
+    if (strategie === 'Enchères') setTri('date_audience_asc')
+    else if (strategie === 'Travaux lourds') setTri('prixm2_asc')
+    else if (tri === 'prixm2_asc' || tri === 'prixm2_desc' || tri === 'score_desc' || tri === 'date_audience_asc' || tri === 'date_audience_desc') setTri('recent')
   }, [strategie])
 
   // Charger les biens quand la strategie ou les filtres changent
@@ -208,7 +210,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, tri])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -678,7 +680,7 @@ export default function BiensPage() {
           <div className="filter-group">
             <label className="filter-label">Trier par</label>
             <select value={tri} onChange={e => setTri(e.target.value)}>
-              {(strategie === 'Travaux lourds' ? TRIS_TRAVAUX : TRIS).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {(isEncheres ? TRIS_ENCHERES : strategie === 'Travaux lourds' ? TRIS_TRAVAUX : TRIS).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           {(userPlan === 'pro' || userPlan === 'expert') && strategie && (
@@ -825,12 +827,14 @@ export default function BiensPage() {
                       {isEncheres ? (
                         <>
                           <th>Tribunal<span></span></th>
-                          <th>Visite<span></span></th>
-                          <th>Audience<span></span></th>
+                          <th>Date visite<span></span></th>
+                          <th>Date audience<span></span></th>
+                          <th>Date surenchère<span></span></th>
                           <th>Statut<span></span></th>
                           <th>Mise à prix<span></span></th>
                           <th>Prix adjugé<span></span></th>
                           <th>Occupation<span></span></th>
+                          <th>Avocat<span></span></th>
                           <th>Sources<span></span></th>
                         </>
                       ) : (
@@ -913,7 +917,19 @@ export default function BiensPage() {
                             vendu: { label: 'Vendu', bg: '#d4f5e0', color: '#1a7a40' },
                             expire: { label: 'Expiré', bg: '#f0ede8', color: '#7a6a60' },
                           }
-                          const s = statutLabels[e.statut] || { label: e.statut || '-', bg: '#f0ede8', color: '#7a6a60' }
+                          // Corriger le statut visuellement si la date est passée
+                          let displayStatut = e.statut
+                          if (displayStatut === 'a_venir' && e.date_audience && new Date(e.date_audience).getTime() < Date.now()) {
+                            if (e.date_surenchere && new Date(e.date_surenchere).getTime() > Date.now()) {
+                              displayStatut = 'surenchere'
+                            } else {
+                              displayStatut = 'adjuge'
+                            }
+                          }
+                          if (displayStatut === 'surenchere' && e.date_surenchere && new Date(e.date_surenchere).getTime() < Date.now()) {
+                            displayStatut = 'adjuge'
+                          }
+                          const s = statutLabels[displayStatut] || { label: displayStatut || '-', bg: '#f0ede8', color: '#7a6a60' }
                           const occupationLabels: Record<string, { label: string; color: string }> = {
                             libre: { label: 'Libre', color: '#1a7a40' },
                             occupe: { label: 'Occupé', color: '#8a5a00' },
@@ -925,10 +941,23 @@ export default function BiensPage() {
                             <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: '#7a6a60' }}>{e.date_visite ? new Date(e.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#8a5a00' }}>{e.date_surenchere ? new Date(e.date_surenchere).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                             <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
                             <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {e.avocat_nom ? (
+                                <button onClick={() => setAvocatModal(e)} style={{
+                                  background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px',
+                                  padding: '4px 8px', fontSize: '11px', fontWeight: 600, color: '#7a6a60',
+                                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                                  maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
+                                }}>
+                                  {e.avocat_nom}
+                                </button>
+                              ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '12px' }}>-</span>}
+                            </td>
                             <td>{(() => {
                               const LOGOS: Record<string, { name: string; color: string; abbrev: string }> = {
                                 licitor: { name: 'Licitor', color: '#1565C0', abbrev: 'LIC' },
@@ -1062,6 +1091,77 @@ export default function BiensPage() {
       </div>
 
       {/* Modal upgrade watchlist */}
+      {/* Modal avocat enchère */}
+      {avocatModal && (
+        <div
+          onClick={() => setAvocatModal(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(26,18,16,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 16, padding: '32px 28px',
+              maxWidth: 380, width: '90%',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+              <div style={{
+                width: '48px', height: '48px', borderRadius: '12px',
+                background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '20px', color: '#7a6a60', flexShrink: 0,
+              }}>
+                {'\u2696'}
+              </div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#1a1210' }}>{avocatModal.avocat_nom}</div>
+                {avocatModal.avocat_cabinet && (
+                  <div style={{ fontSize: '13px', color: '#7a6a60', marginTop: '2px' }}>{avocatModal.avocat_cabinet}</div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {avocatModal.avocat_tel && (
+                <a href={`tel:${avocatModal.avocat_tel.replace(/\s/g, '')}`} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
+                  background: '#faf8f5', borderRadius: '10px', border: '1px solid #e8e2d8',
+                  textDecoration: 'none', color: '#1a1210', fontSize: '14px', fontWeight: 600,
+                }}>
+                  <span style={{ fontSize: '18px' }}>{'\uD83D\uDCDE'}</span>
+                  {avocatModal.avocat_tel}
+                </a>
+              )}
+              {avocatModal.avocat_email && (
+                <a href={`mailto:${avocatModal.avocat_email}`} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
+                  background: '#faf8f5', borderRadius: '10px', border: '1px solid #e8e2d8',
+                  textDecoration: 'none', color: '#1a1210', fontSize: '14px', fontWeight: 600,
+                }}>
+                  <span style={{ fontSize: '18px' }}>{'\u2709'}</span>
+                  {avocatModal.avocat_email}
+                </a>
+              )}
+              {avocatModal.tribunal && (
+                <div style={{ fontSize: '13px', color: '#7a6a60', marginTop: '4px' }}>
+                  {avocatModal.tribunal}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setAvocatModal(null)} style={{
+              marginTop: '20px', width: '100%', padding: '10px',
+              background: '#f0ede8', border: 'none', borderRadius: '10px',
+              fontSize: '13px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif",
+            }}>Fermer</button>
+          </div>
+        </div>
+      )}
+
       {upgradeMsg && (
         <div
           onClick={() => setUpgradeMsg(null)}

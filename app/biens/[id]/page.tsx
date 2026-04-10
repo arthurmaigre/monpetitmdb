@@ -1837,6 +1837,7 @@ export default function FicheBienPage() {
   const [showLotsLocatif, setShowLotsLocatif] = useState(false)
   const [showCoutsCopro, setShowCoutsCopro] = useState(false)
   const [showContact, setShowContact] = useState(false)
+  const [showAvocatModal, setShowAvocatModal] = useState(false)
   const [showReventeLots, setShowReventeLots] = useState(false)
   const [coutGeometreParLot, setCoutGeometreParLot] = useState(1500)
   const [coutReglementCoproParLot, setCoutReglementCoproParLot] = useState(2500)
@@ -2635,8 +2636,22 @@ export default function FicheBienPage() {
                 {bien.tribunal && <div className="data-item"><span className="data-label">Tribunal</span><span className="data-value">{bien.tribunal}</span></div>}
                 {bien.date_audience && <div className="data-item"><span className="data-label">Audience</span><span className="data-value">{new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (passée)' })()}</span></div>}
                 {bien.date_visite && <div className="data-item"><span className="data-label">Visite</span><span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div>}
-                {bien.avocat_nom && <div className="data-item"><span className="data-label">Avocat</span><span className="data-value">{bien.avocat_nom}{bien.avocat_cabinet ? ` (${bien.avocat_cabinet})` : ''}</span></div>}
-                {bien.avocat_tel && <div className="data-item"><span className="data-label">Téléphone avocat</span><span className="data-value">{bien.avocat_tel}</span></div>}
+                {bien.avocat_nom && (
+                  <div className="data-item">
+                    <span className="data-label">Avocat poursuivant</span>
+                    <button onClick={() => setShowAvocatModal(true)} style={{
+                      background: '#faf8f5', border: '1.5px solid #e8e2d8', borderRadius: '10px',
+                      padding: '10px 14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                      display: 'flex', alignItems: 'center', gap: '10px', width: '100%', textAlign: 'left',
+                    }}>
+                      <span style={{ fontSize: '20px' }}>{'\u2696'}</span>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>{bien.avocat_nom}</div>
+                        {bien.avocat_cabinet && <div style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.avocat_cabinet}</div>}
+                      </div>
+                    </button>
+                  </div>
+                )}
                 {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
                 {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
               </>
@@ -3467,6 +3482,48 @@ export default function FicheBienPage() {
           </div>
           </div>
         )}
+
+        {/* Modal avocat enchère */}
+        <ModalPanel open={showAvocatModal} onClose={() => setShowAvocatModal(false)} title="Avocat poursuivant">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '14px',
+                background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '24px', color: '#7a6a60', flexShrink: 0,
+              }}>{'\u2696'}</div>
+              <div>
+                <div style={{ fontSize: '17px', fontWeight: 700, color: '#1a1210' }}>{bien.avocat_nom}</div>
+                {bien.avocat_cabinet && <div style={{ fontSize: '14px', color: '#7a6a60', marginTop: '2px' }}>{bien.avocat_cabinet}</div>}
+              </div>
+            </div>
+            {bien.avocat_tel && (
+              <a href={`tel:${bien.avocat_tel.replace(/\s/g, '')}`} style={{
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px',
+                background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8',
+                textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600,
+              }}>
+                <span style={{ fontSize: '20px' }}>{'\uD83D\uDCDE'}</span>
+                {bien.avocat_tel}
+              </a>
+            )}
+            {bien.avocat_email && (
+              <a href={`mailto:${bien.avocat_email}`} style={{
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px',
+                background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8',
+                textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600,
+              }}>
+                <span style={{ fontSize: '20px' }}>{'\u2709'}</span>
+                {bien.avocat_email}
+              </a>
+            )}
+            {bien.tribunal && (
+              <div style={{ fontSize: '13px', color: '#7a6a60', padding: '8px 0', borderTop: '1px solid #f0ede8' }}>
+                {bien.tribunal}
+              </div>
+            )}
+          </div>
+        </ModalPanel>
 
         <ModalPanel open={showContact} onClose={() => setShowContact(false)} title={"R\u00E9cup\u00E9rer les donn\u00E9es manquantes"}>
           <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />

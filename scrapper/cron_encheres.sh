@@ -79,6 +79,60 @@ echo "" | tee -a "$LOG_FILE"
 
 $PYTHON dedup_cross_source.py 2>&1 | tee -a "$LOG_FILE"
 
+# ── Phase 4 : Mise à jour statuts (a_venir → adjuge si date passée) ──────────
+echo "" | tee -a "$LOG_FILE"
+echo ">>> PHASE 4 : Mise à jour statuts" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+$PYTHON -c "from dotenv import load_dotenv; load_dotenv('.env'); from encheres_supabase import update_statuts_passes; update_statuts_passes()" 2>&1 | tee -a "$LOG_FILE"
+
+# ── Phase 5 : Normalisation programmatique (TJ, ville, avocat — gratuit) ─────
+echo "" | tee -a "$LOG_FILE"
+echo ">>> PHASE 5 : Normalisation programmatique" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+$PYTHON -c "
+import re, json
+from dotenv import load_dotenv; load_dotenv('.env')
+from supabase_client import get_client
+c = get_client()
+offset = 0; fixed = 0
+while True:
+    r = c.table('encheres').select('id, tribunal, ville, avocat_nom, avocat_cabinet, avocat_tel').range(offset, offset + 99).execute()
+    rows = r.data or []
+    if not rows: break
+    for row in rows:
+        update = {}
+        tj = row.get('tribunal')
+        if tj:
+            clean = re.sub(r'^(?:TJ\s+de\s+)+', '', tj, flags=re.I)
+            clean = re.sub(r'^(?:TJ|TGI|Tribunal\s+Judiciaire|Tribunal\s+de\s+Grande\s+Instance)\s+(?:de\s+|d.)?', '', clean, flags=re.I).strip().rstrip(',.')
+            new_tj = 'TJ de ' + clean.title() if clean else None
+            if new_tj and new_tj != tj: update['tribunal'] = new_tj
+        ville = row.get('ville')
+        if ville and (ville.isupper() or ville.islower()):
+            update['ville'] = ville.title()
+        nom = row.get('avocat_nom')
+        if nom:
+            new_nom = re.sub(r'^(?:Ma.tre|Me|Mtre|ME\.?)\s+', '', nom.strip())
+            parts = new_nom.split()
+            norm = [p.capitalize() if p.isupper() and len(p) > 2 else p for p in parts]
+            new_nom = ' '.join(norm)
+            if new_nom != nom: update['avocat_nom'] = new_nom
+        tel = row.get('avocat_tel')
+        if tel:
+            digits = re.sub(r'\D', '', tel)
+            if len(digits) == 10:
+                new_tel = ' '.join([digits[i:i+2] for i in range(0, 10, 2)])
+                if new_tel != tel: update['avocat_tel'] = new_tel
+        if update:
+            c.table('encheres').update(update).eq('id', row['id']).execute()
+            fixed += 1
+    offset += len(rows)
+    if len(rows) < 100: break
+print(f'{fixed} biens normalisés')
+" 2>&1 | tee -a "$LOG_FILE"
+
 # ── Fin ───────────────────────────────────────────────────────────────────────
 echo "" | tee -a "$LOG_FILE"
 echo "══════════════════════════════════════════════════════════════" | tee -a "$LOG_FILE"

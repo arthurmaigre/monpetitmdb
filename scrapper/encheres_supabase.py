@@ -154,6 +154,7 @@ def upsert_encheres_batch(items: list, dry_run: bool = False) -> dict:
                 if item.get("prix_adjuge") and item.get("statut"):
                     update_data["statut"] = item["statut"]
 
+
                 update_data["updated_at"] = now
 
                 # Fetch existant pour sources + check enrichissement
@@ -207,6 +208,69 @@ def upsert_encheres_batch(items: list, dry_run: bool = False) -> dict:
                 stats["errors"] += 1
 
     return stats
+
+
+def update_statuts_passes() -> int:
+    """Met à jour les statuts des enchères dont la date_audience est dépassée.
+
+    - a_venir + date_audience passée + date_surenchere future → surenchere
+    - a_venir + date_audience passée + pas de date_surenchere → adjuge
+    - surenchere + date_surenchere passée → adjuge
+    """
+    client = get_client()
+    if not client:
+        return 0
+
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    count = 0
+
+    try:
+        # 1. a_venir → surenchere ou adjuge
+        r = client.table(TABLE_ENCHERES).select("id, date_audience, date_surenchere") \
+            .eq("statut", "a_venir") \
+            .lt("date_audience", now_iso) \
+            .limit(1000).execute()
+
+        for row in (r.data or []):
+            date_sur = row.get("date_surenchere")
+            if date_sur:
+                try:
+                    sur = datetime.fromisoformat(str(date_sur).replace("Z", "+00:00"))
+                    if sur > now:
+                        new_statut = "surenchere"
+                    else:
+                        new_statut = "adjuge"
+                except Exception:
+                    new_statut = "adjuge"
+            else:
+                new_statut = "adjuge"
+
+            client.table(TABLE_ENCHERES).update({
+                "statut": new_statut,
+                "updated_at": now_iso,
+            }).eq("id", row["id"]).execute()
+            count += 1
+
+        # 2. surenchere → adjuge si date_surenchere passée
+        r2 = client.table(TABLE_ENCHERES).select("id, date_surenchere") \
+            .eq("statut", "surenchere") \
+            .lt("date_surenchere", now_iso) \
+            .limit(1000).execute()
+
+        for row in (r2.data or []):
+            client.table(TABLE_ENCHERES).update({
+                "statut": "adjuge",
+                "updated_at": now_iso,
+            }).eq("id", row["id"]).execute()
+            count += 1
+
+        if count:
+            log.info(f"{count} statuts mis à jour (a_venir/surenchere → adjuge/surenchere)")
+        return count
+    except Exception as e:
+        log.error(f"update_statuts_passes: {e}")
+        return 0
 
 
 def mark_expired(source: str, active_id_sources: set) -> int:

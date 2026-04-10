@@ -70,6 +70,7 @@ Retourne UNIQUEMENT le JSON, sans commentaire ni explication.
   "avocat_nom": null,
   "avocat_cabinet": null,
   "avocat_tel": null,
+  "avocat_email": null,
   "frais_prealables": null,
   "date_visite": null,
   "heure_audience": null,
@@ -125,6 +126,7 @@ AVOCAT :
 - avocat_nom : "Prénom NOM" ou "NOM" (pas de "Maître", "Me")
 - avocat_cabinet : nom du cabinet (SELARL, SCP, etc.) sans adresse
 - avocat_tel : numéro tel formaté "0X XX XX XX XX"
+- avocat_email : adresse email si présente dans le texte ou le bloc avocat. null si non mentionnée.
 
 FRAIS_PREALABLES : montant en euros (float) des frais préalables / frais de procédure / frais de poursuite mentionnés dans l'annonce ou le CCV. Souvent intitulé "frais préalables", "frais de poursuite", "frais taxés". null si non mentionné.
 
@@ -168,21 +170,37 @@ def build_system_prompt() -> str:
     return SYSTEM_PROMPT + examples_text
 
 
-def build_user_message(item: dict, pdf_texts: list[str] = None) -> str:
-    """Construit le message utilisateur pour Sonnet."""
-    parts = []
-    parts.append(f"Source : {item.get('source', '?')}")
-    parts.append(f"URL : {item.get('url', '?')}")
+def build_user_message(item: dict, pdf_texts: list[str] = None, pdf_images: list[str] = None) -> list:
+    """Construit le message utilisateur pour Sonnet.
+    Retourne une liste de content blocks (texte + images si scans).
+    """
+    text_parts = []
+    text_parts.append(f"Source : {item.get('source', '?')}")
+    text_parts.append(f"URL : {item.get('url', '?')}")
 
     if item.get("description"):
-        parts.append(f"\n--- TEXTE BRUT SCRAPÉ ---\n{item['description']}")
+        text_parts.append(f"\n--- TEXTE BRUT SCRAPÉ ---\n{item['description']}")
 
     if pdf_texts:
         for i, pdf_text in enumerate(pdf_texts, 1):
-            truncated = pdf_text[:3000]
-            parts.append(f"\n--- DOCUMENT PDF {i} ---\n{truncated}")
+            text_parts.append(f"\n--- DOCUMENT PDF {i} ---\n{pdf_text}")
 
-    return "\n".join(parts)
+    content = [{"type": "text", "text": "\n".join(text_parts)}]
+
+    # Ajouter les images PDF (scans) pour Sonnet vision
+    if pdf_images:
+        content[0]["text"] += "\n\n--- PAGES PDF SCANNÉES CI-DESSOUS (images) ---"
+        for img_b64 in pdf_images:
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": img_b64,
+                }
+            })
+
+    return content
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -190,7 +208,7 @@ def build_user_message(item: dict, pdf_texts: list[str] = None) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def download_pdf_text(url: str) -> str | None:
-    """Télécharge un PDF et en extrait le texte."""
+    """Télécharge un PDF et en extrait le texte. Retourne None si scan (images)."""
     try:
         r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
@@ -209,6 +227,35 @@ def download_pdf_text(url: str) -> str | None:
             return None
     except Exception as e:
         log.warning(f"Erreur téléchargement PDF {url}: {e}")
+        return None
+
+
+def download_pdf_images(url: str, max_pages: int = 3) -> list[str] | None:
+    """Télécharge un PDF scan et retourne les premières pages en base64 (pour Sonnet vision).
+    Utilisé en fallback quand pdfplumber ne retourne pas de texte.
+    """
+    try:
+        import base64
+        r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        try:
+            import pypdfium2 as pdfium
+            import io
+            pdf = pdfium.PdfDocument(io.BytesIO(r.content))
+            images_b64 = []
+            for i in range(min(len(pdf), max_pages)):
+                page = pdf[i]
+                bitmap = page.render(scale=2)  # 2x pour lisibilité
+                pil_image = bitmap.to_pil()
+                buf = io.BytesIO()
+                pil_image.save(buf, format="JPEG", quality=80)
+                images_b64.append(base64.b64encode(buf.getvalue()).decode("utf-8"))
+            return images_b64 if images_b64 else None
+        except ImportError:
+            log.warning("pypdfium2 non installé — pip install pypdfium2")
+            return None
+    except Exception as e:
+        log.warning(f"Erreur conversion PDF images {url}: {e}")
         return None
 
 
@@ -270,10 +317,15 @@ ou
 []"""
 
 
-def _get_pdf_texts(item: dict) -> list[str]:
-    """Télécharge et extrait le texte des PDFs PV et CCV."""
+def _get_pdf_data(item: dict) -> tuple[list[str], list[dict]]:
+    """Télécharge et extrait le contenu des PDFs.
+    Retourne (pdf_texts, pdf_images).
+    - pdf_texts : liste de strings (texte extrait par pdfplumber)
+    - pdf_images : liste de dicts {"type": "image", "data": base64} pour Sonnet vision (fallback scans)
+    """
     PDF_TYPES_PRIORITY = ("pv", "ccv", "autre")
     pdf_texts = []
+    pdf_images = []
     if item.get("documents"):
         docs = item["documents"]
         if isinstance(docs, str):
@@ -281,12 +333,19 @@ def _get_pdf_texts(item: dict) -> list[str]:
         for doc_type in PDF_TYPES_PRIORITY:
             for doc in docs:
                 if doc.get("type") == doc_type:
+                    # Essayer le texte d'abord
                     text = download_pdf_text(doc["url"])
                     if text and len(text) > 100:
-                        pdf_texts.append(text)
-                        log.info(f"  PDF {doc_type}: {len(text)} chars")
+                        pdf_texts.append(text[:10000])
+                        log.info(f"  PDF {doc_type} texte: {len(text)} chars")
+                    else:
+                        # Fallback : convertir en images (scan)
+                        images = download_pdf_images(doc["url"], max_pages=3)
+                        if images:
+                            pdf_images.extend(images)
+                            log.info(f"  PDF {doc_type} scan: {len(images)} pages (vision)")
                     break
-    return pdf_texts
+    return pdf_texts, pdf_images
 
 
 def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = False) -> dict | None:
@@ -294,11 +353,13 @@ def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = Fals
     Pass 1 : extraction complète.
     Pass 2 : validation + correction de TOUS les champs (qualité, cohérence, champs manquants).
     """
-    pdf_texts = _get_pdf_texts(item) if with_pdfs else []
-    user_msg = build_user_message(item, pdf_texts if pdf_texts else None)
+    pdf_texts, pdf_images = _get_pdf_data(item) if with_pdfs else ([], [])
+    user_content = build_user_message(item, pdf_texts if pdf_texts else None, pdf_images if pdf_images else None)
 
     if dry_run:
-        log.info(f"[DRY-RUN] Prompt ({len(user_msg)} chars):\n{user_msg[:500]}...")
+        text_len = sum(len(b.get("text", "")) for b in user_content if b["type"] == "text")
+        img_count = sum(1 for b in user_content if b["type"] == "image")
+        log.info(f"[DRY-RUN] Prompt ({text_len} chars, {img_count} images)")
         return None
 
     try:
@@ -309,7 +370,7 @@ def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = Fals
             model=MODEL,
             max_tokens=MAX_TOKENS,
             system=build_system_prompt(),
-            messages=[{"role": "user", "content": user_msg}],
+            messages=[{"role": "user", "content": user_content}],
         )
         text = response.content[0].text.strip()
         text = re.sub(r"^```json\s*", "", text)
@@ -335,6 +396,8 @@ def _normalize_output(data: dict) -> dict:
     tj = data.get("tribunal")
     if tj:
         tj = tj.strip()
+        # Retirer tous les préfixes connus (y compris doublons "TJ de TJ")
+        tj = re.sub(r"^(?:TJ\s+de\s+)+", "", tj, flags=re.I)
         tj = re.sub(r"^(?:TJ|TGI|Tribunal de Grande Instance|Tribunal d'Instance)\s+(?:de\s+|d')?", "", tj, flags=re.I)
         tj = re.sub(r"^Tribunal\s+Judiciaire\s+(?:de\s+|d')?", "", tj, flags=re.I)
         # Nettoyer : retirer adresse, salle, étage
@@ -382,11 +445,61 @@ def _normalize_output(data: dict) -> dict:
             normalized = "Autre"
         data["type_bien"] = normalized
 
-    # Avocat nom : retirer "Maître", "Me", "Mtre"
+    # Avocat : normalisation complète
     avocat = data.get("avocat_nom")
     if avocat:
-        avocat = re.sub(r"^(?:Ma[îi]tre|Me|Mtre|M[eE]\.?)\s+", "", avocat.strip())
-        data["avocat_nom"] = avocat
+        avocat = avocat.strip()
+        # Retirer préfixes "Maître", "Me", etc.
+        avocat = re.sub(r"^(?:Ma[îi]tre|Me|Mtre|M[eE]\.?)\s+", "", avocat)
+        # Si le nom contient "Cabinet" ou "SCP" ou "SELARL" → c'est un cabinet, pas un nom
+        if re.match(r"^(?:Cabinet|SCP|SELARL|AARPI|S\.C\.P)", avocat, re.I):
+            if not data.get("avocat_cabinet"):
+                data["avocat_cabinet"] = avocat
+            data["avocat_nom"] = None
+        else:
+            # Séparer "Prénom Nom, du Cabinet XXX" ou "Prénom Nom, membre de..."
+            m = re.match(r"^(.+?)\s*[,]\s*(?:du\s+|de\s+la\s+|membre\s+)", avocat, re.I)
+            if m:
+                rest = avocat[m.end():]
+                avocat = m.group(1).strip()
+                # Extraire le cabinet du reste
+                if not data.get("avocat_cabinet") and rest:
+                    cab = re.sub(r"^(?:cabinet|selarl|scp|aarpi)\s+", "", rest, flags=re.I).strip()
+                    if cab:
+                        data["avocat_cabinet"] = cab
+            # Retirer "Avocats", "Avocat" en fin
+            avocat = re.sub(r"\s*Avocats?\s*$", "", avocat, flags=re.I)
+            # Normaliser la casse : "GERRIET" → "Gerriet", mais garder "Jean-Pierre"
+            parts = avocat.split()
+            normalized = []
+            for p in parts:
+                if p.isupper() and len(p) > 2:
+                    normalized.append(p.capitalize())
+                else:
+                    normalized.append(p)
+            data["avocat_nom"] = " ".join(normalized)
+
+    # Avocat cabinet : nettoyer
+    cabinet = data.get("avocat_cabinet")
+    if cabinet:
+        cabinet = cabinet.strip()
+        # Retirer adresse/CP/ville en fin
+        cabinet = re.sub(r"\s*[-,]\s*\d{1,3}\s+(?:rue|avenue|boulevard|place|bd).*", "", cabinet, flags=re.I)
+        cabinet = re.sub(r"\s*[-,]\s*\d{5}\s+\w.*", "", cabinet)
+        cabinet = re.sub(r"\s*Avocats?\s*$", "", cabinet, flags=re.I)
+        cabinet = cabinet.strip().rstrip(",.-")
+        data["avocat_cabinet"] = cabinet if cabinet else None
+
+    # Avocat tel : normaliser format "01 23 45 67 89"
+    tel = data.get("avocat_tel")
+    if tel:
+        digits = re.sub(r"\D", "", tel)
+        if digits.startswith("33") and len(digits) == 11:
+            digits = "0" + digits[2:]
+        if len(digits) == 10:
+            data["avocat_tel"] = " ".join([digits[i:i+2] for i in range(0, 10, 2)])
+        else:
+            data["avocat_tel"] = tel.strip().rstrip("-.,")
 
     # Occupation : normaliser
     occ = data.get("occupation")
@@ -553,6 +666,7 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
             "avocat_nom": "avocat_nom",
             "avocat_cabinet": "avocat_cabinet",
             "avocat_tel": "avocat_tel",
+            "avocat_email": "avocat_email",
         }
         for sonnet_key, db_key in AUTHORITATIVE.items():
             val = data.get(sonnet_key)
