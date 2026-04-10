@@ -191,6 +191,7 @@ export async function GET(request: NextRequest) {
   created_at, updated_at
 `)
     .eq('statut', statut)
+    .eq('regex_statut', 'valide')
     .order('created_at', { ascending: false })
 
   // Count separement (plus leger, pas de timeout)
@@ -198,8 +199,15 @@ export async function GET(request: NextRequest) {
     .from('biens')
     .select('id', { count: 'exact', head: true })
     .eq('statut', statut)
+    .eq('regex_statut', 'valide')
 
   const strategie = searchParams.get('strategie')
+
+  // Stratégies Locataire en place et IDR : extraction IA doit être faite
+  if (strategie === 'Locataire en place' || strategie === 'Immeuble de rapport') {
+    query = query.eq('extraction_statut', 'ok')
+    countQuery = countQuery.eq('extraction_statut', 'ok')
+  }
   const page = parseInt(searchParams.get('page') || '1')
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 2000)
   const from = (page - 1) * limit

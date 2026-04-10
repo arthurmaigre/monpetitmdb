@@ -81,13 +81,13 @@
 
 ## EN COURS
 
-- [ ] Stream Estate : ingestion batch depuis le 25/03 (API coupée MI) + activation webhooks
+- [x] Stream Estate : notifications activées, webhooks temps réel opérationnels (~400+ biens ingérés)
 - [ ] 183 biens PDF scan en re-traitement vision (cron 18h)
 
 ## A FAIRE — Priorité haute
 
-- [ ] Stream Estate : trouver bon endpoint API + ingestion batch
-- [ ] Stream Estate : activer notifications webhook pour temps réel
+- [x] Stream Estate : webhooks temps réel activés
+- [ ] Filtrage frontend : seuls les biens validés (regex + extraction IA) s'affichent
 - [ ] Estimation DVF enchères : debug biens sans estimation malgré adresse
 - [ ] Dedup cross-source post-Sonnet : valider sur données propres
 

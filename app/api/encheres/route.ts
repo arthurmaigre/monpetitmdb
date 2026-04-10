@@ -47,11 +47,13 @@ export async function GET(request: NextRequest) {
   let query = supabaseAdmin
     .from('encheres')
     .select(ENCHERES_SELECT)
+    .eq('enrichissement_statut', 'ok')
     .order(orderCol, { ascending: orderAsc })
 
   let countQuery = supabaseAdmin
     .from('encheres')
     .select('id', { count: 'exact', head: true })
+    .eq('enrichissement_statut', 'ok')
 
   // Statut (défaut : a_venir + surenchere)
   const statut = searchParams.get('statut')

@@ -12,8 +12,8 @@ Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD`
 - **DB** : Supabase Pro (West EU / Ireland) — auth + tables + storage
 - **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
-- **Scraper legacy** : supprime (LBC + Moteur Immo)
-- **Sourcing API** : Stream Estate (agregateur, webhooks + saved searches)
+- **Scraper legacy** : supprimé (LBC + Moteur Immo, API coupée 2026-03-25)
+- **Sourcing API** : Stream Estate (agregateur, webhooks temps réel + 4 saved searches). Notifications activées.
 - **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Cron VPS Hetzner 7x/jour. Pipeline : scraping minimaliste (donnees fiables + raw_text) → extraction Sonnet (1 passe) + vision PDF scans → normalisation programmatique. Table `encheres` Supabase. Auto-learning (`encheres_learning.json`).
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
@@ -280,7 +280,7 @@ Integree dans `/biens` comme les autres strategies (pas de page separee).
 
 Pilotable depuis `/admin/sourcing` ou via Vercel Cron (automatique, sans PC).
 
-1. **Ingestion Moteur Immo** : API route `/api/admin/ingest` (micro-batch 30j) + webhook `/api/moteurimmo/webhook`. Mappe `category`→`type_bien`, `bedrooms`→`nb_chambres`, `constructionYear`→`annee_construction`, `energyValue`→`dpe_valeur`, `gasGrade`→`ges`.
+1. **Ingestion** : webhook Stream Estate `/api/stream-estate/webhook` (temps réel, 4 saved searches). Legacy Moteur Immo désactivé (API coupée 2026-03-25).
 2. **Validation regex** : `/api/admin/regex` — filtre faux positifs par strategie, timestamp `regex_statut`/`regex_date`
 3. **Extraction donnees locatives** (Haiku) : `/api/admin/extraction` — Locataire en place uniquement, extrait loyer, charges, profil locataire, `nb_sdb`, `nb_chambres`. Timestamp `extraction_statut`/`extraction_date`. Cout ~1$/1000 biens.
 4. **Score travaux** (Haiku) : `/api/admin/score-travaux` — Travaux lourds uniquement, option analyse photos (3x plus cher). max_tokens 300, commentaire max 500 chars. Cout ~0.70$/1000 biens (texte), ~3$/1000 (photos).
@@ -536,6 +536,8 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 2 analyses completes offertes aux free (compteur localStorage `mdb_free_analyses`).
 
 ## Regles absolues
+- **Affichage frontend biens** : `regex_statut = 'valide'` obligatoire. Locataire en place + IDR : `extraction_statut = 'ok'` en plus. Les biens non validés/enrichis ne s'affichent pas.
+- **Affichage frontend encheres** : `enrichissement_statut = 'ok'` obligatoire. Les encheres non enrichies par Sonnet ne s'affichent pas.
 - **Tous les calculs financiers dans `calculs.ts`** — jamais en DB sauf `rendement_brut`
 - **Loyer toujours stocke HC** (converti depuis CC si charges connues)
 - **Deduplication par `url`** — id assigne par Supabase
