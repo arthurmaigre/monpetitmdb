@@ -12,9 +12,9 @@ Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD`
 - **DB** : Supabase Pro (West EU / Ireland) — auth + tables + storage
 - **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
-- **Scraper legacy** : Python + Playwright + Chromium -> Leboncoin — Hetzner VPS
-- **Sourcing API** : Moteur Immo (coupe 2026-04-06) → **migration Stream Estate** (agregateur, webhooks + saved searches). Module legacy `moteurimmo_client.py`
-- **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Table `encheres` Supabase. Extraction Sonnet v3 + PDFs.
+- **Scraper legacy** : supprime (LBC + Moteur Immo)
+- **Sourcing API** : Stream Estate (agregateur, webhooks + saved searches)
+- **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Cron VPS Hetzner 7x/jour. Pipeline : scraping minimaliste (donnees fiables + raw_text) → extraction Sonnet (1 passe) + vision PDF scans → normalisation programmatique. Table `encheres` Supabase. Auto-learning (`encheres_learning.json`).
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
 - **Editorial** : Claude Opus (redaction) + Sonnet (fact-check) + Unsplash (photos)
@@ -103,19 +103,17 @@ monpetitmdb/
 │   ├── supabase.ts             # Client Supabase public (anon key)
 │   └── supabase-admin.ts       # Client Supabase admin (secret key)
 ├── scrapper/
-│   ├── scraper_supabase_prod.py    # Scraper LBC legacy
-│   ├── moteurimmo_client.py        # Module sourcing Moteur Immo
 │   ├── supabase_client.py          # Client Supabase Python
-│   ├── batch_extraction.py         # Extraction donnees locatives IA (Haiku, 5 workers paralleles)
-│   ├── batch_score_travaux.py      # Score travaux IA (Haiku)
-│   ├── batch_regex_validation.py   # Validation regex faux positifs
-│   ├── batch_nuit.py               # Script nuit (enchaine tous les batches)
-│   ├── encheres_supabase.py        # Module Supabase encheres (upsert, fusion cross-source)
-│   ├── scraper_licitor.py          # Scraper Licitor (~385 encheres, requests, GPS)
+│   ├── encheres_supabase.py        # Module Supabase encheres (upsert intra-source, statuts, normalisation)
+│   ├── scraper_licitor.py          # Scraper Licitor (~390 encheres, requests, minimaliste)
 │   ├── scraper_avoventes.py        # Scraper Avoventes (~210 encheres, Playwright + requests)
-│   ├── scraper_vench.py            # Scraper Vench (~440 encheres, requests + login abo)
+│   ├── scraper_vench.py            # Scraper Vench (~430 encheres, requests + login abo)
 │   ├── scraper_encheres.py         # CLI unifie (3 sources)
-│   ├── batch_encheres_extraction.py # Extraction Sonnet v3 + PDFs (PV + CCV)
+│   ├── batch_encheres_extraction.py # Extraction Sonnet (1 passe) + vision PDF scans + normalisation
+│   ├── dedup_cross_source.py       # Dedup cross-source post-Sonnet (ville + date + prix)
+│   ├── encheres_learning.json      # Exemples auto-logues pour ameliorer Sonnet
+│   ├── add_learning_example.py     # Script ajout exemples manuels
+│   ├── cron_encheres.sh            # Cron VPS (5 phases : scraping → Sonnet → dedup → statuts → normalisation)
 │   ├── sql_create_encheres.sql     # Script SQL creation table
 │   └── .env                        # Cles API (ne pas committer)
 └── public/
