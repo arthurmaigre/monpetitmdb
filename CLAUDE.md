@@ -13,8 +13,10 @@ Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD`
 - **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
 - **Scraper legacy** : supprimé (LBC + Moteur Immo, API coupée 2026-03-25)
-- **Sourcing API** : Stream Estate (agregateur, webhooks temps réel + 4 saved searches). Notifications activées.
-- **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Cron VPS Hetzner 7x/jour. Pipeline : scraping minimaliste (donnees fiables + raw_text) → extraction Sonnet (1 passe) + vision PDF scans → normalisation programmatique. Table `encheres` Supabase. Auto-learning (`encheres_learning.json`).
+- **Sourcing API** : Stream Estate (agregateur, webhooks temps réel + 4 saved searches). Notifications DÉSACTIVÉES en attente retours Stan (queue 400K, biens historiques envoyés au lieu de nouveaux uniquement). Email envoyé le 10/04.
+- **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Cron VPS Hetzner DÉSACTIVÉ (en attente fix). Pipeline : scraping minimaliste (donnees fiables + raw_text) → extraction Sonnet (1 passe) + vision PDF scans → dedup cross-source → statuts → normalisation programmatique. Table `encheres` Supabase. Auto-learning (`encheres_learning.json`).
+- **Audit dedup encheres (10/04)** : dedup intra-source OK (0 doublon id_source sur les 3 sites). Licitor 420 en base / 384 sur le site (36 expirees). Avoventes 216 / 212 (4 expirees). Vench 434 / 425 (9 expirees). Bug Licitor : 22 collisions id_source (lots meme dossier) → fix : URL complete comme id_source. Avoventes : listing Playwright deterministe (212 URLs stables). 406 biens restent a enrichir par Sonnet (~$20).
+- **VPS Hetzner** : 178.104.58.122, SSH key configuree, Python 3.12 + Playwright + Chromium. Cron desactive, à remettre à 1x/jour (0 3 * * *).
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
 - **Editorial** : Claude Opus (redaction) + Sonnet (fact-check) + Unsplash (photos)
