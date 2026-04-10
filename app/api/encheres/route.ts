@@ -137,6 +137,19 @@ export async function GET(request: NextRequest) {
     countQuery = countQuery.lte('date_audience', maxDate.toISOString())
   }
 
+  // Source (multisélection : licitor,avoventes,vench)
+  const sourceFilter = searchParams.get('source')
+  if (sourceFilter) {
+    const sources = sourceFilter.split(',').filter(Boolean)
+    if (sources.length === 1) {
+      query = query.eq('source', sources[0])
+      countQuery = countQuery.eq('source', sources[0])
+    } else if (sources.length > 1) {
+      query = query.in('source', sources)
+      countQuery = countQuery.in('source', sources)
+    }
+  }
+
   // Keyword
   const keyword = searchParams.get('keyword')
   if (keyword) {

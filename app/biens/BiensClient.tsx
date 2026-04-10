@@ -53,6 +53,7 @@ export default function BiensPage() {
   // Filtres enchères
   const [enchereStatut, setEnchereStatut] = useState(saved.current?.enchereStatut || '')
   const [enchereOccupation, setEnchereOccupation] = useState(saved.current?.enchereOccupation || '')
+  const [enchereSources, setEnchereSources] = useState<Set<string>>(new Set(saved.current?.enchereSources || []))
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const keywordTimeout = useRef<any>(null)
   const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
@@ -102,9 +103,10 @@ export default function BiensPage() {
       sessionStorage.setItem('biens_filters', JSON.stringify({
         strategie, metropole, ville, communeSearch, selectedCommune,
         typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keyword: keywordSearch, tri, view,
+        enchereStatut, enchereOccupation, enchereSources: Array.from(enchereSources),
       }))
     } catch {}
-  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, tri, view])
+  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, tri, view, enchereStatut, enchereOccupation, enchereSources])
 
   // Sauvegarder la position de scroll avant de quitter
   useEffect(() => {
@@ -160,6 +162,7 @@ export default function BiensPage() {
       if (keywordSearch.trim()) params.set('keyword', keywordSearch.trim())
       if (enchereStatut) params.set('statut', enchereStatut)
       if (enchereOccupation) params.set('occupation', enchereOccupation)
+      if (enchereSources.size > 0 && enchereSources.size < 3) params.set('source', Array.from(enchereSources).join(','))
       params.set('tri', 'date_audience_asc')
       return `/api/encheres?${params.toString()}`
     }
@@ -205,7 +208,7 @@ export default function BiensPage() {
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -627,6 +630,33 @@ export default function BiensPage() {
                   <option value="loue">Bien Loué</option>
                 </select>
               </div>
+              <div className="filter-group">
+                <label className="filter-label">Sources</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {([['licitor', 'LIC', '#1565C0'], ['avoventes', 'AVO', '#6A1B9A'], ['vench', 'VEN', '#2E7D32']] as const).map(([key, abbrev, color]) => {
+                    const active = enchereSources.size === 0 || enchereSources.has(key)
+                    return (
+                      <button key={key} onClick={() => {
+                        setEnchereSources(prev => {
+                          const next = new Set(prev)
+                          if (next.has(key)) { next.delete(key) } else { next.add(key) }
+                          if (next.size === 3) return new Set()
+                          return next
+                        })
+                      }} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: '32px', height: '28px', borderRadius: '6px',
+                        background: active ? color : '#f0ede8',
+                        color: active ? '#fff' : '#b0a898',
+                        fontSize: '9px', fontWeight: 700, border: 'none', cursor: 'pointer',
+                        transition: 'all 0.15s', opacity: active ? 1 : 0.5,
+                      }} title={key.charAt(0).toUpperCase() + key.slice(1)}>
+                        {abbrev}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </>
           )}
           <div className="filter-sep" />
@@ -795,7 +825,8 @@ export default function BiensPage() {
                       {isEncheres ? (
                         <>
                           <th>Tribunal<span></span></th>
-                          <th>Date audience<span></span></th>
+                          <th>Visite<span></span></th>
+                          <th>Audience<span></span></th>
                           <th>Statut<span></span></th>
                           <th>Mise à prix<span></span></th>
                           <th>Prix adjugé<span></span></th>
@@ -892,6 +923,7 @@ export default function BiensPage() {
                           const dateAudience = e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
                           return <>
                             <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: '#7a6a60' }}>{e.date_visite ? new Date(e.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
                             <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
                             <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>

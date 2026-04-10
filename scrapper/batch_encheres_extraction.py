@@ -71,6 +71,8 @@ Retourne UNIQUEMENT le JSON, sans commentaire ni explication.
   "avocat_cabinet": null,
   "avocat_tel": null,
   "frais_prealables": null,
+  "date_visite": null,
+  "heure_audience": null,
   "lots_data": null,
   "description_propre": null
 }
@@ -125,6 +127,10 @@ AVOCAT :
 - avocat_tel : numéro tel formaté "0X XX XX XX XX"
 
 FRAIS_PREALABLES : montant en euros (float) des frais préalables / frais de procédure / frais de poursuite mentionnés dans l'annonce ou le CCV. Souvent intitulé "frais préalables", "frais de poursuite", "frais taxés". null si non mentionné.
+
+DATE_VISITE : date et heure de visite au format ISO "YYYY-MM-DDTHH:MM:SS". Cherche "Visite", "VISITES", "visite sur place", "visite le", "visite prévue". Peut contenir "Le Jeudi 19 mars 2026 de 15h00 à 16h00" → "2026-03-19T15:00:00". Si plage horaire, prendre l'heure de début. null si non mentionné.
+
+HEURE_AUDIENCE : heure de l'audience au format "HH:MM" (ex: "10:30", "14:00"). Cherche dans la date de vente/audience "à 10h00", "à 14h30", "10 heures". null si pas d'heure mentionnée.
 
 LOTS_DATA (si multi-lots uniquement) :
 [{"type": "Appartement", "surface": 52.23, "etage": "1er", "occupation": "occupe", "loyer": 450}, ...]
@@ -575,6 +581,22 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
         # Frais préalables
         if data.get("frais_prealables") and not item.get("frais_prealables"):
             update["frais_prealables"] = data["frais_prealables"]
+
+        # Date visite (Sonnet extrait mieux que les regex)
+        if data.get("date_visite") and not item.get("date_visite"):
+            update["date_visite"] = data["date_visite"]
+
+        # Heure audience : injecter dans date_audience si l'heure manque (00:00:00)
+        if data.get("heure_audience") and item.get("date_audience"):
+            da = item["date_audience"]
+            if "T00:00:00" in str(da):
+                heure = data["heure_audience"]
+                try:
+                    h, m = heure.replace("h", ":").split(":")
+                    new_da = str(da).replace("T00:00:00", f"T{int(h):02d}:{int(m):02d}:00")
+                    update["date_audience"] = new_da
+                except Exception:
+                    pass
 
         # Lots data
         if data.get("lots_data") and not item.get("lots_data"):
