@@ -196,9 +196,21 @@ async function findExistingBien(
     if (bySeid) return bySeid
   }
 
-  // 3. Check dans les duplicates MI (l'URL SE est-elle connue comme doublon MI ?)
-  // Désactivé : .contains() sur JSONB timeout sur 96k lignes
-  // La dedup se fait déjà par URL (étape 1) et stream_estate_id (étape 2)
+  // 3. Check via table biens_source_urls (index des URLs sources MI + SE)
+  const { data: bySourceUrl } = await supabaseAdmin
+    .from('biens_source_urls')
+    .select('bien_id')
+    .eq('url', url)
+    .limit(1)
+    .single()
+  if (bySourceUrl) {
+    const { data: bienFromUrl } = await supabaseAdmin
+      .from('biens')
+      .select('id, source_provider')
+      .eq('id', bySourceUrl.bien_id)
+      .single()
+    if (bienFromUrl) return bienFromUrl
+  }
 
   // 4. Matching geographique + prix (fallback)
   const code_postal = property.city?.zipcode
@@ -345,6 +357,22 @@ async function handlePropertyAdCreate(payload: any) {
     }
     console.error(`[SE webhook] insert error: ${error.message}`)
     return { action: 'error', error: error.message }
+  }
+
+  // Ajouter l'URL + duplicates dans biens_source_urls pour la dédup future
+  if (inserted?.id) {
+    const urlsToInsert: { bien_id: number; url: string }[] = []
+    if (advert.url) urlsToInsert.push({ bien_id: inserted.id, url: advert.url })
+    // Ajouter les URLs des autres annonces du même bien (duplicates)
+    const otherAdverts = (property.adverts || []).filter((a: any) => a.url && a.url !== advert.url)
+    for (const a of otherAdverts) {
+      urlsToInsert.push({ bien_id: inserted.id, url: a.url })
+    }
+    if (urlsToInsert.length > 0) {
+      await supabaseAdmin
+        .from('biens_source_urls')
+        .upsert(urlsToInsert, { onConflict: 'url', ignoreDuplicates: true })
+    }
   }
 
   return { action: 'inserted', id: inserted?.id }

@@ -13,10 +13,10 @@ Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD`
 - **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
 - **Scraper legacy** : supprimé (LBC + Moteur Immo, API coupée 2026-03-25)
-- **Sourcing API** : Stream Estate (agregateur, webhooks temps réel + 4 saved searches). Notifications DÉSACTIVÉES en attente retours Stan (queue 400K, biens historiques envoyés au lieu de nouveaux uniquement). Email envoyé le 10/04.
-- **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Cron VPS Hetzner DÉSACTIVÉ (en attente fix). Pipeline : scraping minimaliste (donnees fiables + raw_text) → extraction Sonnet (1 passe) + vision PDF scans → dedup cross-source → statuts → normalisation programmatique. Table `encheres` Supabase. Auto-learning (`encheres_learning.json`).
+- **Sourcing API** : Stream Estate (agregateur, webhooks temps réel + 4 saved searches). Notifications ACTIVÉES (property.ad.create only, strict:true). Table `biens_source_urls` (360k URLs) pour dedup cross-source.
+- **Scraping encheres** : Python + requests + BeautifulSoup + Playwright (Avoventes) → 3 sources (Licitor, Avoventes, Vench). Cron VPS Hetzner ACTIF (toutes les 3h, scraping seul). Phases 2-5 DESACTIVEES (extraction Sonnet, dedup, statuts, normalisation) en attente verification manuelle. Pipeline : scraping minimaliste (donnees fiables + raw_text) → extraction Sonnet (1 passe) + vision PDF scans → dedup cross-source → statuts → normalisation programmatique. Table `encheres` Supabase. Auto-learning (`encheres_learning.json`). 409 encheres a enrichir par Sonnet (~$20).
 - **Audit dedup encheres (10/04)** : dedup intra-source OK (0 doublon id_source sur les 3 sites). Licitor 420 en base / 384 sur le site (36 expirees). Avoventes 216 / 212 (4 expirees). Vench 434 / 425 (9 expirees). Bug Licitor : 22 collisions id_source (lots meme dossier) → fix : URL complete comme id_source. Avoventes : listing Playwright deterministe (212 URLs stables). 406 biens restent a enrichir par Sonnet (~$20).
-- **VPS Hetzner** : 178.104.58.122, SSH key configuree, Python 3.12 + Playwright + Chromium. Cron desactive, à remettre à 1x/jour (0 3 * * *).
+- **VPS Hetzner** : 178.104.58.122, SSH key configuree, Python 3.12 + Playwright + Chromium + psql. Cron encheres actif toutes les 3h (0h, 8h, 11h, 14h, 17h, 20h), phase 1 scraping uniquement.
 - **AI scoring** : Claude API (Haiku) pour `score_travaux` + extraction donnees locatives
 - **Estimation** : API DVF (Cerema) + correcteurs qualitatifs
 - **Editorial** : Claude Opus (redaction) + Sonnet (fact-check) + Unsplash (photos)
@@ -224,6 +224,7 @@ monpetitmdb/
 - `ref_prix_parking` — prix median parking/box par ville (DVF)
 - `estimation_config` — config estimateur (JSONB, id=1)
 - `stream_estate_searches` — mapping search IRI → strategie_mdb (4 saved searches)
+- `biens_source_urls` — index URLs sources pour dedup cross-source (bien_id, url PK). 360k+ URLs (principales + duplicates MI/SE)
 
 ## Analyse fiscale — 7 regimes
 
@@ -320,8 +321,10 @@ Notifications : desactivees en attente de credits SE.
 **Dedup 4 niveaux** a l'ingestion :
 1. URL source directe (`biens.url`)
 2. `stream_estate_id` (bien deja rattache)
-3. `moteurimmo_data.duplicates` (URL connue comme doublon MI)
+3. Table `biens_source_urls` (360k URLs indexees — remplace .contains() JSONB qui timeout)
 4. Matching geo fallback (code_postal + type_bien + nb_pieces + surface +-1m2 + prix +-2%)
+
+**IMPORTANT** : `strict: false` (defaut SE) = stemming/lemmatisation → 95% faux positifs. Toujours utiliser `strict: true` sur les expressions.
 
 `moteurimmo_data` reutilise avec memes cles (title, description, pictureUrls, origin, duplicates) + champ `source: 'stream_estate'`.
 Colonnes IA (loyer, score_travaux, estimation) **jamais ecrasees** par l'upsert SE.
@@ -329,7 +332,7 @@ Colonnes IA (loyer, score_travaux, estimation) **jamais ecrasees** par l'upsert 
 
 **Strategie** : lookup table `stream_estate_searches` (search IRI → strategie_mdb, cache 5min). Fallback detection regex contenu.
 
-**Saved searches** (notifications OFF) :
+**Saved searches** (notifications ON, strict:true) :
 - `/searches/d12ba9a4-4643-468f-b393-8196b2e29e17` → Locataire en place (3 expressions)
 - `/searches/cfe1717e-e3bc-4359-9bd9-ec0c26b53573` → Travaux lourds (12 expressions)
 - `/searches/7019ec35-2582-4b31-b85d-991793d5fbb3` → Division (10 expressions)

@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
         .is('regex_statut', null)
         .not('moteurimmo_data', 'is', null)
         .order('created_at', { ascending: true })
-        .limit(1500)
+        .limit(500)
 
       if (strategie) query = query.eq('strategie_mdb', strategie)
       if (currentCursor) query = query.gt('created_at', currentCursor)
