@@ -12,6 +12,7 @@ export async function GET(
     .from('encheres')
     .select('*')
     .eq('id', id)
+    .eq('enrichissement_statut', 'ok')
     .maybeSingle()
 
   if (error || !data) {
