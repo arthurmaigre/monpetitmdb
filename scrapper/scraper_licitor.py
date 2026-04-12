@@ -115,19 +115,32 @@ def extract_gps(soup: BeautifulSoup, html_text: str) -> tuple[float | None, floa
 
 def extract_raw_text(soup: BeautifulSoup) -> str:
     """Extrait le texte brut utile de la page (sans nav/footer/pubs)."""
-    # Retirer les éléments non pertinents
-    for tag in soup.find_all(["nav", "footer", "script", "style", "noscript"]):
-        tag.decompose()
-    text = soup.get_text("\n", strip=True)
+    # Cibler article.LegalAd qui contient l'annonce complète
+    legal_ad = soup.find("article", class_="LegalAd")
+    if legal_ad:
+        text = legal_ad.get_text("\n", strip=True)
+    else:
+        # Fallback : div.ResultContent (conteneur parent)
+        result = soup.find("div", class_="ResultContent")
+        if result:
+            text = result.get_text("\n", strip=True)
+        else:
+            # Dernier recours : tout le texte sans nav/footer
+            from copy import copy
+            work = copy(soup)
+            for tag in work.find_all(["nav", "footer", "script", "style", "noscript"]):
+                tag.decompose()
+            text = work.get_text("\n", strip=True)
     lines = [l.strip() for l in text.split("\n") if l.strip()]
-    # Couper après "annonces similaires" ou "annonce non-officielle"
-    cutoff = len(lines)
-    for i, line in enumerate(lines):
-        ll = line.lower()
-        if "annonces similaires" in ll or "annonce non-officielle" in ll:
-            cutoff = i
+    # Retirer les lignes "Annonces similaires" et après
+    cleaned = []
+    for line in lines:
+        if "annonces similaires" in line.lower():
+            continue
+        if "annonce non-officielle" in line.lower():
             break
-    return "\n".join(lines[:cutoff])
+        cleaned.append(line)
+    return "\n".join(cleaned)
 
 
 def scrape_detail(url: str, session: requests.Session) -> dict | None:
@@ -196,6 +209,36 @@ def scrape_detail(url: str, session: requests.Session) -> dict | None:
         if src.startswith("/"):
             src = BASE_URL + src
         item["photo_url"] = src
+
+    # ── Avocat (extrait du texte structuré Licitor) ─────────────────────
+    # Format typique : "Maître Prénom Nom, membre de la SELARL X, Avocat\nAdresse\nTél.: XX XX XX XX XX"
+    m_avocat = re.search(
+        r"Ma[îi]tre\s+(.+?)(?:,\s*(?:membre\s+de\s+la\s+|de\s+la\s+)?((?:SELARL|SCP|SELAS|AARPI|Cabinet)\s+[^,\n]+))?(?:,\s*Avocats?)?\s*\n"
+        r"([^\n]+)\n"  # adresse
+        r"(?:T[ée]l\.?\s*:?\s*([\d\s.+-]+))?",
+        raw_text, re.I
+    )
+    if m_avocat:
+        nom = m_avocat.group(1).strip().rstrip(",")
+        nom = re.sub(r"\s*,?\s*(?:membre|de la|Avocat).*", "", nom, flags=re.I).strip()
+        if nom:
+            item["avocat_nom"] = nom
+        cab = m_avocat.group(2)
+        if cab:
+            item["avocat_cabinet"] = cab.strip().rstrip(",.")
+        tel = m_avocat.group(4)
+        if tel:
+            digits = re.sub(r"[^\d]", "", tel)
+            if len(digits) == 10:
+                item["avocat_tel"] = " ".join([digits[i:i+2] for i in range(0, 10, 2)])
+
+    # Email avocat
+    m_email = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", raw_text)
+    if m_email:
+        email = m_email.group()
+        # Exclure les emails Licitor/système
+        if "licitor" not in email.lower():
+            item["avocat_email"] = email
 
     return item
 
