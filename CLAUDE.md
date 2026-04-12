@@ -579,6 +579,9 @@ Branch protection activee sur main (1 review requise pour merge).
 **Audits partages :** `/home/openclaw/.openclaw/shared/audits/` — symlinke dans tous les workspaces. Les agents ecrivent leurs rapports dans `audits/audit_[agent]_[date].md`, le Developer les lit pour prioriser.
 **Browser :** sandbox SSRF bloque les URLs hostname. Les agents utilisent `curl` en fallback pour analyser les pages.
 **Gateway :** lancer via `screen -dmS oc su - openclaw -c 'ANTHROPIC_API_KEY=... openclaw gateway run'`. Verifier avec `tail /home/openclaw/gateway.log`.
+**Auth agents :** Claude Max (login OAuth, pas d'API key). GitHub via `gh auth login` (arthurmaigre). Git config global (arthurmaigre / arthur.maigre@gmail.com).
+**Isolation securite :** openclaw n'a PAS acces a `/root/` (drwx------), pas de sudo, pas de variables Supabase. Le `.env` openclaw contient uniquement GITHUB_TOKEN + TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (pas d'ANTHROPIC_API_KEY).
+**Repo dev :** `/home/openclaw/monpetitmdb/` (clone GitHub). Les agents travaillent ici, creent des branches et des PRs.
 **Phase actuelle :** Phase 1 — Stabilisation/audit avant lancement beta. Pas de marketing actif.
 
 ## Regles absolues
