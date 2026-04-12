@@ -311,12 +311,22 @@ API : POST https://moteurimmo.fr/api/ads (auth par apiKey) — **COUPE** (concur
 96 000+ biens ingeres, 4 strategies, France entiere. Donnees IA conservees en base.
 URLs en base = URLs Moteur Immo (`moteurimmo.fr/ad/xxx`) — a verifier.
 
-### Stream Estate (nouveau sourcing — OPERATIONNEL depuis 2026-04-08)
+### Stream Estate (sourcing — PAUSE credits epuises 2026-04-12)
 API REST + MCP tools + webhooks. Agregateur annonces immo.
 Webhook : `/api/stream-estate/webhook/route.ts` — pas d'auth (SE n'envoie pas de header secret).
-4 saved searches (1 par strategie) avec expressions (mots-cles identiques a MI).
+4 saved searches (1 par strategie). **Notifications DESACTIVEES** (credits epuises 2026-04-12).
 Events : `property.ad.create`, `ad.update.expired`, `ad.update.price`, `property.ad.update`.
-Notifications : desactivees en attente de credits SE.
+
+**Bilan 4 jours (8-12 avril)** : ~22 000 biens recus, ~2 000 valides (9%), ~20 000 faux positifs (91%).
+Cause : expressions trop larges ("a renover", "vendu en l'etat", "mise aux normes", "plusieurs appartements").
+FP par strategie : Travaux lourds 90%, IDR 54%, Division 26%, Locataire en place 25%.
+
+**Nettoyage expressions (2026-04-12)** :
+- Travaux lourds 12→11 : supprime "a renover" / "vendu en l'etat" / "mise aux normes", ajoute "a restaurer" / "travaux de renovation"
+- IDR 8→7 : supprime "plusieurs appartements"
+- Division et Locataire en place : inchanges (deja cibles)
+
+**Regex strategies factorisees** : `lib/regex-strategies.ts` (module partage entre webhook et cron regex).
 
 **Dedup 4 niveaux** a l'ingestion :
 1. URL source directe (`biens.url`)
@@ -325,6 +335,7 @@ Notifications : desactivees en attente de credits SE.
 4. Matching geo fallback (code_postal + type_bien + nb_pieces + surface +-1m2 + prix +-2%)
 
 **IMPORTANT** : `strict: false` (defaut SE) = stemming/lemmatisation → 95% faux positifs. Toujours utiliser `strict: true` sur les expressions.
+**IMPORTANT** : Le MCP tool `update-search` ne peut PAS modifier les expressions (bug format). Utiliser l'API REST directe : `PUT https://api.stream.estate/searches/{id}` avec header `x-api-key`.
 
 `moteurimmo_data` reutilise avec memes cles (title, description, pictureUrls, origin, duplicates) + champ `source: 'stream_estate'`.
 Colonnes IA (loyer, score_travaux, estimation) **jamais ecrasees** par l'upsert SE.
@@ -332,11 +343,11 @@ Colonnes IA (loyer, score_travaux, estimation) **jamais ecrasees** par l'upsert 
 
 **Strategie** : lookup table `stream_estate_searches` (search IRI → strategie_mdb, cache 5min). Fallback detection regex contenu.
 
-**Saved searches** (notifications ON, strict:true) :
+**Saved searches** (notifications OFF, strict:true) :
 - `/searches/d12ba9a4-4643-468f-b393-8196b2e29e17` → Locataire en place (3 expressions)
-- `/searches/cfe1717e-e3bc-4359-9bd9-ec0c26b53573` → Travaux lourds (12 expressions)
+- `/searches/cfe1717e-e3bc-4359-9bd9-ec0c26b53573` → Travaux lourds (11 expressions)
 - `/searches/7019ec35-2582-4b31-b85d-991793d5fbb3` → Division (10 expressions)
-- `/searches/dd4125d9-aa91-4529-a607-61d4b2347431` → Immeuble de rapport (8 expressions)
+- `/searches/dd4125d9-aa91-4529-a607-61d4b2347431` → Immeuble de rapport (7 expressions)
 
 Env vars : `STREAM_ESTATE_API_KEY`, `STREAM_ESTATE_WEBHOOK_SECRET` (inutilise mais present).
 Doc migration complet : `.claude/projects/.../memory/project_migration_stream_estate.md`
