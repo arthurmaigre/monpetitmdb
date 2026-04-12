@@ -32,9 +32,12 @@ originSessionId: 57ec85e8-b83c-4fda-8db7-9cffc44e420f
 
 - CEO est le seul agent route sur Telegram (binding)
 - Les 8 autres sont des sub-agents spawnes par le CEO via `sessions_spawn`
-- Config sub-agents : maxSpawnDepth=2, maxChildren=5, maxConcurrent=8, timeout=900s
+- Config sub-agents : maxSpawnDepth=2, maxChildren=3, maxConcurrent=4, timeout=1800s
+- Default skills : read, exec (pour curl/wget/git)
 - CEO a les tools : read, exec, sessions_list, sessions_spawn, sessions_send
-- Les 8 autres : tous les tools par defaut (browser, exec, read, write) sauf session tools
+- Les 8 autres : tous les tools par defaut sauf session tools
+- Browser sandbox bloque les URLs hostname (SSRF policy) — agents utilisent curl en fallback
+- Dossier partage : /home/openclaw/.openclaw/shared/audits/ (symlinke dans tous les workspaces)
 
 ## Fichiers de config
 

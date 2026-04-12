@@ -572,9 +572,13 @@ Branch protection activee sur main (1 review requise pour merge).
 | Data Analyst | data-analyst | claude-haiku-4-5 | KPIs, funnel AARRR, analytics |
 
 **Architecture :** CEO seul agent sur Telegram, delegue aux 8 autres via `sessions_spawn` (sub-agents asynchrones).
+**Sub-agents :** maxConcurrent=4, maxChildren=3, timeout=1800s. Default skills: read, exec.
 **Budget :** 10 euros/jour max, alerte a 7 euros. Process echantillon obligatoire (1→10→100→full) pour toute API payante.
 **Config :** `/home/openclaw/.openclaw/openclaw.json`, workspaces dans `/home/openclaw/.openclaw/workspaces/{agent}/`.
 **Repo clone :** `/home/openclaw/.openclaw/workspaces/developer/repo/` (Developer agent push des branches, jamais main).
+**Audits partages :** `/home/openclaw/.openclaw/shared/audits/` — symlinke dans tous les workspaces. Les agents ecrivent leurs rapports dans `audits/audit_[agent]_[date].md`, le Developer les lit pour prioriser.
+**Browser :** sandbox SSRF bloque les URLs hostname. Les agents utilisent `curl` en fallback pour analyser les pages.
+**Gateway :** lancer via `screen -dmS oc su - openclaw -c 'ANTHROPIC_API_KEY=... openclaw gateway run'`. Verifier avec `tail /home/openclaw/gateway.log`.
 **Phase actuelle :** Phase 1 — Stabilisation/audit avant lancement beta. Pas de marketing actif.
 
 ## Regles absolues
