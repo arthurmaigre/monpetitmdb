@@ -551,6 +551,32 @@ Blocs concernes : **Estimation DVF**, **Analyse fiscale (PnlColonne)**, **Score/
 Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, sous le titre).
 2 analyses completes offertes aux free (compteur localStorage `mdb_free_analyses`).
 
+## OpenClaw — Agents IA (VPS Hetzner)
+
+9 agents IA autonomes sur VPS Hetzner (178.104.58.122, CPX42 8vCPU 16GB RAM).
+User dedie `openclaw` (isole de root, pas d'acces aux secrets scrapper).
+Gateway OpenClaw 2026.4.11, bot Telegram @AlbusMDB_Bot.
+Branch protection activee sur main (1 review requise pour merge).
+
+**Agents :**
+| Agent | ID | Modele | Role |
+|---|---|---|---|
+| CEO Albus | ceo | claude-opus-4-6 | Coordination, rapports quotidiens, lean |
+| Developer | developer | claude-sonnet-4-6 | Code, PRs, ameliorations techniques |
+| QA Testeur | qa | claude-haiku-4-5 | Tests parcours utilisateur, bugs |
+| UI/UX | uiux | claude-sonnet-4-6 | Audit design, coherence visuelle |
+| SEO | seo | claude-haiku-4-5 | Audit technique, mots-cles, positions |
+| Marketing | marketing | claude-sonnet-4-6 | Positionnement, contenu (preparation) |
+| LinkedIn | linkedin | claude-sonnet-4-6 | Veille prospects MDB (preparation) |
+| Customer Success | customer-success | claude-sonnet-4-6 | Emails, retention, onboarding (preparation) |
+| Data Analyst | data-analyst | claude-haiku-4-5 | KPIs, funnel AARRR, analytics |
+
+**Architecture :** CEO seul agent sur Telegram, delegue aux 8 autres via `sessions_spawn` (sub-agents asynchrones).
+**Budget :** 10 euros/jour max, alerte a 7 euros. Process echantillon obligatoire (1→10→100→full) pour toute API payante.
+**Config :** `/home/openclaw/.openclaw/openclaw.json`, workspaces dans `/home/openclaw/.openclaw/workspaces/{agent}/`.
+**Repo clone :** `/home/openclaw/.openclaw/workspaces/developer/repo/` (Developer agent push des branches, jamais main).
+**Phase actuelle :** Phase 1 — Stabilisation/audit avant lancement beta. Pas de marketing actif.
+
 ## Regles absolues
 - **Affichage frontend biens** : `regex_statut = 'valide'` obligatoire. Locataire en place + IDR : `extraction_statut = 'ok'` en plus. Les biens non validés/enrichis ne s'affichent pas.
 - **Affichage frontend encheres** : `enrichissement_statut = 'ok'` obligatoire. Les encheres non enrichies par Sonnet ne s'affichent pas.
