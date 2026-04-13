@@ -138,7 +138,7 @@ export default function EncheresPage() {
     setError(null)
     try {
       const url = buildApiUrl(1, view === 'map')
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: userToken ? { Authorization: `Bearer ${userToken}` } : {} })
       if (!res.ok) throw new Error('Erreur chargement')
       const data = await res.json()
       setEncheres(data.encheres || [])
@@ -149,7 +149,7 @@ export default function EncheresPage() {
       setError(e.message)
     }
     setLoading(false)
-  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, selectedCommune])
+  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, selectedCommune, userToken])
 
   useEffect(() => { fetchEncheres() }, [fetchEncheres])
 
@@ -161,7 +161,7 @@ export default function EncheresPage() {
         setLoadingMore(true)
         const nextPage = currentPage + 1
         try {
-          const res = await fetch(buildApiUrl(nextPage))
+          const res = await fetch(buildApiUrl(nextPage), { headers: userToken ? { Authorization: `Bearer ${userToken}` } : {} })
           const data = await res.json()
           setEncheres(prev => [...prev, ...(data.encheres || [])])
           setCurrentPage(nextPage)
