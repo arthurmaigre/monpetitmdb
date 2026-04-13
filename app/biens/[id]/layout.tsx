@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 function formatPrice(prix: number | null): string {
   if (!prix) return ''
@@ -14,7 +16,7 @@ function formatPrice(prix: number | null): string {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
 
-  const { data: bien } = await supabase
+  const { data: bien } = await getSupabase()
     .from('biens')
     .select('type_bien, nb_pieces, surface, ville, quartier, code_postal, prix_fai, rendement_brut, photo_url, moteurimmo_data, strategie_mdb')
     .eq('id', id)
