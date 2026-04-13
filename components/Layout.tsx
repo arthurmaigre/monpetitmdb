@@ -24,10 +24,6 @@ export default function Layout({ children }: Props) {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
-      if (data.user) {
-        fetch('/api/profile', { headers: { Authorization: `Bearer ${data.user.id}` } })
-          .catch(() => {})
-      }
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)

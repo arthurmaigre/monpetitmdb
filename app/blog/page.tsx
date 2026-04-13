@@ -11,13 +11,14 @@ export const metadata: Metadata = {
 export const revalidate = 3600 // Revalide toutes les heures
 
 async function getArticles() {
-  const { data } = await supabaseAdmin
-    .from('articles')
-    .select('title, slug, category, keyword, published_at, word_count, content, cover_url')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
+  try {
+    const { data } = await supabaseAdmin
+      .from('articles')
+      .select('title, slug, category, keyword, published_at, word_count, content, cover_url')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
 
-  return (data || []).map((a: Record<string, unknown>) => {
+    return (data || []).map((a: Record<string, unknown>) => {
     const content = String(a.content || '')
     const plain = content
       .replace(/<[^>]+>/g, ' ')
@@ -50,6 +51,10 @@ async function getArticles() {
       cover_url: cover,
     }
   })
+  } catch {
+    // Build-time : Supabase indisponible (env vars absentes) — page remplie à la revalidation
+    return []
+  }
 }
 
 export default async function BlogPage() {

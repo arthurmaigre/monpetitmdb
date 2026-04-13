@@ -1898,7 +1898,7 @@ export default function FicheBienPage() {
       try {
       const sessionRes = await supabase.auth.getSession()
       const session = sessionRes.data.session
-      const authHeaders = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+      const authHeaders: Record<string, string> = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
       const [bienRes, editsRes] = await Promise.all([
         fetch(`${apiBase}/${id}`, { headers: authHeaders }),
         fetch(`/api/biens/${id}/edits`, { headers: authHeaders }).catch(() => ({ ok: true, json: async () => ({ champs: {} }) })),

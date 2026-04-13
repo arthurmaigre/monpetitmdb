@@ -1,7 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+
+type AnySupabaseClient = SupabaseClient<any, any, any>
 
 // Lazy init — évite crash build-time quand env vars absentes (Vercel preview, CI)
-let _client: ReturnType<typeof createClient> | null = null
+let _client: AnySupabaseClient | null = null
 
 function getSupabaseAdmin() {
   if (!_client) {
@@ -15,14 +17,14 @@ function getSupabaseAdmin() {
       console.error('[supabase-admin] SUPABASE_SECRET_KEY is not set!')
     }
 
-    _client = createClient(supabaseUrl, supabaseSecretKey || '')
+    _client = createClient<any>(supabaseUrl, supabaseSecretKey || '')
   }
   return _client
 }
 
 // Client admin — API routes + SSR, jamais côté client
 // Proxy lazy : même interface SupabaseClient, createClient() différé au premier appel runtime
-export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
+export const supabaseAdmin = new Proxy({} as AnySupabaseClient, {
   get(_target, prop) {
     const client = getSupabaseAdmin()
     const value = (client as any)[prop]
