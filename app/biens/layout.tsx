@@ -8,5 +8,21 @@ export const metadata: Metadata = {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Biens immobiliers à analyser | Mon Petit MDB',
+    description: 'Analysez des biens immobiliers selon les stratégies marchands de biens',
+    url: 'https://www.monpetitmdb.fr/biens',
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      {children}
+    </>
+  )
 }
