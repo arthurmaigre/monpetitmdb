@@ -111,6 +111,72 @@ def extract_id(url: str) -> str | None:
     return m.group(1) if m else None
 
 
+def decode_avoventes_email(html: str) -> str | None:
+    """Décode l'email obfusqué par le JS d'Avoventes (substitution cipher)."""
+    m = re.search(r'eval\("(.*?)"\)/\*\]\]', html, re.S)
+    if not m:
+        return None
+    raw = m.group(1).replace('\\"', '"').replace("\\\\", "\\")
+    ma = re.search(r'var a="([^"]+)"', raw)
+    mc = re.search(r'var c="([^"]+)"', raw)
+    if not ma or not mc:
+        return None
+    a, c = ma.group(1), mc.group(1)
+    b = "".join(sorted(a))
+    d = ""
+    for ch in c:
+        if ch in a:
+            d += b[a.index(ch)]
+        else:
+            d += "?"
+    return d if "@" in d else None
+
+
+def scrape_cabinet_page(cabinet_url: str, session: requests.Session) -> dict:
+    """Scrape la page cabinet Avoventes pour extraire nom, tel, email."""
+    result = {}
+    try:
+        r = session.get(cabinet_url, headers=HEADERS, timeout=15)
+        if r.status_code != 200:
+            return result
+    except Exception:
+        return result
+
+    html = r.text
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Nom du cabinet + adresse (apparaissent juste apres "Liste des cabinets")
+    text_lines = [l.strip() for l in soup.get_text("\n", strip=True).split("\n") if l.strip()]
+    for i, line in enumerate(text_lines):
+        if line == "Liste des cabinets" and i + 1 < len(text_lines):
+            result["cabinet_name"] = text_lines[i + 1]
+            # Ligne suivante = adresse avec CP + ville
+            if i + 2 < len(text_lines):
+                addr = text_lines[i + 2]
+                m_cp = re.search(r"(\d{5})\s+(.+)", addr)
+                if m_cp:
+                    result["cabinet_ville"] = m_cp.group(2).strip().rstrip(".")
+            break
+
+    # Tel : lien tel:+33...
+    m = re.search(r'tel:(\+?\d+)', html)
+    if m:
+        digits = m.group(1)
+        if digits.startswith("+33"):
+            digits = "0" + digits[3:]
+        if len(digits) == 10:
+            result["tel"] = " ".join([digits[i:i+2] for i in range(0, 10, 2)])
+        else:
+            result["tel"] = digits
+
+    # Email : decode JS obfuscation
+    email = decode_avoventes_email(html)
+    if email:
+        result["email"] = email
+
+    return result
+
+
 def extract_raw_text(soup: BeautifulSoup) -> str:
     """Extrait le texte brut utile de la page."""
     for tag in soup.find_all(["nav", "footer", "script", "style", "noscript"]):
@@ -229,6 +295,18 @@ def scrape_detail(url: str, session: requests.Session) -> dict | None:
                 if src.startswith("/"): src = BASE_URL + src
                 item["photo_url"] = src
                 break
+
+    # ── Cabinet avocat (lien /cabinet/xxx — pas les URLs de PDFs) ──────
+    cabinet_link = soup.find("a", href=re.compile(r"^/cabinet/[\w-]+$"))
+    if cabinet_link:
+        cab_href = BASE_URL + cabinet_link.get("href", "")
+        cab_info = scrape_cabinet_page(cab_href, session)
+        if cab_info.get("cabinet_name"):
+            item["avocat_cabinet"] = cab_info["cabinet_name"]
+        if cab_info.get("tel"):
+            item["avocat_tel"] = cab_info["tel"]
+        if cab_info.get("email"):
+            item["avocat_email"] = cab_info["email"]
 
     # ── Documents PDF (fiable : liens directs) ───────────────────────────
     pdf_links = soup.find_all("a", href=re.compile(r"\.pdf", re.I))

@@ -4,8 +4,9 @@
 #
 # Pipeline :
 #   1. Scraping 3 sources (Licitor + Avoventes + Vench) → données fiables + raw_text
-#   2. Extraction Sonnet → normalise et peuple toutes les colonnes texte
+#   2. Extraction Opus (CLI Claude Max) → normalise et peuple toutes les colonnes texte
 #   3. Dédup cross-source → fusionne les doublons entre sources
+#   4. Mise à jour statuts → enchères passées marquées adjugé/surenchère
 #
 # Installation crontab :
 #   crontab -e
@@ -13,12 +14,13 @@
 #
 # Pré-requis VPS :
 #   - Python 3.10+ avec pip
-#   - pip install requests beautifulsoup4 python-dotenv supabase anthropic pdfplumber playwright
+#   - pip install requests beautifulsoup4 python-dotenv supabase pdfplumber playwright
 #   - playwright install chromium (pour Avoventes)
-#   - scrapper/.env avec SUPABASE_URL, SUPABASE_KEY, ANTHROPIC_API_KEY
+#   - scrapper/.env avec SUPABASE_URL, SUPABASE_KEY
+#   - claude CLI connecté via Max (claude login)
 # ══════════════════════════════════════════════════════════════════════════════
 
-set -e
+# Pas de set -e : chaque phase gère ses erreurs, on continue les suivantes
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -60,13 +62,33 @@ if [ $SCRAPING_EXIT -ne 0 ]; then
     echo "ERREUR scraping (exit $SCRAPING_EXIT) — on continue avec l'extraction" | tee -a "$LOG_FILE"
 fi
 
-# ── Phases 2-5 DÉSACTIVÉES (scraping seul, vérification manuelle avant extraction Sonnet)
-# Phase 2 : Extraction Sonnet
-# Phase 3 : Dédup cross-source
-# Phase 4 : Mise à jour statuts
-# Phase 5 : Normalisation programmatique
+# ── Phase 2 : Extraction Opus (via CLI Claude Max) ──────────────────────────
 echo "" | tee -a "$LOG_FILE"
-echo ">>> Phases 2-5 désactivées — scraping seul, vérification manuelle requise" | tee -a "$LOG_FILE"
+echo ">>> PHASE 2 : Extraction Opus (nouveaux biens)" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+$PYTHON batch_encheres_extraction.py 2>&1 | tee -a "$LOG_FILE"
+
+# ── Phase 3 : Dédup cross-source ────────────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo ">>> PHASE 3 : Dédup cross-source" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+$PYTHON dedup_cross_source.py 2>&1 | tee -a "$LOG_FILE"
+
+# ── Phase 4 : Mise à jour statuts (enchères passées → adjugé/surenchère) ────
+echo "" | tee -a "$LOG_FILE"
+echo ">>> PHASE 4 : Mise à jour statuts" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+$PYTHON -c "
+from dotenv import load_dotenv
+from pathlib import Path
+load_dotenv(Path('$SCRIPT_DIR/.env'))
+from encheres_supabase import update_statuts_passes
+count = update_statuts_passes()
+print(f'Statuts mis à jour : {count}')
+" 2>&1 | tee -a "$LOG_FILE"
 
 # ── Fin ───────────────────────────────────────────────────────────────────────
 echo "" | tee -a "$LOG_FILE"

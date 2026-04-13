@@ -40,7 +40,534 @@
         "code_postal": "95400",
         "departement": "Val-d'Oise",
         "tribunal": "Tribunal Judiciaire de Pontoise",
-        "frais_prealables": 8150.50
+        "frais_prealables": 8150.5
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 68)",
+      "input_summary": "licitor, Autre à Paris 9ème, MAP 15000€",
+      "expected_output": {
+        "TYPE_BIEN": "appartement"
+      }
+    },
+    {
+      "note": "Auto-corrigé: type_bien, nombre_pieces, etage, pieces, exterieur, garage (ID 64)",
+      "input_summary": "licitor, Appartement à Plouédern, MAP 75000€",
+      "expected_output": {
+        "type_bien": "Appartement",
+        "nombre_pieces": "T4",
+        "etage": "1er étage",
+        "pieces": [
+          "séjour",
+          "salon",
+          "deux chambres",
+          "salle d'eau avec wc"
+        ],
+        "exterieur": [
+          "balcon"
+        ],
+        "garage": true
+      }
+    },
+    {
+      "note": "Auto-corrigé: surface, nombre_chambres, etage, statut_location (ID 100)",
+      "input_summary": "licitor, Autre à Marseille, MAP 13892€",
+      "expected_output": {
+        "surface": "19,7 m²",
+        "nombre_chambres": 2,
+        "etage": "rez-de-jardin",
+        "statut_location": "louées"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 71)",
+      "input_summary": "licitor, Autre à Paris 9ème, MAP 15000€",
+      "expected_output": {
+        "TYPE_BIEN": "appartement"
+      }
+    },
+    {
+      "note": "Auto-corrigé: superficie, nombre_chambres, type_bien, etages, annexes, adresse (ID 139)",
+      "input_summary": "licitor, Appartement à Aulnay-sous-Bois, MAP 80000€",
+      "expected_output": {
+        "superficie": "85,50 m²",
+        "nombre_chambres": 3,
+        "type_bien": "Appartement en duplex",
+        "etages": [
+          "rez-de-chaussée",
+          "premier étage"
+        ],
+        "annexes": [
+          "terrasse privative",
+          "jardin",
+          "parking au sous-sol",
+          "cellier"
+        ],
+        "adresse": "24, rue du Docteur Broussais à AULNAY-SOUS-BOIS"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 121)",
+      "input_summary": "licitor, Mixte à Mougins, MAP 2000000€",
+      "expected_output": {
+        "TYPE_BIEN": "villa"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 138)",
+      "input_summary": "licitor, Terrain à L'Haÿ-les-Roses, MAP 110000€",
+      "expected_output": {
+        "TYPE_BIEN": "terrain"
+      }
+    },
+    {
+      "note": "Auto-corrigé: tribunal (ID 136)",
+      "input_summary": "licitor, Maison à Bonnières-sur-Seine, MAP 144000€",
+      "expected_output": {
+        "tribunal": "Tribunal judiciaire de Versailles"
+      }
+    },
+    {
+      "note": "Auto-corrigé: mise_a_prix, surface, nombre_pieces, etage, balcon_terrasse, cave_garage, avocat_poursuivant, cabinet_avocat, creancier, debiteur, tribunal, commissaire_justice, date_commandement (ID 164)",
+      "input_summary": "licitor, Appartement à Etrembieres, MAP 43500€",
+      "expected_output": {
+        "mise_a_prix": "43 500 €",
+        "surface": "49,16 m²",
+        "nombre_pieces": "T2",
+        "etage": "1er étage",
+        "balcon_terrasse": "balcon",
+        "cave_garage": "cave incluse",
+        "avocat_poursuivant": "Me Vincent TREQUATTRINI",
+        "cabinet_avocat": "SELARL TRAVERSO-TREQUATTRINI & Associés",
+        "creancier": "SA CREDIT LOGEMENT",
+        "debiteur": "AVOVENTES",
+        "tribunal": "Tribunal Judiciaire de THONON LES BAINS",
+        "commissaire_justice": "SELARL PERRILLAT Anne-Lise",
+        "date_commandement": "13 juin 2025"
+      }
+    },
+    {
+      "note": "Auto-corrigé: nb_pieces, type_cuisine (ID 193)",
+      "input_summary": "licitor, Maison à Fresnes-sur-Escaut, MAP 25000€",
+      "expected_output": {
+        "nb_pieces": 3,
+        "type_cuisine": "ouverte"
+      }
+    },
+    {
+      "note": "Auto-corrigé: adresse, reference_cadastrale, mise_a_prix, loyer_premier_logement, tribunal, date_jugement, commissaire_justice, date_pv_descriptif, poursuivant, proprietaire_actuel, date_acquisition, date_publication (ID 188)",
+      "input_summary": "licitor, Maison à Livry-Gargan, MAP 332500€",
+      "expected_output": {
+        "adresse": "50 Allée de Chartes, Livry-Gargan (93)",
+        "reference_cadastrale": "Section B n° 1360",
+        "mise_a_prix": 332500,
+        "loyer_premier_logement": 1200,
+        "tribunal": "Tribunal Judiciaire de BOBIGNY",
+        "date_jugement": "26.06.2025",
+        "commissaire_justice": "Maître ROBILLARD",
+        "date_pv_descriptif": "9 décembre 2025",
+        "poursuivant": "Comptable du SERVICE DES IMPOTS DES PARTICULIERS de LIVRY-GARGAN",
+        "proprietaire_actuel": "AVOVENTES",
+        "date_acquisition": "30.12.2013",
+        "date_publication": "21.01.2014"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 243)",
+      "input_summary": "licitor, Maison à Scaër, MAP 45000€",
+      "expected_output": {
+        "TYPE_BIEN": "maison"
+      }
+    },
+    {
+      "note": "Auto-corrigé: superficie, etage, nombre_chambres, balcon, cave, parking, annee_construction, etat, adresse, lot, occupant, date_vente, type_vente (ID 301)",
+      "input_summary": "licitor, Appartement à Colombes, MAP 130000€",
+      "expected_output": {
+        "superficie": "91,90 m²",
+        "etage": "1er étage",
+        "nombre_chambres": 4,
+        "balcon": true,
+        "cave": true,
+        "parking": "box de parking",
+        "annee_construction": 2012,
+        "etat": "bon état d'entretien",
+        "adresse": "157 boulevard Charles De Gaulle 92700 COLOMBES",
+        "lot": "n°2056",
+        "occupant": "propriétaire avec ses 3 enfants âgés de 3 à 16 ans",
+        "date_vente": "VENDREDI NEUF JANVIER DEUX MILLE VINGT SIX de 15 heures 30 à 17 heures 30",
+        "type_vente": "adjudication sur licitation"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 261)",
+      "input_summary": "licitor, Maison à Tulle, MAP 151435€",
+      "expected_output": {
+        "TYPE_BIEN": "maison"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 266)",
+      "input_summary": "licitor, Appartement à Lamothe-Capdeville, MAP 74800€",
+      "expected_output": {
+        "TYPE_BIEN": "appartement"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 275)",
+      "input_summary": "licitor, Local commercial à Chemilly-sur-Yonne, MAP 310000€",
+      "expected_output": {
+        "TYPE_BIEN": "bâtiments industriels"
+      }
+    },
+    {
+      "note": "Auto-corrigé: type_bien, description_etat, equipements (ID 348)",
+      "input_summary": "licitor, Maison à Moussey, MAP 54000€",
+      "expected_output": {
+        "type_bien": "Maison",
+        "description_etat": "à l'état brut nécessitant d'importants travaux",
+        "equipements": [
+          "garage",
+          "grange",
+          "remise",
+          "jardin"
+        ]
+      }
+    },
+    {
+      "note": "Auto-corrigé: type_bien, nombre_pieces, surface, terrasse, parking, numero (ID 337)",
+      "input_summary": "licitor, Appartement à Saint-Geniez-d'Olt, MAP 10000€",
+      "expected_output": {
+        "type_bien": "Appartement",
+        "nombre_pieces": "T4",
+        "surface": "45,30 m²",
+        "terrasse": true,
+        "parking": true,
+        "numero": "94"
+      }
+    },
+    {
+      "note": "Auto-corrigé: surface, adresse, ville, type_bien (ID 322)",
+      "input_summary": "licitor, Appartement à Montpellier, MAP 36000€",
+      "expected_output": {
+        "surface": "38,34 m²",
+        "adresse": "rue des Orchidées",
+        "ville": "Montpellier",
+        "type_bien": "Studio"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 386)",
+      "input_summary": "licitor, Appartement à Paris, MAP 1700000€",
+      "expected_output": {
+        "TYPE_BIEN": "appartement"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 363)",
+      "input_summary": "licitor, Maison à Solliès-Pont, MAP 160000€",
+      "expected_output": {
+        "TYPE_BIEN": "appartement"
+      }
+    },
+    {
+      "note": "Auto-corrigé: surface, type_bien, sdb, wc, balcon, cave, etage, chauffage, charges, copropriete, syndic (ID 413)",
+      "input_summary": "vench, Appartement à Saint-Maurice, MAP 57000€",
+      "expected_output": {
+        "surface": "37,28 m²",
+        "type_bien": "studio",
+        "sdb": 1,
+        "wc": 1,
+        "balcon": true,
+        "cave": true,
+        "etage": 1,
+        "chauffage": "électrique",
+        "charges": 480,
+        "copropriete": true,
+        "syndic": "syndic.jc.sqc@gmail.com"
+      }
+    },
+    {
+      "note": "Auto-corrigé: type_bien, usage, adresse, ville (ID 396)",
+      "input_summary": "vench, Maison à Brive-la-Gaillarde, MAP 52000€",
+      "expected_output": {
+        "type_bien": "Maison",
+        "usage": "habitation",
+        "adresse": "avenue du Capitaine Buffet",
+        "ville": "Brive-la-Gaillarde"
+      }
+    },
+    {
+      "note": "Auto-corrigé: surface_habitable, adresse, type_bien (ID 465)",
+      "input_summary": "vench, Maison à Garges-lès-Gonesse, MAP 120000€",
+      "expected_output": {
+        "surface_habitable": "217,07 m²",
+        "adresse": "rue Jeanne d'Arc à Garges-lès-Gonesse",
+        "type_bien": "Pavillon d'habitation"
+      }
+    },
+    {
+      "note": "Auto-corrigé: adresse, type_bien, batiment (ID 458)",
+      "input_summary": "vench, Appartement à Marseille, MAP 25641.84€",
+      "expected_output": {
+        "adresse": "avenue Roger Salengro à Marseille",
+        "type_bien": "Ensemble immobilier composé d'un local commercial au rez-de-chaussée et d'un appartement au premier étage",
+        "batiment": "Bâtiment B"
+      }
+    },
+    {
+      "note": "Auto-corrigé: rue, ville (ID 479)",
+      "input_summary": "vench, Local commercial à Rombas, MAP 80000€",
+      "expected_output": {
+        "rue": "rue de Villers",
+        "ville": "Rombas"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 503)",
+      "input_summary": "vench, Autre à Bussy-Saint-Georges, MAP 58300€",
+      "expected_output": {
+        "TYPE_BIEN": "immeuble"
+      }
+    },
+    {
+      "note": "Auto-corrigé: surface, nombre_chambres, etage, cave, localisation (ID 525)",
+      "input_summary": "vench, Appartement à Paris, MAP 1700000€",
+      "expected_output": {
+        "surface": "122 m²",
+        "nombre_chambres": "2",
+        "etage": "rez-de-chaussée",
+        "cave": "Une cave",
+        "localisation": "Quai aux Fleurs à Paris"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 541)",
+      "input_summary": "vench, Maison à Saintes, MAP 35000€",
+      "expected_output": {
+        "TYPE_BIEN": "maison"
+      }
+    },
+    {
+      "note": "Auto-corrigé: type_bien, nombre_pieces, superficie, etage, cave, parking, adresse (ID 579)",
+      "input_summary": "avoventes, Appartement à Champigny-sur-Marne, MAP 100000€",
+      "expected_output": {
+        "type_bien": "Appartement",
+        "nombre_pieces": 3,
+        "superficie": 62.06,
+        "etage": 4,
+        "cave": true,
+        "parking": true,
+        "adresse": "avenue du Général de Gaulle"
+      }
+    },
+    {
+      "note": "Auto-corrigé: adresse, surface_terrain, description_bien, nombre_chambres, chauffage, toiture, assainissement, garage, creancier, montant_dette, tribunal (ID 559)",
+      "input_summary": "avoventes, Maison à Menneval, MAP 80000€",
+      "expected_output": {
+        "adresse": "29 chaussée de la Mare, MENNEVAL (EURE)",
+        "surface_terrain": "16 ares 77 ca",
+        "description_bien": "Maison d'habitation ancienne de type longère divisée en deux logements indépendants avec terrain clos et garage",
+        "nombre_chambres": "4 chambres au total (3 au rez-de-chaussée, 1 à l'étage)",
+        "chauffage": "Chauffage électrique",
+        "toiture": "Ardoises avec panneaux solaires",
+        "assainissement": "Assainissement collectif",
+        "garage": "Garage",
+        "creancier": "BANQUE CIC NORD OUEST",
+        "montant_dette": "115 337,40 €",
+        "tribunal": "Tribunal Judiciaire d'EVREUX"
+      }
+    },
+    {
+      "note": "Auto-corrigé: tribunal (ID 600)",
+      "input_summary": "avoventes, Parking à Pantin, MAP 7500€",
+      "expected_output": {
+        "tribunal": "Tribunal de proximité de Pantin"
+      }
+    },
+    {
+      "note": "Auto-corrigé: date_constat, heure_constat, duree_constat, commissaire_justice, office, adresse_office, lieu_constat, parcelle_cadastrale, superficie, acces_parcelle, description_cloture, etat_parcelle, occupation (ID 601)",
+      "input_summary": "avoventes, Terrain à Tremblay-en-France, MAP 25000€",
+      "expected_output": {
+        "date_constat": "2025-11-14",
+        "heure_constat": "16:50",
+        "duree_constat": "1h10",
+        "commissaire_justice": "Stéphanie ROBILLARD",
+        "office": "SELARL KSR & Associés",
+        "adresse_office": "24-26, avenue du Général de Gaulle à ROSNY SOUS BOIS (93110)",
+        "lieu_constat": "rue de Pau à Tremblay en France (Seine-Saint-Denis)",
+        "parcelle_cadastrale": "AO 1222",
+        "superficie": "1a 96ca",
+        "acces_parcelle": "sur une longueur d'environ 9 mètres depuis la rue de Pau, entre le 47, rue de Touraine et le 3 rue de Pau",
+        "description_cloture": "clôture métallique basse",
+        "etat_parcelle": "n'est pas entretenue et semble abandonnée, avec de hautes herbes et des broussailles",
+        "occupation": "inoccupée"
+      }
+    },
+    {
+      "note": "Auto-corrigé: surface, adresse (ID 582)",
+      "input_summary": "avoventes, Maison à Saint-Marcel-lès-Valence, MAP 60000€",
+      "expected_output": {
+        "surface": "124,90 m²",
+        "adresse": "rue des Margillières à Saint-Marcel-lès-Valence"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 588)",
+      "input_summary": "avoventes, Local commercial à Bonson, MAP 75000€",
+      "expected_output": {
+        "TYPE_BIEN": "local"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 587)",
+      "input_summary": "avoventes, Autre à Bussy-Saint-Georges, MAP 21600€",
+      "expected_output": {
+        "TYPE_BIEN": "studio"
+      }
+    },
+    {
+      "note": "Auto-corrigé: VILLE (ID 617)",
+      "input_summary": "avoventes, Terrain à Serres Gaston Et Parentis En Born, MAP 54000€",
+      "expected_output": {
+        "VILLE": "Parentis-en-Born"
+      }
+    },
+    {
+      "note": "Auto-corrigé: nombre_lots, composition, localisation, occupation (ID 616)",
+      "input_summary": "avoventes, Parking à Lyon, MAP 1000€",
+      "expected_output": {
+        "nombre_lots": 21,
+        "composition": {
+          "caves": 6,
+          "parkings": 15
+        },
+        "localisation": "8ème arrondissement de Lyon",
+        "occupation": "Certains lots seraient occupés selon conditions à vérifier lors de la visite"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 622)",
+      "input_summary": "avoventes, Local commercial à Argentière, MAP 292600€",
+      "expected_output": {
+        "TYPE_BIEN": "local"
+      }
+    },
+    {
+      "note": "Auto-corrigé: TRIBUNAL (ID 618)",
+      "input_summary": "avoventes, Mixte à Thonon-les-Bains, MAP 400000€",
+      "expected_output": {
+        "TRIBUNAL": "TRIBUNAL DE COMMERCE de THONON LES BAINS"
+      }
+    },
+    {
+      "note": "Auto-corrigé: VILLE, TRIBUNAL (ID 630)",
+      "input_summary": "avoventes, Maison à ?, MAP 39000€",
+      "expected_output": {
+        "VILLE": "Bettoncourt",
+        "TRIBUNAL": "Tribunal de Grande Instance d'Epinal"
+      }
+    },
+    {
+      "note": "Auto-corrigé: VILLE (ID 629)",
+      "input_summary": "avoventes, Maison à ?, MAP 34000€",
+      "expected_output": {
+        "VILLE": "88210 SENONES"
+      }
+    },
+    {
+      "note": "Auto-corrigé: adresse, superficie_terrain, nb_chambres, description_bien, reference_cadastrale, ville, code_postal, type_bien, garage, jardin, nb_wc, nb_salles_bain, grenier, etages, piece_de_vie (ID 643)",
+      "input_summary": "avoventes, Maison à RIBERAC, MAP 10000€",
+      "expected_output": {
+        "adresse": "RIBERAC (24600), Chez Vilate, 2 route de Faye",
+        "superficie_terrain": "5a 54ca",
+        "nb_chambres": 4,
+        "description_bien": "Maison d'habitation libre visiblement de toute occupation, avec étage, située en bordure de route comprenant un petit jardin, au rez de chaussée un garage, chaufferie, local, une salle de bains, un wc indépendant, une chambre, une pièce de vie, et à l'étage trois chambres, une pièce d'eau, un wc indépendant, un grenier aménageable",
+        "reference_cadastrale": "section AE numéro 45",
+        "ville": "RIBERAC",
+        "code_postal": "24600",
+        "type_bien": "Maison d'habitation",
+        "garage": true,
+        "jardin": true,
+        "nb_wc": 2,
+        "nb_salles_bain": 1,
+        "grenier": true,
+        "etages": true,
+        "piece_de_vie": true
+      }
+    },
+    {
+      "note": "Auto-corrigé: TYPE_BIEN (ID 664)",
+      "input_summary": "vench, Immeuble à Nanterre, MAP 550000€",
+      "expected_output": {
+        "TYPE_BIEN": [
+          "local",
+          "maison",
+          "appartements"
+        ]
+      }
+    },
+    {
+      "note": "Auto-corrigé: type_bien, prix, date_vente, ville, adresse, code_postal, pieces, tribunal, avocat, occupation (ID 656)",
+      "input_summary": "vench, Appartement à Plouédern, MAP 75000€",
+      "expected_output": {
+        "type_bien": "appartement",
+        "prix": 75000.0,
+        "date_vente": "05/05/2026",
+        "ville": "Plouédern",
+        "adresse": "49, allée du Tromeur",
+        "code_postal": "29800",
+        "pieces": "T4",
+        "tribunal": "Tribunal judiciaire de BREST",
+        "avocat": "Maître Christelle FLOC'H",
+        "occupation": "Bien occupé par le propriétaire"
+      }
+    },
+    {
+      "note": "Auto-corrigé: type_bien, ville, code_postal, prix, date_vente, heure_vente, tribunal, adresse_tribunal, surface_habitable, annee_construction, chauffage, cadastre, caracteristiques, telephone_greffe (ID 687)",
+      "input_summary": "vench, Immeuble à Tulle, MAP 151435€",
+      "expected_output": {
+        "type_bien": "UN ENSEMBLE IMMEUBLE",
+        "ville": "Tulle",
+        "code_postal": "19000",
+        "prix": "151 435.00 €",
+        "date_vente": "24/04/2026",
+        "heure_vente": "10:00",
+        "tribunal": "Tribunal judiciaire de TULLE",
+        "adresse_tribunal": "9 Boulevard Henri Bouyoux, 19000 Tulle",
+        "surface_habitable": "134,60 m2 + 90,16 m2",
+        "annee_construction": "antérieure à 1949",
+        "chauffage": "gaz",
+        "cadastre": "section BH n°6 et section BH n°332",
+        "caracteristiques": [
+          "Garage",
+          "Cave"
+        ],
+        "telephone_greffe": "05-55-26-71-16"
+      }
+    },
+    {
+      "note": "Auto-corrigé: surface_habitable, surface_annexes, nombre_chambres, nombre_salles_de_bain, nombre_wc, nombre_parkings, surface_parking, mise_a_prix, adresse, reference_cadastrale, etage, type_bien, equipements, occupation (ID 718)",
+      "input_summary": "vench, Appartement à Nîmes, MAP 140000€",
+      "expected_output": {
+        "surface_habitable": "243.11 m2",
+        "surface_annexes": "74.29 m2",
+        "nombre_chambres": 3,
+        "nombre_salles_de_bain": 3,
+        "nombre_wc": 3,
+        "nombre_parkings": 3,
+        "surface_parking": "11m2 environ",
+        "mise_a_prix": "140 000.00 €",
+        "adresse": "21, rue Fernand Pelloutier à Nîmes, Gard",
+        "reference_cadastrale": "Section EX n° 263",
+        "etage": "premier étage",
+        "type_bien": "appartement de type loft",
+        "equipements": [
+          "terrasse",
+          "cellier",
+          "dressing",
+          "box de garage"
+        ],
+        "occupation": "occupé par la propriétaire ou ses enfants"
       }
     }
   ]

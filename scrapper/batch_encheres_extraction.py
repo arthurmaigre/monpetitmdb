@@ -1,40 +1,38 @@
 """
-batch_encheres_extraction.py — Extraction IA (Sonnet) pour les enchères judiciaires
+batch_encheres_extraction.py — Extraction IA (Opus via CLI Claude Max) pour les enchères judiciaires
 
-Sonnet est la SOURCE AUTORITAIRE pour toutes les colonnes texte.
+Opus est la SOURCE AUTORITAIRE pour toutes les colonnes texte.
 Le scraping ne fournit que les données fiables (prix, dates, GPS, URLs).
-Sonnet lit le raw_text + PDFs et peuple proprement toutes les colonnes structurées.
+Opus lit le raw_text + PDFs et peuple proprement toutes les colonnes structurées.
+
+Utilise le CLI claude (abonnement Max) au lieu de l'API Anthropic.
+Pré-requis : claude CLI connecté (claude login), poppler-utils installé.
 
 Usage :
   python batch_encheres_extraction.py                     # Texte + PDFs
-  python batch_encheres_extraction.py --no-pdfs            # Texte seul (moins cher)
+  python batch_encheres_extraction.py --no-pdfs            # Texte seul
   python batch_encheres_extraction.py --limit 10
   python batch_encheres_extraction.py --reprocess          # Re-traiter les "ok" existants
   python batch_encheres_extraction.py --dry-run
 """
-import os, sys, json, logging, time, argparse, re
+import os, sys, json, logging, time, argparse, re, subprocess, tempfile, shutil
 from pathlib import Path
 from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 
 import requests
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
-import anthropic
 from supabase_client import get_client
 
 log = logging.getLogger("encheres_extraction")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 TABLE = "encheres"
-MODEL = "claude-sonnet-4-20250514"
-MAX_TOKENS = 1500
-WORKERS = 3
+MODEL = "opus"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Prompt Sonnet — SOURCE AUTORITAIRE pour toutes les colonnes texte
+# Prompt — SOURCE AUTORITAIRE pour toutes les colonnes texte
 # ══════════════════════════════════════════════════════════════════════════════
 
 SYSTEM_PROMPT = """Tu es un expert en ventes aux enchères immobilières judiciaires en France.
@@ -172,162 +170,89 @@ def build_system_prompt() -> str:
     return SYSTEM_PROMPT + examples_text
 
 
-def build_user_message(item: dict, pdf_texts: list[str] = None, pdf_images: list[str] = None) -> list:
-    """Construit le message utilisateur pour Sonnet.
-    Retourne une liste de content blocks (texte + images si scans).
+def build_prompt_text(item: dict, pdf_paths: list[str] = None) -> str:
+    """Construit le prompt texte pour le CLI claude.
+    Les PDFs sont référencés par chemin — Claude les lira via son outil Read.
     """
     text_parts = []
     text_parts.append(f"Source : {item.get('source', '?')}")
     text_parts.append(f"URL : {item.get('url', '?')}")
 
+    # Hints structurés (données fiables du scraping)
+    hints = []
+    if item.get("avocat_cabinet"):
+        hints.append(f"Cabinet avocat : {item['avocat_cabinet']}")
+    if item.get("avocat_tel"):
+        hints.append(f"Tel avocat : {item['avocat_tel']}")
+    if item.get("avocat_email"):
+        hints.append(f"Email avocat : {item['avocat_email']}")
+    if hints:
+        text_parts.append("\n--- DONNÉES STRUCTURÉES (fiables) ---\n" + "\n".join(hints))
+
     if item.get("description"):
         text_parts.append(f"\n--- TEXTE BRUT SCRAPÉ ---\n{item['description']}")
 
-    if pdf_texts:
-        for i, pdf_text in enumerate(pdf_texts, 1):
-            text_parts.append(f"\n--- DOCUMENT PDF {i} ---\n{pdf_text}")
+    if pdf_paths:
+        text_parts.append("\n--- DOCUMENTS PDF À LIRE ---")
+        for pdf_path in pdf_paths:
+            text_parts.append(f"Lis le fichier {pdf_path} (pages 1-5) avec l'outil Read.")
 
-    content = [{"type": "text", "text": "\n".join(text_parts)}]
-
-    # Ajouter les images PDF (scans) pour Sonnet vision
-    if pdf_images:
-        content[0]["text"] += "\n\n--- PAGES PDF SCANNÉES CI-DESSOUS (images) ---"
-        for img_b64 in pdf_images:
-            content.append({
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/jpeg",
-                    "data": img_b64,
-                }
-            })
-
-    return content
+    return "\n".join(text_parts)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PDF download & extraction
 # ══════════════════════════════════════════════════════════════════════════════
 
-def download_pdf_text(url: str) -> str | None:
-    """Télécharge un PDF et en extrait le texte. Retourne None si scan (images)."""
+def download_pdf(url: str, dest_path: str) -> bool:
+    """Télécharge un PDF vers un fichier local. Retourne True si succès."""
     try:
         r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
-        try:
-            import pdfplumber
-            import io
-            with pdfplumber.open(io.BytesIO(r.content)) as pdf:
-                text_parts = []
-                for page in pdf.pages[:10]:
-                    t = page.extract_text()
-                    if t:
-                        text_parts.append(t)
-                return "\n".join(text_parts) if text_parts else None
-        except ImportError:
-            log.warning("pdfplumber non installé — pip install pdfplumber")
-            return None
+        with open(dest_path, "wb") as f:
+            f.write(r.content)
+        log.info(f"  PDF téléchargé: {len(r.content)//1024}Ko → {dest_path}")
+        return True
     except Exception as e:
         log.warning(f"Erreur téléchargement PDF {url}: {e}")
-        return None
-
-
-def download_pdf_images(url: str, max_pages: int = 3) -> list[str] | None:
-    """Télécharge un PDF scan et retourne les premières pages en base64 (pour Sonnet vision).
-    Utilisé en fallback quand pdfplumber ne retourne pas de texte.
-    """
-    try:
-        import base64
-        r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
-        try:
-            import pypdfium2 as pdfium
-            import io
-            pdf = pdfium.PdfDocument(io.BytesIO(r.content))
-            images_b64 = []
-            for i in range(min(len(pdf), max_pages)):
-                page = pdf[i]
-                bitmap = page.render(scale=2)  # 2x pour lisibilité
-                pil_image = bitmap.to_pil()
-                buf = io.BytesIO()
-                pil_image.save(buf, format="JPEG", quality=80)
-                images_b64.append(base64.b64encode(buf.getvalue()).decode("utf-8"))
-            return images_b64 if images_b64 else None
-        except ImportError:
-            log.warning("pypdfium2 non installé — pip install pypdfium2")
-            return None
-    except Exception as e:
-        log.warning(f"Erreur conversion PDF images {url}: {e}")
-        return None
+        return False
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Extraction Sonnet
+# Extraction via CLI Claude
 # ══════════════════════════════════════════════════════════════════════════════
 
-client_anthropic = None
-lock = threading.Lock()
 stats = {"total": 0, "enriched": 0, "no_data": 0, "errors": 0}
 
 
-def get_anthropic_client():
-    global client_anthropic
-    if client_anthropic is None:
-        client_anthropic = anthropic.Anthropic()
-    return client_anthropic
+def call_claude_cli(prompt: str, system_prompt: str = None, timeout: int = 180) -> str | None:
+    """Appelle le CLI claude en mode print. Retourne la réponse texte ou None."""
+    cmd = ["claude", "-p", "--model", MODEL, "--allowedTools", "Read,Bash", "--no-session-persistence"]
+    if system_prompt:
+        cmd.extend(["--system-prompt", system_prompt])
+
+    try:
+        result = subprocess.run(
+            cmd, input=prompt, capture_output=True, text=True, timeout=timeout,
+        )
+        if result.returncode != 0:
+            log.error(f"CLI claude erreur (exit {result.returncode}): {result.stderr[:300]}")
+            return None
+        return result.stdout.strip()
+    except subprocess.TimeoutExpired:
+        log.error(f"CLI claude timeout ({timeout}s)")
+        return None
+    except Exception as e:
+        log.error(f"CLI claude exception: {e}")
+        return None
 
 
-# Tous les champs attendus dans l'output Sonnet
-ALL_EXPECTED_FIELDS = [
-    "type_bien", "surface", "nb_pieces", "nb_chambres", "nb_lots", "etage",
-    "occupation", "loyer_mensuel", "profil_locataire",
-    "etat_interieur", "dpe", "annee_construction",
-    "has_cave", "has_parking", "has_jardin", "has_terrasse", "has_piscine", "has_ascenseur",
-    "tribunal", "adresse_complete", "code_postal", "ville", "departement",
-    "avocat_nom", "avocat_cabinet", "avocat_tel",
-    "frais_prealables", "lots_data", "description_propre",
-]
-
-VALIDATION_PROMPT = """Voici le JSON extrait d'une enchère judiciaire. Vérifie la COHÉRENCE et le FORMAT de TOUS les champs. Ne relis PAS les sources, analyse UNIQUEMENT ce JSON.
-
-{first_result}
-
-Contrôles :
-1. TRIBUNAL : format exact "Tribunal Judiciaire de Ville" (majuscule initiale). Ne doit PAS contenir d'adresse, salle, étage.
-2. VILLE : nom propre avec accents et tirets. Pas de MAJUSCULES, pas de "Cedex", pas de code postal dedans.
-3. CODE_POSTAL : exactement 5 chiffres. Cohérent avec la ville et le département.
-4. DEPARTEMENT : nom complet ("Loire-Atlantique", pas "44"). Cohérent avec le code postal.
-5. TYPE_BIEN : valeur parmi Appartement/Maison/Immeuble/Terrain/Local commercial/Parking/Bureau/Mixte/Autre. Cohérent avec surface/nb_pieces.
-6. SURFACE : float en m² habitables. >500m² suspect pour un appartement. null vaut mieux qu'une valeur douteuse terrain.
-7. OCCUPATION : uniquement "libre", "occupe", "loue" ou "NC". Pas d'interprétation.
-8. AVOCAT_NOM : sans "Maître"/"Me"/"Mtre" en préfixe. Juste le nom.
-9. AVOCAT_TEL : format "0X XX XX XX XX" si présent.
-10. FRAIS_PREALABLES : nombre > 0 si présent. Pas de texte.
-11. DESCRIPTION_PROPRE : résumé court (2-3 phrases), pas de texte juridique brut ni de navigation web.
-12. NB_PIECES / NB_CHAMBRES : entiers positifs, cohérents entre eux (chambres < pièces).
-13. DPE : lettre A-G uniquement.
-14. ANNEE_CONSTRUCTION : entier 4 chiffres entre 1600 et 2026.
-15. LOYER_MENSUEL : nombre > 0, cohérent avec la surface (pas 50€ pour 100m²).
-16. ADRESSE_COMPLETE : adresse du BIEN, pas de l'avocat ni du tribunal.
-
-Retourne UNIQUEMENT une liste JSON des problèmes trouvés. Chaque problème au format "champ: description du problème".
-Si AUCUN problème, retourne une liste vide [].
-
-Exemples de réponses :
-["tribunal: manquant", "ville: en majuscules TOURS au lieu de Tours", "surface: 1699 semble être un terrain pas une surface habitable"]
-ou
-[]"""
-
-
-def _get_pdf_data(item: dict) -> tuple[list[str], list[dict]]:
-    """Télécharge et extrait le contenu des PDFs.
-    Retourne (pdf_texts, pdf_images).
-    - pdf_texts : liste de strings (texte extrait par pdfplumber)
-    - pdf_images : liste de dicts {"type": "image", "data": base64} pour Sonnet vision (fallback scans)
+def _download_pdfs(item: dict, tmp_dir: str) -> list[str]:
+    """Télécharge les PDFs d'une enchère dans tmp_dir.
+    Retourne la liste des chemins locaux.
     """
     PDF_TYPES_PRIORITY = ("pv", "ccv", "autre")
-    pdf_texts = []
-    pdf_images = []
+    pdf_paths = []
     if item.get("documents"):
         docs = item["documents"]
         if isinstance(docs, str):
@@ -335,66 +260,88 @@ def _get_pdf_data(item: dict) -> tuple[list[str], list[dict]]:
         for doc_type in PDF_TYPES_PRIORITY:
             for doc in docs:
                 if doc.get("type") == doc_type:
-                    # Essayer le texte d'abord
-                    text = download_pdf_text(doc["url"])
-                    if text and len(text) > 100:
-                        pdf_texts.append(text[:10000])
-                        log.info(f"  PDF {doc_type} texte: {len(text)} chars")
-                    else:
-                        # Fallback : convertir en images (scan)
-                        images = download_pdf_images(doc["url"], max_pages=3)
-                        if images:
-                            pdf_images.extend(images)
-                            log.info(f"  PDF {doc_type} scan: {len(images)} pages (vision)")
-                    break
-    return pdf_texts, pdf_images
+                    dest = os.path.join(tmp_dir, f"{doc_type}_{item['id']}.pdf")
+                    if download_pdf(doc["url"], dest):
+                        pdf_paths.append(dest)
+                    break  # un seul PDF par type
+    return pdf_paths
 
 
-def extract_with_sonnet(item: dict, with_pdfs: bool = True, dry_run: bool = False) -> dict | None:
-    """Appelle Sonnet pour extraire les données structurées.
-    Pass 1 : extraction complète.
-    Pass 2 : validation + correction de TOUS les champs (qualité, cohérence, champs manquants).
+def extract_with_claude(item: dict, with_pdfs: bool = True, dry_run: bool = False) -> dict | None:
+    """Appelle le CLI claude (Opus via Max) pour extraire les données structurées.
+    Télécharge les PDFs localement — Claude les lit directement (texte ou scan).
     """
-    pdf_texts, pdf_images = _get_pdf_data(item) if with_pdfs else ([], [])
-    user_content = build_user_message(item, pdf_texts if pdf_texts else None, pdf_images if pdf_images else None)
-
-    if dry_run:
-        text_len = sum(len(b.get("text", "")) for b in user_content if b["type"] == "text")
-        img_count = sum(1 for b in user_content if b["type"] == "image")
-        log.info(f"[DRY-RUN] Prompt ({text_len} chars, {img_count} images)")
-        return None
-
+    tmp_dir = tempfile.mkdtemp(prefix="encheres_")
     try:
-        ai_client = get_anthropic_client()
+        pdf_paths = _download_pdfs(item, tmp_dir) if with_pdfs else []
+        prompt = build_prompt_text(item, pdf_paths if pdf_paths else None)
 
-        # ── Pass 1 : extraction ──────────────────────────────────────
-        response = ai_client.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
-            system=build_system_prompt(),
-            messages=[{"role": "user", "content": user_content}],
-        )
-        text = response.content[0].text.strip()
+        if dry_run:
+            log.info(f"[DRY-RUN] Prompt ({len(prompt)} chars, {len(pdf_paths)} PDFs)")
+            return None
+
+        full_prompt = prompt + "\n\nRetourne UNIQUEMENT le JSON, sans commentaire ni explication ni bloc markdown."
+        response = call_claude_cli(full_prompt, system_prompt=build_system_prompt())
+
+        if not response:
+            return None
+
+        # Extraire le JSON de la réponse
+        text = response.strip()
         text = re.sub(r"^```json\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
-        data = json.loads(text)
+        text = re.sub(r"\s*```\s*$", "", text)
+        # Chercher le premier objet JSON dans la réponse
+        match = re.search(r"\{[\s\S]*\}", text)
+        if not match:
+            log.warning(f"Pas de JSON trouvé dans la réponse ({len(text)} chars)")
+            return None
 
-        # ── Normalisation programmatique (gratuit, pas d'appel API) ──
+        data = json.loads(match.group(0))
         data = _normalize_output(data)
-
         return data
+
     except json.JSONDecodeError as e:
         log.warning(f"JSON invalide: {e}")
         return None
     except Exception as e:
-        log.error(f"Erreur Sonnet: {e}")
+        log.error(f"Erreur extraction: {e}")
         return None
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# Mots français à ne pas capitaliser dans les noms de villes/tribunaux
+_FR_LOWERCASE = {"de", "du", "des", "le", "la", "les", "l", "en", "sur", "sous", "à", "a", "et", "lès", "lez"}
+
+def _titlecase_fr(s: str) -> str:
+    """Title case respectant les règles françaises.
+    'MONT DE MARSAN' → 'Mont-de-Marsan', 'brive la gaillarde' → 'Brive-la-Gaillarde'
+    """
+    # Heuristique : si > 2 mots sans tiret, ajouter des tirets (noms de villes composés)
+    words = s.split()
+    if len(words) > 2 and "-" not in s:
+        s = "-".join(words)
+
+    parts = re.split(r"(-|\s)", s)
+    result = []
+    for i, part in enumerate(parts):
+        if part in ("-", " "):
+            result.append(part)
+        elif part.lower() in _FR_LOWERCASE and i > 0:
+            result.append(part.lower())
+        elif part.isupper() and len(part) > 1:
+            result.append(part.capitalize())
+        elif part.islower():
+            result.append(part.capitalize())
+        else:
+            result.append(part)
+    return "".join(result)
 
 
 def _normalize_output(data: dict) -> dict:
     """Normalisation programmatique de l'output Sonnet (gratuit, pas d'API)."""
 
-    # Tribunal : "TJ X" / "tj x" / "Tribunal judiciaire de x" → "Tribunal Judiciaire de X"
+    # Tribunal : "TJ X" / "tj x" / "Tribunal judiciaire de x" → "TJ de Ville"
     tj = data.get("tribunal")
     if tj:
         tj = tj.strip()
@@ -406,18 +353,33 @@ def _normalize_output(data: dict) -> dict:
         tj = re.sub(r"\s*[-,]?\s*(?:\d+\s+(?:rue|avenue|place|boulevard)|salle|étage|RDC).*", "", tj, flags=re.I)
         tj = tj.strip().rstrip(",.")
         if tj:
-            data["tribunal"] = f"TJ de {tj.title()}"
+            # Title case puis corriger les articles/prépositions français
+            tj = _titlecase_fr(tj)
+            # Contractions françaises : "de Le" → "du", "de Les" → "des", "de Des" → "des"
+            prefix = "TJ de "
+            if re.match(r"^Les?\s", tj):
+                # "Le Mans" → "du Mans", "Les Sables" → "des Sables"
+                if tj.startswith("Le "):
+                    prefix = "TJ du "
+                    tj = tj[3:]
+                elif tj.startswith("Les "):
+                    prefix = "TJ des "
+                    tj = tj[4:]
+            elif re.match(r"^Des?\s", tj):
+                # "Des Sables" (erreur source) → "des Sables"
+                prefix = "TJ des "
+                tj = tj[4:]
+            data["tribunal"] = prefix + tj
         else:
             data["tribunal"] = None
 
-    # Ville : normaliser casse "TOURS" → "Tours", "saint jean" → "Saint-Jean"
+    # Ville : normaliser casse "TOURS" → "Tours", "SAINT JEAN DE VEDAS" → "Saint-Jean-de-Védas"
     ville = data.get("ville")
     if ville:
         ville = ville.strip()
         ville = re.sub(r"\s*\d{5}\s*", "", ville)  # retirer CP incrusté
         ville = re.sub(r"\s+[Cc]edex.*", "", ville)  # retirer Cedex
-        if ville.isupper() or ville.islower():
-            ville = ville.title()
+        ville = _titlecase_fr(ville)
         data["ville"] = ville
 
     # Département : "44" → laisser (on ne peut pas deviner le nom), mais nettoyer
@@ -506,11 +468,24 @@ def _normalize_output(data: dict) -> dict:
     # Occupation : normaliser
     occ = data.get("occupation")
     if occ:
+        occ_lower = occ.lower().strip()
         occ_map = {"libre": "libre", "vacant": "libre", "inoccupé": "libre",
-                    "occupé": "occupe", "occupe": "occupe", "occupee": "occupe",
-                    "loué": "loue", "loue": "loue", "louée": "loue",
-                    "nc": "NC", "": "NC"}
-        data["occupation"] = occ_map.get(occ.lower().strip(), occ)
+                    "inoccupée": "libre", "vacante": "libre", "inoccupe": "libre",
+                    "occupé": "occupe", "occupe": "occupe", "occupée": "occupe",
+                    "occupee": "occupe",
+                    "loué": "loue", "loue": "loue", "louée": "loue", "louee": "loue",
+                    "nc": "NC", "non communiqué": "NC", "non précisé": "NC",
+                    "mixte": "occupe", "": "NC"}
+        if occ_lower in occ_map:
+            data["occupation"] = occ_map[occ_lower]
+        elif "libre" in occ_lower or "vacant" in occ_lower or "inoccup" in occ_lower:
+            data["occupation"] = "libre"
+        elif "loué" in occ_lower or "loue" in occ_lower or "bail" in occ_lower:
+            data["occupation"] = "loue"
+        elif "occup" in occ_lower:
+            data["occupation"] = "occupe"
+        else:
+            data["occupation"] = "NC"
 
     # DPE : lettre majuscule A-G
     dpe = data.get("dpe")
@@ -521,64 +496,6 @@ def _normalize_output(data: dict) -> dict:
     return data
 
 
-def _validation_pass(first_result: dict) -> list:
-    """Pass 2 : contrôle qualité du JSON → retourne uniquement la liste des issues."""
-    try:
-        prompt = VALIDATION_PROMPT.format(first_result=json.dumps(first_result, ensure_ascii=False, indent=2))
-
-        ai_client = get_anthropic_client()
-        response = ai_client.messages.create(
-            model=MODEL,
-            max_tokens=300,
-            system="Retourne UNIQUEMENT une liste JSON de strings. Pas de commentaire.",
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = response.content[0].text.strip()
-        text = re.sub(r"^```json\s*", "", text)
-        text = re.sub(r"\s*```\s*$", "", text)
-        match = re.search(r"\[[\s\S]*\]", text)
-        if not match:
-            return []
-        return json.loads(match.group(0))
-    except Exception as e:
-        log.warning(f"  Pass 2 échoué: {e}")
-        return []
-
-
-def _targeted_retry(item: dict, missing_fields: list, pdf_texts: list) -> dict | None:
-    """Pass 3 : relit les sources UNIQUEMENT pour les champs manquants critiques."""
-    field_instructions = {
-        "tribunal": 'TRIBUNAL : cherche "Tribunal Judiciaire de", "TJ", "TGI", "devant le tribunal". Format exact : "Tribunal Judiciaire de Ville".',
-        "ville": "VILLE : cherche le code postal 5 chiffres suivi du nom de commune, ou l'adresse du bien (PAS celle de l'avocat). Format : nom propre avec accents et tirets.",
-        "type_bien": 'TYPE_BIEN : cherche "appartement", "maison", "immeuble", "terrain", "local", "parking", "studio" dans la description.',
-        "frais_prealables": 'FRAIS_PREALABLES : cherche "frais préalables", "frais de poursuite", "frais taxés", "montant des frais". C\'est un montant en euros, souvent dans le CCV.',
-    }
-    instructions = "\n".join(field_instructions[f] for f in missing_fields if f in field_instructions)
-
-    try:
-        parts = [f"Cherche SPÉCIFIQUEMENT ces informations dans le texte ci-dessous :\n{instructions}\n\nRetourne un JSON avec uniquement les champs trouvés. null si introuvable."]
-        if item.get("description"):
-            parts.append(f"\n--- TEXTE ---\n{item['description'][:2000]}")
-        for i, pdf_text in enumerate(pdf_texts, 1):
-            parts.append(f"\n--- PDF {i} ---\n{pdf_text[:4000]}")
-
-        ai_client = get_anthropic_client()
-        response = ai_client.messages.create(
-            model=MODEL,
-            max_tokens=300,
-            system="Retourne UNIQUEMENT du JSON valide.",
-            messages=[{"role": "user", "content": "\n".join(parts)}],
-        )
-        text = response.content[0].text.strip()
-        text = re.sub(r"^```json\s*", "", text)
-        text = re.sub(r"\s*```\s*$", "", text)
-        match = re.search(r"\{[\s\S]*\}", text)
-        if not match:
-            return None
-        return json.loads(match.group(0))
-    except Exception as e:
-        log.warning(f"  Pass 3 échoué: {e}")
-        return None
 
 
 def _auto_log_example(item: dict, corrected_data: dict, fields_corrected: list):
@@ -626,16 +543,14 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
                 "enrichissement_statut": "no_data",
                 "enrichissement_date": now,
             }).eq("id", enchere_id).execute()
-            with lock:
-                stats["no_data"] += 1
-                stats["total"] += 1
+            stats["no_data"] += 1
+            stats["total"] += 1
             return
 
-        data = extract_with_sonnet(item, with_pdfs=with_pdfs, dry_run=dry_run)
+        data = extract_with_claude(item, with_pdfs=with_pdfs, dry_run=dry_run)
 
         if dry_run:
-            with lock:
-                stats["total"] += 1
+            stats["total"] += 1
             return
 
         if not data:
@@ -643,9 +558,8 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
                 "enrichissement_statut": "echec",
                 "enrichissement_date": now,
             }).eq("id", enchere_id).execute()
-            with lock:
-                stats["errors"] += 1
-                stats["total"] += 1
+            stats["errors"] += 1
+            stats["total"] += 1
             return
 
         # ── Construire l'update ──────────────────────────────────────────
@@ -661,7 +575,7 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
             "tribunal": "tribunal",
             "type_bien": "type_bien",
             "occupation": "occupation",
-            "description_propre": "description",  # remplace le raw_text par le résumé propre
+            "description_propre": "description_resume",  # résumé Sonnet dans colonne dédiée (ne PAS écraser description originale)
             "code_postal": "code_postal",
             "departement": "departement",
             "adresse_complete": "adresse",
@@ -694,9 +608,15 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
         if data.get("loyer_mensuel") and not item.get("loyer"):
             update["loyer"] = data["loyer_mensuel"]
 
-        # Frais préalables
+        # Frais préalables (garde-fou : si > 50% de la MAP, c'est probablement la créance)
         if data.get("frais_prealables") and not item.get("frais_prealables"):
-            update["frais_prealables"] = data["frais_prealables"]
+            frais = data["frais_prealables"]
+            map_ = item.get("mise_a_prix") or 0
+            if map_ > 0 and frais > map_ * 0.5:
+                log.warning(f"  Frais préalables suspects ({frais}€ vs MAP {map_}€) — ignoré (probable créance)")
+                data["frais_prealables"] = None
+            else:
+                update["frais_prealables"] = frais
 
         # Date visite (Sonnet extrait mieux que les regex)
         if data.get("date_visite") and not item.get("date_visite"):
@@ -734,9 +654,8 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
 
         c.table(TABLE).update(update).eq("id", enchere_id).execute()
 
-        with lock:
-            stats["enriched"] += 1
-            stats["total"] += 1
+        stats["enriched"] += 1
+        stats["total"] += 1
 
     except Exception as e:
         log.error(f"Erreur traitement {enchere_id}: {e}")
@@ -747,9 +666,8 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
             }).eq("id", enchere_id).execute()
         except Exception:
             pass
-        with lock:
-            stats["errors"] += 1
-            stats["total"] += 1
+        stats["errors"] += 1
+        stats["total"] += 1
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -789,19 +707,13 @@ def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None,
         log.info("Rien à traiter")
         return stats
 
-    with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-        futures = {
-            executor.submit(process_enchere, eid, with_pdfs, dry_run): eid
-            for eid in ids
-        }
-        for i, future in enumerate(as_completed(futures), 1):
-            eid = futures[future]
-            try:
-                future.result()
-            except Exception as e:
-                log.error(f"Future error {eid}: {e}")
-            if i % 10 == 0:
-                log.info(f"Progression: {i}/{len(ids)} — {json.dumps(stats)}")
+    for i, eid in enumerate(ids, 1):
+        try:
+            process_enchere(eid, with_pdfs, dry_run)
+        except Exception as e:
+            log.error(f"Erreur {eid}: {e}")
+        if i % 10 == 0 or i == len(ids):
+            log.info(f"Progression: {i}/{len(ids)} — {json.dumps(stats)}")
 
     log.info(f"Terminé: {json.dumps(stats)}")
     return stats
