@@ -1,10 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Layout from '@/components/Layout'
-
-// Note: metadata export not possible in client components
-// Title set via document.title in useEffect would be needed for SEO
 
 export default function ContactPage() {
   const [name, setName] = useState('')
