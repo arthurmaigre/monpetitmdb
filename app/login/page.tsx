@@ -118,8 +118,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin}>
             <div className="auth-field">
-              <label className="auth-label">Email</label>
+              <label className="auth-label" htmlFor="login-email">Email</label>
               <input
+                id="login-email"
                 ref={emailRef}
                 className="auth-input"
                 type="email"
@@ -132,9 +133,10 @@ export default function LoginPage() {
             </div>
 
             <div className="auth-field">
-              <label className="auth-label">Mot de passe</label>
+              <label className="auth-label" htmlFor="login-password">Mot de passe</label>
               <div className="pwd-wrap">
                 <input
+                  id="login-password"
                   className="auth-input"
                   type={showPwd ? 'text' : 'password'}
                   placeholder={"••••••••"}

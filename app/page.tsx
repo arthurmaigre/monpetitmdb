@@ -353,7 +353,6 @@ export default function Home() {
                 <span className="strat-tag">Plus-value travaux</span>
                 <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
-              {/* Division masquee — a reactiver quand la strategie sera prete */}
               <div className="strat-card">
                 <div className="strat-icon">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8503a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -361,6 +360,15 @@ export default function Home() {
                 <div className="strat-name">Immeuble de rapport</div>
                 <p className="strat-desc">{"Achetez un immeuble entier en monopropri\u00E9t\u00E9 et revendez lot par lot. La m\u00E9thode des pros accessible \u00E0 tous."}</p>
                 <span className="strat-tag">{"M\u00E9thode MDB"}</span>
+                <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
+              </div>
+              <div className="strat-card">
+                <div className="strat-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8503a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <div className="strat-name">{"Ench\u00E8res"}</div>
+                <p className="strat-desc">{"Rep\u00E9rez les biens aux ench\u00E8res judiciaires et notariales. Prix en dessous du march\u00E9, analyse de la mise \u00E0 prix et estimation de la valeur r\u00E9elle."}</p>
+                <span className="strat-tag">{"D\u00E9cote garantie"}</span>
                 <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
             </div>

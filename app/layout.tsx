@@ -48,8 +48,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <style>{`
-          body { font-size: 16px; line-height: 1.5; }
-          @media (min-width: 768px) { body { font-size: 14px; } }
+          body { font-size: 14px; line-height: 1.5; }
+          @media (min-width: 768px) { body { font-size: 16px; } }
           h1, h2, h3, h4, h5, h6 { line-height: 1.15; }
           p { line-height: 1.5; }
           *:focus-visible {

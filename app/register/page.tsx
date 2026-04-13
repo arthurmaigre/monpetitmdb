@@ -153,8 +153,9 @@ export default function RegisterPage() {
 
               <form onSubmit={handleRegister}>
                 <div className="auth-field">
-                  <label className="auth-label">Email</label>
+                  <label className="auth-label" htmlFor="register-email">Email</label>
                   <input
+                    id="register-email"
                     ref={emailRef}
                     className="auth-input"
                     type="email"
@@ -170,9 +171,10 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="auth-field">
-                  <label className="auth-label">Mot de passe</label>
+                  <label className="auth-label" htmlFor="register-password">Mot de passe</label>
                   <div className="pwd-wrap">
                     <input
+                      id="register-password"
                       className="auth-input"
                       type={showPwd ? 'text' : 'password'}
                       placeholder={"8 caract\u00E8res minimum"}
@@ -202,8 +204,9 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="auth-field">
-                  <label className="auth-label">Confirmer le mot de passe</label>
+                  <label className="auth-label" htmlFor="register-confirm">Confirmer le mot de passe</label>
                   <input
+                    id="register-confirm"
                     className="auth-input"
                     type={showPwd ? 'text' : 'password'}
                     placeholder={"••••••••"}
