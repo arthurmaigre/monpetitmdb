@@ -661,6 +661,7 @@ Branch protection activee sur main (1 review requise pour merge).
 - REFLEXION.md : journal post-tache obligatoire (pattern Reflexion). Auto-evaluation, extraction de skill, partage inter-agents.
 - VEILLE.md : sources de veille exhaustives par domaine. Mis a jour par cron automatique.
 - Protocole de reflexion : dans chaque AGENTS.md — obligatoire apres chaque tache, avant de rapporter au CEO.
+- Pre-validation Plan-Review-Execute : pour toute tache code/audit, l'agent soumet un PLAN avant d'executer. Le CEO evalue (grille GO/AJUSTE/STOP). Critique croisee QA pour taches critiques (Stripe, auth, data). Execution directe uniquement pour taches triviales (typo, CSS).
 - Cross-learnings : `shared/memory/cross-learnings.md` — chaque agent partage ses decouvertes pertinentes pour les autres.
 - Fichiers de flux inter-agents : `insights-marketing.md`, `insights-cs.md`, `seo-updates.md`, `linkedin-insights.md`, `data-marche.md`, `qa-suggestions.md`, `ux-suggestions.md`, `system-improvements.md`, `backlog-technique.md`.
 
