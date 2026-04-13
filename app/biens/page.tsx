@@ -52,7 +52,8 @@ async function getInitialBiens() {
     })
 
     return { biens, total: count ?? biens.length }
-  } catch {
+  } catch (error) {
+    console.error('[SSR] getInitialBiens failed:', error)
     return { biens: [], total: 0 }
   }
 }
