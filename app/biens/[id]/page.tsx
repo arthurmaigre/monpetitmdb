@@ -1896,10 +1896,12 @@ export default function FicheBienPage() {
   useEffect(() => {
     async function load() {
       try {
-      const [bienRes, editsRes, sessionRes] = await Promise.all([
-        fetch(`${apiBase}/${id}`),
-        fetch(`/api/biens/${id}/edits`).catch(() => ({ ok: true, json: async () => ({ champs: {} }) })),
-        supabase.auth.getSession()
+      const sessionRes = await supabase.auth.getSession()
+      const session = sessionRes.data.session
+      const authHeaders = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+      const [bienRes, editsRes] = await Promise.all([
+        fetch(`${apiBase}/${id}`, { headers: authHeaders }),
+        fetch(`/api/biens/${id}/edits`, { headers: authHeaders }).catch(() => ({ ok: true, json: async () => ({ champs: {} }) })),
       ])
       if (!bienRes.ok) { setFetchError(true); setLoading(false); return }
       const bienData = await bienRes.json()
@@ -1926,8 +1928,6 @@ export default function FicheBienPage() {
       }
       setBien(rawBien)
       setChampsStatut(editsData.champs || {})
-
-      const session = sessionRes.data.session
       if (session) {
         setUserToken(session.access_token)
         const profilRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })

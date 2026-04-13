@@ -1243,15 +1243,14 @@ export default function FicheEncherePage() {
   useEffect(() => {
     async function load() {
       try {
-        const [enchereRes, sessionRes] = await Promise.all([
-          fetch(`/api/encheres/${id}`),
-          supabase.auth.getSession()
-        ])
+        const sessionRes = await supabase.auth.getSession()
+        const session = sessionRes.data.session
+        const enchereRes = await fetch(`/api/encheres/${id}`, {
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+        })
         if (!enchereRes.ok) { setFetchError(true); setLoading(false); return }
         const enchereData = await enchereRes.json()
         setEnchere(enchereData.enchere)
-
-        const session = sessionRes.data.session
         if (session) {
           setUserToken(session.access_token)
           const profilRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
