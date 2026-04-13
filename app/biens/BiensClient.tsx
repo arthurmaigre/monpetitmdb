@@ -217,7 +217,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     setError(null)
     setCurrentPage(1)
     scrollRestored.current = false
-    fetch(buildApiUrl(1, view === 'map'))
+    fetch(buildApiUrl(1, view === 'map'), userToken ? { headers: { Authorization: `Bearer ${userToken}` } } : undefined)
       .then(r => { if (!r.ok) throw new Error('Erreur serveur'); return r.json() })
       .then(d => {
         // L'API enchères retourne "encheres", l'API biens retourne "biens"
@@ -235,7 +235,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
     const nextPage = currentPage + 1
-    fetch(buildApiUrl(nextPage))
+    fetch(buildApiUrl(nextPage), userToken ? { headers: { Authorization: `Bearer ${userToken}` } } : undefined)
       .then(r => r.json())
       .then(d => {
         setAllBiens(prev => [...prev, ...(d.biens || d.encheres || [])])

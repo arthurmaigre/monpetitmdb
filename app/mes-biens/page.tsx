@@ -104,9 +104,10 @@ export default function MesBiensPage() {
         const encheresIds = items.filter((w: any) => w.source_table === 'encheres').map((w: any) => w.bien_id)
 
         // Charger biens classiques + enchères en parallèle
+        const authHeaders = { headers: { Authorization: `Bearer ${session.access_token}` } }
         const [biensRes, encheresRes] = await Promise.all([
-          biensIds.length > 0 ? fetch('/api/biens?ids=' + biensIds.join(',')) : Promise.resolve(null),
-          encheresIds.length > 0 ? fetch('/api/encheres?ids=' + encheresIds.join(',')) : Promise.resolve(null)
+          biensIds.length > 0 ? fetch('/api/biens?ids=' + biensIds.join(','), authHeaders) : Promise.resolve(null),
+          encheresIds.length > 0 ? fetch('/api/encheres?ids=' + encheresIds.join(','), authHeaders) : Promise.resolve(null)
         ])
         const biensData = biensRes && biensRes.ok ? await biensRes.json() : { biens: [] }
         const encheresData = encheresRes && encheresRes.ok ? await encheresRes.json() : { encheres: [] }
