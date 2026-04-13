@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Questions fréquentes',
+  openGraph: { title: 'Questions fréquentes | Mon Petit MDB' },
   description:
     'Réponses aux questions fréquentes sur Mon Petit MDB : fonctionnement, tarifs, stratégies MDB, estimation DVF, données et sécurité.',
 }

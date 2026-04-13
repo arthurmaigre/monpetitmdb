@@ -1,15 +1,5 @@
-'use client'
-
-import { useEffect } from 'react'
+import { redirect } from 'next/navigation'
 
 export default function TarifsPage() {
-  useEffect(() => {
-    window.location.href = '/#pricing'
-  }, [])
-
-  return (
-    <head>
-      <meta name="robots" content="noindex, nofollow" />
-    </head>
-  )
+  redirect('/#pricing')
 }

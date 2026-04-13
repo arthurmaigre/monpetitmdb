@@ -423,6 +423,7 @@ export default function BiensPage() {
 
   return (
     <Layout>
+      <h1 className="sr-only">Biens immobiliers à analyser</h1>
       <style>{`
         .main { max-width: 1600px; margin: 0 auto; padding: 32px 48px; box-sizing: border-box; }
         .filter-bar { background: #fff; border-radius: 16px; padding: 16px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
