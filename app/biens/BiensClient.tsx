@@ -27,15 +27,23 @@ function getSessionFilters() {
   } catch { return null }
 }
 
-export default function BiensPage() {
+interface BiensClientProps {
+  initialBiens?: Bien[]
+  initialTotal?: number
+  initialStrategie?: string
+}
+
+export default function BiensPage({ initialBiens, initialTotal, initialStrategie }: BiensClientProps) {
   const saved = useRef(getSessionFilters())
-  const [allBiens, setAllBiens] = useState<Bien[]>([])
+  const hasInitialData = !!(initialBiens && initialBiens.length > 0)
+  const defaultStrategie = saved.current?.strategie || initialStrategie || ''
+  const [allBiens, setAllBiens] = useState<Bien[]>(hasInitialData && !saved.current?.strategie ? initialBiens : [])
   const [metropoles, setMetropoles] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(hasInitialData && !saved.current?.strategie ? false : true)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<'grid' | 'list' | 'map'>(saved.current?.view || 'grid')
   const [filtersOpen, setFiltersOpen] = useState(true)
-  const [strategie, setStrategie] = useState(saved.current?.strategie || '')
+  const [strategie, setStrategie] = useState(defaultStrategie)
   const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
   const [ville, setVille] = useState(saved.current?.ville || 'Toutes')
   const [communeSearch, setCommuneSearch] = useState(saved.current?.communeSearch || '')
@@ -59,8 +67,8 @@ export default function BiensPage() {
   const keywordTimeout = useRef<any>(null)
   const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
   const [tri, setTri] = useState(saved.current?.tri || 'recent')
-  const [totalBiens, setTotalBiens] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
+  const [totalBiens, setTotalBiens] = useState(hasInitialData && !saved.current?.strategie ? (initialTotal ?? 0) : 0)
+  const [hasMore, setHasMore] = useState(hasInitialData && !saved.current?.strategie ? (initialTotal ?? 0) > (initialBiens?.length ?? 0) : false)
   const [currentPage, setCurrentPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -193,9 +201,18 @@ export default function BiensPage() {
     else if (tri === 'prixm2_asc' || tri === 'prixm2_desc' || tri === 'score_desc' || tri === 'date_audience_asc' || tri === 'date_audience_desc') setTri('recent')
   }, [strategie])
 
+  // Skip premier fetch si on a deja les donnees SSR
+  const ssrConsumed = useRef(false)
+
   // Charger les biens quand la strategie ou les filtres changent
   useEffect(() => {
     if (!strategie) { setAllBiens([]); setLoading(false); setTotalBiens(0); setHasMore(false); return }
+    // Skip le premier fetch si les donnees SSR correspondent
+    if (!ssrConsumed.current && hasInitialData && strategie === initialStrategie && !saved.current?.strategie) {
+      ssrConsumed.current = true
+      return
+    }
+    ssrConsumed.current = true
     setLoading(true)
     setError(null)
     setCurrentPage(1)
