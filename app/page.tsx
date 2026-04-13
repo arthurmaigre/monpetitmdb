@@ -182,6 +182,20 @@ export default function Home() {
         .testi-avatar{width:40px;height:40px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:800;font-size:16px;color:var(--red);flex-shrink:0;}
         .testi-name{font-size:14px;font-weight:600;color:var(--ink);}
         .testi-role{font-size:12px;color:var(--muted);}
+        /* MEMO IA */
+        .memo-ia{padding:100px 64px;background:var(--ink);color:#fff;text-align:center;position:relative;overflow:hidden;}
+        .memo-ia::before{content:'';position:absolute;top:-120px;right:-120px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(192,57,43,.15),transparent 70%);pointer-events:none;}
+        .memo-ia-hdr{margin-bottom:56px;}
+        .memo-ia-hdr h2{font-family:'Fraunces',serif;font-size:48px;font-weight:800;letter-spacing:-.02em;margin-bottom:16px;}
+        .memo-ia-hdr p{font-size:17px;color:rgba(255,255,255,.6);max-width:560px;margin:0 auto;}
+        .memo-ia-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1080px;margin:0 auto;}
+        .memo-ia-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:32px 24px;text-align:left;transition:border-color .2s;}
+        .memo-ia-card:hover{border-color:rgba(192,57,43,.4);}
+        .memo-ia-icon{width:48px;height:48px;border-radius:12px;background:rgba(192,57,43,.15);display:flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:22px;}
+        .memo-ia-card h3{font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin-bottom:10px;}
+        .memo-ia-card p{font-size:14px;color:rgba(255,255,255,.55);line-height:1.65;}
+        .memo-ia-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(192,57,43,.15);color:var(--red-light);font-size:13px;font-weight:600;padding:6px 14px;border-radius:20px;margin-bottom:20px;}
+        @media(max-width:768px){.memo-ia{padding:64px 20px;}.memo-ia-hdr h2{font-size:32px;}.memo-ia-grid{grid-template-columns:1fr;}}
         .plan-trial{display:block;margin-top:6px;font-size:13px;color:rgba(255,255,255,.6);font-weight:400;}
         /* FOOTER */
         .lp-footer{background:var(--ink);padding:56px 64px 40px;color:rgba(255,255,255,.6);}
@@ -544,6 +558,35 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* MEMO IA */}
+        <section className="memo-ia fade-in">
+          <div className="memo-ia-hdr">
+            <div className="memo-ia-badge">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5.5L15 6.5L11.5 10L12.5 15L8 12.5L3.5 15L4.5 10L1 6.5L6 5.5L8 1Z" fill="currentColor"/></svg>
+              Assistant IA
+            </div>
+            <h2>Memo, votre assistant immobilier</h2>
+            <p>{"Posez vos questions \u00E0 Memo, l\u2019IA int\u00E9gr\u00E9e qui conna\u00EEt l\u2019immobilier, la fiscalit\u00E9 et les strat\u00E9gies MDB."}</p>
+          </div>
+          <div className="memo-ia-grid">
+            <div className="memo-ia-card">
+              <div className="memo-ia-icon">{'\uD83C\uDFE0'}</div>
+              <h3>{"Analyse d\u2019opportunit\u00E9s"}</h3>
+              <p>{"\u00AB Ce T3 \u00E0 Lyon vaut le coup ? \u00BB \u2014 Memo analyse le prix, le rendement, l\u2019estimation DVF et vous donne un avis argument\u00E9."}</p>
+            </div>
+            <div className="memo-ia-card">
+              <div className="memo-ia-icon">{'\uD83D\uDCCA'}</div>
+              <h3>{"Fiscalit\u00E9 d\u00E9crypt\u00E9e"}</h3>
+              <p>{"\u00AB LMNP r\u00E9el ou micro-BIC ? \u00BB \u2014 Memo compare les r\u00E9gimes fiscaux adapt\u00E9s \u00E0 votre situation et chiffre la diff\u00E9rence."}</p>
+            </div>
+            <div className="memo-ia-card">
+              <div className="memo-ia-icon">{'\uD83D\uDCA1'}</div>
+              <h3>{"Strat\u00E9gies MDB"}</h3>
+              <p>{"\u00AB Comment fonctionne la division ? \u00BB \u2014 Memo explique chaque strat\u00E9gie marchand de biens, avec exemples concrets et chiffres."}</p>
             </div>
           </div>
         </section>
