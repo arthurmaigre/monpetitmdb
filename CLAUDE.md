@@ -610,14 +610,15 @@ Branch protection activee sur main (1 review requise pour merge).
 | Data Analyst | data-analyst | KPIs, funnel AARRR, analytics |
 
 **Architecture :**
-- Tous les agents en `runtime.type: "acp"` (Claude Code Max, Opus 4.6, 0€). Aucun agent n'utilise l'API Anthropic payante.
+- Tous les agents en `runtime.type: "acp"` via `claude-cli` backend (Claude Code Max OAuth, Opus 4.6, 0€). Pas de clé API Anthropic — auth via OAuth subscription Max.
 - CEO lie a Telegram via binding ACP persistent (session Claude Code qui reste ouverte entre les messages).
 - CEO delegue aux 8 autres via `sessions_spawn(runtime="acp")`.
 - maxConcurrent=8, maxChildren=8, timeout=1800s.
 - Hook `pre-push` git bloque tout push direct sur main. Branches + PRs obligatoires.
 - Compaction safeguard + memory flush active (contexte persiste entre les sessions).
 - Memory search active (rappel automatique des conversations passees).
-- Heartbeat CEO toutes les 30 min, 24h/24 : git pull + check SPRINT.md, git log, agents actifs, lance les taches en attente. La nuit il travaille, Arthur valide les PRs au matin.
+- Heartbeat CEO toutes les 30 min, 24h/24 : lance MINIMUM 4 agents par tick (objectif 8), suit ROTATION.md pour la rotation des taches. Rapporte a Arthur ce qu'il a FAIT (pas ce qu'il propose). La nuit il travaille, Arthur valide les PRs au matin.
+- CEO 100% autonome sur les taches operationnelles (lancement agents, audits, branches, PRs). Escalade Arthur uniquement pour : depenses, suppression features, comm publique, merge PRs, acces outils externes.
 
 **Communication inter-agents :**
 - Les agents ne se parlent pas directement. Tout passe par le CEO.
@@ -646,9 +647,17 @@ Branch protection activee sur main (1 review requise pour merge).
 - Les deux lisent et ecrivent au meme endroit = pas de desync.
 - MEMORY.md = index + faits durables. Fichiers .md = details par sujet.
 
-**Escalade Arthur (TOUTE depense + tout acces outil externe) :**
-- Arthur valide chaque euro depense (pas de seuil minimum).
-- Tout besoin d'acces a un outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT.
+**Autonomie CEO (taches operationnelles = pas de demande) :**
+- Lancer agents, assigner taches, creer branches, ouvrir PRs, audits, relances = AUTONOME
+- Anti-pattern : "Je propose de lancer X" → INTERDIT. Correct : "J'ai lance X sur Y."
+
+**Escalade Arthur (UNIQUEMENT ces cas) :**
+- TOUTE depense (0€ seuil)
+- Suppression de code ou features existantes
+- Communications publiques (posts reseaux, emails users prod)
+- Changement strategie produit
+- Merge de PRs
+- Acces outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT
 
 **Budget agents :** 0€ (ACP/Claude Code Max). Seuls les appels API dans le backend Next.js (Haiku extraction/scoring, Memo chat) coutent.
 **Fichiers workspace par agent :**
