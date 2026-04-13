@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [forgotLoading, setForgotLoading] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { document.title = 'Connexion | Mon Petit MDB' }, [])
+
   useEffect(() => { emailRef.current?.focus() }, [])
 
   async function handleOAuth(provider: 'google' | 'facebook') {
