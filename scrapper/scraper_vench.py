@@ -238,6 +238,45 @@ def scrape_detail(url: str, session: requests.Session) -> dict | None:
         elif not src.startswith("http"): src = BASE_URL + "/" + src
         item["photo_url"] = src
 
+    # ── Avocat poursuivant (bloc structuré div.enquiry) ─────────────────
+    for enquiry in soup.find_all("div", class_="enquiry"):
+        role_tag = enquiry.find("p", class_="h4")
+        if not role_tag or "poursuivant" not in role_tag.get_text().lower():
+            continue
+
+        # Nom : dans le premier <p> du contact-form
+        contact = enquiry.find("div", class_="contact-form")
+        if contact:
+            name_tag = contact.find("p")
+            if name_tag:
+                name = name_tag.get_text(strip=True)
+                # Retirer "Maître", "Avocat", "Me"
+                name = re.sub(r"^(?:Ma[îi]tre|Avocat|Me|Mtre|M[eE]\.?)\s+", "", name)
+                name = re.sub(r"\s*Avocat\s*$", "", name)
+                item["avocat_nom"] = name.strip()
+
+        # Adresse + tel + email dans le bloc caché
+        coords = enquiry.find("div", class_="displayAPcoords")
+        if coords:
+            coord_text = coords.get_text("\n", strip=True)
+            # Tel : chercher un numéro 0X... ou 0X-... sur sa propre ligne
+            for line in coord_text.split("\n"):
+                line = line.strip()
+                m_tel = re.match(r"^(0[\d.\s-]{8,}\d)$", line)
+                if m_tel:
+                    digits = re.sub(r"[^\d]", "", m_tel.group(1))
+                    if len(digits) == 10:
+                        item["avocat_tel"] = " ".join([digits[i:i+2] for i in range(0, 10, 2)])
+                    break
+            # Email
+            m_email = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", coord_text)
+            if m_email:
+                item["avocat_email"] = m_email.group()
+        break
+
+    # Note : Vench ne publie pas le nom du cabinet de l'avocat poursuivant.
+    # Le cabinet sera extrait par Sonnet depuis le raw text ou les PDFs si mentionné.
+
     return item
 
 

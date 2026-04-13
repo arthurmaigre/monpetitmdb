@@ -82,15 +82,16 @@ UPDATABLE_FIELDS = {
     "mise_a_prix", "prix_adjuge", "date_audience", "date_visite",
     "date_surenchere", "mise_a_prix_surenchere", "consignation",
     "latitude", "longitude", "photo_url", "documents",
+    "avocat_cabinet", "avocat_tel", "avocat_email",  # scraper Avoventes extrait depuis /cabinet
 }
 
 # Champs protégés : peuplés par Sonnet, jamais écrasés par le scraping
 SONNET_FIELDS = {
     "ville", "tribunal", "type_bien", "adresse", "code_postal", "departement",
     "occupation", "surface", "nb_pieces", "nb_lots", "nb_chambres",
-    "avocat_nom", "avocat_cabinet", "avocat_tel",
+    "avocat_nom",
     "enrichissement_data", "enrichissement_statut", "enrichissement_date",
-    "lots_data", "loyer", "score_travaux",
+    "lots_data", "loyer", "score_travaux", "description_resume",
 }
 
 
@@ -162,10 +163,10 @@ def upsert_encheres_batch(items: list, dry_run: bool = False) -> dict:
                     .eq("source", item["source"]) \
                     .eq("id_source", id_source).limit(1).execute()
 
-                # Description : écraser uniquement si pas encore enrichi par Sonnet
-                if row.data and row.data[0].get("enrichissement_statut") != "ok":
-                    if item.get("description"):
-                        update_data["description"] = item["description"]
+                # Description : toujours écraser avec le raw text du scraping
+                # (le résumé Sonnet est stocké dans description_resume)
+                if item.get("description"):
+                    update_data["description"] = item["description"]
 
                 # MAJ sources JSONB
                 if row.data:
