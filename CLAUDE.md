@@ -591,15 +591,16 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 
 ## OpenClaw — Agents IA (VPS Hetzner)
 
-9 agents IA autonomes sur VPS Hetzner (178.104.58.122, CPX42 8vCPU 16GB RAM).
+10 agents IA autonomes sur VPS Hetzner (178.104.58.122, CPX42 8vCPU 16GB RAM).
 User dedie `openclaw` (isole de root, pas d'acces aux secrets scrapper).
 Gateway OpenClaw 2026.4.11, bot Telegram @AlbusMDB_Bot.
 Branch protection activee sur main (1 review requise pour merge).
+Watchdog cron */2 * * * * — verifie gateway + auth, relance si down (`~/.openclaw/scripts/gateway-watchdog.sh`).
 
-**Agents (9 total — TOUS en ACP / Claude Code Max = Opus 4.6 = 0€) :**
+**Agents (10 total — TOUS en ACP / Claude Code Max = Opus 4.6 = 0€) :**
 | Prenom | ID | Poste |
 |---|---|---|
-| Albus | ceo | CEO — Coordination, pilotage 8 agents, rapports Telegram |
+| Albus | ceo | CEO — Coordination, pilotage 9 agents, rapports Telegram |
 | Harry | developer | Lead Software Engineer |
 | Severus | qa | Quality Assurance Expert |
 | Luna | uiux | Product Designer |
@@ -608,11 +609,12 @@ Branch protection activee sur main (1 review requise pour merge).
 | Sirius | linkedin | Business Development Manager |
 | Ron | customer-success | Customer Success Manager |
 | Neville | data-analyst | Data Analyst |
+| Filius | tax-expert | Expert-Comptable Immobilier (droit & fiscalite) |
 
 **Architecture :**
 - Tous les agents en `runtime.type: "acp"` via `claude-cli` backend (Claude Code Max OAuth, Opus 4.6, 0€). Pas de clé API Anthropic — auth via OAuth subscription Max.
 - CEO lie a Telegram via binding ACP persistent (session Claude Code qui reste ouverte entre les messages).
-- CEO delegue aux 8 autres via `sessions_spawn(runtime="acp")`.
+- CEO delegue aux 9 autres via `sessions_spawn(runtime="acp")`.
 - maxConcurrentSessions=4, maxChildrenPerAgent=3, maxConcurrent=4, timeout=900s.
 - Hook `pre-push` git bloque tout push direct sur main. Branches + PRs obligatoires.
 - Compaction safeguard + memory flush active (contexte persiste entre les sessions).
