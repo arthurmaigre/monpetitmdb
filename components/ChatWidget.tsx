@@ -103,10 +103,16 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
     incrementDailyCount()
 
     try {
+      const token = await (await import('@/lib/supabase')).supabase.auth.getSession().then(r => r.data.session?.access_token)
+      if (!token) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Connectez-vous pour utiliser le chat.' }])
+        setLoading(false)
+        return
+      }
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })), plan, context }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })), context }),
       })
 
       if (!res.ok || !res.body) throw new Error()

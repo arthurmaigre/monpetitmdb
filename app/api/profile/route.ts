@@ -43,9 +43,10 @@ export async function PUT(req: NextRequest) {
   // Cooldown 7 jours pour changement strategie/regime2 en Pro
   const proRestrictedFields = ['strategie_mdb', 'strategie_mdb_2', 'regime2']
   const hasProRestricted = proRestrictedFields.some(f => body[f] !== undefined)
-  if (hasProRestricted && !body._skipCooldown) {
-    const { data: current } = await supabaseAdmin.from('profiles').select('plan, pro_config_updated_at').eq('id', user.id).single()
-    if (current?.plan === 'pro' && current?.pro_config_updated_at) {
+  if (hasProRestricted) {
+    const { data: current } = await supabaseAdmin.from('profiles').select('plan, role, pro_config_updated_at').eq('id', user.id).single()
+    const isAdmin = current?.role === 'admin'
+    if (!isAdmin && current?.plan === 'pro' && current?.pro_config_updated_at) {
       const lastChange = new Date(current.pro_config_updated_at)
       const daysSince = (Date.now() - lastChange.getTime()) / (1000 * 60 * 60 * 24)
       if (daysSince < 7) {
