@@ -1,4 +1,41 @@
 import { NextRequest } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+
+// In-memory rate limiting: key = userId, value = { count, resetAt }
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+const DAILY_LIMITS: Record<string, number | null> = {
+  free: 5,
+  pro: 50,
+  expert: null,
+}
+
+function getNextMidnightUTC(): number {
+  const now = new Date()
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+  return next.getTime()
+}
+
+function checkRateLimit(userId: string, plan: string): { allowed: boolean; remaining: number } {
+  const limit = DAILY_LIMITS[plan] ?? DAILY_LIMITS.free
+  if (limit === null) return { allowed: true, remaining: -1 }
+
+  const now = Date.now()
+  const entry = rateLimitMap.get(userId)
+
+  if (!entry || now >= entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: getNextMidnightUTC() })
+    return { allowed: true, remaining: (limit as number) - 1 }
+  }
+
+  if (entry.count >= (limit as number)) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  entry.count++
+  return { allowed: true, remaining: (limit as number) - entry.count }
+}
 
 const SYSTEM_PROMPTS: Record<string, string> = {
   free: `Tu es Memo, l'assistant de Mon Petit MDB, plateforme de sourcing immobilier pour investisseurs particuliers utilisant la m\u00E9thodologie marchand de biens.
@@ -200,7 +237,6 @@ interface BienContext {
 
 interface ChatRequestBody {
   messages: ChatMessage[]
-  plan: 'free' | 'pro' | 'expert' | null
   context?: BienContext
 }
 
@@ -224,8 +260,47 @@ function getSystemPrompt(plan: string | null): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth: verify Bearer token
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Non autorisé' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    )
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Non autorisé' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Read plan from DB (never trust client)
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single()
+    const plan = (profile?.plan as 'free' | 'pro' | 'expert') || 'free'
+
+    // Rate limiting server-side
+    const { allowed } = checkRateLimit(user.id, plan)
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Limite de messages atteinte pour aujourd\'hui', limit: DAILY_LIMITS[plan] }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     const body: ChatRequestBody = await request.json()
-    const { messages, plan, context } = body
+    const { messages, context } = body
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
