@@ -597,27 +597,27 @@ Gateway OpenClaw 2026.4.11, bot Telegram @AlbusMDB_Bot.
 Branch protection activee sur main (1 review requise pour merge).
 
 **Agents (9 total — TOUS en ACP / Claude Code Max = Opus 4.6 = 0€) :**
-| Agent | ID | Role |
+| Prenom | ID | Poste |
 |---|---|---|
-| CEO Albus | ceo | Coordination, pilotage 8 agents, rapports Telegram |
-| Developer | developer | Code, PRs, corrections techniques |
-| QA Testeur | qa | Tests parcours utilisateur, bugs |
-| UI/UX | uiux | Audit design, coherence visuelle |
-| SEO | seo | Audit technique, mots-cles, JSON-LD |
-| Marketing | marketing | Positionnement, contenu (preparation) |
-| LinkedIn | linkedin | Veille prospects MDB (preparation) |
-| Customer Success | customer-success | Emails, retention, onboarding (preparation) |
-| Data Analyst | data-analyst | KPIs, funnel AARRR, analytics |
+| Albus | ceo | CEO — Coordination, pilotage 8 agents, rapports Telegram |
+| Harry | developer | Lead Software Engineer |
+| Severus | qa | Quality Assurance Expert |
+| Luna | uiux | Product Designer |
+| Hermione | seo | SEO Expert |
+| Minerva | marketing | Head of Marketing |
+| Sirius | linkedin | Business Development Manager |
+| Ron | customer-success | Customer Success Manager |
+| Neville | data-analyst | Data Analyst |
 
 **Architecture :**
 - Tous les agents en `runtime.type: "acp"` via `claude-cli` backend (Claude Code Max OAuth, Opus 4.6, 0€). Pas de clé API Anthropic — auth via OAuth subscription Max.
 - CEO lie a Telegram via binding ACP persistent (session Claude Code qui reste ouverte entre les messages).
 - CEO delegue aux 8 autres via `sessions_spawn(runtime="acp")`.
-- maxConcurrent=8, maxChildren=8, timeout=1800s.
+- maxConcurrentSessions=4, maxChildrenPerAgent=3, maxConcurrent=4, timeout=900s.
 - Hook `pre-push` git bloque tout push direct sur main. Branches + PRs obligatoires.
 - Compaction safeguard + memory flush active (contexte persiste entre les sessions).
 - Memory search active (rappel automatique des conversations passees).
-- Heartbeat CEO toutes les 30 min, 24h/24 : lance MINIMUM 4 agents par tick (objectif 8), suit ROTATION.md pour la rotation des taches. Rapporte a Arthur ce qu'il a FAIT (pas ce qu'il propose). La nuit il travaille, Arthur valide les PRs au matin.
+- Heartbeat CEO toutes les 90 min, 24h/24. Garde-fou charge : si 4+ agents actifs = 0 spawn ; 2-3 actifs = 1 max ; 0-1 actifs = 3 max. Rapporte a Arthur ce qu'il a FAIT (pas ce qu'il propose). La nuit il travaille, Arthur valide les PRs au matin.
 - CEO 100% autonome sur les taches operationnelles (lancement agents, audits, branches, PRs). Escalade Arthur uniquement pour : depenses, suppression features, comm publique, merge PRs, acces outils externes.
 
 **Communication inter-agents :**
@@ -675,16 +675,22 @@ Branch protection activee sur main (1 review requise pour merge).
 - Fichiers de flux inter-agents : `insights-marketing.md`, `insights-cs.md`, `seo-updates.md`, `linkedin-insights.md`, `data-marche.md`, `qa-suggestions.md`, `ux-suggestions.md`, `system-improvements.md`, `backlog-technique.md`.
 
 **8 cycles de travail 24h/24 (toutes les 3h) :**
-- `cycle-06h` : Veille marche + premiers audits (Developer, SEO, QA)
-- `cycle-09h` : Production max — 8 agents en parallele
-- `cycle-12h` : Enchainement — fixes bugs matin + livrables (Developer, QA, Marketing, Data)
-- `cycle-15h` : Croissance (Developer, Marketing, LinkedIn, CS, UI/UX)
-- `cycle-18h` : Technique + verification PRs (Developer, SEO, QA, UI/UX)
-- `cycle-21h` : Deep work nuit — taches complexes (Developer, SEO, Data, QA)
-- `cycle-00h` : Nuit — contenu + emails + dev (Developer, Marketing, CS)
-- `cycle-03h` : Maintenance — dette technique + refresh data (Developer, SEO, Data)
+- `cycle-06h` : Veille marche + premiers audits (Harry, Hermione, Severus) — rapport P0 uniquement
+- `cycle-09h` : Production max — max 4 agents en parallele — FORMAT BILAN MATIN
+- `cycle-12h` : Enchainement — fixes bugs matin + livrables (Harry, Severus, Minerva, Neville) — rapport P0 uniquement
+- `cycle-15h` : Croissance (Harry, Minerva, Sirius, Ron, Luna) — FORMAT BILAN APRES-MIDI
+- `cycle-18h` : Technique + verification PRs (Harry, Hermione, Severus, Luna) — FORMAT BILAN SOIR
+- `cycle-21h` : Deep work nuit — taches complexes (Harry, Hermione, Neville, Severus) — silencieux
+- `cycle-00h` : Nuit — contenu + emails + dev (Harry, Minerva, Ron) — silencieux
+- `cycle-03h` : Maintenance — dette technique + refresh data (Harry, Hermione, Neville) — silencieux
 - Systeme de rotation : chaque agent tourne sur une liste numerotee d'audits/taches (voir ROTATION.md). Jamais d'agent inactif.
 - Cycle auto-alimentant : audits generent des taches → dev code → QA valide → merge → nouveaux audits.
+
+**Formats de rapport Telegram (4 formats canoniques — source : AGENTS.md CEO) :**
+- `FORMAT HEARTBEAT` : toutes les 90 min, toujours envoye — LANCE / EN COURS / LIVRE / SYSTEME / ARTHUR
+- `FORMAT BILAN` : cycles 9h (MATIN), 15h (APRES-MIDI), 18h (SOIR) — LIVRE / EN COURS / PROCHAIN CYCLE / ARTHUR / SYSTEME
+- `FORMAT ALERTE P0` : immediat — bug critique, prod down — SITUATION / IMPACT / FAIT / ETA FIX / ARTHUR
+- `FORMAT DEMANDE` : immediat — outil externe, depense, acces — DE / BESOIN / POURQUOI / COUT / ARTHUR
 
 **Crons periodiques :**
 - `synthese-hebdomadaire` : vendredi 20h — CEO compile cross-learnings, mesure progression SKILLS/REFLEXION
