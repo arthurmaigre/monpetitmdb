@@ -665,8 +665,19 @@ Branch protection activee sur main (1 review requise pour merge).
 - Cross-learnings : `shared/memory/cross-learnings.md` — chaque agent partage ses decouvertes pertinentes pour les autres.
 - Fichiers de flux inter-agents : `insights-marketing.md`, `insights-cs.md`, `seo-updates.md`, `linkedin-insights.md`, `data-marche.md`, `qa-suggestions.md`, `ux-suggestions.md`, `system-improvements.md`, `backlog-technique.md`.
 
-**Crons amelioration continue :**
-- `veille-quotidienne` : 6h tous les jours — CEO dispatch veille aux agents selon le jour (SEO/Marketing/LinkedIn/CS quotidien, Dev lun+jeu, QA mer, Data mar+ven, UIUX lun)
+**8 cycles de travail 24h/24 (toutes les 3h) :**
+- `cycle-06h` : Veille marche + premiers audits (Developer, SEO, QA)
+- `cycle-09h` : Production max — 8 agents en parallele
+- `cycle-12h` : Enchainement — fixes bugs matin + livrables (Developer, QA, Marketing, Data)
+- `cycle-15h` : Croissance (Developer, Marketing, LinkedIn, CS, UI/UX)
+- `cycle-18h` : Technique + verification PRs (Developer, SEO, QA, UI/UX)
+- `cycle-21h` : Deep work nuit — taches complexes (Developer, SEO, Data, QA)
+- `cycle-00h` : Nuit — contenu + emails + dev (Developer, Marketing, CS)
+- `cycle-03h` : Maintenance — dette technique + refresh data (Developer, SEO, Data)
+- Systeme de rotation : chaque agent tourne sur une liste numerotee d'audits/taches (voir ROTATION.md). Jamais d'agent inactif.
+- Cycle auto-alimentant : audits generent des taches → dev code → QA valide → merge → nouveaux audits.
+
+**Crons periodiques :**
 - `synthese-hebdomadaire` : vendredi 20h — CEO compile cross-learnings, mesure progression SKILLS/REFLEXION
 - `meta-veille-systeme-ia` : dimanche 20h — CEO veille OpenClaw/Claude Code/Anthropic/frameworks agents
 - `retrospective-mensuelle` : 1er du mois 10h — bilan progression de chaque agent, ajustements
