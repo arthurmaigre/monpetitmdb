@@ -641,6 +641,11 @@ Branch protection activee sur main (1 review requise pour merge).
 - Tout besoin d'acces a un outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT.
 
 **Budget agents :** 0€ (ACP/Claude Code Max). Seuls les appels API dans le backend Next.js (Haiku extraction/scoring, Memo chat) coutent.
+**Fichiers workspace par agent :**
+- CEO : SOUL.md, AGENTS.md, HEARTBEAT.md, SPRINT.md, USER.md, CLAUDE.md, memory/ (symlink shared)
+- Sub-agents : SOUL.md, AGENTS.md, USER.md, CLAUDE.md
+- Templates vides (IDENTITY.md, TOOLS.md, PLAYBOOK.md) supprimes — tout est dans SOUL.md + AGENTS.md
+
 **Config :** `/home/openclaw/.openclaw/openclaw.json`, workspaces dans `/home/openclaw/.openclaw/workspaces/{agent}/`.
 **Repo dev :** `/home/openclaw/monpetitmdb/` (clone GitHub). Branches + PRs, jamais push main.
 **Gateway :** `nohup openclaw gateway run > ~/gateway.log 2>&1 &`. Verifier : `openclaw health`.
