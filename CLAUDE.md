@@ -10,7 +10,7 @@ Early adopter : -30% a vie pour les 100 premiers abonnes. Code promo `EARLYBIRD`
 ## Stack
 - **Frontend** : Next.js App Router, TypeScript — Vercel
 - **DB** : Supabase Pro (West EU / Ireland) — auth + tables + storage
-- **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE
+- **Auth** : Supabase Auth (email/password + OAuth Google) — callback client-side PKCE, `@supabase/ssr` installé (middleware SSR)
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (mode live)
 - **Scraper legacy** : supprimé (LBC + Moteur Immo, API coupée 2026-03-25)
 - **Sourcing API** : Stream Estate (agregateur, webhooks temps réel + 4 saved searches). Notifications ACTIVÉES (property.ad.create only, strict:true). Table `biens_source_urls` (360k URLs) pour dedup cross-source.
@@ -352,6 +352,22 @@ Colonnes IA (loyer, score_travaux, estimation) **jamais ecrasees** par l'upsert 
 Env vars : `STREAM_ESTATE_API_KEY`, `STREAM_ESTATE_WEBHOOK_SECRET` (inutilise mais present).
 Doc migration complet : `.claude/projects/.../memory/project_migration_stream_estate.md`
 
+## Landing page (`app/page.tsx`)
+
+### Stratégies affichées
+4 stratégies visibles sur la landing (section `#strats`) :
+1. **Locataire en place** — tag "Cashflow immédiat"
+2. **Travaux lourds** — tag "Plus-value travaux"
+3. **Immeuble de rapport** — tag "Méthode MDB"
+4. **Enchères** — tag "Décote garantie"
+
+La stratégie **Division** existe en base (`strategie_mdb`) mais est **masquée** sur la landing et dans les filtres UI (non affichée dans la section strats, non proposée au checkout).
+
+### Badge EARLYBIRD (`components/EarlyAdopterBadge.tsx`)
+Badge statique (pas d'appel API) affiché dans la section pricing sur la landing et dans l'étape 4 de l'onboarding.
+Affiche : `-30 % à vie — Code EARLYBIRD` + instructions pour saisir le code au moment du paiement.
+Le vrai compteur (places restantes) n'est exposé que côté admin via `GET /api/stripe/early-adopter`.
+
 ## Editorial CMS (/editorial)
 
 Pipeline : Opus redige → Sonnet fact-checke → Unsplash photos
@@ -411,6 +427,22 @@ Sommaire : H2 visibles, H3 depliables au clic, auto-deplie si <= 15 entrees, FAQ
 - Memo detecte bugs/suggestions via tag [FEEDBACK:type:cat:summary] dans les reponses
 - ChatWidget parse le tag, POST /api/feedback (upsert same summary → increment counter)
 - Admin `/admin/feedbacks` : cards avec occurrence, type badges, delete
+
+## Sécurité
+
+### Headers HTTP (`next.config.ts`)
+Appliques sur toutes les routes (`/(.*)`), via `async headers()` :
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Content-Security-Policy` : default-src 'self', script-src autorise GTM/Stripe/GA, style-src Google Fonts, connect-src Supabase + Stripe + GA, frame-src Stripe JS, object-src 'none'
+
+### Protection API
+- `GET /api/biens` : exige token Bearer (401 si absent ou invalide) — utilisateur authentifie requis
+- `POST /api/biens` : idem (creation bien + ajout watchlist auto)
+- `GET /api/stripe/early-adopter` : exige token Bearer + role `admin` en base (401 sinon)
+- Routes `/api/admin/*` : header `Authorization: Bearer <CRON_SECRET>` pour les crons, token user pour les appels UI
 
 ## Deploiement
 - **Auto-deploy** : git push → GitHub → Vercel auto-deploy (env vars dans Vercel Dashboard)
@@ -479,6 +511,14 @@ Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
 - Google Search Console configuree sur `www.monpetitmdb.fr`
 
 ## Auth
+
+### Middleware (`middleware.ts`)
+- Protege les routes : `/admin/*`, `/mes-biens/*`, `/mon-profil/*`, `/parametres/*`, `/onboarding/*`
+- Utilise `@supabase/ssr` (`createServerClient`) pour verifier la session via cookies
+- Si pas de session → redirect `/login?redirect=[pathname]`
+- Matcher Next.js configure sur les memes 5 prefixes (pas de regex globale)
+
+### Providers & config
 - **Google OAuth** : actif
 - **Facebook OAuth** : actif (Meta app Live, domaine verifie)
 - **Email/password** : actif avec confirmation email
