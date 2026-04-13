@@ -39,6 +39,9 @@ export default function Image() {
         {/* Title */}
         <div
           style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
             fontSize: '68px',
             fontWeight: 700,
             color: '#1a1210',
@@ -49,9 +52,8 @@ export default function Image() {
             lineHeight: 1.1,
           }}
         >
-          Biens immobiliers
-          <br />
-          à analyser
+          <span>Biens immobiliers</span>
+          <span>à analyser</span>
         </div>
 
         {/* Divider */}
