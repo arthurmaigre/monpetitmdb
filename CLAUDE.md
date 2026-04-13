@@ -652,9 +652,29 @@ Branch protection activee sur main (1 review requise pour merge).
 
 **Budget agents :** 0€ (ACP/Claude Code Max). Seuls les appels API dans le backend Next.js (Haiku extraction/scoring, Memo chat) coutent.
 **Fichiers workspace par agent :**
-- CEO : SOUL.md, AGENTS.md, HEARTBEAT.md, SPRINT.md, USER.md, CLAUDE.md, memory/ (symlink shared)
-- Sub-agents : SOUL.md, AGENTS.md, USER.md, CLAUDE.md
+- CEO : SOUL.md, AGENTS.md, HEARTBEAT.md, SPRINT.md, USER.md, CLAUDE.md, SKILLS.md, REFLEXION.md, VEILLE.md, memory/ (symlink shared)
+- Sub-agents : SOUL.md, AGENTS.md, USER.md, CLAUDE.md, SKILLS.md, REFLEXION.md, VEILLE.md
 - Templates vides (IDENTITY.md, TOOLS.md, PLAYBOOK.md) supprimes — tout est dans SOUL.md + AGENTS.md
+
+**Amelioration continue (mis en place 2026-04-13) :**
+- SKILLS.md : bibliotheque de competences par agent (pattern Memento-Skills). Score confiance 1-10, evolue apres chaque tache.
+- REFLEXION.md : journal post-tache obligatoire (pattern Reflexion). Auto-evaluation, extraction de skill, partage inter-agents.
+- VEILLE.md : sources de veille exhaustives par domaine. Mis a jour par cron automatique.
+- Protocole de reflexion : dans chaque AGENTS.md — obligatoire apres chaque tache, avant de rapporter au CEO.
+- Cross-learnings : `shared/memory/cross-learnings.md` — chaque agent partage ses decouvertes pertinentes pour les autres.
+- Fichiers de flux inter-agents : `insights-marketing.md`, `insights-cs.md`, `seo-updates.md`, `linkedin-insights.md`, `data-marche.md`, `qa-suggestions.md`, `ux-suggestions.md`, `system-improvements.md`, `backlog-technique.md`.
+
+**Crons amelioration continue :**
+- `veille-quotidienne` : 6h tous les jours — CEO dispatch veille aux agents selon le jour (SEO/Marketing/LinkedIn/CS quotidien, Dev lun+jeu, QA mer, Data mar+ven, UIUX lun)
+- `synthese-hebdomadaire` : vendredi 20h — CEO compile cross-learnings, mesure progression SKILLS/REFLEXION
+- `meta-veille-systeme-ia` : dimanche 20h — CEO veille OpenClaw/Claude Code/Anthropic/frameworks agents
+- `retrospective-mensuelle` : 1er du mois 10h — bilan progression de chaque agent, ajustements
+
+**Conventions de nommage :** voir `/home/openclaw/.openclaw/shared/CONVENTIONS.md`
+- Audits : `YYYY-MM-DD-{agent}-{sujet}.md` (minuscules, tirets, date en tete)
+- Memory permanente : `{type}_{sujet}.md` (project_, feedback_)
+- Flux inter-agents : `{sujet}.md` (tirets, append-only)
+- Triage : audits > 7 jours archives dans `YYYY-MM/`
 
 **Config :** `/home/openclaw/.openclaw/openclaw.json`, workspaces dans `/home/openclaw/.openclaw/workspaces/{agent}/`.
 **Repo dev :** `/home/openclaw/monpetitmdb/` (clone GitHub). Branches + PRs, jamais push main.
