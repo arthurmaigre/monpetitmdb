@@ -630,6 +630,12 @@ Branch protection activee sur main (1 review requise pour merge).
 - Changement hors code (config, infra, services, decisions produit) → CEO ouvre une branche docs/ et fait une PR.
 - Regle : si c'est dans le produit, ca doit etre dans CLAUDE.md.
 
+**Memoire partagee :**
+- Dossier unique : `/home/openclaw/.openclaw/shared/memory/`
+- Symlinke dans le workspace CEO (`~/.openclaw/workspaces/ceo/memory/`) ET dans Claude Code (`~/.claude/projects/.../memory/`)
+- Les deux lisent et ecrivent au meme endroit = pas de desync.
+- MEMORY.md = index + faits durables. Fichiers .md = details par sujet.
+
 **Escalade Arthur (TOUTE depense + tout acces outil externe) :**
 - Arthur valide chaque euro depense (pas de seuil minimum).
 - Tout besoin d'acces a un outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT.
