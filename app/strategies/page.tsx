@@ -7,7 +7,6 @@ export default function StrategiesPage() {
   const [activeSection, setActiveSection] = useState('s1')
 
   useEffect(() => {
-    document.title = "Strat\u00E9gies d\u2019investissement immobilier | Mon Petit MDB"
     const hash = window.location.hash.replace('#', '')
     if (hash && ['s1', 's2', 's3', 's4'].includes(hash)) {
       setTimeout(() => {

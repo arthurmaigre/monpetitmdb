@@ -14,7 +14,7 @@ export default function RegisterPage() {
   const [showPwd, setShowPwd] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { document.title = "Cr\u00E9er un compte | Mon Petit MDB" }, [])
+
   useEffect(() => { emailRef.current?.focus() }, [])
 
   function getPasswordStrength(pwd: string): { label: string; color: string; width: string } {

@@ -7,8 +7,6 @@ import Layout from '@/components/Layout'
 // Title set via document.title in useEffect would be needed for SEO
 
 export default function ContactPage() {
-  useEffect(() => { document.title = 'Contact | Mon Petit MDB' }, [])
-
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [subject, setSubject] = useState('')

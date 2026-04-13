@@ -57,8 +57,6 @@ const faqs = [
 export default function FaqPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
-  useEffect(() => { document.title = 'Questions fr\u00E9quentes | Mon Petit MDB' }, [])
-
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
