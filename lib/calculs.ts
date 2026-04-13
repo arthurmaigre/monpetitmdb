@@ -28,21 +28,30 @@ export type RegimeFiscal =
 // Frais d'acquisition enchère judiciaire
 // ═══════════════════════════════════════════════════════════════
 
-export function calculerFraisEnchere(prixAdjuge: number, fraisPrealables?: number): {
+export function calculerFraisEnchere(
+  prixAdjuge: number,
+  fraisPrealables?: number,
+  options?: { isMDB?: boolean }
+): {
   emoluments_ht: number
   emoluments_ttc: number
+  emoluments_poursuivant_ttc: number
+  emoluments_adjudicataire_ttc: number
   droits_enregistrement: number
+  frais_publication: number
   frais_prealables: number
   total: number
   pct: number
 } {
-  // Émoluments avocat (barème réglementé)
+  const isMDB = options?.isMDB ?? false
+
+  // Émoluments avocat — barème réglementé Didiercam (taux exacts)
   let emoluments = 0
   const tranches = [
-    { plafond: 6500, taux: 0.072 },
-    { plafond: 17000, taux: 0.03 },
-    { plafond: 60000, taux: 0.02 },
-    { plafond: Infinity, taux: 0.01 },
+    { plafond: 6500, taux: 0.07256 },
+    { plafond: 17000, taux: 0.02993 },
+    { plafond: 60000, taux: 0.01995 },
+    { plafond: Infinity, taux: 0.01497 },
   ]
   let reste = prixAdjuge
   let seuil = 0
@@ -54,15 +63,33 @@ export function calculerFraisEnchere(prixAdjuge: number, fraisPrealables?: numbe
     seuil = plafond
   }
 
-  const emoluments_ttc = Math.round(emoluments * 1.2) // TVA 20%
-  const droits_enregistrement = Math.round(prixAdjuge * 0.058) // 5,8%
+  const emoluments_ttc = Math.round(emoluments * 1.2 * 100) / 100
+  // Répartition poursuivant 3/4, adjudicataire 1/4
+  const emoluments_poursuivant_ttc = Math.round(emoluments_ttc * 0.75 * 100) / 100
+  const emoluments_adjudicataire_ttc = Math.round(emoluments_ttc * 0.25 * 100) / 100
+
+  // Droits d'enregistrement : 5.8% particulier, 0.715% MDB
+  const tauxDroits = isMDB ? 0.00715 : 0.058
+  const droits_enregistrement = Math.round(prixAdjuge * tauxDroits * 100) / 100
+
+  // Frais de publication (contribution de sécurité immobilière)
+  let frais_publication = 0
+  if (prixAdjuge <= 60000) {
+    frais_publication = 62 // forfait fixe ~61-63€
+  } else {
+    frais_publication = Math.round(prixAdjuge * 0.001 * 100) / 100 // 0.1% au-delà
+  }
+
   const fp = fraisPrealables || 0
-  const total = emoluments_ttc + droits_enregistrement + fp
+  const total = Math.round((emoluments_ttc + droits_enregistrement + frais_publication + fp) * 100) / 100
 
   return {
-    emoluments_ht: Math.round(emoluments),
+    emoluments_ht: Math.round(emoluments * 100) / 100,
     emoluments_ttc,
+    emoluments_poursuivant_ttc,
+    emoluments_adjudicataire_ttc,
     droits_enregistrement,
+    frais_publication,
     frais_prealables: fp,
     total,
     pct: prixAdjuge > 0 ? Math.round(total / prixAdjuge * 1000) / 10 : 0,
