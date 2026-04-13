@@ -7,6 +7,7 @@ export default function LandingHeader() {
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -49,18 +50,44 @@ export default function LandingHeader() {
     return () => document.removeEventListener('click', handleClick)
   }, [menuOpen])
 
-  if (!user) {
-    return (
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <a href="/login" className="btn-o">Se connecter</a>
-        <a href="/register" className="btn-p">Commencer gratuitement</a>
-      </div>
-    )
-  }
-
   return (
     <>
       <style>{`
+        .lp-hamburger {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: 40px; height: 40px;
+          background: none; border: none;
+          font-size: 22px; cursor: pointer;
+          color: var(--ink); padding: 0; flex-shrink: 0;
+        }
+        @media (max-width: 767px) {
+          .lp-hamburger { display: flex; }
+        }
+        .lp-mobile-overlay {
+          position: fixed; top: 60px; left: 0; right: 0; bottom: 0;
+          background: #fff; z-index: 200;
+          display: flex; flex-direction: column;
+          padding: 24px 20px; gap: 0;
+          border-top: 1px solid var(--sand);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+          overflow-y: auto;
+        }
+        .lp-mobile-nav-link {
+          display: block; padding: 16px 8px;
+          font-size: 16px; font-weight: 500;
+          color: var(--ink); text-decoration: none;
+          border-bottom: 1px solid var(--sand);
+          font-family: 'DM Sans', sans-serif;
+          transition: color 150ms ease;
+        }
+        .lp-mobile-nav-link:last-of-type { border-bottom: none; }
+        .lp-mobile-nav-link:hover { color: var(--red); }
+        .lp-mobile-nav-actions {
+          display: flex; flex-direction: column; gap: 10px;
+          margin-top: 24px;
+        }
         .lp-user-wrap { position: relative; }
         .lp-user-pill {
           display: flex; align-items: center; gap: 8px;
@@ -98,44 +125,72 @@ export default function LandingHeader() {
         .lp-dd-item.logout { color: var(--red); }
       `}</style>
 
-      <div className="lp-user-wrap">
-        <button className="lp-user-pill" onClick={() => setMenuOpen(!menuOpen)}>
-          <span className="lp-user-email">{user.email}</span>
-          <span className="lp-user-avatar">{(user.email || '?')[0].toUpperCase()}</span>
-        </button>
-        <div className={`lp-user-dropdown ${menuOpen ? 'open' : ''}`}>
-          <a href="/biens" className="lp-dd-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
-            Biens Immobiliers
-          </a>
-          <a href="/mes-biens" className="lp-dd-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            Ma Watchlist
-          </a>
-          <a href="/mon-profil" className="lp-dd-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Mon Profil
-          </a>
-          <a href="/parametres" className="lp-dd-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            {"Mes param\u00E8tres"}
-          </a>
-          {userRole === 'admin' && (
-            <>
-              <div className="lp-dd-sep" />
-              <a href="/admin" className="lp-dd-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                Administration
-              </a>
-            </>
-          )}
-          <div className="lp-dd-sep" />
-          <button className="lp-dd-item logout" onClick={handleLogout}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            {"D\u00E9connexion"}
-          </button>
+      <button
+        className="lp-hamburger"
+        onClick={() => setMobileNavOpen(!mobileNavOpen)}
+        aria-label={mobileNavOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+      >
+        {mobileNavOpen ? '✕' : '☰'}
+      </button>
+
+      {mobileNavOpen && (
+        <div className="lp-mobile-overlay">
+          <a href="/biens" className="lp-mobile-nav-link" onClick={() => setMobileNavOpen(false)}>Biens</a>
+          <a href="/strategies" className="lp-mobile-nav-link" onClick={() => setMobileNavOpen(false)}>{"Strat\u00E9gies"}</a>
+          <a href="/blog" className="lp-mobile-nav-link" onClick={() => setMobileNavOpen(false)}>Conseils</a>
+          <a href="/#pricing" className="lp-mobile-nav-link" onClick={() => setMobileNavOpen(false)}>Tarifs</a>
+          <div className="lp-mobile-nav-actions">
+            <a href="/login" className="btn-o" style={{ textAlign: 'center', padding: '12px 20px' }}>Connexion</a>
+            <a href="/register" className="btn-p" style={{ textAlign: 'center', padding: '12px 20px' }}>Inscription</a>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!user ? (
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <a href="/login" className="btn-o">Se connecter</a>
+          <a href="/register" className="btn-p">Commencer gratuitement</a>
+        </div>
+      ) : (
+        <div className="lp-user-wrap">
+          <button className="lp-user-pill" onClick={() => setMenuOpen(!menuOpen)}>
+            <span className="lp-user-email">{user.email}</span>
+            <span className="lp-user-avatar">{(user.email || '?')[0].toUpperCase()}</span>
+          </button>
+          <div className={`lp-user-dropdown ${menuOpen ? 'open' : ''}`}>
+            <a href="/biens" className="lp-dd-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+              Biens Immobiliers
+            </a>
+            <a href="/mes-biens" className="lp-dd-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              Ma Watchlist
+            </a>
+            <a href="/mon-profil" className="lp-dd-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Mon Profil
+            </a>
+            <a href="/parametres" className="lp-dd-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              {"Mes param\u00E8tres"}
+            </a>
+            {userRole === 'admin' && (
+              <>
+                <div className="lp-dd-sep" />
+                <a href="/admin" className="lp-dd-item">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  Administration
+                </a>
+              </>
+            )}
+            <div className="lp-dd-sep" />
+            <button className="lp-dd-item logout" onClick={handleLogout}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              {"D\u00E9connexion"}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
