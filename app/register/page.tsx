@@ -126,6 +126,16 @@ export default function RegisterPage() {
           <h1 className="auth-title">Créer un compte</h1>
           <p className="auth-sub">Rejoignez Mon Petit MDB gratuitement</p>
 
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <li style={{ fontSize: '14px', color: '#1a7a40', fontWeight: 500 }}>✓ Analysez des biens immobiliers selon la méthode MDB</li>
+            <li style={{ fontSize: '14px', color: '#1a7a40', fontWeight: 500 }}>✓ Simulation fiscale sur 7 régimes (LMNP, SCI IS, MdB...)</li>
+            <li style={{ fontSize: '14px', color: '#1a7a40', fontWeight: 500 }}>✓ Early Bird : -30% à vie avec le code EARLYBIRD</li>
+          </ul>
+
+          <div style={{ background: '#fff8e1', border: '1.5px solid #f39c12', borderRadius: '10px', padding: '10px 14px', marginBottom: '24px', fontSize: '13px', color: '#7a4f00', fontWeight: 600, textAlign: 'center' }}>
+            🎯 Offre Early Bird — Code <span style={{ letterSpacing: '0.08em' }}>EARLYBIRD</span> — -30% à vie pour les 100 premiers
+          </div>
+
           {success ? (
             <div className="auth-success" style={{ textAlign: 'left', padding: '24px' }}>
               <div style={{ fontSize: '20px', marginBottom: '8px' }}>{'\u2705'}</div>

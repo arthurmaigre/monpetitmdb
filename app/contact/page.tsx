@@ -11,6 +11,7 @@ export default function ContactPage() {
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -19,7 +20,7 @@ export default function ContactPage() {
     e.preventDefault()
     setError('')
 
-    if (!name.trim() || !email.trim() || !message.trim()) {
+    if (!name.trim() || !email.trim() || !subject || !message.trim()) {
       setError('Veuillez remplir tous les champs.')
       return
     }
@@ -100,6 +101,23 @@ export default function ContactPage() {
                     onChange={e => setEmail(e.target.value)}
                     required
                   />
+                </div>
+
+                <div className="contact-field">
+                  <label className="contact-label">{"Sujet *"}</label>
+                  <select
+                    className="contact-input"
+                    value={subject}
+                    onChange={e => setSubject(e.target.value)}
+                    required
+                  >
+                    <option value="">Sélectionnez un sujet</option>
+                    <option value="Bug">Bug</option>
+                    <option value="Question">Question</option>
+                    <option value="Suggestion">Suggestion</option>
+                    <option value="Partenariat">Partenariat</option>
+                    <option value="Autre">Autre</option>
+                  </select>
                 </div>
 
                 <div className="contact-field">
