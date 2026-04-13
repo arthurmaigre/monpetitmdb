@@ -54,7 +54,7 @@ monpetitmdb/
 │   │   ├── editorial/calendar/ # CRUD calendrier editorial (GET/PATCH)
 │   │   └── feedback/           # Feedbacks utilisateurs via Memo (GET/POST/DELETE)
 │   ├── auth/callback/          # OAuth callback client-side (PKCE + implicit), redirige /onboarding si nouveau user
-│   ├── onboarding/             # Tunnel inscription 5 etapes (infos, fiscalite, financement, abonnement, strategies)
+│   ├── onboarding/             # Tunnel inscription 3 etapes (profil+fiscal, financement, abonnement+strategie)
 │   ├── page.tsx                # Landing page (hero, strategies, pricing, screenshot)
 │   ├── admin/                  # Dashboard admin (index)
 │   ├── admin/biens/            # Admin gestion biens
@@ -527,12 +527,10 @@ Colonne `suivi` (TEXT) sur table `watchlist`, persistee en base
 - **Onboarding** : detection nouveau user (pas de `strategie_mdb`) → redirect `/onboarding`
 
 ## Tunnel d'onboarding (`/onboarding`)
-5 etapes apres la creation de compte :
-1. **Vos informations** : prenom, nom (pre-rempli Google OAuth), toggle "Je suis professionnel" → entreprise
-2. **Votre fiscalite** : TMI + regime fiscal (obligatoire)
-3. **Votre financement** : type credit (amortissable/in fine), apport (montant € ou % autofinancement), taux credit, taux assurance, duree (skippable)
-4. **Votre abonnement** : Free/Pro/Expert (meme format que landing), badge EarlyAdopterBadge avec code `EARLYBIRD`, checkout Stripe avec retour `/onboarding?step=5&plan=xxx`
-5. **Votre projet** : strategies adaptees au plan (Free=1, Pro=2 hors IDR, Expert=toutes)
+3 etapes apres la creation de compte :
+1. **Profil investisseur** : prenom, nom (pre-rempli Google OAuth), toggle "Je suis professionnel" → entreprise + TMI + regime fiscal
+2. **Financement** : type credit (amortissable/in fine), apport (montant € ou % autofinancement), taux credit, taux assurance, duree (skippable)
+3. **Abonnement** : Free/Pro/Expert (meme format que landing), badge EarlyAdopterBadge avec code `EARLYBIRD`, checkout Stripe + choix strategies adaptees au plan (Free=1, Pro=2 hors IDR, Expert=toutes)
 
 ## Admin — Gestion utilisateurs (`/admin/users`)
 - **Colonnes** : utilisateur (prenom/nom/email), plan (editable), role (editable), strategie, Stripe (badge statut + dernier paiement + renouvellement), derniere connexion (last_sign_in_at + "il y a Xj"), inscription
@@ -598,30 +596,42 @@ User dedie `openclaw` (isole de root, pas d'acces aux secrets scrapper).
 Gateway OpenClaw 2026.4.11, bot Telegram @AlbusMDB_Bot.
 Branch protection activee sur main (1 review requise pour merge).
 
-**Agents :**
-| Agent | ID | Modele | Role |
-|---|---|---|---|
-| CEO Albus | ceo | claude-opus-4-6 | Coordination, rapports quotidiens, lean |
-| Developer | developer | claude-sonnet-4-6 | Code, PRs, ameliorations techniques |
-| QA Testeur | qa | claude-haiku-4-5 | Tests parcours utilisateur, bugs |
-| UI/UX | uiux | claude-sonnet-4-6 | Audit design, coherence visuelle |
-| SEO | seo | claude-haiku-4-5 | Audit technique, mots-cles, positions |
-| Marketing | marketing | claude-sonnet-4-6 | Positionnement, contenu (preparation) |
-| LinkedIn | linkedin | claude-sonnet-4-6 | Veille prospects MDB (preparation) |
-| Customer Success | customer-success | claude-sonnet-4-6 | Emails, retention, onboarding (preparation) |
-| Data Analyst | data-analyst | claude-haiku-4-5 | KPIs, funnel AARRR, analytics |
+**Agents (9 total — TOUS en ACP / Claude Code Max = Opus 4.6 = 0€) :**
+| Agent | ID | Role |
+|---|---|---|
+| CEO Albus | ceo | Coordination, pilotage 8 agents, rapports Telegram |
+| Developer | developer | Code, PRs, corrections techniques |
+| QA Testeur | qa | Tests parcours utilisateur, bugs |
+| UI/UX | uiux | Audit design, coherence visuelle |
+| SEO | seo | Audit technique, mots-cles, JSON-LD |
+| Marketing | marketing | Positionnement, contenu (preparation) |
+| LinkedIn | linkedin | Veille prospects MDB (preparation) |
+| Customer Success | customer-success | Emails, retention, onboarding (preparation) |
+| Data Analyst | data-analyst | KPIs, funnel AARRR, analytics |
 
-**Architecture :** CEO seul agent sur Telegram, delegue aux 8 autres via `sessions_spawn` (sub-agents asynchrones).
-**Sub-agents :** maxConcurrent=4, maxChildren=3, timeout=1800s. Default skills: read, exec.
-**Budget :** 10 euros/jour max, alerte a 7 euros. Process echantillon obligatoire (1→10→100→full) pour toute API payante.
+**Architecture :**
+- Tous les agents en `runtime.type: "acp"` (Claude Code Max, Opus 4.6, 0€). Aucun agent n'utilise l'API Anthropic payante.
+- CEO lie a Telegram via binding ACP persistent (session Claude Code qui reste ouverte entre les messages).
+- CEO delegue aux 8 autres via `sessions_spawn(runtime="acp")`.
+- maxConcurrent=8, maxChildren=8, timeout=1800s.
+- Hook `pre-push` git bloque tout push direct sur main. Branches + PRs obligatoires.
+- Compaction safeguard + memory flush active (contexte persiste entre les sessions).
+- Memory search active (rappel automatique des conversations passees).
+
+**Communication inter-agents :**
+- Les agents ne se parlent pas directement. Tout passe par le CEO.
+- Rapports d'audit ecrits dans `/home/openclaw/.openclaw/shared/audits/YYYY-MM-DD-[agent]-[sujet].md`
+- Format standardise : severite, fichier source, fix recommande (code exact).
+- Le CEO lit les rapports, extrait les taches, et lance Developer avec des prompts PRECIS (fichier + ligne + code).
+
+**Escalade Arthur (TOUTE depense + tout acces outil externe) :**
+- Arthur valide chaque euro depense (pas de seuil minimum).
+- Tout besoin d'acces a un outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT.
+
+**Budget agents :** 0€ (ACP/Claude Code Max). Seuls les appels API dans le backend Next.js (Haiku extraction/scoring, Memo chat) coutent.
 **Config :** `/home/openclaw/.openclaw/openclaw.json`, workspaces dans `/home/openclaw/.openclaw/workspaces/{agent}/`.
-**Repo clone :** `/home/openclaw/.openclaw/workspaces/developer/repo/` (Developer agent push des branches, jamais main).
-**Audits partages :** `/home/openclaw/.openclaw/shared/audits/` — symlinke dans tous les workspaces. Les agents ecrivent leurs rapports dans `audits/audit_[agent]_[date].md`, le Developer les lit pour prioriser.
-**Browser :** sandbox SSRF bloque les URLs hostname. Les agents utilisent `curl` en fallback pour analyser les pages.
-**Gateway :** lancer via `screen -dmS oc su - openclaw -c 'ANTHROPIC_API_KEY=... openclaw gateway run'`. Verifier avec `tail /home/openclaw/gateway.log`.
-**Auth agents :** Claude Max (login OAuth, pas d'API key). GitHub via `gh auth login` (arthurmaigre). Git config global (arthurmaigre / arthur.maigre@gmail.com).
-**Isolation securite :** openclaw n'a PAS acces a `/root/` (drwx------), pas de sudo, pas de variables Supabase. Le `.env` openclaw contient uniquement GITHUB_TOKEN + TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (pas d'ANTHROPIC_API_KEY).
-**Repo dev :** `/home/openclaw/monpetitmdb/` (clone GitHub). Les agents travaillent ici, creent des branches et des PRs.
+**Repo dev :** `/home/openclaw/monpetitmdb/` (clone GitHub). Branches + PRs, jamais push main.
+**Gateway :** `nohup openclaw gateway run > ~/gateway.log 2>&1 &`. Verifier : `openclaw health`.
 **Phase actuelle :** Phase 1 — Stabilisation/audit avant lancement beta. Pas de marketing actif.
 
 ## Regles absolues
