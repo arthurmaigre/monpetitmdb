@@ -36,6 +36,22 @@ const faqs = [
     question: "Comment contacter le support\u00A0?",
     answer: "Vous pouvez nous \u00E9crire via la page Contact accessible depuis le footer du site ou poser vos questions directement \u00E0 Memo, notre assistant IA int\u00E9gr\u00E9, disponible sur chaque page."
   },
+  {
+    question: "Comment fonctionne l\u2019analyse fiscale\u00A0?",
+    answer: "MonPetitMDB simule votre situation sur 5 r\u00E9gimes fiscaux (Nu micro-foncier, Nu r\u00E9el, LMNP micro-BIC, LMNP r\u00E9el, SCI \u00E0 l\u2019IS, Marchand de biens). Chaque r\u00E9gime calcule votre cashflow net d\u2019imp\u00F4t et votre bilan de revente selon votre TMI et votre dur\u00E9e de d\u00E9tention."
+  },
+  {
+    question: "Qu\u2019est-ce que la strat\u00E9gie Ench\u00E8res\u00A0?",
+    answer: "Les ventes aux ench\u00E8res judiciaires permettent d\u2019acqu\u00E9rir des biens avec une d\u00E9cote de 10 \u00E0 40\u00A0% sur le prix du march\u00E9. MonPetitMDB agr\u00E8ge les annonces de 3 tribunaux (Licitor, Avoventes, Vench) et calcule automatiquement votre prix cible maximum pour viser 20\u00A0% de plus-value brute."
+  },
+  {
+    question: "Comment est calcul\u00E9e l\u2019estimation DVF\u00A0?",
+    answer: "L\u2019estimation est bas\u00E9e sur les transactions notariales r\u00E9elles (donn\u00E9es DVF Cerema), filtr\u00E9es par type de bien, surface et localisation. Des correcteurs qualitatifs sont appliqu\u00E9s (DPE, \u00E9tage, ext\u00E9rieur, parking). C\u2019est le prix de revente \u00AB\u00A0en bon \u00E9tat\u00A0\u00BB, pas un prix d\u2019achat d\u00E9cot\u00E9."
+  },
+  {
+    question: "Puis-je annuler mon abonnement\u00A0?",
+    answer: "Oui, \u00E0 tout moment depuis votre espace Mon Profil \u2192 Facturation \u2192 G\u00E9rer mon abonnement. L\u2019annulation prend effet \u00E0 la fin de la p\u00E9riode en cours. Vos donn\u00E9es sont conserv\u00E9es en plan Free."
+  },
 ]
 
 export default function FaqPage() {
