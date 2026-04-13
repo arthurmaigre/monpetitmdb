@@ -625,6 +625,11 @@ Branch protection activee sur main (1 review requise pour merge).
 - Format standardise : severite, fichier source, fix recommande (code exact).
 - Le CEO lit les rapports, extrait les taches, et lance Developer avec des prompts PRECIS (fichier + ligne + code).
 
+**Maintenance CLAUDE.md :**
+- Changement code → Developer met a jour CLAUDE.md dans le meme commit.
+- Changement hors code (config, infra, services, decisions produit) → CEO ouvre une branche docs/ et fait une PR.
+- Regle : si c'est dans le produit, ca doit etre dans CLAUDE.md.
+
 **Escalade Arthur (TOUTE depense + tout acces outil externe) :**
 - Arthur valide chaque euro depense (pas de seuil minimum).
 - Tout besoin d'acces a un outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT.
