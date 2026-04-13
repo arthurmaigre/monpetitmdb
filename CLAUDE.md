@@ -625,6 +625,16 @@ Branch protection activee sur main (1 review requise pour merge).
 - Format standardise : severite, fichier source, fix recommande (code exact).
 - Le CEO lit les rapports, extrait les taches, et lance Developer avec des prompts PRECIS (fichier + ligne + code).
 
+**Webhook GitHub → QA automatique :**
+- GitHub envoie un webhook a `http://178.104.58.122:18789/hooks/github` quand une PR est mergee
+- Le gateway reveille Albus immediatement (mode "now")
+- Albus fait git pull, identifie les changements, lance QA sur les flows impactes
+- Gateway bind=lan (accessible depuis l'exterieur), protege par token webhook
+
+**Chainage agents :**
+- Albus enchaine les agents dans le meme heartbeat (audit → fix → verify) sans attendre le tick suivant
+- Utilise sessions_send pour envoyer des instructions a un agent deja actif
+
 **Maintenance CLAUDE.md :**
 - Changement code → Developer met a jour CLAUDE.md dans le meme commit.
 - Changement hors code (config, infra, services, decisions produit) → CEO ouvre une branche docs/ et fait une PR.
