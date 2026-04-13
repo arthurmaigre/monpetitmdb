@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { createClient } from '@supabase/supabase-js'
 
 const ENCHERES_SELECT = `
   id, source, id_source, url, sources, statut,
@@ -17,6 +18,17 @@ const ENCHERES_SELECT = `
 `
 
 export async function GET(request: NextRequest) {
+  // Auth: verify Bearer token
+  const token = request.headers.get('authorization')?.replace('Bearer ', '')
+  if (!token) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  )
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
 
   // Watchlist mode : charger des IDs spécifiques
