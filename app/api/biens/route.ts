@@ -142,6 +142,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const user = await getUser(request)
+  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
+
   const { searchParams } = new URL(request.url)
   const metropole = searchParams.get('metropole')
   const prix_min = searchParams.get('prix_min')
