@@ -10,6 +10,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPwd, setShowPwd] = useState(false)
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotSent, setForgotSent] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { document.title = 'Connexion | Mon Petit MDB' }, [])
@@ -160,17 +164,47 @@ export default function LoginPage() {
               {loading ? 'Connexion...' : "Se connecter \u2192"}
             </button>
             <div style={{ textAlign: 'right', marginTop: '8px' }}>
-              <a href="#" onClick={async (e) => {
-                e.preventDefault()
-                if (!email) { setError('Entrez votre email pour recevoir le lien de réinitialisation'); return }
-                const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback` })
-                if (error) setError(error.message)
-                else setError('')
-                alert('Si ce compte existe, un email de réinitialisation a été envoyé.')
-              }} style={{ fontSize: '13px', color: '#c0392b', textDecoration: 'none' }}>
+              <a href="#" onClick={e => { e.preventDefault(); setShowForgot(v => !v); setForgotSent(false) }}
+                style={{ fontSize: '13px', color: '#c0392b', textDecoration: 'none' }}>
                 {"Mot de passe oubli\u00E9 ?"}
               </a>
             </div>
+
+            {showForgot && (
+              <div style={{ marginTop: '16px', padding: '16px', background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8' }}>
+                {forgotSent ? (
+                  <p style={{ fontSize: '14px', color: '#2e7d32', margin: 0, textAlign: 'center', fontWeight: 600 }}>Email envoy\u00E9 \u2713</p>
+                ) : (
+                  <>
+                    <label className="auth-label" style={{ display: 'block', marginBottom: '6px' }}>Votre email</label>
+                    <input
+                      className="auth-input"
+                      type="email"
+                      placeholder="vous@email.com"
+                      value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      style={{ width: '100%', marginBottom: '10px' }}
+                    />
+                    <button
+                      type="button"
+                      className="auth-btn"
+                      disabled={forgotLoading || !forgotEmail}
+                      onClick={async () => {
+                        setForgotLoading(true)
+                        const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+                          redirectTo: window.location.origin + '/reset-password'
+                        })
+                        setForgotLoading(false)
+                        if (error) setError(error.message)
+                        else setForgotSent(true)
+                      }}
+                    >
+                      {forgotLoading ? 'Envoi...' : 'Envoyer le lien'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </form>
 
           <div className="auth-footer">
