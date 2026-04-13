@@ -6,7 +6,7 @@ import Layout from '@/components/Layout'
 const faqs = [
   {
     question: "Qu\u2019est-ce que Mon Petit MDB\u00A0?",
-    answer: "Mon Petit MDB est une plateforme de sourcing et d\u2019analyse immobili\u00E8re destin\u00E9e aux marchands de biens et investisseurs. Elle applique la m\u00E9thodologie marchand de biens pour analyser plus de 90\u00A0000 biens issus de 60+ plateformes, avec 3 strat\u00E9gies (locataire en place, travaux lourds, immeuble de rapport) et 7 r\u00E9gimes fiscaux."
+    answer: "Mon Petit MDB est une plateforme de sourcing et d\u2019analyse immobili\u00E8re destin\u00E9e aux marchands de biens et investisseurs. Elle applique la m\u00E9thodologie marchand de biens pour analyser plus de 90\u00A0000 biens issus de 60+ plateformes, avec 4 strat\u00E9gies (locataire en place, travaux lourds, immeuble de rapport, ench\u00E8res) et 5 r\u00E9gimes fiscaux."
   },
   {
     question: "Quels sont les tarifs\u00A0?",
@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     question: "Quelles sont les 4 strat\u00E9gies MDB\u00A0?",
-    answer: "Les 3 strat\u00E9gies sont\u00A0: Locataire en place (bien d\u00E9j\u00E0 lou\u00E9, rendement imm\u00E9diat), Travaux lourds (achat sous le march\u00E9 + r\u00E9novation) et Immeuble de rapport (achat d\u2019un immeuble entier, revente ou location lot par lot). Chaque strat\u00E9gie a ses propres crit\u00E8res de filtrage et d\u2019analyse."
+    answer: "Les 4 strat\u00E9gies sont\u00A0: Locataire en place (bien d\u00E9j\u00E0 lou\u00E9, rendement imm\u00E9diat), Travaux lourds (achat sous le march\u00E9 + r\u00E9novation), Immeuble de rapport (achat d\u2019un immeuble entier, revente ou location lot par lot) et Ench\u00E8res (acquisition en vente judiciaire ou notariale). Chaque strat\u00E9gie a ses propres crit\u00E8res de filtrage et d\u2019analyse."
   },
   {
     question: "Comment fonctionne l\u2019estimation DVF\u00A0?",
