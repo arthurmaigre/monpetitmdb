@@ -617,7 +617,7 @@ Branch protection activee sur main (1 review requise pour merge).
 - Hook `pre-push` git bloque tout push direct sur main. Branches + PRs obligatoires.
 - Compaction safeguard + memory flush active (contexte persiste entre les sessions).
 - Memory search active (rappel automatique des conversations passees).
-- Heartbeat CEO toutes les 30 min (7h-23h Paris) : check SPRINT.md, git log, agents actifs, lance les taches en attente.
+- Heartbeat CEO toutes les 30 min, 24h/24 : git pull + check SPRINT.md, git log, agents actifs, lance les taches en attente. La nuit il travaille, Arthur valide les PRs au matin.
 
 **Communication inter-agents :**
 - Les agents ne se parlent pas directement. Tout passe par le CEO.
