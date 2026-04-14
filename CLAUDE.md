@@ -591,15 +591,15 @@ Bandeau CTA "Passez Pro" affiche en haut de chaque bloc concerne (dans le bloc, 
 
 ## OpenClaw — Agents IA (VPS Hetzner)
 
-9 agents IA autonomes sur VPS Hetzner (178.104.58.122, CPX42 8vCPU 16GB RAM).
+10 agents IA autonomes sur VPS Hetzner (178.104.58.122, CPX42 8vCPU 16GB RAM).
 User dedie `openclaw` (isole de root, pas d'acces aux secrets scrapper).
 Gateway OpenClaw 2026.4.11, bot Telegram @AlbusMDB_Bot.
 Branch protection activee sur main (1 review requise pour merge).
 
-**Agents (9 total — TOUS en ACP / Claude Code Max = Opus 4.6 = 0€) :**
+**Agents (10 total — TOUS en ACP / Claude Code Max — consomme quota, PAS gratuit) :**
 | Prenom | ID | Poste |
 |---|---|---|
-| Albus | ceo | CEO — Coordination, pilotage 8 agents, rapports Telegram |
+| Albus | ceo | CEO — Coordination, pilotage 9 agents, rapports Telegram |
 | Harry | developer | Lead Software Engineer |
 | Severus | qa | Quality Assurance Expert |
 | Luna | uiux | Product Designer |
@@ -608,16 +608,17 @@ Branch protection activee sur main (1 review requise pour merge).
 | Sirius | linkedin | Business Development Manager |
 | Ron | customer-success | Customer Success Manager |
 | Neville | data-analyst | Data Analyst |
+| Filius | tax-expert | Expert-Comptable Immobilier |
 
 **Architecture :**
-- Tous les agents en `runtime.type: "acp"` via `claude-cli` backend (Claude Code Max OAuth, Opus 4.6, 0€). Pas de clé API Anthropic — auth via OAuth subscription Max.
+- Tous les agents en `runtime.type: "acp"` via `claude-cli` backend (Claude Code Max OAuth). Pas de cle API Anthropic — auth via OAuth subscription Max. **ATTENTION : consomme du quota Claude Max — pas gratuit.** Modeles differencies : Harry (Opus 4.6), Albus/Severus/Minerva/Sirius/Filius (Sonnet 4.6), Hermione/Ron/Neville/Luna (Haiku 4.5). Budget : enveloppe $3.00/jour geree par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE).
 - CEO lie a Telegram via binding ACP persistent (session Claude Code qui reste ouverte entre les messages).
-- CEO delegue aux 8 autres via `sessions_spawn(runtime="acp")`.
+- CEO delegue aux 9 autres via `sessions_spawn(runtime="acp")`.
 - maxConcurrentSessions=4, maxChildrenPerAgent=3, maxConcurrent=4, timeout=900s.
 - Hook `pre-push` git bloque tout push direct sur main. Branches + PRs obligatoires.
 - Compaction safeguard + memory flush active (contexte persiste entre les sessions).
 - Memory search active (rappel automatique des conversations passees).
-- Heartbeat CEO toutes les 90 min, 24h/24. Garde-fou charge : si 4+ agents actifs = 0 spawn ; 2-3 actifs = 1 max ; 0-1 actifs = 3 max. Rapporte a Arthur ce qu'il a FAIT (pas ce qu'il propose). La nuit il travaille, Arthur valide les PRs au matin.
+- Heartbeat CEO natif desactive (24h/noop). Les 6 cycles cron isolees remplacent le heartbeat. Garde-fou charge : si 4+ agents actifs = 0 spawn ; 2-3 actifs = 1 max ; 0-1 actifs = 3 max. Rapporte a Arthur ce qu'il a FAIT (pas ce qu'il propose). La nuit il travaille, Arthur valide les PRs au matin.
 - CEO 100% autonome sur les taches operationnelles (lancement agents, audits, branches, PRs). Escalade Arthur uniquement pour : depenses, suppression features, comm publique, merge PRs, acces outils externes.
 
 **Communication inter-agents :**
@@ -659,9 +660,9 @@ Branch protection activee sur main (1 review requise pour merge).
 - Merge de PRs
 - Acces outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT
 
-**Budget agents :** 0€ (ACP/Claude Code Max). Seuls les appels API dans le backend Next.js (Haiku extraction/scoring, Memo chat) coutent.
+**Budget agents :** ACP consomme le quota Claude Code Max (PAS gratuit). Enveloppe $3.00/jour geree par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE). Suivi dans `budget-tracker.md`. Autres couts : API Anthropic dans le backend Next.js (Haiku extraction/scoring, Memo chat).
 **Fichiers workspace par agent :**
-- CEO : SOUL.md, AGENTS.md, HEARTBEAT.md, SPRINT.md, USER.md, CLAUDE.md, SKILLS.md, REFLEXION.md, VEILLE.md, memory/ (symlink shared)
+- CEO : SOUL.md, AGENTS.md, HEARTBEAT.md, SPRINT.md, USER.md, CLAUDE.md, SKILLS.md, REFLEXION.md, VEILLE.md, TROUBLESHOOTING.md, memory/ (symlink shared)
 - Sub-agents : SOUL.md, AGENTS.md, USER.md, CLAUDE.md, SKILLS.md, REFLEXION.md, VEILLE.md
 - Templates vides (IDENTITY.md, TOOLS.md, PLAYBOOK.md) supprimes — tout est dans SOUL.md + AGENTS.md
 
@@ -674,21 +675,19 @@ Branch protection activee sur main (1 review requise pour merge).
 - Cross-learnings : `shared/memory/cross-learnings.md` — chaque agent partage ses decouvertes pertinentes pour les autres.
 - Fichiers de flux inter-agents : `insights-marketing.md`, `insights-cs.md`, `seo-updates.md`, `linkedin-insights.md`, `data-marche.md`, `qa-suggestions.md`, `ux-suggestions.md`, `system-improvements.md`, `backlog-technique.md`.
 
-**8 cycles de travail 24h/24 (toutes les 3h) :**
-- `cycle-06h` : Veille marche + premiers audits (Harry, Hermione, Severus) — rapport P0 uniquement
-- `cycle-09h` : Production max — max 4 agents en parallele — FORMAT BILAN MATIN
-- `cycle-12h` : Enchainement — fixes bugs matin + livrables (Harry, Severus, Minerva, Neville) — rapport P0 uniquement
-- `cycle-15h` : Croissance (Harry, Minerva, Sirius, Ron, Luna) — FORMAT BILAN APRES-MIDI
-- `cycle-18h` : Technique + verification PRs (Harry, Hermione, Severus, Luna) — FORMAT BILAN SOIR
-- `cycle-21h` : Deep work nuit — taches complexes (Harry, Hermione, Neville, Severus) — silencieux
-- `cycle-00h` : Nuit — contenu + emails + dev (Harry, Minerva, Ron) — silencieux
-- `cycle-03h` : Maintenance — dette technique + refresh data (Harry, Hermione, Neville) — silencieux
-- Systeme de rotation : chaque agent tourne sur une liste numerotee d'audits/taches (voir ROTATION.md). Jamais d'agent inactif.
-- Cycle auto-alimentant : audits generent des taches → dev code → QA valide → merge → nouveaux audits.
+**6 cycles de travail 24h/24 (toutes les 4h, sessions isolees) :**
+- `cycle-02h` : Maintenance nuit — dette technique, refresh data
+- `cycle-06h` : Veille marche + premiers audits
+- `cycle-10h` : Production — FORMAT BILAN MATIN
+- `cycle-14h` : Croissance + enchainement — FORMAT BILAN APRES-MIDI
+- `cycle-18h` : Technique + verification PRs — FORMAT BILAN SOIR
+- `cycle-22h` : Deep work nuit — taches complexes — silencieux sauf P0
+- Budget dynamique : Albus gere l'enveloppe $3.00/jour (regime VERT/JAUNE/ORANGE/ROUGE), max 10 turns/agent.
+- Systeme de rotation : chaque agent tourne sur une liste numerotee d'audits/taches (voir ROTATION.md).
 
 **Formats de rapport Telegram (4 formats canoniques — source : AGENTS.md CEO) :**
-- `FORMAT HEARTBEAT` : toutes les 90 min, toujours envoye — LANCE / EN COURS / LIVRE / SYSTEME / ARTHUR
-- `FORMAT BILAN` : cycles 9h (MATIN), 15h (APRES-MIDI), 18h (SOIR) — LIVRE / EN COURS / PROCHAIN CYCLE / ARTHUR / SYSTEME
+- `FORMAT HEARTBEAT` : natif desactive (remplace par cycles cron) — LANCE / EN COURS / LIVRE / SYSTEME / ARTHUR
+- `FORMAT BILAN` : cycles 10h (MATIN), 14h (APRES-MIDI), 18h (SOIR) — LIVRE / EN COURS / PROCHAIN CYCLE / ARTHUR / SYSTEME
 - `FORMAT ALERTE P0` : immediat — bug critique, prod down — SITUATION / IMPACT / FAIT / ETA FIX / ARTHUR
 - `FORMAT DEMANDE` : immediat — outil externe, depense, acces — DE / BESOIN / POURQUOI / COUT / ARTHUR
 
