@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: "Conditions g\u00E9n\u00E9rales d'utilisation",
   description: "CGU de Mon Petit MDB \u2014 plateforme de sourcing immobilier pour investisseurs.",
+  alternates: { canonical: 'https://www.monpetitmdb.fr/cgu' },
 }
 
 export default function CGUPage() {

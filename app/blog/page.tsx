@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Conseils immobiliers — Guides & analyses',
   openGraph: { title: 'Conseils immobiliers — Guides & analyses | Mon Petit MDB' },
   description: 'Fiscalit\u00E9, strat\u00E9gies d\u2019investissement, march\u00E9 immobilier \u2014 tout ce qu\u2019il faut savoir pour investir intelligemment.',
+  alternates: { canonical: 'https://www.monpetitmdb.fr/blog' },
 }
 
 export const revalidate = 3600 // Revalide toutes les heures

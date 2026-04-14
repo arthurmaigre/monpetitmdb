@@ -308,6 +308,14 @@ async function handlePropertyAdCreate(payload: any) {
   const text = [advert.title || '', advert.description || ''].join(' ')
   const strategie = strategieFromSearch || detectStrategieFromContent(text, property.propertyType)
 
+  // Filtrer les faux positifs Locataire en place (baux commerciaux, résidences gérées, EHPAD, tourisme)
+  if (strategie === 'Locataire en place') {
+    const EXCLUDE_PATTERNS = /bail commercial|local commercial|murs commerci|fonds de commerce|résidence de tourisme|résidence touristi|pierre.{0,3}vacances|résidence senior|ehpad|maison de retraite|résidence étudiante|résidence hôtelière|résidence de service|résidence gérée|lmnp|meublé non professionnel/i
+    if (EXCLUDE_PATTERNS.test(text)) {
+      return { action: 'skip', reason: 'excluded: bail commercial / résidence gérée' }
+    }
+  }
+
   const bien = buildBienPayload(property, advert, strategie, metropoleMap)
   const existing = await findExistingBien(advert.url, property, advert)
 

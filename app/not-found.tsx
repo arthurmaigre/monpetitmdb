@@ -1,4 +1,11 @@
+import type { Metadata } from 'next'
 import Layout from '@/components/Layout'
+
+export const metadata: Metadata = {
+  title: 'Page introuvable | Mon Petit MDB',
+  description: "La page demandée n'existe pas. Découvrez nos biens immobiliers analysés selon la méthode marchand de biens.",
+  robots: { index: false },
+}
 
 export default function NotFound() {
   return (

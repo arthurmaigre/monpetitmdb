@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: data.title,
     description: `${data.title} — Mon Petit MDB`,
+    alternates: { canonical: `https://www.monpetitmdb.fr/blog/${slug}` },
     openGraph: {
       title: data.title,
       description: `${data.title} — Mon Petit MDB`,
