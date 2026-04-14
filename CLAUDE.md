@@ -596,22 +596,22 @@ User dedie `openclaw` (isole de root, pas d'acces aux secrets scrapper).
 Gateway OpenClaw 2026.4.11, bot Telegram @AlbusMDB_Bot.
 Branch protection activee sur main (1 review requise pour merge).
 
-**Agents (10 total — TOUS en ACP / Claude Code Max — consomme quota, PAS gratuit) :**
-| Prenom | ID | Poste |
-|---|---|---|
-| Albus | ceo | CEO — Coordination, pilotage 9 agents, rapports Telegram |
-| Harry | developer | Lead Software Engineer |
-| Severus | qa | Quality Assurance Expert |
-| Luna | uiux | Product Designer |
-| Hermione | seo | SEO Expert |
-| Minerva | marketing | Head of Marketing |
-| Sirius | linkedin | Business Development Manager |
-| Ron | customer-success | Customer Success Manager |
-| Neville | data-analyst | Data Analyst |
-| Filius | tax-expert | Expert-Comptable Immobilier |
+**Agents (10 total — API Anthropic directe, 1 cle par agent) :**
+| Prenom | ID | Poste | Modele | Cle API |
+|---|---|---|---|---|
+| Albus | ceo | CEO — Coordination, pilotage 9 agents, rapports Telegram | Sonnet 4.6 | Albus-ceo |
+| Harry | developer | Lead Software Engineer | Opus 4.6 | Harry-developer |
+| Severus | qa | Quality Assurance Expert | Sonnet 4.6 | Severus-qa |
+| Luna | uiux | Product Designer | Haiku 4.5 | Luna-uiux |
+| Hermione | seo | SEO Expert | Haiku 4.5 | Hermione-seo |
+| Minerva | marketing | Head of Marketing | Sonnet 4.6 | Minerva-marketing |
+| Sirius | linkedin | Business Development Manager | Sonnet 4.6 | Sirius-linkedin |
+| Ron | customer-success | Customer Success Manager | Haiku 4.5 | Ron-customer-success |
+| Neville | data-analyst | Data Analyst | Haiku 4.5 | Neville-data-analyst |
+| Filius | tax-expert | Expert-Comptable Immobilier | Sonnet 4.6 | Filius-tax-expert |
 
 **Architecture :**
-- Tous les agents en `runtime.type: "acp"` via `claude-cli` backend (Claude Code Max OAuth). Pas de cle API Anthropic — auth via OAuth subscription Max. **ATTENTION : consomme du quota Claude Max — pas gratuit.** Modeles differencies : Harry (Opus 4.6), Albus/Severus/Minerva/Sirius/Filius (Sonnet 4.6), Hermione/Ron/Neville/Luna (Haiku 4.5). Budget : enveloppe $3.00/jour geree par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE).
+- Tous les agents en `runtime.type: "acp"` via API Anthropic directe (plugin `anthropic` active, 1 cle API par agent). Auth par `auth-profiles.json` par agent + `auth order set` pour le routing. Modeles : `anthropic/claude-opus-4-6` (Harry), `anthropic/claude-sonnet-4-6` (Albus/Severus/Minerva/Sirius/Filius), `anthropic/claude-haiku-4-5` (Hermione/Ron/Neville/Luna). Budget : 3€/jour (~$3.25) gere par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE).
 - CEO lie a Telegram via binding ACP persistent (session Claude Code qui reste ouverte entre les messages).
 - CEO delegue aux 9 autres via `sessions_spawn(runtime="acp")`.
 - maxConcurrentSessions=4, maxChildrenPerAgent=3, maxConcurrent=4, timeout=900s.
@@ -660,7 +660,7 @@ Branch protection activee sur main (1 review requise pour merge).
 - Merge de PRs
 - Acces outil externe (Canva, LinkedIn, Semrush, etc.) = demande Arthur AVANT
 
-**Budget agents :** ACP consomme le quota Claude Code Max (PAS gratuit). Enveloppe $3.00/jour geree par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE). Suivi dans `budget-tracker.md`. Autres couts : API Anthropic dans le backend Next.js (Haiku extraction/scoring, Memo chat).
+**Budget agents :** 3€/jour (~$3.25) via API Anthropic directe (1 cle par agent, suivi conso sur console.anthropic.com). Gere par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE). Suivi automatique : `budget-realtime.json` (cron toutes les 30min) + `budget-tracker.md` (logs manuels Albus). Hard stop automatique a 95% du budget. Rapport quotidien par agent a 23h55 (`daily-report.sh`). Autres couts : API Anthropic backend Next.js (Haiku extraction/scoring, Memo chat).
 **Fichiers workspace par agent :**
 - CEO : SOUL.md, AGENTS.md, HEARTBEAT.md, SPRINT.md, USER.md, CLAUDE.md, SKILLS.md, REFLEXION.md, VEILLE.md, TROUBLESHOOTING.md, memory/ (symlink shared)
 - Sub-agents : SOUL.md, AGENTS.md, USER.md, CLAUDE.md, SKILLS.md, REFLEXION.md, VEILLE.md
@@ -682,7 +682,7 @@ Branch protection activee sur main (1 review requise pour merge).
 - `cycle-14h` : Croissance + enchainement — FORMAT BILAN APRES-MIDI
 - `cycle-18h` : Technique + verification PRs — FORMAT BILAN SOIR
 - `cycle-22h` : Deep work nuit — taches complexes — silencieux sauf P0
-- Budget dynamique : Albus gere l'enveloppe $3.00/jour (regime VERT/JAUNE/ORANGE/ROUGE), max 10 turns/agent.
+- Budget dynamique : Albus gere l'enveloppe 3€/jour (~$3.25) via API (regime VERT/JAUNE/ORANGE/ROUGE), max 10 turns/agent.
 - Systeme de rotation : chaque agent tourne sur une liste numerotee d'audits/taches (voir ROTATION.md).
 
 **Formats de rapport Telegram (4 formats canoniques — source : AGENTS.md CEO) :**
@@ -704,7 +704,11 @@ Branch protection activee sur main (1 review requise pour merge).
 
 **Config :** `/home/openclaw/.openclaw/openclaw.json`, workspaces dans `/home/openclaw/.openclaw/workspaces/{agent}/`.
 **Repo dev :** `/home/openclaw/monpetitmdb/` (clone GitHub). Branches + PRs, jamais push main.
-**Gateway :** `nohup openclaw gateway run > ~/gateway.log 2>&1 &`. Verifier : `openclaw health`.
+**Gateway :** watchdog cron toutes les 2min (`gateway-watchdog.sh`). Verifier : `openclaw health`.
+**Crons VPS :**
+- `*/2 * * * *` — gateway-watchdog.sh (relance gateway si down)
+- `*/30 * * * *` — budget-monitor.sh (calcul conso reelle, hard stop a 95%)
+- `55 23 * * *` — daily-report.sh (rapport quotidien par agent)
 **Phase actuelle :** Phase 1 — Stabilisation/audit avant lancement beta. Pas de marketing actif.
 
 ## Regles absolues
