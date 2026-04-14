@@ -1,6 +1,12 @@
+import Image from 'next/image'
 import PricingCta from '@/components/PricingCta'
 import LandingHeader from '@/components/LandingHeader'
 import EarlyAdopterBadge from '@/components/EarlyAdopterBadge'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  alternates: { canonical: 'https://www.monpetitmdb.fr' },
+}
 
 export default function Home() {
   return (
@@ -302,7 +308,7 @@ export default function Home() {
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginLeft: '8px' }}>monpetitmdb.fr/biens/4821</span>
                 </div>
                 <div className="mc-photo">
-                  <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=180&fit=crop" alt="Appartement lumineux" width={400} height={180} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=180&fit=crop" alt="Appartement lumineux" width={400} height={180} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 40%,rgba(26,18,16,.3))' }} />
                   <span className="mc-badge">{"M\u00E9tropole Marseillaise"}</span>
                   <span className="mc-rend">8.60 %</span>
@@ -480,7 +486,7 @@ export default function Home() {
                 <div className="ag">
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Nantes</span>
                       <span className="ac-br g">5.07 %</span>
                     </div>
@@ -493,7 +499,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Lyon</span>
                       <span className="ac-br g">6.14 %</span>
                     </div>
@@ -506,7 +512,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Marseille</span>
                       <span className="ac-br g">8.60 %</span>
                     </div>
@@ -519,7 +525,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Bordeaux</span>
                       <span className="ac-br y">3.78 %</span>
                     </div>
@@ -532,7 +538,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Rennes</span>
                       <span className="ac-br y">4.39 %</span>
                     </div>
@@ -545,7 +551,7 @@ export default function Home() {
                   </div>
                   <div className="ac">
                     <div className="ac-img" style={{ overflow: 'hidden' }}>
-                      <img src="https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src="https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=300&h=100&fit=crop" alt="" width={300} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span className="ac-bm">Toulouse</span>
                       <span className="ac-br g">5.82 %</span>
                     </div>

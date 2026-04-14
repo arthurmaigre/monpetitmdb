@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import BienCard from '@/components/BienCard'
@@ -871,7 +872,7 @@ export default function MesBiensPage() {
                         </td>
                         <td className="sticky-col" style={{ left: '170px', width: '80px', minWidth: '80px' }}>
                           <div style={{ position: 'relative', display: 'inline-block' }}>
-                            {bien.photo_url ? <img src={bien.photo_url} alt="" className="list-thumb" /> : <div className="list-thumb-empty"><TypeBienIllustration type={bien.type_bien} size={36} /></div>}
+                            {bien.photo_url ? <Image src={bien.photo_url} alt="" width={80} height={60} className="list-thumb" style={{ objectFit: 'cover' }} /> : <div className="list-thumb-empty"><TypeBienIllustration type={bien.type_bien} size={36} /></div>}
                             {bien.url?.startsWith('manual://') && <span style={{ position: 'absolute', bottom: '2px', left: '2px', fontSize: '7px', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.55)', padding: '1px 4px', borderRadius: '3px', lineHeight: 1.3 }}>MON BIEN</span>}
                           </div>
                         </td>
