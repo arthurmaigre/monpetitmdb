@@ -83,6 +83,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [userPlan, setUserPlan] = useState<string>('free')
   const [userStrategie, setUserStrategie] = useState<string>('')
   const [userStrategie2, setUserStrategie2] = useState<string>('')
+  const [authChecked, setAuthChecked] = useState(false)
+  const ssrSkipApplied = useRef(false)
   const [showAlertModal, setShowAlertModal] = useState(false)
   const [alertNom, setAlertNom] = useState('')
   const [alertFrequence, setAlertFrequence] = useState('quotidien')
@@ -210,9 +212,17 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     // Skip le premier fetch si les donnees SSR correspondent
     if (!ssrConsumed.current && hasInitialData && strategie === initialStrategie && !saved.current?.strategie) {
       ssrConsumed.current = true
+      ssrSkipApplied.current = true
       return
     }
     ssrConsumed.current = true
+    // Si le skip SSR vient juste d'etre applique (authChecked vient de passer a true), ne pas refetcher les donnees SSR encore valides
+    if (ssrSkipApplied.current) {
+      ssrSkipApplied.current = false
+      return
+    }
+    // Attendre que la session soit verifiee avant tout fetch client (evite le 401 au demarrage)
+    if (!authChecked) return
     setLoading(true)
     setError(null)
     setCurrentPage(1)
@@ -227,7 +237,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, tri])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, tri, authChecked])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -282,6 +292,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         if (pData.profile?.budget_travaux_m2) setBudgetTravauxM2(pData.profile.budget_travaux_m2)
       }
       if (!strategie) setLoading(false)
+      setAuthChecked(true)
     }
     load()
   }, [])
