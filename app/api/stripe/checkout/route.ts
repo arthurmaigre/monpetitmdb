@@ -30,11 +30,37 @@ export async function POST(req: NextRequest) {
   const priceId = PRICE_IDS[plan]
   if (!priceId) return NextResponse.json({ error: 'Plan invalide' }, { status: 400 })
 
+  // Récupérer le stripe_customer_id existant pour éviter les doublons
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('stripe_customer_id')
+    .eq('id', user.id)
+    .single()
+
+  let customerParam: { customer: string } | { customer_email: string }
+  if (profile?.stripe_customer_id) {
+    customerParam = { customer: profile.stripe_customer_id }
+  } else {
+    const stripeCustomer = await stripe.customers.create({
+      email: user.email,
+      metadata: { supabase_user_id: user.id },
+    })
+    await supabaseAdmin
+      .from('profiles')
+      .update({ stripe_customer_id: stripeCustomer.id })
+      .eq('id', user.id)
+    customerParam = { customer: stripeCustomer.id }
+  }
+
   const origin = req.headers.get('origin')
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
-    customer_email: user.email,
+    ...customerParam,
     metadata: { supabase_user_id: user.id, plan },
     line_items: [{ price: priceId, quantity: 1 }],
     allow_promotion_codes: true,
