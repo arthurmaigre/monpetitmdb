@@ -1,10 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import CookieBanner from '@/components/CookieBanner'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.monpetitmdb.fr'),
   alternates: {
-    canonical: './',
+    canonical: '/',
   },
   title: {
     default: 'Mon Petit MDB — Sourcing immobilier pour investisseurs',

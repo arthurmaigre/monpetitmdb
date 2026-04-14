@@ -30,6 +30,15 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/tarifs',
+        destination: '/#pricing',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig;
