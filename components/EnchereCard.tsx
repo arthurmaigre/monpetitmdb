@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Enchere } from '@/lib/types'
 import { theme } from '@/lib/theme'
+import { calculerFraisEnchere } from '@/lib/calculs'
 import TypeBienIllustration from './TypeBienIllustration'
 
 interface Props {
@@ -270,6 +271,14 @@ export default function EnchereCard({ enchere, compact = false, inWatchlist: ini
               {enchere.nb_lots} lots
             </span>
           )}
+          {enchere.mise_a_prix && enchere.mise_a_prix > 0 && (() => {
+            const frais = calculerFraisEnchere(enchere.mise_a_prix)
+            return (
+              <span style={pillStyle({ background: '#fdf3e7', color: '#9a5a00' })} title={`Frais d'adjudication estimés : ${Math.round(frais.total).toLocaleString('fr-FR')} €`}>
+                ~{Math.round(frais.pct * 100)}% frais
+              </span>
+            )
+          })()}
         </div>
 
         {/* CTA */}

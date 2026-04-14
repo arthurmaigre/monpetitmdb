@@ -1608,6 +1608,22 @@ export default function FicheEncherePage() {
                 <span className="data-value">{enchere.avocat_nom}{enchere.avocat_cabinet ? ` (${enchere.avocat_cabinet})` : ''}{enchere.avocat_tel ? ` — ${enchere.avocat_tel}` : ''}</span>
               </div>
             )}
+            {enchere.avocat_email && (
+              <div className="data-item">
+                <span className="data-label"></span>
+                <a
+                  href={`mailto:${enchere.avocat_email}?subject=${encodeURIComponent(`Demande de dossier — ${enchere.adresse || enchere.ville || 'enchère judiciaire'}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe suis intéressé par l'acquisition du bien mis en vente aux enchères judiciaires :\n${enchere.adresse ? enchere.adresse + ', ' : ''}${enchere.ville || ''}\nMise à prix : ${enchere.mise_a_prix ? enchere.mise_a_prix.toLocaleString('fr-FR') + ' €' : 'NC'}\n\nPouvez-vous m'adresser le dossier complet (cahier des conditions de vente, procès-verbal de description) ?\n\nCordialement`)}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 16px', borderRadius: '6px',
+                    background: '#c0392b', color: '#fff',
+                    textDecoration: 'none', fontSize: '13px', fontWeight: 600,
+                  }}
+                >
+                  ✉ Contacter l{"'"}avocat poursuivant
+                </a>
+              </div>
+            )}
           </div>
           {/* Sources */}
           {sources.length > 0 && (
