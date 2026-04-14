@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: "Politique de confidentialit\u00E9",
   description: "Politique de confidentialit\u00E9 RGPD de Mon Petit MDB.",
+  alternates: { canonical: 'https://www.monpetitmdb.fr/privacy' },
 }
 
 export default function PrivacyPage() {

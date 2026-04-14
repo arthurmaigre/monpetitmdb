@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   openGraph: { title: 'Connexion | Mon Petit MDB' },
   description:
     'Connectez-vous à votre espace investisseur Mon Petit MDB.',
+  alternates: { canonical: 'https://www.monpetitmdb.fr/login' },
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {

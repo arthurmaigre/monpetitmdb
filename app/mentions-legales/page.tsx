@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: "Mentions l\u00E9gales",
   description: "Mentions l\u00E9gales de Mon Petit MDB.",
+  alternates: { canonical: 'https://www.monpetitmdb.fr/mentions-legales' },
 }
 
 export default function MentionsLegalesPage() {

@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   openGraph: { title: "Stratégies d'investissement immobilier | Mon Petit MDB" },
   description:
     'D\u00E9couvrez les strat\u00E9gies MDB : locataire en place, travaux lourds et immeuble de rapport. Analysez chaque bien comme un marchand de biens.',
+  alternates: { canonical: 'https://www.monpetitmdb.fr/strategies' },
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
