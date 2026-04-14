@@ -40,6 +40,7 @@ export default function MesBiensPage() {
   const [userToken, setUserToken] = useState<string | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
   const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [isMobile, setIsMobile] = useState(false)
   const [activeTab, setActiveTab] = useState('')
   const [error, setError] = useState('')
   const [plan, setPlan] = useState<string>('free')
@@ -126,6 +127,13 @@ export default function MesBiensPage() {
   }, [])
 
   useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  useEffect(() => {
     if (view !== 'list' || loading) return
     const tw = tableWrapRef.current
     if (!tw) return
@@ -136,6 +144,7 @@ export default function MesBiensPage() {
     return () => obs.disconnect()
   }, [view, loading, activeTab, biens.length])
 
+  const effectiveView = isMobile ? 'grid' : view
   const activeBiens = biens.filter(b => suiviMap[b.id] !== 'archive')
   const archivedBiens = biens.filter(b => suiviMap[b.id] === 'archive')
   const displayBiens = showArchived ? archivedBiens : activeBiens
@@ -631,13 +640,14 @@ export default function MesBiensPage() {
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 150ms ease; color: #c0392b; }
         .td-heart:hover { transform: scale(1.2); }
         .edit-hint { font-size: 12px; color: #7a6a60; margin-bottom: 12px; font-style: italic; }
-        .suivi-select { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid #e8e2d8; cursor: pointer; outline: none; min-width: 130px; }
+        .suivi-select { font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid #e8e2d8; cursor: pointer; outline: none; min-width: 155px; }
         .suivi-select:focus { border-color: #c0392b; box-shadow: 0 0 0 2px rgba(192,57,43,0.1); }
         @media (max-width: 768px) {
           .mes-biens-wrap { padding: 24px 16px; }
           .mes-biens-title { font-size: 24px; }
           .mes-biens-header { flex-direction: column; align-items: flex-start; }
           .grid { grid-template-columns: 1fr; gap: 16px; }
+          .view-btn-list { display: none; }
         }
       `}</style>
 
@@ -702,8 +712,8 @@ export default function MesBiensPage() {
               </button>
             )}
             <div className="view-toggle" role="group" aria-label="Mode d'affichage">
-              <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
-              <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
+              <button className={`view-btn ${effectiveView === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
+              <button className={`view-btn view-btn-list ${effectiveView === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
             </div>
           </div>
         </div>
@@ -743,7 +753,7 @@ export default function MesBiensPage() {
               )}
             </p>
 
-            {view === 'grid' ? (
+            {effectiveView === 'grid' ? (
               <div className="grid">
                 {filteredBiens.map(bien => {
                   const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || SUIVI_OPTIONS[0]
@@ -768,18 +778,28 @@ export default function MesBiensPage() {
                       </button>
                     </div>
                   ) : (
-                  <BienCard
-                    key={bien.id}
-                    bien={bien}
-                    inWatchlist={true}
-                    userToken={userToken}
-                    onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
-                    extraTitleRight={
-                      <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg, flexShrink: 0 }}>
-                        {SUIVI_OPTIONS.map(o => o.value !== 'archive' && <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                    }
-                  />
+                  <div key={bien.id} style={{ position: 'relative' }}>
+                    <span style={{
+                      position: 'absolute', top: '10px', left: '10px', zIndex: 10,
+                      display: 'inline-block', padding: '3px 8px', borderRadius: '20px',
+                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.01em',
+                      color: opt.color, background: opt.bg,
+                      border: `1px solid ${opt.color}33`,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      pointerEvents: 'none',
+                    }}>{opt.label}</span>
+                    <BienCard
+                      bien={bien}
+                      inWatchlist={true}
+                      userToken={userToken}
+                      onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
+                      extraTitleRight={
+                        <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg, flexShrink: 0 }}>
+                          {SUIVI_OPTIONS.map(o => o.value !== 'archive' && <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      }
+                    />
+                  </div>
                   )
                 })}
               </div>
