@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
-import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV } from '@/lib/calculs'
+import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV, calculerFraisEnchere } from '@/lib/calculs'
 
 function getPhotos(enchere: any): string[] {
   const photos: string[] = []
@@ -325,15 +325,17 @@ function ExpandableCharges({ label, total, isReel, isFree, details }: { label: s
   )
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { tauxCredit, tauxAssurance, dureeAns, typeCredit: typeCreditSimu } = financement
   const hasLoyer = loyer && loyer > 0
   const isMarchand = regime === 'marchand_de_biens'
   const [optionTVA, setOptionTVA] = useState(true)
 
-  const colFraisNotairePct = isMarchand ? 2.5 : (fraisNotaireBase || 7.5)
-  const colFraisNotaireMontant = prix_fai * colFraisNotairePct / 100
+  // Frais d'acquisition : barème Didiercam pour enchères, % flat pour biens classiques
+  const fraisEnchere = isEnchere ? calculerFraisEnchere(prix_fai, 0, { isMDB: isMarchand }) : null
+  const colFraisNotairePct = isEnchere && fraisEnchere ? fraisEnchere.pct : (isMarchand ? 2.5 : (fraisNotaireBase || 7.5))
+  const colFraisNotaireMontant = isEnchere && fraisEnchere ? fraisEnchere.total : (prix_fai * colFraisNotairePct / 100)
   const colMontantEmprunte = Math.max(0, prix_fai + colFraisNotaireMontant - (apport || 0))
 
   const isMicro = (r: string) => r === 'nu_micro_foncier' || r === 'lmnp_micro_bic'
@@ -644,7 +646,15 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
           <SectionLabel label={`Scénario revente (${dur} an${dur > 1 ? 's' : ''})`} />
           <Row label="Prix de revente (DVF)" value={`${fmt(prixReventeNetVendeur)} \u20AC`} />
           <Row label="Prix d'achat (mise à prix)" value={`-${fmt(prix_fai)} \u20AC`} rouge />
-          <Row label={`Frais de notaire (${colFraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge />
+          {isEnchere && fraisEnchere ? (
+            <>
+              <Row label="Émoluments avocat TTC" value={`-${fmt(fraisEnchere.emoluments_ttc)} \u20AC`} rouge info="Barème Didiercam : poursuivant 3/4 + adjudicataire 1/4" />
+              <Row label={`Droits d'enregistrement (${isMarchand ? '0,715%' : '5,8%'})`} value={`-${fmt(fraisEnchere.droits_enregistrement)} \u20AC`} rouge />
+              <Row label="Frais de publication" value={`-${fmt(fraisEnchere.frais_publication)} \u20AC`} rouge />
+            </>
+          ) : (
+            <Row label={`Frais de notaire (${colFraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge />
+          )}
           <Row
             label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})${isMarchand && optionTVA ? ' HT' : ''}` : 'Travaux'}
             value={budgetTravauxEffectif > 0 ? `-${fmt(budgetTravauxEffectif)} \u20AC` : `0 \u20AC`}
@@ -1420,7 +1430,6 @@ export default function FicheEncherePage() {
   const scoreUtilCalc = scorePerso || enchere.score_travaux
   const budgetTravCalc = scoreUtilCalc && enchere.surface ? (budgetTravauxM2[String(scoreUtilCalc)] || 0) * enchere.surface : 0
   const estimPrix = estimationData?.prix_total || 0
-  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix - budgetTravCalc) / ((1 + fraisNotaire / 100) * (1 + 20 / 100))) : null
 
   const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
   const apportNum = apport || 0
@@ -1428,7 +1437,10 @@ export default function FicheEncherePage() {
   const tauxAssuranceNum = tauxAssurance || 0
   const fraisAgenceNum = fraisAgenceRevente || 0
   const prixBase = enchere.mise_a_prix
-  const montantProjet = prixBase * (1 + fraisNotaire / 100) + budgetTravCalc
+  // Frais d'adjudication barème Didiercam (remplace le % flat)
+  const fraisEnchereMain = calculerFraisEnchere(prixBase, 0, { isMDB: regime === 'marchand_de_biens' })
+  const montantProjet = prixBase + fraisEnchereMain.total + budgetTravCalc
+  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix - budgetTravCalc - fraisEnchereMain.total) / 1.2) : null
   const montantEmprunte = Math.max(0, montantProjet - apportNum)
   const apportPct = montantProjet > 0 ? Math.round(apportNum / montantProjet * 1000) / 10 : 0
 
@@ -2050,9 +2062,9 @@ export default function FicheEncherePage() {
               <h2 className="section-title">Simulateur de Financement</h2>
                 <div>
                   <div className="param-group">
-                    <label className="param-label">Montant du projet (frais notaire inclus)</label>
+                    <label className="param-label">Montant du projet (frais adjudication inclus)</label>
                     <div className="param-input" style={{ background: '#f0ede8', color: '#1a1210', fontWeight: 700, fontSize: '16px' }}>{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
-                    <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
+                    <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fmt(Math.round(fraisEnchereMain.total))} {'\u20AC'} frais ({fraisEnchereMain.pct}%){budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
                   </div>
                   <div className="param-group">
                     <label className="param-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</label>
@@ -2177,8 +2189,8 @@ export default function FicheEncherePage() {
                 </div>
               )}
               <div className="pnl-grid">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre régime)`} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
-                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre régime)`} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere />
               </div>
             </div>
           </div>
