@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 import Layout from '@/components/Layout'
 
 interface Article {
@@ -244,7 +245,7 @@ export default function ArticleClient({ article, related }: { article: Article; 
 
           <main className="guide-main">
             {article.cover_url && (
-              <img src={article.cover_url} alt={article.title} style={{ width: '100%', height: 'auto', borderRadius: '16px', marginBottom: '32px', maxHeight: '400px', objectFit: 'cover' }} />
+              <Image src={article.cover_url} alt={article.title} width={1200} height={630} style={{ width: '100%', height: 'auto', borderRadius: '16px', marginBottom: '32px', maxHeight: '400px', objectFit: 'cover' }} />
             )}
 
             <div className="guide-content" dangerouslySetInnerHTML={{ __html: contentWithIds }} />
@@ -279,7 +280,7 @@ export default function ArticleClient({ article, related }: { article: Article; 
                   const cs = catStyle(r.category)
                   return (
                     <a key={r.slug} href={`/blog/${r.slug}`} className="guide-related-card">
-                      {r.cover_url && <img src={r.cover_url} alt="" />}
+                      {r.cover_url && <Image src={r.cover_url} alt="" width={400} height={200} style={{ width: '100%', height: 'auto', objectFit: 'cover' }} />}
                       <div className="guide-related-card-body">
                         {r.category && <span className="guide-related-card-cat" style={{ background: cs.bg, color: cs.color }}>{r.category}</span>}
                         <div className="guide-related-card-title">{r.title}</div>

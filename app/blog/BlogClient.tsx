@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Layout from '@/components/Layout'
 
 interface Article {
@@ -139,7 +140,7 @@ export default function BlogClient({ articles }: { articles: Article[] }) {
               <a href={`/blog/${featured.slug}`} className="blog-featured">
                 <div className={`blog-featured-visual ${featured.cover_url ? 'has-img' : ''}`}>
                   {featured.cover_url
-                    ? <img src={featured.cover_url} alt={featured.title} className="blog-featured-img" />
+                    ? <Image src={featured.cover_url} alt={featured.title} fill className="blog-featured-img" style={{ objectFit: 'cover' }} />
                     : <span className="blog-featured-icon">MDB</span>
                   }
                 </div>
@@ -178,7 +179,7 @@ export default function BlogClient({ articles }: { articles: Article[] }) {
                     return (
                       <a key={article.slug} href={`/blog/${article.slug}`} className="blog-card">
                         {article.cover_url
-                          ? <img src={article.cover_url} alt={article.title} className="blog-card-cover" />
+                          ? <Image src={article.cover_url} alt={article.title} width={400} height={180} className="blog-card-cover" style={{ objectFit: 'cover', width: '100%' }} />
                           : <div className="blog-card-top" style={{ background: cs.color }} />
                         }
                         <div className="blog-card-body">

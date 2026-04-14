@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Bien } from '@/lib/types'
 import { theme } from '@/lib/theme'
 import MetroBadge from './MetroBadge'
@@ -169,7 +170,7 @@ export default function BienCard({ bien, inWatchlist = false, userToken, onWatch
                 Photo indisponible
               </div>
             ) : (
-              <img
+              <Image
                 src={photos[photoIdx]}
                 alt={imageAlt}
                 width={400}

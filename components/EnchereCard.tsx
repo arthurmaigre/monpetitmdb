@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Enchere } from '@/lib/types'
 import { theme } from '@/lib/theme'
 import TypeBienIllustration from './TypeBienIllustration'
@@ -116,7 +117,7 @@ export default function EnchereCard({ enchere, compact = false, inWatchlist: ini
                 animation: 'shimmer 1.5s infinite',
               }} />
             )}
-            <img
+            <Image
               src={photo}
               alt={`${enchere.type_bien || 'Bien'} - ${enchere.ville || ''}`}
               width={400}

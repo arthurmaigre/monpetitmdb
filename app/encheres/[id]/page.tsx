@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV, calculerFraisEnchere } from '@/lib/calculs'
@@ -34,7 +35,7 @@ function PhotoCarousel({ enchere }: { enchere: any }) {
       aria-label={`Photo ${idx + 1} sur ${photos.length}`}
       style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}
     >
-      <img src={photos[idx]} alt="" className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in' }} />
+      <Image src={photos[idx]} alt="" width={800} height={450} className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in', width: '100%', height: 'auto', maxHeight: '320px', objectFit: 'cover' }} />
       {fullscreen && (
         <div onClick={() => setFullscreen(false)} style={{
           position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.9)',
