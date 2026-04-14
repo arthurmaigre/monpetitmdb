@@ -75,6 +75,7 @@ export default function EncheresPage() {
   const [statut, setStatut] = useState(saved.current?.statut || '')
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
+  const [sources, setSources] = useState<Set<string>>(new Set(saved.current?.sources || []))
   const [tri, setTri] = useState(saved.current?.tri || 'date_audience_asc')
 
   // Localisation
@@ -101,9 +102,9 @@ export default function EncheresPage() {
     sessionStorage.setItem('encheres_filters', JSON.stringify({
       typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation,
       tribunal, dateRange, statut, keyword: keywordSearch, tri, view,
-      communeSearch, selectedCommune,
+      communeSearch, selectedCommune, sources: Array.from(sources),
     }))
-  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, communeSearch, selectedCommune])
+  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, communeSearch, selectedCommune, sources])
 
   // Build API URL
   function buildApiUrl(page: number, mapMode = false) {
@@ -122,6 +123,8 @@ export default function EncheresPage() {
     if (dateRange) params.set('date_audience_max', dateRange)
     if (statut) params.set('statut', statut)
     if (keywordSearch) params.set('keyword', keywordSearch)
+
+    if (sources.size > 0 && sources.size < 3) params.set('source', Array.from(sources).join(','))
 
     if (selectedCommune) {
       params.set('locationType', selectedCommune.type || 'commune')
@@ -149,7 +152,7 @@ export default function EncheresPage() {
       setError(e.message)
     }
     setLoading(false)
-  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, selectedCommune, userToken])
+  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, selectedCommune, userToken, sources])
 
   useEffect(() => { fetchEncheres() }, [fetchEncheres])
 
@@ -376,17 +379,47 @@ export default function EncheresPage() {
                   onBlur={() => setKeywordSearch(keyword)}
                 />
               </div>
+
+              {/* Sources */}
+              <div>
+                <label style={labelStyle}>Sources</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {([['licitor', 'LIC', '#1565C0'], ['avoventes', 'AVO', '#6A1B9A'], ['vench', 'VEN', '#2E7D32']] as const).map(([key, abbrev, color]) => {
+                    const active = sources.size === 0 || sources.has(key)
+                    return (
+                      <button key={key} onClick={() => {
+                        setSources(prev => {
+                          const next = new Set(prev)
+                          if (next.has(key)) { next.delete(key) } else { next.add(key) }
+                          if (next.size === 3) return new Set()
+                          return next
+                        })
+                      }} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: '32px', height: '28px', borderRadius: '6px',
+                        background: active ? color : '#f0ede8',
+                        color: active ? '#fff' : '#b0a898',
+                        fontSize: '9px', fontWeight: 700, border: 'none', cursor: 'pointer',
+                        transition: 'all 0.15s', opacity: active ? 1 : 0.5,
+                      }} title={key.charAt(0).toUpperCase() + key.slice(1)}>
+                        {abbrev}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
           {/* Active filters + reset */}
-          {(typeBien || prixMin || prixMax || surfaceMin || surfaceMax || occupation || tribunal || dateRange || statut || selectedCommune || keywordSearch) && (
+          {(typeBien || prixMin || prixMax || surfaceMin || surfaceMax || occupation || tribunal || dateRange || statut || selectedCommune || keywordSearch || sources.size > 0) && (
             <div style={{ marginTop: theme.spacing[3], display: 'flex', gap: theme.spacing[2], flexWrap: 'wrap', alignItems: 'center' }}>
               <button
                 onClick={() => {
                   setTypeBien(''); setPrixMin(''); setPrixMax(''); setSurfaceMin(''); setSurfaceMax('')
                   setOccupation(''); setTribunal(''); setDateRange(''); setStatut('')
                   setSelectedCommune(null); setCommuneSearch(''); setKeyword(''); setKeywordSearch('')
+                  setSources(new Set())
                 }}
                 style={{
                   padding: '4px 12px', borderRadius: theme.radii.sm,
