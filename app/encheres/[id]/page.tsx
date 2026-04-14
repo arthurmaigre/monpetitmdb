@@ -41,7 +41,7 @@ function PhotoCarousel({ enchere }: { enchere: any }) {
           position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.9)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out',
         }}>
-          <img src={photos[idx]} alt="" style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', borderRadius: '8px' }} />
+          <Image src={photos[idx]} alt="" width={1920} height={1080} style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', borderRadius: '8px', width: 'auto', height: 'auto' }} />
           <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', color: '#fff', fontSize: '14px', fontWeight: 600 }}>
             {idx + 1} / {photos.length}
           </div>
