@@ -493,13 +493,13 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
         return
 
     # Étape 1 : récupérer les IDs (sans moteurimmo_data pour éviter timeout Supabase)
+    # Note: pas d'order(created_at) car timeout Supabase sans index composite
     id_query = (client.table("biens")
              .select("id")
              .eq("strategie_mdb", "Immeuble de rapport")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
              .is_("extraction_statut", "null")
-             .order("created_at", desc=False)
              .limit(limit))
     id_res = id_query.execute()
     ids = [r["id"] for r in (id_res.data or [])]
