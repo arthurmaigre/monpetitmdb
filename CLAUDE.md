@@ -611,9 +611,9 @@ Branch protection activee sur main (1 review requise pour merge).
 | Filius | tax-expert | Expert-Comptable Immobilier | Sonnet 4.6 | Filius-tax-expert |
 
 **Architecture :**
-- Tous les agents en `runtime.type: "acp"` via API Anthropic directe (plugin `anthropic` active, 1 cle API par agent). Auth par `auth-profiles.json` par agent + `auth order set` pour le routing. Modeles : `anthropic/claude-opus-4-6` (Harry), `anthropic/claude-sonnet-4-6` (Albus/Severus/Minerva/Sirius/Filius), `anthropic/claude-haiku-4-5` (Hermione/Ron/Neville/Luna). Budget : 3€/jour (~$3.25) gere par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE).
-- CEO lie a Telegram via binding ACP persistent (session Claude Code qui reste ouverte entre les messages).
-- CEO delegue aux 9 autres via `sessions_spawn(runtime="acp")`.
+- Tous les agents en `runtime.type: "embedded"` via API Anthropic directe (plugin `anthropic` active, 1 cle API par agent). Auth par `auth-profiles.json` par agent. Modeles : `anthropic/claude-opus-4-6` (Harry), `anthropic/claude-sonnet-4-6` (Albus/Severus/Minerva/Sirius/Filius), `anthropic/claude-haiku-4-5` (Hermione/Ron/Neville/Luna). Budget : 3€/jour (~$3.25) gere par Albus (max 10 turns/agent, regime VERT/JAUNE/ORANGE/ROUGE).
+- CEO lie a Telegram via binding route standard (pas ACP).
+- CEO delegue aux 9 autres via `sessions_spawn(runtime="embedded")`.
 - maxConcurrentSessions=4, maxChildrenPerAgent=3, maxConcurrent=4, timeout=900s.
 - Hook `pre-push` git bloque tout push direct sur main. Branches + PRs obligatoires.
 - Compaction safeguard + memory flush active (contexte persiste entre les sessions).
