@@ -492,17 +492,28 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
         log.error("Supabase non connecté")
         return
 
-    query = (client.table("biens")
-             .select("id, created_at, prix_fai, loyer, taxe_fonc_ann, moteurimmo_data")
+    # Étape 1 : récupérer les IDs (sans moteurimmo_data pour éviter timeout Supabase)
+    id_query = (client.table("biens")
+             .select("id")
              .eq("strategie_mdb", "Immeuble de rapport")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
              .is_("extraction_statut", "null")
              .order("created_at", desc=False)
              .limit(limit))
-    res = query.execute()
-    biens = res.data or []
-    log.info(f"IDR : {len(biens)} biens à traiter (batch_size={batch_size}, workers={workers})")
+    id_res = id_query.execute()
+    ids = [r["id"] for r in (id_res.data or [])]
+    log.info(f"IDR : {len(ids)} biens à traiter (batch_size={batch_size}, workers={workers})")
+
+    # Étape 2 : fetch le détail par petits groupes de 50
+    biens = []
+    for i in range(0, len(ids), 50):
+        chunk_ids = ids[i:i + 50]
+        res = (client.table("biens")
+               .select("id, created_at, prix_fai, loyer, taxe_fonc_ann, moteurimmo_data")
+               .in_("id", chunk_ids)
+               .execute())
+        biens.extend(res.data or [])
 
     processed = 0
     lots_found = 0
