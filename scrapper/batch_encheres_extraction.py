@@ -29,7 +29,7 @@ log = logging.getLogger("encheres_extraction")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 TABLE = "encheres"
-MODEL = "opus"
+MODEL = "sonnet"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Prompt — SOURCE AUTORITAIRE pour toutes les colonnes texte

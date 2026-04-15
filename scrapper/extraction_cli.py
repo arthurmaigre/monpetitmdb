@@ -12,8 +12,9 @@ Usage :
   python extraction_cli.py score                  # Score travaux
   python extraction_cli.py --dry-run locataire    # Voir sans modifier la DB
 """
-import os, sys, json, logging, argparse, subprocess, time, tempfile, shutil
+import os, sys, json, logging, argparse, subprocess, time, tempfile, shutil, re
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from datetime import datetime, timezone
 
@@ -24,6 +25,10 @@ from supabase_client import get_client
 
 log = logging.getLogger("extraction_cli")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+MODEL = "sonnet"
+BATCH_SIZE = 10
+MAX_WORKERS = 3
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Prompts — identiques aux routes TypeScript
@@ -129,11 +134,11 @@ Annonce :
 # Appel Claude CLI
 # ══════════════════════════════════════════════════════════════════════════════
 
-def call_claude(prompt: str, timeout: int = 60) -> dict | None:
-    """Appelle claude -p et retourne le JSON parsé, ou None en cas d'erreur."""
+def call_claude(prompt: str, timeout: int = 120) -> dict | None:
+    """Appelle claude -p avec Sonnet et retourne le JSON parsé, ou None en cas d'erreur."""
     try:
         result = subprocess.run(
-            ["claude", "-p", prompt, "--output-format", "json", "--max-turns", "1"],
+            ["claude", "-p", prompt, "--model", MODEL, "--output-format", "json", "--max-turns", "1"],
             capture_output=True, text=True, timeout=timeout,
         )
         if result.returncode != 0:
@@ -171,7 +176,7 @@ def download_photo(url: str, dest_path: str) -> bool:
 
 
 def call_claude_with_photos(prompt: str, photo_paths: list[str], timeout: int = 120) -> dict | None:
-    """Appelle claude -p avec --allowedTools Read pour lire les photos locales."""
+    """Appelle claude -p Sonnet avec --allowedTools Read pour lire les photos locales."""
     # Ajouter les instructions de lecture des photos au prompt
     full_prompt = prompt
     if photo_paths:
@@ -181,7 +186,7 @@ def call_claude_with_photos(prompt: str, photo_paths: list[str], timeout: int = 
 
     try:
         result = subprocess.run(
-            ["claude", "-p", "--allowedTools", "Read", "--max-turns", str(2 + len(photo_paths))],
+            ["claude", "-p", "--model", MODEL, "--allowedTools", "Read", "--max-turns", str(2 + len(photo_paths))],
             input=full_prompt, capture_output=True, text=True, timeout=timeout,
         )
         if result.returncode != 0:
@@ -225,47 +230,134 @@ def parse_json_response(text: str) -> dict | None:
         return None
 
 
+def parse_json_array_response(text: str) -> list[dict]:
+    """Parse un JSON array depuis la réponse Claude (batch multi-biens)."""
+    cleaned = re.sub(r'```json\s*', '', text)
+    cleaned = re.sub(r'```\s*', '', cleaned).strip()
+
+    # Chercher un array JSON [...]
+    start = cleaned.find('[')
+    if start == -1:
+        # Fallback : peut-être un seul objet
+        single = parse_json_response(text)
+        return [single] if single else []
+    depth = 0
+    end = -1
+    for i in range(start, len(cleaned)):
+        if cleaned[i] == '[':
+            depth += 1
+        elif cleaned[i] == ']':
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end == -1:
+        return []
+    try:
+        result = json.loads(cleaned[start:end + 1])
+        return result if isinstance(result, list) else []
+    except json.JSONDecodeError:
+        return []
+
+
+def call_claude_batch(prompt: str, timeout: int = 180) -> list[dict]:
+    """Appelle claude -p Sonnet avec un prompt batch, retourne une liste de résultats."""
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt, "--model", MODEL, "--output-format", "json", "--max-turns", "1"],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if result.returncode != 0:
+            log.error(f"Claude CLI batch erreur (code {result.returncode}): {result.stderr[:200]}")
+            return []
+
+        outer = json.loads(result.stdout)
+        response_text = outer.get("result", "")
+        return parse_json_array_response(response_text)
+    except subprocess.TimeoutExpired:
+        log.error("Claude CLI batch timeout")
+        return []
+    except json.JSONDecodeError as e:
+        log.error(f"JSON batch parse error: {e}")
+        return []
+    except Exception as e:
+        log.error(f"Claude CLI batch exception: {e}")
+        return []
+
+
+def extract_moteurimmo_data(bien: dict) -> dict:
+    """Extrait et parse le moteurimmo_data d'un bien."""
+    md = bien.get("moteurimmo_data")
+    if isinstance(md, str):
+        try:
+            md = json.loads(md)
+            if isinstance(md, str):
+                md = json.loads(md)
+        except Exception:
+            md = {}
+    return md or {}
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Extraction Locataire en place
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_locataire(limit: int, dry_run: bool):
-    client = get_client()
-    if not client:
-        log.error("Supabase non connecté")
-        return
+def _apply_locataire_update(bien: dict, parsed: dict, client, dry_run: bool) -> dict:
+    """Applique les données extraites d'un bien locataire. Retourne les stats."""
+    now = datetime.now(timezone.utc).isoformat()
+    stats = {"loyer": 0, "profil": 0}
 
-    # Récupérer les biens à traiter
-    query = (client.table("biens")
-             .select("id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data")
-             .eq("strategie_mdb", "Locataire en place")
-             .eq("statut", "Toujours disponible")
-             .eq("regex_statut", "valide")
-             .not_.is_("moteurimmo_data", "null")
-             .is_("extraction_statut", "null")
-             .order("created_at", desc=False)
-             .limit(limit))
-    res = query.execute()
-    biens = res.data or []
-    log.info(f"Locataire en place : {len(biens)} biens à traiter")
+    if dry_run:
+        log.info(f"  [{bien['id']}] DRY RUN → {json.dumps(parsed, ensure_ascii=False)}")
+        return stats
 
-    processed = 0
-    loyer_found = 0
-    profil_found = 0
-    errors = 0
+    update = {"extraction_statut": "ok", "extraction_date": now}
 
-    for bien in biens:
-        now = datetime.now(timezone.utc).isoformat()
-        md = bien.get("moteurimmo_data")
-        if isinstance(md, str):
-            try:
-                md = json.loads(md)
-                if isinstance(md, str):
-                    md = json.loads(md)
-            except:
-                md = {}
+    if not bien.get("loyer") and parsed.get("loyer") and isinstance(parsed["loyer"], (int, float)):
+        update["loyer"] = parsed["loyer"]
+        update["type_loyer"] = parsed.get("type_loyer") or "HC"
+        stats["loyer"] = 1
 
-        desc = (md.get("description", "") or "")[:800] if md else ""
+    if not bien.get("charges_rec") and parsed.get("charges_recup") is not None:
+        update["charges_rec"] = parsed["charges_recup"]
+    if not bien.get("charges_copro") and parsed.get("charges_copro") is not None:
+        update["charges_copro"] = parsed["charges_copro"]
+    if not bien.get("taxe_fonc_ann") and parsed.get("taxe_fonc_ann") is not None:
+        update["taxe_fonc_ann"] = parsed["taxe_fonc_ann"]
+    if not bien.get("fin_bail") and parsed.get("fin_bail") is not None:
+        fb = str(parsed["fin_bail"])
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", fb):
+            update["fin_bail"] = fb
+    if parsed.get("nb_sdb") is not None and isinstance(parsed["nb_sdb"], (int, float)):
+        update["nb_sdb"] = int(parsed["nb_sdb"])
+    if parsed.get("nb_chambres") is not None and isinstance(parsed["nb_chambres"], (int, float)):
+        update["nb_chambres"] = int(parsed["nb_chambres"])
+
+    if parsed.get("profil_locataire") and isinstance(parsed["profil_locataire"], str):
+        update["profil_locataire"] = parsed["profil_locataire"]
+        stats["profil"] = 1
+    else:
+        update["profil_locataire"] = "NC"
+
+    final_loyer = update.get("loyer") or bien.get("loyer")
+    if final_loyer and bien.get("prix_fai"):
+        update["rendement_brut"] = round((final_loyer * 12 / bien["prix_fai"]) * 10000) / 10000
+
+    client.table("biens").update(update).eq("id", bien["id"]).execute()
+    log.info(f"  [{bien['id']}] OK — loyer={update.get('loyer')}, profil={update.get('profil_locataire')}")
+    return stats
+
+
+def _process_locataire_batch(chunk: list[dict], client, dry_run: bool) -> dict:
+    """Traite un batch de biens locataire (1 appel Claude pour N biens)."""
+    stats = {"processed": 0, "loyer": 0, "profil": 0, "errors": 0}
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Séparer les biens avec/sans description
+    valid_biens = []
+    for bien in chunk:
+        md = extract_moteurimmo_data(bien)
+        desc = (md.get("description", "") or "")[:800]
         if not desc:
             if not dry_run:
                 client.table("biens").update({
@@ -274,11 +366,32 @@ def run_locataire(limit: int, dry_run: bool):
                     "extraction_date": now
                 }).eq("id", bien["id"]).execute()
             log.info(f"  [{bien['id']}] pas de description → no_data")
-            processed += 1
-            continue
+            stats["processed"] += 1
+        else:
+            valid_biens.append((bien, desc))
 
-        log.info(f"  [{bien['id']}] extraction en cours...")
-        parsed = call_claude(PROMPT_LOCATAIRE + desc)
+    if not valid_biens:
+        return stats
+
+    # Construire le prompt batch
+    prompt = PROMPT_LOCATAIRE + "\n\n--- BATCH : analyse les annonces suivantes et retourne un JSON ARRAY ---\n"
+    prompt += "Retourne EXACTEMENT un array JSON : [{\"id\": \"...\", ...données...}, ...]\n\n"
+    for bien, desc in valid_biens:
+        prompt += f"=== ANNONCE (id: {bien['id']}) ===\n{desc}\n\n"
+
+    log.info(f"  Batch locataire : {len(valid_biens)} biens, appel Claude...")
+    results = call_claude_batch(prompt)
+
+    # Mapper les résultats par id
+    results_by_id = {}
+    for r in results:
+        rid = str(r.get("id", ""))
+        if rid:
+            results_by_id[rid] = r
+
+    for bien, desc in valid_biens:
+        bid = str(bien["id"])
+        parsed = results_by_id.get(bid)
 
         if not parsed:
             if not dry_run:
@@ -287,58 +400,158 @@ def run_locataire(limit: int, dry_run: bool):
                     "extraction_statut": "echec",
                     "extraction_date": now
                 }).eq("id", bien["id"]).execute()
-            log.warning(f"  [{bien['id']}] échec parsing")
-            errors += 1
-            processed += 1
-            continue
-
-        if dry_run:
-            log.info(f"  [{bien['id']}] DRY RUN → {json.dumps(parsed, ensure_ascii=False)}")
-            processed += 1
-            continue
-
-        # Construire l'update — même logique que route.ts
-        update = {"extraction_statut": "ok", "extraction_date": now}
-
-        if not bien.get("loyer") and parsed.get("loyer") and isinstance(parsed["loyer"], (int, float)):
-            update["loyer"] = parsed["loyer"]
-            update["type_loyer"] = parsed.get("type_loyer") or "HC"
-            loyer_found += 1
-
-        if not bien.get("charges_rec") and parsed.get("charges_recup") is not None:
-            update["charges_rec"] = parsed["charges_recup"]
-        if not bien.get("charges_copro") and parsed.get("charges_copro") is not None:
-            update["charges_copro"] = parsed["charges_copro"]
-        if not bien.get("taxe_fonc_ann") and parsed.get("taxe_fonc_ann") is not None:
-            update["taxe_fonc_ann"] = parsed["taxe_fonc_ann"]
-        if not bien.get("fin_bail") and parsed.get("fin_bail") is not None:
-            update["fin_bail"] = parsed["fin_bail"]
-        if parsed.get("nb_sdb") is not None and isinstance(parsed["nb_sdb"], (int, float)):
-            update["nb_sdb"] = int(parsed["nb_sdb"])
-        if parsed.get("nb_chambres") is not None and isinstance(parsed["nb_chambres"], (int, float)):
-            update["nb_chambres"] = int(parsed["nb_chambres"])
-
-        if parsed.get("profil_locataire") and isinstance(parsed["profil_locataire"], str):
-            update["profil_locataire"] = parsed["profil_locataire"]
-            profil_found += 1
+            log.warning(f"  [{bien['id']}] pas de résultat dans le batch")
+            stats["errors"] += 1
         else:
-            update["profil_locataire"] = "NC"
+            s = _apply_locataire_update(bien, parsed, client, dry_run)
+            stats["loyer"] += s["loyer"]
+            stats["profil"] += s["profil"]
+        stats["processed"] += 1
 
-        # Recalculer rendement_brut
-        final_loyer = update.get("loyer") or bien.get("loyer")
-        if final_loyer and bien.get("prix_fai"):
-            update["rendement_brut"] = round((final_loyer * 12 / bien["prix_fai"]) * 10000) / 10000
+    return stats
 
-        client.table("biens").update(update).eq("id", bien["id"]).execute()
-        log.info(f"  [{bien['id']}] OK — loyer={update.get('loyer')}, profil={update.get('profil_locataire')}")
-        processed += 1
 
-    log.info(f"\nRésultat : {processed} traités, {loyer_found} loyers trouvés, {profil_found} profils trouvés, {errors} erreurs")
+def run_locataire(limit: int, dry_run: bool):
+    client = get_client()
+    if not client:
+        log.error("Supabase non connecté")
+        return
+
+    query = (client.table("biens")
+             .select("id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data")
+             .eq("strategie_mdb", "Locataire en place")
+             .eq("statut", "Toujours disponible")
+             .eq("regex_statut", "valide")
+             .is_("extraction_statut", "null")
+             .order("created_at", desc=False)
+             .limit(limit))
+    res = query.execute()
+    biens = res.data or []
+    log.info(f"Locataire en place : {len(biens)} biens à traiter")
+
+    if not biens:
+        return
+
+    # Découper en chunks de BATCH_SIZE
+    chunks = [biens[i:i + BATCH_SIZE] for i in range(0, len(biens), BATCH_SIZE)]
+    totals = {"processed": 0, "loyer": 0, "profil": 0, "errors": 0}
+
+    # Traiter les chunks en parallèle (MAX_WORKERS)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(_process_locataire_batch, chunk, client, dry_run): i
+            for i, chunk in enumerate(chunks)
+        }
+        for future in as_completed(futures):
+            try:
+                stats = future.result()
+                for k in totals:
+                    totals[k] += stats.get(k, 0)
+            except Exception as e:
+                log.error(f"Erreur batch locataire : {e}")
+                totals["errors"] += 1
+
+    log.info(f"\nRésultat locataire : {totals['processed']} traités, {totals['loyer']} loyers trouvés, {totals['profil']} profils trouvés, {totals['errors']} erreurs")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Extraction Immeuble de rapport
 # ══════════════════════════════════════════════════════════════════════════════
+
+def _apply_idr_update(bien: dict, parsed: dict, client, dry_run: bool) -> dict:
+    """Applique les données extraites d'un bien IDR. Retourne les stats."""
+    stats = {"lots": 0}
+
+    if dry_run:
+        log.info(f"  [{bien['id']}] DRY RUN → {json.dumps(parsed, ensure_ascii=False)[:300]}")
+        return stats
+
+    now = datetime.now(timezone.utc).isoformat()
+    update = {"extraction_statut": "ok", "extraction_date": now}
+    lots = parsed.get("lots", [])
+
+    nb_lots = parsed.get("nb_lots") or (len(lots) if isinstance(lots, list) else None)
+    if nb_lots:
+        update["nb_lots"] = nb_lots
+    if parsed.get("monopropriete") is not None:
+        update["monopropriete"] = parsed["monopropriete"]
+    if parsed.get("compteurs_individuels") is not None:
+        update["compteurs_individuels"] = parsed["compteurs_individuels"]
+    if not bien.get("taxe_fonc_ann") and parsed.get("taxe_fonc_ann") is not None:
+        update["taxe_fonc_ann"] = parsed["taxe_fonc_ann"]
+    if not bien.get("loyer") and parsed.get("loyer_total_mensuel") and isinstance(parsed["loyer_total_mensuel"], (int, float)):
+        update["loyer"] = parsed["loyer_total_mensuel"]
+        update["type_loyer"] = "HC"
+    if isinstance(lots, list) and len(lots) > 0:
+        update["lots_data"] = {"lots": lots}
+        stats["lots"] = 1
+
+    final_loyer = update.get("loyer") or bien.get("loyer")
+    if final_loyer and bien.get("prix_fai"):
+        update["rendement_brut"] = round((final_loyer * 12 / bien["prix_fai"]) * 10000) / 10000
+
+    client.table("biens").update(update).eq("id", bien["id"]).execute()
+    log.info(f"  [{bien['id']}] OK — nb_lots={update.get('nb_lots')}, lots={'oui' if stats['lots'] else 'non'}")
+    return stats
+
+
+def _process_idr_batch(chunk: list[dict], client, dry_run: bool) -> dict:
+    """Traite un batch de biens IDR (1 appel Claude pour N biens)."""
+    stats = {"processed": 0, "lots": 0, "errors": 0}
+    now = datetime.now(timezone.utc).isoformat()
+
+    valid_biens = []
+    for bien in chunk:
+        md = extract_moteurimmo_data(bien)
+        title = (md.get("title", "") or "")[:100]
+        desc = (md.get("description", "") or "")[:1200]
+        if not desc:
+            if not dry_run:
+                client.table("biens").update({
+                    "extraction_statut": "no_data",
+                    "extraction_date": now
+                }).eq("id", bien["id"]).execute()
+            log.info(f"  [{bien['id']}] pas de description → no_data")
+            stats["processed"] += 1
+        else:
+            valid_biens.append((bien, title, desc))
+
+    if not valid_biens:
+        return stats
+
+    prompt = PROMPT_IDR + "\n\n--- BATCH : analyse les annonces suivantes et retourne un JSON ARRAY ---\n"
+    prompt += "Retourne EXACTEMENT un array JSON : [{\"id\": \"...\", ...données...}, ...]\n\n"
+    for bien, title, desc in valid_biens:
+        prompt += f"=== ANNONCE (id: {bien['id']}) ===\n{title}\n\n{desc}\n\n"
+
+    log.info(f"  Batch IDR : {len(valid_biens)} biens, appel Claude...")
+    results = call_claude_batch(prompt)
+
+    results_by_id = {}
+    for r in results:
+        rid = str(r.get("id", ""))
+        if rid:
+            results_by_id[rid] = r
+
+    for bien, title, desc in valid_biens:
+        bid = str(bien["id"])
+        parsed = results_by_id.get(bid)
+
+        if not parsed:
+            if not dry_run:
+                client.table("biens").update({
+                    "extraction_statut": "echec",
+                    "extraction_date": now
+                }).eq("id", bien["id"]).execute()
+            log.warning(f"  [{bien['id']}] pas de résultat dans le batch")
+            stats["errors"] += 1
+        else:
+            s = _apply_idr_update(bien, parsed, client, dry_run)
+            stats["lots"] += s["lots"]
+        stats["processed"] += 1
+
+    return stats
+
 
 def run_idr(limit: int, dry_run: bool):
     client = get_client()
@@ -350,7 +563,7 @@ def run_idr(limit: int, dry_run: bool):
              .select("id, created_at, prix_fai, loyer, taxe_fonc_ann, moteurimmo_data")
              .eq("strategie_mdb", "Immeuble de rapport")
              .eq("statut", "Toujours disponible")
-             .not_.is_("moteurimmo_data", "null")
+             .eq("regex_statut", "valide")
              .is_("extraction_statut", "null")
              .order("created_at", desc=False)
              .limit(limit))
@@ -358,85 +571,106 @@ def run_idr(limit: int, dry_run: bool):
     biens = res.data or []
     log.info(f"IDR : {len(biens)} biens à traiter")
 
-    processed = 0
-    lots_found = 0
-    errors = 0
+    if not biens:
+        return
 
-    for bien in biens:
-        now = datetime.now(timezone.utc).isoformat()
-        md = bien.get("moteurimmo_data")
-        if isinstance(md, str):
+    chunks = [biens[i:i + BATCH_SIZE] for i in range(0, len(biens), BATCH_SIZE)]
+    totals = {"processed": 0, "lots": 0, "errors": 0}
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(_process_idr_batch, chunk, client, dry_run): i
+            for i, chunk in enumerate(chunks)
+        }
+        for future in as_completed(futures):
             try:
-                md = json.loads(md)
-                if isinstance(md, str):
-                    md = json.loads(md)
-            except:
-                md = {}
+                stats = future.result()
+                for k in totals:
+                    totals[k] += stats.get(k, 0)
+            except Exception as e:
+                log.error(f"Erreur batch IDR : {e}")
+                totals["errors"] += 1
 
-        title = (md.get("title", "") or "")[:100] if md else ""
-        desc = (md.get("description", "") or "")[:1200] if md else ""
-        if not desc:
-            if not dry_run:
-                client.table("biens").update({
-                    "extraction_statut": "no_data",
-                    "extraction_date": now
-                }).eq("id", bien["id"]).execute()
-            log.info(f"  [{bien['id']}] pas de description → no_data")
-            processed += 1
-            continue
-
-        log.info(f"  [{bien['id']}] extraction IDR en cours...")
-        parsed = call_claude(PROMPT_IDR + f"{title}\n\n{desc}")
-
-        if not parsed:
-            if not dry_run:
-                client.table("biens").update({
-                    "extraction_statut": "echec",
-                    "extraction_date": now
-                }).eq("id", bien["id"]).execute()
-            log.warning(f"  [{bien['id']}] échec parsing")
-            errors += 1
-            processed += 1
-            continue
-
-        if dry_run:
-            log.info(f"  [{bien['id']}] DRY RUN → {json.dumps(parsed, ensure_ascii=False)[:300]}")
-            processed += 1
-            continue
-
-        update = {"extraction_statut": "ok", "extraction_date": now}
-        lots = parsed.get("lots", [])
-
-        nb_lots = parsed.get("nb_lots") or (len(lots) if isinstance(lots, list) else None)
-        if nb_lots:
-            update["nb_lots"] = nb_lots
-        if parsed.get("monopropriete") is not None:
-            update["monopropriete"] = parsed["monopropriete"]
-        if parsed.get("compteurs_individuels") is not None:
-            update["compteurs_individuels"] = parsed["compteurs_individuels"]
-        if not bien.get("taxe_fonc_ann") and parsed.get("taxe_fonc_ann") is not None:
-            update["taxe_fonc_ann"] = parsed["taxe_fonc_ann"]
-        if not bien.get("loyer") and parsed.get("loyer_total_mensuel") and isinstance(parsed["loyer_total_mensuel"], (int, float)):
-            update["loyer"] = parsed["loyer_total_mensuel"]
-            update["type_loyer"] = "HC"
-        if isinstance(lots, list) and len(lots) > 0:
-            update["lots_data"] = {"lots": lots}
-            lots_found += 1
-
-        final_loyer = update.get("loyer") or bien.get("loyer")
-        if final_loyer and bien.get("prix_fai"):
-            update["rendement_brut"] = round((final_loyer * 12 / bien["prix_fai"]) * 10000) / 10000
-
-        client.table("biens").update(update).eq("id", bien["id"]).execute()
-        log.info(f"  [{bien['id']}] OK — nb_lots={update.get('nb_lots')}, lots_data={'oui' if lots_found else 'non'}")
-        processed += 1
-
-    log.info(f"\nRésultat : {processed} traités, {lots_found} avec lots, {errors} erreurs")
+    log.info(f"\nRésultat IDR : {totals['processed']} traités, {totals['lots']} avec lots, {totals['errors']} erreurs")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Score Travaux
 # ══════════════════════════════════════════════════════════════════════════════
+
+def _process_score_single(bien: dict, client, dry_run: bool) -> dict:
+    """Traite un seul bien pour le score travaux (photos non batchables)."""
+    stats = {"processed": 1, "scored": 0, "errors": 0}
+    now = datetime.now(timezone.utc).isoformat()
+
+    md = extract_moteurimmo_data(bien)
+    title = (md.get("title", "") or "")
+    desc = (md.get("description", "") or "")[:900]
+    photo_urls = md.get("pictureUrls") or []
+
+    if not desc and not title:
+        if not dry_run:
+            client.table("biens").update({
+                "score_travaux": 1,
+                "score_commentaire": "Pas de description disponible",
+                "score_analyse_statut": "no_data",
+                "score_analyse_date": now
+            }).eq("id", bien["id"]).execute()
+        return stats
+
+    annonce = f"Titre: {title}\nDescription: {desc}\nDPE: {bien.get('dpe') or 'NC'}\nAnnee: {bien.get('annee_construction') or 'NC'}\nPrix: {bien.get('prix_fai')} | Surface: {bien.get('surface')}m2"
+
+    tmp_dir = None
+    photo_paths = []
+    if photo_urls:
+        tmp_dir = tempfile.mkdtemp(prefix="score_photos_")
+        for i, url in enumerate(photo_urls[:5]):
+            ext = url.rsplit(".", 1)[-1][:4] if "." in url else "jpg"
+            dest = os.path.join(tmp_dir, f"photo_{i+1}.{ext}")
+            if download_photo(url, dest):
+                photo_paths.append(dest)
+
+    nb_photos = len(photo_paths)
+    log.info(f"  [{bien['id']}] scoring en cours... ({nb_photos} photos)")
+
+    if photo_paths:
+        parsed = call_claude_with_photos(PROMPT_SCORE + annonce, photo_paths, timeout=120)
+    else:
+        parsed = call_claude(PROMPT_SCORE + annonce)
+
+    if tmp_dir:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    if not parsed:
+        if not dry_run:
+            client.table("biens").update({
+                "score_analyse_statut": "erreur",
+                "score_analyse_date": now
+            }).eq("id", bien["id"]).execute()
+        log.warning(f"  [{bien['id']}] échec parsing")
+        stats["errors"] = 1
+        return stats
+
+    score = parsed.get("score")
+    if not isinstance(score, (int, float)) or not (1 <= score <= 5):
+        log.warning(f"  [{bien['id']}] score invalide: {score}")
+        stats["errors"] = 1
+        return stats
+
+    if dry_run:
+        log.info(f"  [{bien['id']}] DRY RUN → score={int(score)}, {parsed.get('commentaire', '')[:80]}")
+        return stats
+
+    client.table("biens").update({
+        "score_travaux": int(score),
+        "score_commentaire": str(parsed.get("commentaire", ""))[:800],
+        "score_analyse_statut": "ok",
+        "score_analyse_date": now
+    }).eq("id", bien["id"]).execute()
+    log.info(f"  [{bien['id']}] OK — score={int(score)}")
+    stats["scored"] = 1
+    return stats
+
 
 def run_score(limit: int, dry_run: bool):
     client = get_client()
@@ -448,102 +682,36 @@ def run_score(limit: int, dry_run: bool):
              .select("id, created_at, dpe, annee_construction, prix_fai, surface, moteurimmo_data")
              .eq("strategie_mdb", "Travaux lourds")
              .eq("statut", "Toujours disponible")
+             .eq("regex_statut", "valide")
              .is_("score_travaux", "null")
-             .not_.is_("moteurimmo_data", "null")
              .order("created_at", desc=False)
              .limit(limit))
     res = query.execute()
     biens = res.data or []
     log.info(f"Score travaux : {len(biens)} biens à traiter")
 
-    processed = 0
-    scored = 0
-    errors = 0
+    if not biens:
+        return
 
-    for bien in biens:
-        now = datetime.now(timezone.utc).isoformat()
-        md = bien.get("moteurimmo_data")
-        if isinstance(md, str):
+    totals = {"processed": 0, "scored": 0, "errors": 0}
+
+    # Score avec photos = pas de batch, mais parallélisme sur les appels individuels
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(_process_score_single, bien, client, dry_run): bien["id"]
+            for bien in biens
+        }
+        for future in as_completed(futures):
             try:
-                md = json.loads(md)
-                if isinstance(md, str):
-                    md = json.loads(md)
-            except:
-                md = {}
+                stats = future.result()
+                for k in totals:
+                    totals[k] += stats.get(k, 0)
+            except Exception as e:
+                log.error(f"Erreur score : {e}")
+                totals["errors"] += 1
+                totals["processed"] += 1
 
-        title = (md.get("title", "") or "") if md else ""
-        desc = (md.get("description", "") or "")[:900] if md else ""
-        photo_urls = (md.get("pictureUrls") or []) if md else []
-        if not desc and not title:
-            if not dry_run:
-                client.table("biens").update({
-                    "score_travaux": 1,
-                    "score_commentaire": "Pas de description disponible",
-                    "score_analyse_statut": "no_data",
-                    "score_analyse_date": now
-                }).eq("id", bien["id"]).execute()
-            processed += 1
-            continue
-
-        annonce = f"Titre: {title}\nDescription: {desc}\nDPE: {bien.get('dpe') or 'NC'}\nAnnee: {bien.get('annee_construction') or 'NC'}\nPrix: {bien.get('prix_fai')} | Surface: {bien.get('surface')}m2"
-
-        # Télécharger les photos (max 5 pour limiter le temps)
-        tmp_dir = None
-        photo_paths = []
-        if photo_urls:
-            tmp_dir = tempfile.mkdtemp(prefix="score_photos_")
-            for i, url in enumerate(photo_urls[:5]):
-                ext = url.rsplit(".", 1)[-1][:4] if "." in url else "jpg"
-                dest = os.path.join(tmp_dir, f"photo_{i+1}.{ext}")
-                if download_photo(url, dest):
-                    photo_paths.append(dest)
-
-        nb_photos = len(photo_paths)
-        log.info(f"  [{bien['id']}] scoring en cours... ({nb_photos} photos)")
-
-        if photo_paths:
-            parsed = call_claude_with_photos(PROMPT_SCORE + annonce, photo_paths, timeout=120)
-        else:
-            parsed = call_claude(PROMPT_SCORE + annonce)
-
-        # Nettoyage du dossier temporaire
-        if tmp_dir:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-
-        if not parsed:
-            if not dry_run:
-                client.table("biens").update({
-                    "score_analyse_statut": "erreur",
-                    "score_analyse_date": now
-                }).eq("id", bien["id"]).execute()
-            log.warning(f"  [{bien['id']}] échec parsing")
-            errors += 1
-            processed += 1
-            continue
-
-        score = parsed.get("score")
-        if not isinstance(score, (int, float)) or not (1 <= score <= 5):
-            log.warning(f"  [{bien['id']}] score invalide: {score}")
-            errors += 1
-            processed += 1
-            continue
-
-        if dry_run:
-            log.info(f"  [{bien['id']}] DRY RUN → score={int(score)}, {parsed.get('commentaire', '')[:80]}")
-            processed += 1
-            continue
-
-        client.table("biens").update({
-            "score_travaux": int(score),
-            "score_commentaire": str(parsed.get("commentaire", ""))[:800],
-            "score_analyse_statut": "ok",
-            "score_analyse_date": now
-        }).eq("id", bien["id"]).execute()
-        log.info(f"  [{bien['id']}] OK — score={int(score)}")
-        scored += 1
-        processed += 1
-
-    log.info(f"\nRésultat : {processed} traités, {scored} scorés, {errors} erreurs")
+    log.info(f"\nRésultat score : {totals['processed']} traités, {totals['scored']} scorés, {totals['errors']} erreurs")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
