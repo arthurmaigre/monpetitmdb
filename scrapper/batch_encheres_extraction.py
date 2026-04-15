@@ -691,8 +691,8 @@ def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None,
         # Re-traiter tout (utile après amélioration du prompt)
         q = q.order("created_at")
     else:
-        # Seulement les non-enrichis
-        q = q.is_("enrichissement_statut", "null").order("created_at")
+        # Non-enrichis + échecs (retry automatique)
+        q = q.or_("enrichissement_statut.is.null,enrichissement_statut.eq.echec").order("created_at")
 
     if limit:
         q = q.limit(limit)
