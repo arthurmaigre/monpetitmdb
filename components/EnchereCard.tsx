@@ -6,6 +6,7 @@ import { Enchere } from '@/lib/types'
 import { theme } from '@/lib/theme'
 import { calculerFraisEnchere } from '@/lib/calculs'
 import TypeBienIllustration from './TypeBienIllustration'
+import { isVenteDelocalisee } from '@/lib/utils-encheres'
 
 interface Props {
   enchere: Enchere
@@ -266,6 +267,11 @@ export default function EnchereCard({ enchere, compact = false, inWatchlist: ini
           )}
           {tribunalShort && (
             <span style={pillStyle()}>{tribunalShort}</span>
+          )}
+          {isVenteDelocalisee(enchere.departement, enchere.tribunal) && (
+            <span style={pillStyle({ fontWeight: 600, background: '#fff3e0', color: '#e65100' })} title="La vente se déroule dans un tribunal d'un autre département">
+              📍 Délocalisée
+            </span>
           )}
           {enchere.nb_lots && enchere.nb_lots > 1 && (
             <span style={pillStyle({ fontWeight: 700, background: '#d4ddf5', color: '#2a4a8a' })}>
