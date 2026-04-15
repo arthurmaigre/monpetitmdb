@@ -382,31 +382,16 @@ export default function EncheresPage() {
 
               {/* Sources */}
               <div>
-                <label style={labelStyle}>Sources</label>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {([['licitor', 'LIC', '#1565C0'], ['avoventes', 'AVO', '#6A1B9A'], ['vench', 'VEN', '#2E7D32']] as const).map(([key, abbrev, color]) => {
-                    const active = sources.size === 0 || sources.has(key)
-                    return (
-                      <button key={key} onClick={() => {
-                        setSources(prev => {
-                          const next = new Set(prev)
-                          if (next.has(key)) { next.delete(key) } else { next.add(key) }
-                          if (next.size === 3) return new Set()
-                          return next
-                        })
-                      }} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        width: '32px', height: '28px', borderRadius: '6px',
-                        background: active ? color : '#f0ede8',
-                        color: active ? '#fff' : '#b0a898',
-                        fontSize: '9px', fontWeight: 700, border: 'none', cursor: 'pointer',
-                        transition: 'all 0.15s', opacity: active ? 1 : 0.5,
-                      }} title={key.charAt(0).toUpperCase() + key.slice(1)}>
-                        {abbrev}
-                      </button>
-                    )
-                  })}
-                </div>
+                <label style={labelStyle}>Source</label>
+                <select style={inputStyle} value={sources.size === 1 ? Array.from(sources)[0] : ''} onChange={e => {
+                  const v = e.target.value
+                  setSources(v ? new Set([v]) : new Set())
+                }}>
+                  <option value="">Toutes</option>
+                  <option value="licitor">Licitor</option>
+                  <option value="avoventes">Avoventes</option>
+                  <option value="vench">Vench</option>
+                </select>
               </div>
             </div>
           )}

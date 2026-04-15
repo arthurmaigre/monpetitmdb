@@ -21,6 +21,7 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
   const markerMapRef = useRef<Map<string, any>>(new Map())
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const LRef = useRef<any>(null)
+  const updateVisibleBiensRef = useRef<() => void>(() => {})
 
   // Biens avec coords
   const biensAvecCoords = biens.filter(b => b.latitude && b.longitude)
@@ -39,6 +40,11 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
     })
     setVisibleIds(ids)
   }, [biensAvecCoords])
+
+  // Keep ref in sync so event listeners always call the latest version
+  useEffect(() => {
+    updateVisibleBiensRef.current = updateVisibleBiens
+  }, [updateVisibleBiens])
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return
@@ -65,8 +71,8 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
       setTimeout(() => map.invalidateSize(), 100)
 
       // Mettre a jour les biens visibles quand on bouge la carte
-      map.on('moveend', () => updateVisibleBiens())
-      map.on('zoomend', () => updateVisibleBiens())
+      map.on('moveend', () => updateVisibleBiensRef.current())
+      map.on('zoomend', () => updateVisibleBiensRef.current())
     })
 
     return () => {
@@ -125,7 +131,7 @@ export default function MapView({ biens, userToken, watchlistIds, onWatchlistCha
 
     // Init visible apres fitBounds
     setTimeout(() => updateVisibleBiens(), 500)
-  }, [biens, ready])
+  }, [biens, ready, updateVisibleBiens])
 
   // Clic sur une card → centrer la carte + activer le marker
   function handleCardClick(bien: any) {
