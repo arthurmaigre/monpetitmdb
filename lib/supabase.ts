@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 type AnySupabaseClient = SupabaseClient<any, any, any>
 
@@ -14,13 +15,14 @@ function getSupabase() {
       throw new Error('[supabase] NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set!')
     }
 
-    _client = createClient<any>(supabaseUrl, supabaseAnonKey)
+    // createBrowserClient stocke la session dans les cookies (compatible middleware SSR)
+    _client = createBrowserClient<any>(supabaseUrl, supabaseAnonKey)
   }
   return _client
 }
 
 // Client public — utilisable partout (pages, composants)
-// Proxy lazy : createClient() différé au premier appel runtime
+// Proxy lazy : createBrowserClient() différé au premier appel runtime
 export const supabase = new Proxy({} as AnySupabaseClient, {
   get(_target, prop) {
     const client = getSupabase()
