@@ -7,6 +7,7 @@ import Layout from '@/components/Layout'
 import EnchereCard from '@/components/EnchereCard'
 import { Enchere } from '@/lib/types'
 import { theme } from '@/lib/theme'
+import { isVenteDelocalisee } from '@/lib/utils-encheres'
 
 const MapView = dynamic(() => import('../biens/MapView'), {
   ssr: false,
@@ -487,7 +488,12 @@ export default function EncheresPage() {
                       <td style={{ padding: '10px 8px' }}>
                         {OCCUPATIONS.find(o => o.value === e.occupation)?.label || '-'}
                       </td>
-                      <td style={{ padding: '10px 8px', fontSize: '12px' }}>{formatTribunal(e.tribunal)}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '12px' }}>
+                        {formatTribunal(e.tribunal)}
+                        {isVenteDelocalisee(e.departement, e.tribunal) && (
+                          <span style={{ marginLeft: '6px', background: '#fff3e0', color: '#e65100', borderRadius: '4px', padding: '1px 6px', fontSize: '11px', fontWeight: 600 }} title="La vente se déroule dans un tribunal d'un autre département">📍 Délocalisée</span>
+                        )}
+                      </td>
                       <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
                         {e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR') : '-'}
                         {countdown !== null && countdown >= 0 && (
