@@ -142,7 +142,32 @@
       "Bash(choco install:*)",
       "Bash(scp:*)",
       "Bash(awk '{print $2}')",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "mcp__stream-estate__get-search",
+      "Bash(npx ts-node --skip-project -e ':*)",
+      "mcp__claude_ai_Gmail__gmail_create_draft",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "Bash(mkdir -p .claude/memories)",
+      "Bash(cp C:/Users/GAMER/.claude/projects/C--Users-GAMER-monpetitmdb/memory/*.md .claude/memories/)",
+      "Bash(cp \"C:/Users/GAMER/.claude/projects/C--Users-GAMER-monpetitmdb/memory/project_openclaw_setup.md\" .claude/memories/project_openclaw_setup.md)",
+      "Bash(cp \"C:/Users/GAMER/.claude/projects/C--Users-GAMER-monpetitmdb/memory/project_vision_phases.md\" .claude/memories/project_vision_phases.md)",
+      "Bash(cp \"C:/Users/GAMER/.claude/projects/C--Users-GAMER-monpetitmdb/memory/MEMORY.md\" .claude/memories/MEMORY.md)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)",
+      "Bash(ssh root@178.104.58.122 \"su - openclaw -c 'cat /home/openclaw/.openclaw/openclaw.json'\")",
+      "Bash(python /tmp/update_openclaw.py)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Read(//c/Users/GAMER/.ssh/**)",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(git log *)",
+      "WebFetch(domain:support.claude.com)",
+      "WebFetch(domain:www.shareuhack.com)",
+      "WebFetch(domain:thenewstack.io)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(xxd)"
     ]
   }
 }
