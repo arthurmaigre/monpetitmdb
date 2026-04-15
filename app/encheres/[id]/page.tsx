@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV, calculerFraisEnchere } from '@/lib/calculs'
+import { isVenteDelocalisee } from '@/lib/utils-encheres'
 
 function getPhotos(enchere: any): string[] {
   const photos: string[] = []
@@ -1591,7 +1592,14 @@ export default function FicheEncherePage() {
           <div className="data-grid">
             <div className="data-item">
               <span className="data-label">Tribunal</span>
-              <span className="data-value">{enchere.tribunal || 'NC'}</span>
+              <span className="data-value">
+                {enchere.tribunal || 'NC'}
+                {isVenteDelocalisee(enchere.departement, enchere.tribunal) && (
+                  <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">
+                    📍 Délocalisée
+                  </span>
+                )}
+              </span>
             </div>
             <div className="data-item">
               <span className="data-label">Date audience</span>
