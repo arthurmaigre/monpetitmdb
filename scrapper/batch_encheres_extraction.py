@@ -704,7 +704,7 @@ def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None,
         q = q.order("created_at")
     else:
         # Non-enrichis + échecs (retry automatique)
-        q = q.or_("enrichissement_statut.is.null,enrichissement_statut.eq.echec").order("created_at")
+        q = q.or_("enrichissement_statut.is.null,enrichissement_statut.eq.echec,enrichissement_statut.eq.echec_quota").order("created_at")
 
     if limit:
         q = q.limit(limit)
