@@ -63,6 +63,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [enchereStatut, setEnchereStatut] = useState(saved.current?.enchereStatut || '')
   const [enchereOccupation, setEnchereOccupation] = useState(saved.current?.enchereOccupation || '')
   const [enchereSources, setEnchereSources] = useState<Set<string>>(new Set(saved.current?.enchereSources || []))
+  const [enchereDelocalise, setEnchereDelocalise] = useState<boolean>(saved.current?.enchereDelocalise || false)
   const [avocatModal, setAvocatModal] = useState<any>(null)
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const keywordTimeout = useRef<any>(null)
@@ -116,10 +117,10 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
       sessionStorage.setItem('biens_filters', JSON.stringify({
         strategie, metropole, ville, communeSearch, selectedCommune,
         typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keyword: keywordSearch, tri, view,
-        enchereStatut, enchereOccupation, enchereSources: Array.from(enchereSources),
+        enchereStatut, enchereOccupation, enchereSources: Array.from(enchereSources), enchereDelocalise,
       }))
     } catch {}
-  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, tri, view, enchereStatut, enchereOccupation, enchereSources])
+  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, tri, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise])
 
   // Sauvegarder la position de scroll avant de quitter
   useEffect(() => {
@@ -176,6 +177,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
       if (enchereStatut) params.set('statut', enchereStatut)
       if (enchereOccupation) params.set('occupation', enchereOccupation)
       if (enchereSources.size > 0) params.set('source', Array.from(enchereSources).join(','))
+      if (enchereDelocalise) params.set('delocalise', 'true')
       params.set('tri', tri)
       return `/api/encheres?${params.toString()}`
     }
@@ -240,7 +242,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, tri, authChecked])
+  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise, tri, authChecked])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -656,7 +658,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               </div>
               <div className="filter-group">
                 <label className="filter-label">Sources</label>
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px', height: '32px', alignItems: 'center' }}>
                   {([['licitor', 'LIC', '#1565C0'], ['avoventes', 'AVO', '#6A1B9A'], ['vench', 'VEN', '#2E7D32']] as const).map(([key, abbrev, color]) => {
                     const active = enchereSources.size === 0 || enchereSources.has(key)
                     return (
@@ -678,6 +680,20 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                       </button>
                     )
                   })}
+                </div>
+              </div>
+              <div className="filter-group">
+                <label className="filter-label">Délocalisées</label>
+                <div style={{ display: 'flex', alignItems: 'center', height: '32px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: enchereDelocalise ? '#e65100' : '#7a6a60', fontWeight: enchereDelocalise ? 600 : 400 }}>
+                    <input
+                      type="checkbox"
+                      checked={enchereDelocalise}
+                      onChange={e => setEnchereDelocalise(e.target.checked)}
+                      style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: '#e65100' }}
+                    />
+                    📍 Uniquement
+                  </label>
                 </div>
               </div>
             </>
