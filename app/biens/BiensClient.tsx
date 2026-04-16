@@ -558,8 +558,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
       <div className="main">
         <h1 className="page-h1">
           {isEncheres ? <><em>Enchères</em> immobilières à analyser</> :
-           strategie === 'Locataire en place' ? <><em>Locataires</em> en place à analyser</> :
-           strategie === 'Travaux lourds' ? <><em>Travaux lourds</em> à analyser</> :
+           strategie === 'Locataire en place' ? <>Biens avec <em>Locataires en Place</em> à analyser</> :
+           strategie === 'Travaux lourds' ? <>Biens avec <em>Travaux Lourds</em> à analyser</> :
            strategie === 'Immeuble de rapport' ? <><em>Immeubles</em> de rapport à analyser</> :
            strategie === 'Division' ? <><em>Divisions</em> à analyser</> :
            <><em>Biens</em> immobiliers à analyser</>}
