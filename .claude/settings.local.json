@@ -167,7 +167,15 @@
       "WebFetch(domain:thenewstack.io)",
       "WebFetch(domain:medium.com)",
       "WebFetch(domain:gist.github.com)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(gh pr *)",
+      "Bash(winpty gh *)",
+      "Bash(where gh *)",
+      "Read(//c/Program Files/GitHub CLI/**)",
+      "Read(//c/Users/GAMER/AppData/Local/Programs/GitHub CLI/**)",
+      "Bash(winget install *)",
+      "Bash(cmd.exe *)",
+      "Bash(powershell.exe *)"
     ]
   }
 }

@@ -8,7 +8,17 @@ export async function GET(
 ) {
   const { id } = await params
 
-  const { data, error } = await supabaseAdmin
+  const token = request.headers.get('authorization')?.replace('Bearer ', '')
+  if (!token) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  )
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
+
+  const { data, error } = await supabase
     .from('encheres')
     .select('*')
     .eq('id', id)
@@ -16,7 +26,7 @@ export async function GET(
     .maybeSingle()
 
   if (error || !data) {
-    return NextResponse.json({ error: error?.message || 'Enchère introuvable' }, { status: 404 })
+    return NextResponse.json({ error: error?.message || 'Enchere introuvable' }, { status: 404 })
   }
 
   return NextResponse.json({ enchere: data })
@@ -54,10 +64,10 @@ export async function PATCH(
     'surface', 'nb_pieces', 'nb_lots',
     'loyer', 'charges_copro', 'taxe_fonc_ann',
     'adresse', 'latitude', 'longitude',
-    'score_travaux', 'score_commentaire',
+    'score_travaux', 'score_commentaire', 'lots_data',
     'frais_preemption',
   ]
-  const champsLibres = ['adresse', 'latitude', 'longitude', 'score_travaux', 'score_commentaire']
+  const champsLibres = ['adresse', 'latitude', 'longitude', 'score_travaux', 'score_commentaire', 'lots_data']
 
   const { data: userEdits } = await supabaseAdmin
     .from('biens_user_edits')
