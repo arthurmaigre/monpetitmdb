@@ -31,6 +31,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 TABLE = "encheres"
 MODEL = "sonnet"
 
+# ── Détection quota CLI Max ────────────────────────────────────────────────
+QUOTA_HIT = False
+QUOTA_KEYWORDS = ["usage limit", "rate limit", "429", "quota", "overloaded", "too many requests", "capacity"]
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Prompt — SOURCE AUTORITAIRE pour toutes les colonnes texte
 # ══════════════════════════════════════════════════════════════════════════════
@@ -231,12 +235,19 @@ def call_claude_cli(prompt: str, system_prompt: str = None, timeout: int = 180) 
     if system_prompt:
         cmd.extend(["--system-prompt", system_prompt])
 
+    global QUOTA_HIT
+    if QUOTA_HIT:
+        return None
     try:
         result = subprocess.run(
             cmd, input=prompt, capture_output=True, text=True, timeout=timeout,
         )
         if result.returncode != 0:
-            log.error(f"CLI claude erreur (exit {result.returncode}): {result.stderr[:300]}")
+            err_text = (result.stderr + result.stdout).strip()
+            log.error(f"CLI claude exit {result.returncode} — {err_text[:500] or '(vide)'}")
+            if any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
+                log.critical("⚠️  QUOTA CLI MAX ATTEINT — arrêt du batch")
+                QUOTA_HIT = True
             return None
         return result.stdout.strip()
     except subprocess.TimeoutExpired:
@@ -554,8 +565,9 @@ def process_enchere(enchere_id: int, with_pdfs: bool = True, dry_run: bool = Fal
             return
 
         if not data:
+            status = "echec_quota" if QUOTA_HIT else "echec"
             c.table(TABLE).update({
-                "enrichissement_statut": "echec",
+                "enrichissement_statut": status,
                 "enrichissement_date": now,
             }).eq("id", enchere_id).execute()
             stats["errors"] += 1
@@ -692,7 +704,7 @@ def run(with_pdfs: bool = True, dry_run: bool = False, limit: int = None,
         q = q.order("created_at")
     else:
         # Non-enrichis + échecs (retry automatique)
-        q = q.or_("enrichissement_statut.is.null,enrichissement_statut.eq.echec").order("created_at")
+        q = q.or_("enrichissement_statut.is.null,enrichissement_statut.eq.echec,enrichissement_statut.eq.echec_quota").order("created_at")
 
     if limit:
         q = q.limit(limit)

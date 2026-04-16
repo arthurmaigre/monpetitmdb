@@ -29,6 +29,10 @@ from supabase_client import get_client
 log = logging.getLogger("extraction_cli")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+# ── Détection quota CLI Max ────────────────────────────────────────────────
+QUOTA_HIT = False
+QUOTA_KEYWORDS = ["usage limit", "rate limit", "429", "quota", "overloaded", "too many requests", "capacity"]
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Prompts — identiques aux routes TypeScript
 # ══════════════════════════════════════════════════════════════════════════════
@@ -135,13 +139,20 @@ Annonce :
 
 def call_claude(prompt: str, timeout: int = 60) -> dict | None:
     """Appelle claude -p pour UN SEUL bien et retourne le JSON parsé, ou None en cas d'erreur."""
+    global QUOTA_HIT
+    if QUOTA_HIT:
+        return None
     try:
         result = subprocess.run(
             ["claude", "-p", prompt, "--model", "sonnet", "--output-format", "json", "--max-turns", "1"],
             capture_output=True, text=True, timeout=timeout,
         )
         if result.returncode != 0:
-            log.error(f"Claude CLI erreur (code {result.returncode}): {result.stderr[:200]}")
+            err_text = (result.stderr + result.stdout).strip()
+            log.error(f"Claude CLI exit {result.returncode} — {err_text[:500] or '(vide)'}")
+            if any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
+                log.critical("QUOTA CLI MAX ATTEINT — arret du batch")
+                QUOTA_HIT = True
             return None
 
         # --output-format json retourne un objet avec "result" contenant la réponse texte
@@ -172,6 +183,8 @@ def call_claude_batch(system_prompt: str, items: list[dict[str, str]], timeout: 
     """
     if not items:
         return []
+    if QUOTA_HIT:
+        return [None] * len(items)
 
     # Construire le prompt batch
     batch_prompt = system_prompt.rstrip()
@@ -186,7 +199,11 @@ def call_claude_batch(system_prompt: str, items: list[dict[str, str]], timeout: 
             capture_output=True, text=True, timeout=timeout,
         )
         if result.returncode != 0:
-            log.error(f"Claude CLI batch erreur (code {result.returncode}): {result.stderr[:200]}")
+            err_text = (result.stderr + result.stdout).strip()
+            log.error(f"Claude CLI batch exit {result.returncode} — {err_text[:500] or '(vide)'}")
+            if any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
+                log.critical("QUOTA CLI MAX ATTEINT — arret du batch")
+                QUOTA_HIT = True
             return [None] * len(items)
 
         outer = json.loads(result.stdout)
@@ -242,7 +259,11 @@ def call_claude_with_photos(prompt: str, photo_paths: list[str], timeout: int = 
             input=full_prompt, capture_output=True, text=True, timeout=timeout,
         )
         if result.returncode != 0:
-            log.error(f"Claude CLI erreur (code {result.returncode}): {result.stderr[:200]}")
+            err_text = (result.stderr + result.stdout).strip()
+            log.error(f"Claude CLI exit {result.returncode} — {err_text[:500] or '(vide)'}")
+            if any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
+                log.critical("QUOTA CLI MAX ATTEINT — arret du batch")
+                QUOTA_HIT = True
             return None
 
         return parse_json_response(result.stdout)
@@ -345,17 +366,30 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
         log.error("Supabase non connecté")
         return
 
-    # Récupérer les biens à traiter
-    query = (client.table("biens")
+    # Récupérer les biens à traiter — pagination pour dépasser le plafond 1000 de PostgREST
+    PAGE_SIZE = 1000
+    biens = []
+    last_created_at = None
+    while len(biens) < limit:
+        fetch_size = min(PAGE_SIZE, limit - len(biens))
+        q = (client.table("biens")
              .select("id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data")
              .eq("strategie_mdb", "Locataire en place")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
-             .is_("extraction_statut", "null")
+             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
              .order("created_at", desc=False)
-             .limit(limit))
-    res = query.execute()
-    biens = res.data or []
+             .limit(fetch_size))
+        if last_created_at:
+            q = q.gt("created_at", last_created_at)
+        page = q.execute().data or []
+        if not page:
+            break
+        biens.extend(page)
+        last_created_at = page[-1]["created_at"]
+        log.info(f"  Pagination: {len(biens)} biens chargés (page {len(page)})")
+        if len(page) < fetch_size:
+            break
     log.info(f"Locataire en place : {len(biens)} biens à traiter (batch_size={batch_size}, workers={workers})")
 
     processed = 0
@@ -425,12 +459,13 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
             now = datetime.now(timezone.utc).isoformat()
             if not parsed:
                 if not dry_run:
+                    status = "echec_quota" if QUOTA_HIT else "echec"
                     client.table("biens").update({
                         "profil_locataire": "NC",
-                        "extraction_statut": "echec",
+                        "extraction_statut": status,
                         "extraction_date": now
                     }).eq("id", bien["id"]).execute()
-                log.warning(f"  [{bien['id']}] échec parsing")
+                log.warning(f"  [{bien['id']}] echec parsing{' (quota)' if QUOTA_HIT else ''}")
                 errors += 1
                 processed += 1
                 continue
@@ -499,7 +534,7 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
              .eq("strategie_mdb", "Immeuble de rapport")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
-             .is_("extraction_statut", "null")
+             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
              .limit(limit))
     id_res = id_query.execute()
     ids = [r["id"] for r in (id_res.data or [])]
@@ -581,11 +616,12 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
             now = datetime.now(timezone.utc).isoformat()
             if not parsed:
                 if not dry_run:
+                    status = "echec_quota" if QUOTA_HIT else "echec"
                     client.table("biens").update({
-                        "extraction_statut": "echec",
+                        "extraction_statut": status,
                         "extraction_date": now
                     }).eq("id", bien["id"]).execute()
-                log.warning(f"  [{bien['id']}] échec parsing")
+                log.warning(f"  [{bien['id']}] echec parsing{' (quota)' if QUOTA_HIT else ''}")
                 errors += 1
                 processed += 1
                 continue
@@ -704,11 +740,12 @@ def run_score(limit: int, dry_run: bool):
 
         if not parsed:
             if not dry_run:
+                status = "echec_quota" if QUOTA_HIT else "erreur"
                 client.table("biens").update({
-                    "score_analyse_statut": "erreur",
+                    "score_analyse_statut": status,
                     "score_analyse_date": now
                 }).eq("id", bien["id"]).execute()
-            log.warning(f"  [{bien['id']}] échec parsing")
+            log.warning(f"  [{bien['id']}] echec parsing{' (quota)' if QUOTA_HIT else ''}")
             errors += 1
             processed += 1
             continue
