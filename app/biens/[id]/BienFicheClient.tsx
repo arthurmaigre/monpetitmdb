@@ -2623,40 +2623,42 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 )}
                 {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
                 {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
-                {/* Frais préalables — label gauche / valeur droite */}
-                <div className="data-item">
-                  <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    Frais préalables
-                    <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais de procédure (commissaire de justice, annonces légales, diagnostics). Communiqués par le tribunal env. 1 semaine avant l{"'"}audience. Variables, à renseigner si connus.</span>
-                    </span>
-                  </span>
-                  <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-                </div>
-                {/* Frais d'adjudication — label gauche / montant cliquable droite */}
-                {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
-                  const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
-                  const isMDB = regime === 'marchand_de_biens'
-                  const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
-                  return (
-                    <div className="data-item">
-                      <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        Frais d{"'"}adjudication
-                        <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais d{"'"}acquisition calculés : émoluments avocat + droits d{"'"}enregistrement + CSI. Hors frais préalables (à renseigner séparément).</span>
-                        </span>
+                {/* Frais préalables + Frais d'adjudication — même ligne */}
+                <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+                  <div className="data-item">
+                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      Frais préalables
+                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais de procédure (commissaire de justice, annonces légales, diagnostics). Communiqués par le tribunal env. 1 semaine avant l{"'"}audience. Variables, à renseigner si connus.</span>
                       </span>
-                      <button onClick={() => setShowFraisModal(true)} style={{
-                        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                        fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600,
-                        color: '#2a4a8a', textDecoration: 'underline dotted', textUnderlineOffset: '2px',
-                        textAlign: 'right',
-                      }}>
-                        {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'} (~{Math.round(frais.pct_sans_prealables)}%)
-                      </button>
-                    </div>
-                  )
-                })()}
+                    </span>
+                    <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                  </div>
+                  {/* Frais d'adjudication — label gauche / montant cliquable droite */}
+                  {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
+                    const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
+                    const isMDB = regime === 'marchand_de_biens'
+                    const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
+                    return (
+                      <div className="data-item">
+                        <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          Frais d{"'"}adjudication
+                          <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais d{"'"}acquisition calculés : émoluments avocat + droits d{"'"}enregistrement + CSI. Hors frais préalables (à renseigner séparément).</span>
+                          </span>
+                        </span>
+                        <button onClick={() => setShowFraisModal(true)} style={{
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                          fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600,
+                          color: '#2a4a8a', textDecoration: 'underline dotted', textUnderlineOffset: '2px',
+                          textAlign: 'left',
+                        }}>
+                          {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'} (~{Math.round(frais.pct_sans_prealables)}%)
+                        </button>
+                      </div>
+                    )
+                  })()}
+                </div>
               </>
             )}
             <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>

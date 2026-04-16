@@ -1074,7 +1074,7 @@ function EstimationSection({ enchereId, prixFai, surface, adresseInitiale, ville
       {/* 3 columns: Mise à prix | Décote | Estimation */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0', marginBottom: '24px' }}>
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Mise à prix"}</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px', minHeight: '2.4em', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>{"Mise à prix"}</div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210', whiteSpace: 'nowrap' }}>{fmt(prixFai)}{'\u00A0\u20AC'}</div>
           {surface ? <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px', whiteSpace: 'nowrap' }}>{fmt(Math.round(prixFai / surface))}{'\u00A0\u20AC'}/m{'\u00B2'}</div> : null}
         </div>
@@ -1094,7 +1094,7 @@ function EstimationSection({ enchereId, prixFai, surface, adresseInitiale, ville
         </div>
 
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px', minHeight: '2.4em', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             {isAjuste ? "Mon estimation" : "Prix de revente estimé"}
           </div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: ecartPositif ? '#1a7a40' : '#1a1210', whiteSpace: 'nowrap' }}><V>{fmt(prixActuel)}{'\u00A0\u20AC'}</V></div>
