@@ -151,16 +151,38 @@ export async function GET(request: NextRequest) {
     countQuery = countQuery.lte('date_audience', maxDate.toISOString())
   }
 
-  // Source (multisélection : licitor,avoventes,vench)
+  // Source (filtre exclusif)
+  // 1 source : biens disponibles UNIQUEMENT sur cette plateforme (pas sur les autres)
+  // 2+ sources : biens présents sur TOUTES les sources sélectionnées (multi-source, AND)
   const sourceFilter = searchParams.get('source')
   if (sourceFilter) {
-    const sources = sourceFilter.split(',').filter(Boolean)
-    if (sources.length === 1) {
-      query = query.eq('source', sources[0])
-      countQuery = countQuery.eq('source', sources[0])
-    } else if (sources.length > 1) {
-      query = query.in('source', sources)
-      countQuery = countQuery.in('source', sources)
+    const selectedSources = sourceFilter.split(',').filter(Boolean)
+    const allSources = ['licitor', 'avoventes', 'vench']
+    const nonSelected = allSources.filter(s => !selectedSources.includes(s))
+
+    if (selectedSources.length === 1) {
+      // 1 source : source principale = sélectionnée, pas présent sur les autres
+      const [sel] = selectedSources
+      query = query.eq('source', sel)
+      countQuery = countQuery.eq('source', sel)
+      for (const ns of nonSelected) {
+        const filterVal = JSON.stringify([{ source: ns }])
+        query = query.or(`sources.is.null,not.sources.cs.${filterVal}`)
+        countQuery = countQuery.or(`sources.is.null,not.sources.cs.${filterVal}`)
+      }
+    } else {
+      // 2+ sources : bien présent sur TOUTES les sources sélectionnées (badges multiples)
+      for (const sel of selectedSources) {
+        const filterVal = JSON.stringify([{ source: sel }])
+        query = query.filter('sources', 'cs', filterVal)
+        countQuery = countQuery.filter('sources', 'cs', filterVal)
+      }
+      // Exclure les biens qui apparaissent aussi sur une source non sélectionnée
+      for (const ns of nonSelected) {
+        const filterVal = JSON.stringify([{ source: ns }])
+        query = query.not('sources', 'cs', filterVal)
+        countQuery = countQuery.not('sources', 'cs', filterVal)
+      }
     }
   }
 
