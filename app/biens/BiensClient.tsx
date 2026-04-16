@@ -659,14 +659,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               <div className="filter-group">
                 <label className="filter-label">Sources</label>
                 <div style={{ display: 'flex', gap: '6px', height: '38px', alignItems: 'center' }}>
-                  <button onClick={() => setEnchereSources(new Set())} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '0 8px', height: '28px', borderRadius: '6px',
-                    background: enchereSources.size === 0 ? '#1a1210' : '#f0ede8',
-                    color: enchereSources.size === 0 ? '#fff' : '#b0a898',
-                    fontSize: '9px', fontWeight: 700, border: 'none', cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}>TOUS</button>
                   {([['licitor', 'LIC', '#1565C0'], ['avoventes', 'AVO', '#6A1B9A'], ['vench', 'VEN', '#2E7D32']] as const).map(([key, abbrev, color]) => {
                     const active = enchereSources.has(key)
                     return (
@@ -674,7 +666,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                         setEnchereSources(prev => {
                           const next = new Set(prev)
                           if (next.has(key)) { next.delete(key) } else { next.add(key) }
-                          if (next.size === 0) return new Set() // si tout décoché → reset à tous
                           return next
                         })
                       }} style={{
