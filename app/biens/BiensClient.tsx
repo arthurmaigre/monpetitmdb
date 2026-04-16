@@ -659,13 +659,22 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               <div className="filter-group">
                 <label className="filter-label">Sources</label>
                 <div style={{ display: 'flex', gap: '6px', height: '38px', alignItems: 'center' }}>
+                  <button onClick={() => setEnchereSources(new Set())} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 8px', height: '28px', borderRadius: '6px',
+                    background: enchereSources.size === 0 ? '#1a1210' : '#f0ede8',
+                    color: enchereSources.size === 0 ? '#fff' : '#b0a898',
+                    fontSize: '9px', fontWeight: 700, border: 'none', cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}>TOUS</button>
                   {([['licitor', 'LIC', '#1565C0'], ['avoventes', 'AVO', '#6A1B9A'], ['vench', 'VEN', '#2E7D32']] as const).map(([key, abbrev, color]) => {
-                    const active = enchereSources.size === 0 || enchereSources.has(key)
+                    const active = enchereSources.has(key)
                     return (
                       <button key={key} onClick={() => {
                         setEnchereSources(prev => {
                           const next = new Set(prev)
                           if (next.has(key)) { next.delete(key) } else { next.add(key) }
+                          if (next.size === 0) return new Set() // si tout décoché → reset à tous
                           return next
                         })
                       }} style={{
@@ -674,7 +683,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                         background: active ? color : '#f0ede8',
                         color: active ? '#fff' : '#b0a898',
                         fontSize: '9px', fontWeight: 700, border: 'none', cursor: 'pointer',
-                        transition: 'all 0.15s', opacity: active ? 1 : 0.5,
+                        transition: 'all 0.15s',
                       }} title={key.charAt(0).toUpperCase() + key.slice(1)}>
                         {abbrev}
                       </button>
