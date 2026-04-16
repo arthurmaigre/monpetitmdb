@@ -8,8 +8,8 @@ function getStripe() {
 }
 
 const PRICE_TO_PLAN: Record<string, string> = {
-  [process.env.STRIPE_PRICE_PRO || 'price_1TDnxVBsP350Ff8hRjhx0tXi']: 'pro',
-  [process.env.STRIPE_PRICE_EXPERT || 'price_1TDnxoBsP350Ff8hsBhWz9Qn']: 'expert',
+  [process.env.STRIPE_PRICE_PRO || 'price_1TITHvB8W2KbjDORI3BQPve6']: 'pro',
+  [process.env.STRIPE_PRICE_EXPERT || 'price_1TITHsB8W2KbjDORrE8wCWpc']: 'expert',
 }
 
 export async function POST(req: NextRequest) {
@@ -25,49 +25,77 @@ export async function POST(req: NextRequest) {
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session
-    const userId = session.metadata?.supabase_user_id
-    const plan = session.metadata?.plan
-    if (userId && plan) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ plan, stripe_customer_id: session.customer as string })
-        .eq('id', userId)
+    try {
+      const session = event.data.object as Stripe.Checkout.Session
+      const userId = session.metadata?.supabase_user_id
+      const plan = session.metadata?.plan
+      if (userId && plan) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ plan, stripe_customer_id: session.customer as string })
+          .eq('id', userId)
+      }
+    } catch (err) {
+      console.error('[webhook] checkout.session.completed error:', err)
     }
   }
 
-  if (event.type === 'customer.subscription.updated') {
-    const subscription = event.data.object as Stripe.Subscription
-    const priceId = subscription.items.data[0]?.price.id
-    const plan = PRICE_TO_PLAN[priceId] || 'free'
-    const customerId = subscription.customer as string
+  if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+    try {
+      const subscription = event.data.object as Stripe.Subscription
+      const priceId = subscription.items.data[0]?.price.id
+      const customerId = subscription.customer as string
 
-    if (subscription.status === 'active') {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ plan })
-        .eq('stripe_customer_id', customerId)
-    } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ plan: 'free' })
-        .eq('stripe_customer_id', customerId)
+      // Essayer d'abord via les metadata de la subscription (plus fiable)
+      const userId = subscription.metadata?.supabase_user_id
+
+      if (subscription.status === 'active') {
+        const plan = PRICE_TO_PLAN[priceId]
+        if (plan) {
+          if (userId) {
+            await supabaseAdmin
+              .from('profiles')
+              .update({ plan, stripe_customer_id: customerId })
+              .eq('id', userId)
+          } else {
+            await supabaseAdmin
+              .from('profiles')
+              .update({ plan })
+              .eq('stripe_customer_id', customerId)
+          }
+        }
+      } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ plan: 'free' })
+          .eq('stripe_customer_id', customerId)
+      }
+    } catch (err) {
+      console.error(`[webhook] ${event.type} error:`, err)
     }
   }
 
   if (event.type === 'invoice.payment_failed') {
-    const invoice = event.data.object as Stripe.Invoice
-    const customerId = invoice.customer as string
-    console.warn(`[Stripe] Paiement echoue pour customer ${customerId} — Stripe retentera automatiquement`)
+    try {
+      const invoice = event.data.object as Stripe.Invoice
+      const customerId = invoice.customer as string
+      console.warn(`[Stripe] Paiement echoue pour customer ${customerId} — Stripe retentera automatiquement`)
+    } catch (err) {
+      console.error('[webhook] invoice.payment_failed error:', err)
+    }
   }
 
   if (event.type === 'customer.subscription.deleted') {
-    const subscription = event.data.object as Stripe.Subscription
-    const customerId = subscription.customer as string
-    await supabaseAdmin
-      .from('profiles')
-      .update({ plan: 'free' })
-      .eq('stripe_customer_id', customerId)
+    try {
+      const subscription = event.data.object as Stripe.Subscription
+      const customerId = subscription.customer as string
+      await supabaseAdmin
+        .from('profiles')
+        .update({ plan: 'free' })
+        .eq('stripe_customer_id', customerId)
+    } catch (err) {
+      console.error('[webhook] customer.subscription.deleted error:', err)
+    }
   }
 
   return NextResponse.json({ received: true })

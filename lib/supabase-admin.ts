@@ -8,13 +8,13 @@ let _client: AnySupabaseClient | null = null
 function getSupabaseAdmin() {
   if (!_client) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl) {
       throw new Error('[supabase-admin] NEXT_PUBLIC_SUPABASE_URL is not set!')
     }
-    if (!supabaseSecretKey) {
-      console.error('[supabase-admin] SUPABASE_SECRET_KEY is not set!')
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SECRET_KEY) {
+      console.error('[supabase-admin] SUPABASE_SECRET_KEY (ou SUPABASE_SERVICE_ROLE_KEY) is not set!')
     }
 
     _client = createClient<any>(supabaseUrl, supabaseSecretKey || '')
