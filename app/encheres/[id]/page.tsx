@@ -1363,6 +1363,8 @@ export default function FicheEncherePage() {
     if (res.ok) {
       const data = await res.json()
       setEnchere((prev: any) => ({ ...prev, ...data.enchere }))
+    } else {
+      console.error('PATCH enchere echoue', await res.json())
     }
   }
 
