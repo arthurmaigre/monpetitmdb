@@ -15,6 +15,21 @@ async function getUser(req: NextRequest) {
   return user
 }
 
+function getOrderClause(tri: string | null): [string, { ascending: boolean; nullsFirst?: boolean }] {
+  switch (tri) {
+    case 'rendement_desc': return ['rendement_brut', { ascending: false, nullsFirst: false }]
+    case 'rendement_asc': return ['rendement_brut', { ascending: true, nullsFirst: false }]
+    case 'prix_asc': return ['prix_fai', { ascending: true }]
+    case 'prix_desc': return ['prix_fai', { ascending: false }]
+    case 'prixm2_asc': return ['prix_m2', { ascending: true }]
+    case 'prixm2_desc': return ['prix_m2', { ascending: false }]
+    case 'score_desc': return ['score_travaux', { ascending: false, nullsFirst: false }]
+    // plusvalue_desc/plusvalue_asc : pas de colonne en base, tri client-side
+    case 'recent':
+    default: return ['created_at', { ascending: false }]
+  }
+}
+
 const STRATEGIES = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport']
 const TYPES_BIEN = ['Appartement', 'Maison', 'Immeuble', 'Local commercial', 'Terrain', 'Parking', 'Autre']
 
@@ -196,7 +211,7 @@ export async function GET(request: NextRequest) {
 `)
     .eq('statut', statut)
     .eq('regex_statut', 'valide')
-    .order('created_at', { ascending: false })
+    .order(...getOrderClause(searchParams.get('tri')))
 
   // Count separement (plus leger, pas de timeout)
   let countQuery = supabaseAdmin

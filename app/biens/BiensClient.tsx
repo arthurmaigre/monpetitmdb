@@ -194,6 +194,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     if (rendMin) params.set('rendement_min', rendMin)
     if (scoreTravauxMin) params.set('score_travaux_min', scoreTravauxMin)
     if (keywordSearch.trim()) params.set('keyword', keywordSearch.trim())
+    params.set('tri', tri)
     return `/api/biens?${params.toString()}`
   }
 
@@ -388,26 +389,15 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     return true
   })
 
-  filtered = [...filtered].sort((a, b) => {
-    if (tri === 'rendement_desc') return (b.rendement_brut || 0) - (a.rendement_brut || 0)
-    if (tri === 'rendement_asc') return (a.rendement_brut || 0) - (b.rendement_brut || 0)
-    if (tri === 'prix_asc') return (a.prix_fai || 0) - (b.prix_fai || 0)
-    if (tri === 'prix_desc') return (b.prix_fai || 0) - (a.prix_fai || 0)
-    if (tri === 'plusvalue_desc') {
+  // Tri client-side uniquement pour plusvalue (champ calcule, pas de colonne en base)
+  // Les autres tris sont appliques cote serveur via l'API
+  if (tri === 'plusvalue_desc' || tri === 'plusvalue_asc') {
+    filtered = [...filtered].sort((a, b) => {
       const pvA = (a.estimation_prix_total || 0) - (a.prix_fai || 0)
       const pvB = (b.estimation_prix_total || 0) - (b.prix_fai || 0)
-      return pvB - pvA
-    }
-    if (tri === 'plusvalue_asc') {
-      const pvA = (a.estimation_prix_total || 0) - (a.prix_fai || 0)
-      const pvB = (b.estimation_prix_total || 0) - (b.prix_fai || 0)
-      return pvA - pvB
-    }
-    if (tri === 'prixm2_asc') return (a.prix_m2 || 0) - (b.prix_m2 || 0)
-    if (tri === 'prixm2_desc') return (b.prix_m2 || 0) - (a.prix_m2 || 0)
-    if (tri === 'score_desc') return ((b as any).score_travaux || 0) - ((a as any).score_travaux || 0)
-    return 0
-  })
+      return tri === 'plusvalue_desc' ? pvB - pvA : pvA - pvB
+    })
+  }
 
   useEffect(() => {
     if (view !== 'list' || loading) return
