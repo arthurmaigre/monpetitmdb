@@ -658,7 +658,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               </div>
               <div className="filter-group">
                 <label className="filter-label">Sources</label>
-                <div style={{ display: 'flex', gap: '6px', height: '32px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '6px', height: '38px', alignItems: 'center' }}>
                   {([['licitor', 'LIC', '#1565C0'], ['avoventes', 'AVO', '#6A1B9A'], ['vench', 'VEN', '#2E7D32']] as const).map(([key, abbrev, color]) => {
                     const active = enchereSources.size === 0 || enchereSources.has(key)
                     return (
@@ -684,7 +684,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               </div>
               <div className="filter-group">
                 <label className="filter-label">Délocalisées</label>
-                <div style={{ display: 'flex', alignItems: 'center', height: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', height: '38px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: enchereDelocalise ? '#e65100' : '#7a6a60', fontWeight: enchereDelocalise ? 600 : 400 }}>
                     <input
                       type="checkbox"
