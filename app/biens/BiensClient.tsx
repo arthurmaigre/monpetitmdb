@@ -446,9 +446,10 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
 
   return (
     <Layout>
-      <h1 className="sr-only">Biens immobiliers à analyser</h1>
       <style>{`
         .main { max-width: 1600px; margin: 0 auto; padding: 32px 48px; box-sizing: border-box; }
+        .page-h1 { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; letter-spacing: -.02em; color: #1a1210; margin: 0 0 20px 0; line-height: 1.1; }
+        .page-h1 em { font-style: normal; color: #c0392b; }
         .filter-bar { background: #fff; border-radius: 16px; padding: 16px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { display: flex; flex-direction: column; gap: 4px; }
         .filter-label { font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -555,6 +556,14 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
       `}</style>
 
       <div className="main">
+        <h1 className="page-h1">
+          {isEncheres ? <><em>Enchères</em> immobilières à analyser</> :
+           strategie === 'Locataire en place' ? <><em>Locataires</em> en place à analyser</> :
+           strategie === 'Travaux lourds' ? <><em>Travaux lourds</em> à analyser</> :
+           strategie === 'Immeuble de rapport' ? <><em>Immeubles</em> de rapport à analyser</> :
+           strategie === 'Division' ? <><em>Divisions</em> à analyser</> :
+           <><em>Biens</em> immobiliers à analyser</>}
+        </h1>
         <button className="filter-toggle" onClick={() => setFiltersOpen(!filtersOpen)}>
           <span>{filtersOpen ? "Masquer les filtres" : "Afficher les filtres"}</span>
           <span style={{ fontSize: '18px', transition: 'transform 150ms ease', transform: filtersOpen ? 'rotate(180deg)' : 'rotate(0)' }}>{'\u25B2'}</span>
