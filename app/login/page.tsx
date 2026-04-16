@@ -16,8 +16,14 @@ export default function LoginPage() {
   const [forgotLoading, setForgotLoading] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
-
-  useEffect(() => { emailRef.current?.focus() }, [])
+  useEffect(() => {
+    emailRef.current?.focus()
+    // Afficher erreur OAuth si redirigé depuis /auth/callback
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error') === 'oauth_failed') {
+      setError('La connexion Google/Facebook a échoué. Réessayez ou utilisez email + mot de passe.')
+    }
+  }, [])
 
   async function handleOAuth(provider: 'google' | 'facebook') {
     setLoading(true)
