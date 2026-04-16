@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV, calculerFraisEnchere } from '@/lib/calculs'
+import { isVenteDelocalisee } from '@/lib/utils-encheres'
 import TypeBienIllustration from '@/components/TypeBienIllustration'
 
 function getPhotos(bien: any): string[] {
@@ -481,7 +482,7 @@ function ExpandableCharges({ label, total, isReel, isFree, details }: { label: s
   )
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false, fraisPrealables = 0 }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { tauxCredit, tauxAssurance, dureeAns, typeCredit: typeCreditSimu } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
@@ -492,8 +493,10 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // Frais de notaire propres a cette colonne : 2.5% MdB, sinon valeur profil
   const colFraisNotairePct = isMarchand ? 2.5 : (fraisNotaireBase || 7.5)
   const colFraisNotaireMontant = prix_fai * colFraisNotairePct / 100
+  // Pour enchères : frais d'acquisition = frais enchere (pas de frais notaire classiques)
+  const fraisEnchere = isEnchere ? calculerFraisEnchere(prix_fai, fraisPrealables as number, { isMDB: isMarchand }) : null
   // Recalculer le montant emprunte et la mensualite pour cette colonne
-  const colMontantEmprunte = Math.max(0, prix_fai + colFraisNotaireMontant - (apport || 0))
+  const colMontantEmprunte = Math.max(0, prix_fai + (isEnchere ? (fraisEnchere?.total || 0) : colFraisNotaireMontant) - (apport || 0))
 
   // Visibilite conditionnelle : afficher une ligne si au moins un des 2 regimes l'utilise
   const isMicro = (r: string) => r === 'nu_micro_foncier' || r === 'lmnp_micro_bic'
@@ -616,12 +619,15 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // Estimation DVF = prix net vendeur (transactions notariales, HORS frais agence)
   const prixReventeNetVendeur = estimation?.prix_total || 0
   // Frais agence : % inclus dans le FAI a l'achat. Sert a retrouver le prix net vendeur achat pour la TVA sur marge MdB
-  const prixNetVendeurAchat = fraisAgenceRevente > 0 ? Math.round(prix_fai / (1 + fraisAgenceRevente / 100)) : prix_fai
+  // Pour enchères : pas de frais d'agence, le prix FAI = mise à prix (déjà net vendeur)
+  const prixNetVendeurAchat = (!isEnchere && fraisAgenceRevente > 0) ? Math.round(prix_fai / (1 + fraisAgenceRevente / 100)) : prix_fai
   const fraisAgenceAchatMontant = prix_fai - prixNetVendeurAchat
   // Estimation DVF = deja net vendeur, pas de frais agence a deduire a la revente
   const prixReventeApresAgence = prixReventeNetVendeur
   const fraisNotairePct = colFraisNotairePct
   const fraisNotaireMontant = Math.round(colFraisNotaireMontant)
+  // Montant total des frais d'acquisition : frais enchere si enchère, frais notaire sinon
+  const fraisAcquisitionTotal = isEnchere ? (fraisEnchere?.total || 0) : fraisNotaireMontant
 
   // PV brute = revente net vendeur - frais agence vendeur - achat FAI - notaire achat - travaux
   // L'estimation DVF est deja le prix net vendeur (pas de frais agence a deduire sauf si charge vendeur)
@@ -633,7 +639,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // En micro/MdB : pas deduits en locatif → deduits de la PV normalement
   const travauxPV = budgetTravauxEffectif
   const pvBruteSimple = prixReventeApresAgence - prixNetVendeurAchat
-  const pvBrute = prixReventeApresAgence - prix_fai - fraisNotaireMontant - travauxPV
+  const pvBrute = prixReventeApresAgence - prix_fai - fraisAcquisitionTotal - travauxPV
 
   // Fiscalite PV selon regime
   let irPV = 0, psPV = 0, tvaMarge = 0, isPV = 0
@@ -684,10 +690,10 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
     // SCI IS : PV sur VNC, IS 15/25%, pas d'abattement + PFU 30% sur dividendes
     // Interets deja deduits du resultat courant en phase locative → pas re-deduits ici
     const amortCumuleImmo = (prix_fai * 0.85 / 30) * dur
-    const amortCumuleNotaire = (fraisNotaireMontant / 5) * Math.min(dur, 5)
+    const amortCumuleNotaire = (fraisAcquisitionTotal / 5) * Math.min(dur, 5)
     const amortCumuleTravaux = travauxAmortis * Math.min(dur, 10)
     const amortCumule = amortCumuleImmo + amortCumuleNotaire + amortCumuleTravaux
-    const vnc = prix_fai + fraisNotaireMontant + budgetTravaux - amortCumule
+    const vnc = prix_fai + fraisAcquisitionTotal + budgetTravaux - amortCumule
     const pvSCI = Math.max(0, prixReventeApresAgence - vnc)
     isPV = pvSCI <= 42500 ? pvSCI * 0.15 : 42500 * 0.15 + (pvSCI - 42500) * 0.25
     // PFU 30% flat tax sur dividendes distribues (benefice apres IS)
@@ -700,7 +706,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
       const marge = Math.max(0, prixReventeApresAgence - prixNetVendeurAchat)
       tvaMarge = marge * 20 / 120
     }
-    const benefice = Math.max(0, prixReventeApresAgence - prix_fai - budgetTravauxEffectif - fraisNotaireMontant - tvaMarge)
+    const benefice = Math.max(0, prixReventeApresAgence - prix_fai - budgetTravauxEffectif - fraisAcquisitionTotal - tvaMarge)
     isPV = benefice <= 42500 ? benefice * 0.15 : 42500 * 0.15 + (benefice - 42500) * 0.25
   }
   // Surtaxe PV > 50k (regimes des particuliers uniquement)
@@ -736,7 +742,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // Bilan : cashflow achat-revente = emprunt + PV nette - CRD (- interets/frais si pas de loyer)
   const produitRevente = prixReventeApresAgence - crd
   const fondsInvestis = apport || 0
-  const coutTotal = prix_fai + fraisNotaireMontant + budgetTravauxEffectif
+  const coutTotal = prix_fai + fraisAcquisitionTotal + budgetTravauxEffectif
   const cashflowAchatRevente = Math.round(colMontantEmprunte + pvNette - crd - interetsCumules - ((!hasLoyer || isTravauxLourds) ? fraisBancaires : 0))
   const profitNet = Math.round(cashflowCumule + cashflowAchatRevente)
   // ROI = rendement sur cout total de l'operation
@@ -952,21 +958,32 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                 ? "Prix de revente estim\u00E9 via les donn\u00E9es DVF. En SCI IS, la plus-value se calcule sur la VNC (valeur nette comptable = prix + frais + travaux - amortissements cumul\u00E9s), pas sur le prix d\u2019achat."
                 : "Prix de revente estim\u00E9 via les donn\u00E9es DVF (transactions notariales r\u00E9elles). C\u2019est le prix net vendeur dans l\u2019acte. Les frais d\u2019agence sont g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur."} />
           <Row label="Prix d'achat (net vendeur)" value={`-${fmt(prixNetVendeurAchat)} \u20AC`} rouge
-            info={"Prix pay\u00E9 au vendeur du bien (hors frais d\u2019agence). C\u2019est le prix inscrit dans l\u2019acte notari\u00E9 d\u2019achat."} />
+            info={isEnchere
+              ? "Mise à prix fixée par le tribunal, ou prix adjugé si le bien a déjà été vendu aux enchères. C'est le montant de référence avant les frais d'adjudication."
+              : "Prix payé au vendeur du bien (hors frais d'agence). C'est le prix inscrit dans l'acte notarié d'achat."} />
           <Row label={pvBruteSimple >= 0 ? "Plus-value brute" : "Moins-value brute"} value={`${pvBruteSimple > 0 ? '+' : ''}${fmt(pvBruteSimple)} \u20AC`} bold vert={pvBruteSimple > 0} rouge={pvBruteSimple <= 0}
             info={regime === 'marchand_de_biens'
               ? "Diff\u00E9rence entre le prix de revente net vendeur et le prix d\u2019achat net vendeur. En MdB, c\u2019est aussi la base de calcul de la TVA sur marge."
               : "Diff\u00E9rence entre les deux prix net vendeur (revente et achat). C\u2019est la vraie cr\u00E9ation de valeur sur le bien, avant frais et fiscalit\u00E9."} />
-          {fraisAgenceAchatMontant > 0 && (
+          {!isEnchere && fraisAgenceAchatMontant > 0 && (
             <Row label={`Frais d'agence achat (${fraisAgenceRevente}%)`} value={`-${fmt(fraisAgenceAchatMontant)} \u20AC`} rouge
               info={regime === 'marchand_de_biens'
                 ? `Commission de l\u2019agence immobili\u00E8re \u00E0 l\u2019achat. En MdB, ces frais ne font pas partie de la base de la TVA sur marge. Prix FAI total : ${fmt(prix_fai)} \u20AC.`
                 : `Commission de l\u2019agence immobili\u00E8re \u00E0 l\u2019achat, g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur. Prix FAI total : ${fmt(prix_fai)} \u20AC.`} />
           )}
-          <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge
-            info={regime === 'marchand_de_biens'
-              ? `Frais de notaire r\u00E9duits \u00E0 ~2,5% pour les marchands de biens (droits de mutation r\u00E9duits). C\u2019est un avantage significatif par rapport aux 7-8% d\u2019un particulier.`
-              : `Frais de notaire (droits de mutation + \u00E9moluments). En ancien : 7-8% du prix. En neuf : 2-3%. Ces frais augmentent le co\u00FBt total de l\u2019op\u00E9ration et r\u00E9duisent la plus-value nette.`} />
+          {isEnchere ? (
+            <>
+              <Row label={"Frais préalables"} value={fraisEnchere && fraisEnchere.frais_prealables > 0 ? `-${fmt(fraisEnchere.frais_prealables)} ${'\u20AC'}` : `0 ${'\u20AC'}`} rouge={fraisEnchere ? fraisEnchere.frais_prealables > 0 : false}
+                info={"Frais préalables engagés par l'avocat poursuivant avant l'audience (diagnostics, huissier, publication…). À demander à l'avocat et saisir dans la fiche une fois obtenus."} />
+              <Row label={`Frais d'adjudication (${fraisEnchere?.pct_sans_prealables ?? 0}\u00A0%)`} value={`-${fmt(fraisEnchere?.total_sans_prealables || 0)} ${'\u20AC'}`} rouge
+                info={`Émoluments avocat TTC : ${fmt(fraisEnchere?.emoluments_ttc || 0)}\u00A0${'\u20AC'}\nDroits d'enregistrement (${fraisEnchere?.droits_enregistrement_pct ?? 5.8}\u00A0%) : ${fmt(fraisEnchere?.droits_enregistrement || 0)}\u00A0${'\u20AC'}\nCSI (0,1\u00A0%) : ${fmt(fraisEnchere?.csi || 0)}\u00A0${'\u20AC'}\n\nTotal hors frais préalables : ${fmt(fraisEnchere?.total_sans_prealables || 0)}\u00A0${'\u20AC'}`} />
+            </>
+          ) : (
+            <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge
+              info={regime === 'marchand_de_biens'
+                ? `Frais de notaire r\u00E9duits \u00E0 ~2,5% pour les marchands de biens (droits de mutation r\u00E9duits). C\u2019est un avantage significatif par rapport aux 7-8% d\u2019un particulier.`
+                : `Frais de notaire (droits de mutation + \u00E9moluments). En ancien : 7-8% du prix. En neuf : 2-3%. Ces frais augmentent le co\u00FBt total de l\u2019op\u00E9ration et r\u00E9duisent la plus-value nette.`} />
+          )}
           <Row
             label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})${isMarchand && optionTVA ? ' HT' : ''}` : 'Travaux'}
             value={budgetTravauxEffectif > 0 ? `-${fmt(budgetTravauxEffectif)} \u20AC` : `0 \u20AC`}
@@ -2352,6 +2369,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       fontWeight: 700,
                     }}>{bien.occupation === 'libre' ? 'Bien Libre' : bien.occupation === 'loue' ? 'Bien Loué' : 'Bien Occupé'}</span>
                   )}
+                  {isVenteDelocalisee(bien.departement, bien.tribunal) && (
+                    <span className="tag" style={{ background: '#fff3e0', color: '#e65100', fontWeight: 700 }} title="La vente se déroule dans un tribunal d'un autre département">
+                      📍 Délocalisée
+                    </span>
+                  )}
                 </>
               ) : (
                 <>
@@ -2370,7 +2392,19 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     const dvf = estimationData?.prix_total || 0
                     const travaux = dvf && (bien.score_travaux || scorePerso) && bien.surface
                       ? (budgetTravauxM2[String(bien.score_travaux || scorePerso)] || 0) * bien.surface : 0
-                    const enchMax = dvf ? Math.round((dvf - travaux * 1.2) / (1.12 * 1.2)) : null
+                    const enchMax = (() => {
+                      if (!dvf) return null
+                      const obj = (objectifPV || 20) / 100
+                      const isMDB = regime === 'marchand_de_biens'
+                      const fp = bien.frais_preemption || 0
+                      // Itération point fixe : p = K - fraisEnchere(p), K = DVF/(1+obj) - travaux
+                      const K = dvf / (1 + obj) - travaux
+                      let p = K / 1.1 // estimation initiale (frais ≈ 10%)
+                      for (let i = 0; i < 5; i++) {
+                        p = K - calculerFraisEnchere(Math.max(1, p), fp, { isMDB }).total
+                      }
+                      return Math.round(p)
+                    })()
                     return enchMax ? (
                       <>
                         <div style={{ display: 'flex', gap: '40px' }}>
@@ -2379,7 +2413,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                             <span className="prix-fai">{fmt(hasAdjuge ? bien.prix_adjuge : bien.prix_fai)} {'\u20AC'}</span>
                           </div>
                           <div>
-                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>Enchère Max (Objectif 20% PV)</div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>Enchère Max (Objectif {objectifPV || 20}% PV)</div>
                             <span style={{ fontFamily: "'Fraunces', serif", fontSize: '30px', fontWeight: 800, color: '#1a7a40', lineHeight: 1, display: 'block' }}>
                               {fmt(enchMax)} {'\u20AC'}
                             </span>
@@ -2602,28 +2636,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {isEnchere && (
               <>
                 <div className="data-subtitle">Enchère</div>
-                {bien.tribunal && <div className="data-item"><span className="data-label">Tribunal</span><span className="data-value">{bien.tribunal}</span></div>}
+                {bien.tribunal && <div className="data-item"><span className="data-label">Tribunal</span><span className="data-value">{bien.tribunal}{isVenteDelocalisee(bien.departement, bien.tribunal) && <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">📍 Délocalisée</span>}</span></div>}
                 {bien.date_audience && <div className="data-item"><span className="data-label">Audience</span><span className="data-value">{new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (passée)' })()}</span></div>}
                 {bien.date_visite && <div className="data-item"><span className="data-label">Visite</span><span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div>}
-                {bien.avocat_nom && (
-                  <div className="data-item">
-                    <span className="data-label">Avocat poursuivant</span>
-                    <button onClick={() => setShowAvocatModal(true)} style={{
-                      background: '#faf8f5', border: '1.5px solid #e8e2d8', borderRadius: '10px',
-                      padding: '10px 14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                      display: 'flex', alignItems: 'center', gap: '10px', width: '100%', textAlign: 'left',
-                    }}>
-                      <span style={{ fontSize: '20px' }}>{'\u2696'}</span>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>{bien.avocat_nom}</div>
-                        {bien.avocat_cabinet && <div style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.avocat_cabinet}</div>}
-                      </div>
-                    </button>
-                  </div>
-                )}
                 {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
                 {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
-                {/* Frais préalables + Frais d'adjudication — même ligne */}
+                {/* Frais préalables + Frais d'adjudication + Avocat — même ligne */}
                 <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
                   <div className="data-item">
                     <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2634,7 +2652,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     </span>
                     <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
                   </div>
-                  {/* Frais d'adjudication — label gauche / montant cliquable droite */}
+                  {/* Frais d'adjudication */}
                   {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
                     const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
                     const isMDB = regime === 'marchand_de_biens'
@@ -2658,6 +2676,23 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       </div>
                     )
                   })()}
+                  {/* Avocat poursuivant */}
+                  {bien.avocat_nom && (
+                    <div className="data-item">
+                      <span className="data-label">Avocat poursuivant</span>
+                      <button onClick={() => setShowAvocatModal(true)} style={{
+                        background: '#faf8f5', border: '1.5px solid #e8e2d8', borderRadius: '10px',
+                        padding: '8px 12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                        display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left',
+                      }}>
+                        <span style={{ fontSize: '16px' }}>{'\u2696'}</span>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>{bien.avocat_nom}</div>
+                          {bien.avocat_cabinet && <div style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.avocat_cabinet}</div>}
+                        </div>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -3455,14 +3490,16 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   </div>
                 </div>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"Frais d\u2019agence \u00E0 l\u2019achat :"}</span>
-                <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
-                  onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
-                  onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
-                  className="param-input" style={{ width: '60px', textAlign: 'right' }} />
-                <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
-              </div>
+              {!isEnchere && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"Frais d\u2019agence \u00E0 l\u2019achat :"}</span>
+                  <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
+                    onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
+                    onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
+                    className="param-input" style={{ width: '60px', textAlign: 'right' }} />
+                  <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
+                </div>
+              )}
             </div>
             <div>
               {isFreeBlocked && (
@@ -3480,8 +3517,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 </div>
               )}
               <div className="pnl-grid">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
-                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
               </div>
             </div>
           </div>

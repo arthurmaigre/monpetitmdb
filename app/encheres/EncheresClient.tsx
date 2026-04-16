@@ -77,6 +77,7 @@ export default function EncheresPage() {
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
   const [sources, setSources] = useState<Set<string>>(new Set(saved.current?.sources || []))
+  const [delocalise, setDelocalise] = useState<boolean>(saved.current?.delocalise || false)
   const [tri, setTri] = useState(saved.current?.tri || 'date_audience_asc')
 
   // Localisation
@@ -103,9 +104,9 @@ export default function EncheresPage() {
     sessionStorage.setItem('encheres_filters', JSON.stringify({
       typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation,
       tribunal, dateRange, statut, keyword: keywordSearch, tri, view,
-      communeSearch, selectedCommune, sources: Array.from(sources),
+      communeSearch, selectedCommune, sources: Array.from(sources), delocalise,
     }))
-  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, communeSearch, selectedCommune, sources])
+  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, communeSearch, selectedCommune, sources, delocalise])
 
   // Build API URL
   function buildApiUrl(page: number, mapMode = false) {
@@ -126,6 +127,7 @@ export default function EncheresPage() {
     if (keywordSearch) params.set('keyword', keywordSearch)
 
     if (sources.size > 0 && sources.size < 3) params.set('source', Array.from(sources).join(','))
+    if (delocalise) params.set('delocalise', 'true')
 
     if (selectedCommune) {
       params.set('locationType', selectedCommune.type || 'commune')
@@ -153,7 +155,7 @@ export default function EncheresPage() {
       setError(e.message)
     }
     setLoading(false)
-  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, selectedCommune, userToken, sources])
+  }, [typeBien, prixMin, prixMax, surfaceMin, surfaceMax, occupation, tribunal, dateRange, statut, keywordSearch, tri, view, selectedCommune, userToken, sources, delocalise])
 
   useEffect(() => { fetchEncheres() }, [fetchEncheres])
 
@@ -394,18 +396,32 @@ export default function EncheresPage() {
                   <option value="vench">Vench</option>
                 </select>
               </div>
+
+              {/* Délocalisée */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '20px' }}>
+                <input
+                  type="checkbox"
+                  id="filter-delocalise"
+                  checked={delocalise}
+                  onChange={e => setDelocalise(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#e65100' }}
+                />
+                <label htmlFor="filter-delocalise" style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer' }}>
+                  📍 Délocalisées uniquement
+                </label>
+              </div>
             </div>
           )}
 
           {/* Active filters + reset */}
-          {(typeBien || prixMin || prixMax || surfaceMin || surfaceMax || occupation || tribunal || dateRange || statut || selectedCommune || keywordSearch || sources.size > 0) && (
+          {(typeBien || prixMin || prixMax || surfaceMin || surfaceMax || occupation || tribunal || dateRange || statut || selectedCommune || keywordSearch || sources.size > 0 || delocalise) && (
             <div style={{ marginTop: theme.spacing[3], display: 'flex', gap: theme.spacing[2], flexWrap: 'wrap', alignItems: 'center' }}>
               <button
                 onClick={() => {
                   setTypeBien(''); setPrixMin(''); setPrixMax(''); setSurfaceMin(''); setSurfaceMax('')
                   setOccupation(''); setTribunal(''); setDateRange(''); setStatut('')
                   setSelectedCommune(null); setCommuneSearch(''); setKeyword(''); setKeywordSearch('')
-                  setSources(new Set())
+                  setSources(new Set()); setDelocalise(false)
                 }}
                 style={{
                   padding: '4px 12px', borderRadius: theme.radii.sm,

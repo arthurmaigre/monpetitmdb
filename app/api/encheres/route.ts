@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createClient } from '@supabase/supabase-js'
+import { isVenteDelocalisee } from '@/lib/utils-encheres'
 
 const ENCHERES_SELECT = `
   id, source, id_source, url, sources, statut,
@@ -159,6 +160,9 @@ export async function GET(request: NextRequest) {
     countQuery = countQuery.or(`description.ilike.${kw},ville.ilike.${kw},adresse.ilike.${kw},tribunal.ilike.${kw}`)
   }
 
+  // Filtre délocalisée (post-traitement JS — propriété calculée departement ≠ tribunal)
+  const delocalise = searchParams.get('delocalise') === 'true'
+
   // Source (filtre exclusif — post-traitement JS pour éviter les limites PostgREST JSONB)
   // 1 source : biens exclusivement sur cette plateforme
   // 2+ sources : biens présents sur TOUTES les sources sélectionnées (AND, multi-source)
@@ -183,7 +187,8 @@ export async function GET(request: NextRequest) {
     return selectedSources.every(s => eSrcs.includes(s)) && nonSelected.every(s => !eSrcs.includes(s))
   }
 
-  if (selectedSources.length > 0) {
+  const needsJsFilter = selectedSources.length > 0 || delocalise
+  if (needsJsFilter) {
     // Fetch tout (max 2000) puis paginer manuellement après filtrage JS
     query = query.limit(2000)
   } else {
@@ -193,8 +198,9 @@ export async function GET(request: NextRequest) {
   const [{ data, error }, { count: totalCount }] = await Promise.all([query, countQuery])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  if (selectedSources.length > 0) {
-    const filtered = (data || []).filter(matchesSourceFilter)
+  if (needsJsFilter) {
+    let filtered = (data || []).filter(matchesSourceFilter)
+    if (delocalise) filtered = filtered.filter(e => isVenteDelocalisee(e.departement, e.tribunal))
     const paginated = filtered.slice(from, from + limit)
     return NextResponse.json({
       encheres: paginated,
