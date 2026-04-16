@@ -652,7 +652,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
             <>
               <Row label="Émoluments avocat TTC" value={`-${fmt(fraisEnchere.emoluments_ttc)} \u20AC`} rouge info="Barème Didiercam : poursuivant 3/4 + adjudicataire 1/4" />
               <Row label={`Droits d'enregistrement (${isMarchand ? '0,715%' : '5,8%'})`} value={`-${fmt(fraisEnchere.droits_enregistrement)} \u20AC`} rouge />
-              <Row label="Frais de publication" value={`-${fmt(fraisEnchere.frais_publication)} \u20AC`} rouge />
+              <Row label="CSI (0,10%)" value={`-${fmt(fraisEnchere.csi)} \u20AC`} rouge />
             </>
           ) : (
             <Row label={`Frais de notaire (${colFraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge />

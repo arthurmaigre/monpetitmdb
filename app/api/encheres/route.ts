@@ -151,41 +151,6 @@ export async function GET(request: NextRequest) {
     countQuery = countQuery.lte('date_audience', maxDate.toISOString())
   }
 
-  // Source (filtre exclusif)
-  // 1 source : biens disponibles UNIQUEMENT sur cette plateforme (pas sur les autres)
-  // 2+ sources : biens présents sur TOUTES les sources sélectionnées (multi-source, AND)
-  const sourceFilter = searchParams.get('source')
-  if (sourceFilter) {
-    const selectedSources = sourceFilter.split(',').filter(Boolean)
-    const allSources = ['licitor', 'avoventes', 'vench']
-    const nonSelected = allSources.filter(s => !selectedSources.includes(s))
-
-    if (selectedSources.length === 1) {
-      // 1 source : source principale = sélectionnée, pas présent sur les autres
-      const [sel] = selectedSources
-      query = query.eq('source', sel)
-      countQuery = countQuery.eq('source', sel)
-      for (const ns of nonSelected) {
-        const filterVal = JSON.stringify([{ source: ns }])
-        query = query.or(`sources.is.null,not.sources.cs.${filterVal}`)
-        countQuery = countQuery.or(`sources.is.null,not.sources.cs.${filterVal}`)
-      }
-    } else {
-      // 2+ sources : bien présent sur TOUTES les sources sélectionnées (badges multiples)
-      for (const sel of selectedSources) {
-        const filterVal = JSON.stringify([{ source: sel }])
-        query = query.filter('sources', 'cs', filterVal)
-        countQuery = countQuery.filter('sources', 'cs', filterVal)
-      }
-      // Exclure les biens qui apparaissent aussi sur une source non sélectionnée
-      for (const ns of nonSelected) {
-        const filterVal = JSON.stringify([{ source: ns }])
-        query = query.not('sources', 'cs', filterVal)
-        countQuery = countQuery.not('sources', 'cs', filterVal)
-      }
-    }
-  }
-
   // Keyword
   const keyword = searchParams.get('keyword')
   if (keyword) {
@@ -194,14 +159,53 @@ export async function GET(request: NextRequest) {
     countQuery = countQuery.or(`description.ilike.${kw},ville.ilike.${kw},adresse.ilike.${kw},tribunal.ilike.${kw}`)
   }
 
-  // Pagination
-  query = query.range(from, from + limit - 1)
+  // Source (filtre exclusif — post-traitement JS pour éviter les limites PostgREST JSONB)
+  // 1 source : biens exclusivement sur cette plateforme
+  // 2+ sources : biens présents sur TOUTES les sources sélectionnées (AND, multi-source)
+  const sourceFilter = searchParams.get('source')
+  const selectedSources = sourceFilter ? sourceFilter.split(',').filter(Boolean) : []
+
+  function getEnchereSources(e: any): string[] {
+    let srcs = e.sources
+    if (typeof srcs === 'string') try { srcs = JSON.parse(srcs) } catch { srcs = null }
+    if (!Array.isArray(srcs) || srcs.length === 0) return e.source ? [e.source] : []
+    return [...new Set((srcs as any[]).map((s: any) => s.source).filter(Boolean))] as string[]
+  }
+
+  function matchesSourceFilter(e: any): boolean {
+    if (selectedSources.length === 0) return true
+    const eSrcs = getEnchereSources(e)
+    if (selectedSources.length === 1) {
+      return eSrcs.length === 1 && eSrcs[0] === selectedSources[0]
+    }
+    const allSrcs = ['licitor', 'avoventes', 'vench']
+    const nonSelected = allSrcs.filter(s => !selectedSources.includes(s))
+    return selectedSources.every(s => eSrcs.includes(s)) && nonSelected.every(s => !eSrcs.includes(s))
+  }
+
+  if (selectedSources.length > 0) {
+    // Fetch tout (max 2000) puis paginer manuellement après filtrage JS
+    query = query.limit(2000)
+  } else {
+    query = query.range(from, from + limit - 1)
+  }
 
   const [{ data, error }, { count: totalCount }] = await Promise.all([query, countQuery])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const encheres = data || []
+  if (selectedSources.length > 0) {
+    const filtered = (data || []).filter(matchesSourceFilter)
+    const paginated = filtered.slice(from, from + limit)
+    return NextResponse.json({
+      encheres: paginated,
+      total: filtered.length,
+      page,
+      limit,
+      hasMore: from + limit < filtered.length,
+    })
+  }
 
+  const encheres = data || []
   return NextResponse.json({
     encheres,
     total: totalCount ?? encheres.length,

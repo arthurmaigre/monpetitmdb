@@ -19,7 +19,11 @@ async function getEnchere(id: string) {
     .select('*')
     .eq('id', id)
     .single()
-  return data
+  if (!data) return null
+  // prix_fai = champ virtuel pour compatibilité avec BienFicheClient (~35 usages)
+  // Logique : prix adjugé si disponible (bien vendu), sinon mise à prix (enchère à venir)
+  const prixRef = (data.prix_adjuge > 0 ? data.prix_adjuge : data.mise_a_prix) || 0
+  return { ...data, prix_fai: prixRef }
 }
 
 export default async function FicheBienPage({

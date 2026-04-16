@@ -38,14 +38,17 @@ export function calculerFraisEnchere(
   emoluments_poursuivant_ttc: number
   emoluments_adjudicataire_ttc: number
   droits_enregistrement: number
-  frais_publication: number
+  droits_enregistrement_pct: number
+  csi: number
   frais_prealables: number
   total: number
+  total_sans_prealables: number
   pct: number
+  pct_sans_prealables: number
 } {
   const isMDB = options?.isMDB ?? false
 
-  // Émoluments avocat — barème réglementé Didiercam (taux exacts)
+  // Émoluments avocat — barème réglementé (taux exacts)
   let emoluments = 0
   const tranches = [
     { plafond: 6500, taux: 0.07256 },
@@ -69,19 +72,15 @@ export function calculerFraisEnchere(
   const emoluments_adjudicataire_ttc = Math.round(emoluments_ttc * 0.25 * 100) / 100
 
   // Droits d'enregistrement : 5.8% particulier, 0.715% MDB
-  const tauxDroits = isMDB ? 0.00715 : 0.058
-  const droits_enregistrement = Math.round(prixAdjuge * tauxDroits * 100) / 100
+  const droits_enregistrement_pct = isMDB ? 0.715 : 5.8
+  const droits_enregistrement = Math.round(prixAdjuge * droits_enregistrement_pct / 100 * 100) / 100
 
-  // Frais de publication (contribution de sécurité immobilière)
-  let frais_publication = 0
-  if (prixAdjuge <= 60000) {
-    frais_publication = 62 // forfait fixe ~61-63€
-  } else {
-    frais_publication = Math.round(prixAdjuge * 0.001 * 100) / 100 // 0.1% au-delà
-  }
+  // CSI — Contribution de Sécurité Immobilière (0.10% du prix, sans forfait)
+  const csi = Math.round(prixAdjuge * 0.001 * 100) / 100
 
   const fp = fraisPrealables || 0
-  const total = Math.round((emoluments_ttc + droits_enregistrement + frais_publication + fp) * 100) / 100
+  const total_sans_prealables = Math.round((emoluments_ttc + droits_enregistrement + csi) * 100) / 100
+  const total = Math.round((total_sans_prealables + fp) * 100) / 100
 
   return {
     emoluments_ht: Math.round(emoluments * 100) / 100,
@@ -89,10 +88,13 @@ export function calculerFraisEnchere(
     emoluments_poursuivant_ttc,
     emoluments_adjudicataire_ttc,
     droits_enregistrement,
-    frais_publication,
+    droits_enregistrement_pct,
+    csi,
     frais_prealables: fp,
     total,
+    total_sans_prealables,
     pct: prixAdjuge > 0 ? Math.round(total / prixAdjuge * 1000) / 10 : 0,
+    pct_sans_prealables: prixAdjuge > 0 ? Math.round(total_sans_prealables / prixAdjuge * 1000) / 10 : 0,
   }
 }
 

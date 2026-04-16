@@ -82,6 +82,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [userPlan, setUserPlan] = useState<string>('free')
+  const [userRegime, setUserRegime] = useState<string>('')
   const [userStrategie, setUserStrategie] = useState<string>('')
   const [userStrategie2, setUserStrategie2] = useState<string>('')
   const [authChecked, setAuthChecked] = useState(false)
@@ -174,7 +175,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
       if (keywordSearch.trim()) params.set('keyword', keywordSearch.trim())
       if (enchereStatut) params.set('statut', enchereStatut)
       if (enchereOccupation) params.set('occupation', enchereOccupation)
-      if (enchereSources.size > 0 && enchereSources.size < 3) params.set('source', Array.from(enchereSources).join(','))
+      if (enchereSources.size > 0) params.set('source', Array.from(enchereSources).join(','))
       params.set('tri', tri)
       return `/api/encheres?${params.toString()}`
     }
@@ -289,6 +290,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         setWatchlistIds(new Set((wData.watchlist || []).map((w: any) => String(w.bien_id))))
         const pData = await pRes.json()
         if (pData.profile?.plan) setUserPlan(pData.profile.plan)
+        if (pData.profile?.regime) setUserRegime(pData.profile.regime)
         if (pData.profile?.strategie_mdb) setUserStrategie(pData.profile.strategie_mdb)
         if (pData.profile?.strategie_mdb_2) setUserStrategie2(pData.profile.strategie_mdb_2)
         if (pData.profile?.budget_travaux_m2) setBudgetTravauxM2(pData.profile.budget_travaux_m2)
@@ -662,7 +664,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                         setEnchereSources(prev => {
                           const next = new Set(prev)
                           if (next.has(key)) { next.delete(key) } else { next.add(key) }
-                          if (next.size === 3) return new Set()
                           return next
                         })
                       }} style={{
@@ -814,7 +815,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               <div className="grid">
                 {filtered.map(bien => (
                   isEncheres ? (
-                    <EnchereCard key={bien.id} enchere={bien as any} inWatchlist={watchlistIds.has(String(bien.id))} userToken={userToken} onWatchlistChange={(id, added) => { setWatchlistIds(prev => { const next = new Set(prev); added ? next.add(String(id)) : next.delete(String(id)); return next }) }} />
+                    <EnchereCard key={bien.id} enchere={bien as any} inWatchlist={watchlistIds.has(String(bien.id))} userToken={userToken} onWatchlistChange={(id, added) => { setWatchlistIds(prev => { const next = new Set(prev); added ? next.add(String(id)) : next.delete(String(id)); return next }) }} isMDB={userRegime === 'marchand_de_biens'} />
                   ) : (
                     <BienCard
                       key={bien.id}
@@ -929,7 +930,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                         {isEncheres ? (() => {
                           const e = bien as any
                           const miseAPrix = e.mise_a_prix || 0
-                          const frais = miseAPrix ? calculerFraisEnchere(miseAPrix) : null
+                          const frais = miseAPrix ? calculerFraisEnchere(miseAPrix, undefined, { isMDB: userRegime === 'marchand_de_biens' }) : null
                           const statutLabels: Record<string, { label: string; bg: string; color: string }> = {
                             a_venir: { label: 'À venir', bg: '#e8f4fd', color: '#1a6aa0' },
                             surenchere: { label: 'Surenchère', bg: '#fff3e0', color: '#e65100' },
@@ -992,8 +993,10 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               }
                               const unique = new Map<string, { source: string; url: string }>()
                               for (const s of srcs) { if (s.url && s.source) unique.set(s.source, s) }
+                              const SOURCE_ORDER = ['licitor', 'avoventes', 'vench']
+                              const sorted = SOURCE_ORDER.map(k => unique.get(k)).filter(Boolean) as { source: string; url: string }[]
                               return <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                {Array.from(unique.values()).map((s, i) => {
+                                {sorted.map((s, i) => {
                                   const p = LOGOS[s.source]
                                   if (!p) return null
                                   return <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" title={p.name} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '4px', background: p.color, color: '#fff', fontSize: '8px', fontWeight: 700, textDecoration: 'none' }}>{p.abbrev}</a>

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
-import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV } from '@/lib/calculs'
+import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV, calculerFraisEnchere } from '@/lib/calculs'
 import TypeBienIllustration from '@/components/TypeBienIllustration'
 
 function getPhotos(bien: any): string[] {
@@ -1514,7 +1514,7 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra, estimationApiBase }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode, estimationApiBase?: string }) {
+function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra, estimationApiBase, labelPrix }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode, estimationApiBase?: string, labelPrix?: React.ReactNode }) {
   const [estimation, setEstimation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -1678,7 +1678,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 
         {/* Colonne gauche : Prix FAI */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{"Prix demand\u00E9"}<br />{"(FAI)"}</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{labelPrix || <>{"\u0050rix demand\u00E9"}<br />{"(FAI)"}</>}</div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 800, color: '#1a1210', whiteSpace: 'nowrap' }}>{fmt(prixFai)}{'\u00A0\u20AC'}</div>
           {surface ? <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '4px', whiteSpace: 'nowrap' }}>{fmt(Math.round(prixFai / surface))}{'\u00A0\u20AC'}/m{'\u00B2'}</div> : null}
         </div>
@@ -1831,6 +1831,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [showCoutsCopro, setShowCoutsCopro] = useState(false)
   const [showContact, setShowContact] = useState(false)
   const [showAvocatModal, setShowAvocatModal] = useState(false)
+  const [showFraisModal, setShowFraisModal] = useState(false)
   const [showReventeLots, setShowReventeLots] = useState(false)
   const [coutGeometreParLot, setCoutGeometreParLot] = useState(1500)
   const [coutReglementCoproParLot, setCoutReglementCoproParLot] = useState(2500)
@@ -2622,6 +2623,40 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 )}
                 {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
                 {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
+                {/* Frais préalables — label gauche / valeur droite */}
+                <div className="data-item">
+                  <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Frais préalables
+                    <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais de procédure (commissaire de justice, annonces légales, diagnostics). Communiqués par le tribunal env. 1 semaine avant l{"'"}audience. Variables, à renseigner si connus.</span>
+                    </span>
+                  </span>
+                  <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                </div>
+                {/* Frais d'adjudication — label gauche / montant cliquable droite */}
+                {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
+                  const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
+                  const isMDB = regime === 'marchand_de_biens'
+                  const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
+                  return (
+                    <div className="data-item">
+                      <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Frais d{"'"}adjudication
+                        <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais d{"'"}acquisition calculés : émoluments avocat + droits d{"'"}enregistrement + CSI. Hors frais préalables (à renseigner séparément).</span>
+                        </span>
+                      </span>
+                      <button onClick={() => setShowFraisModal(true)} style={{
+                        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600,
+                        color: '#2a4a8a', textDecoration: 'underline dotted', textUnderlineOffset: '2px',
+                        textAlign: 'right',
+                      }}>
+                        {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'} (~{Math.round(frais.pct_sans_prealables)}%)
+                      </button>
+                    </div>
+                  )
+                })()}
               </>
             )}
             <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>
@@ -2899,7 +2934,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/2 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
                 </div>
               )}
-              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined}
+              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined} labelPrix={isEnchere ? (bien.prix_adjuge > 0 ? <>{"Prix adjug\u00e9"}</> : <>{"Mise \u00e0 prix"}</>) : undefined}
                 extra={isIDR && nbLotsEffectif > 0 ? (
                   <div style={{ marginTop: '4px', textAlign: 'center' }}>
                     <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
@@ -3497,6 +3532,65 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           <ContactVendeur bien={bien} userToken={userToken} onStatusUpdate={handleContactUpdate} />
         </ModalPanel>
 
+        {/* Modal détail des frais d'adjudication */}
+        {isEnchere && bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
+          const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
+          const isMDB = regime === 'marchand_de_biens'
+          const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
+          return (
+            <ModalPanel open={showFraisModal} onClose={() => setShowFraisModal(false)} title={"Frais d\u2019adjudication \u2014 D\u00E9tail"}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Badge régime */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: '#7a6a60' }}>Régime :</span>
+                  <span style={{
+                    display: 'inline-block', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+                    background: isMDB ? '#d4ddf5' : '#f0ede8', color: isMDB ? '#2a4a8a' : '#7a6a60',
+                  }}>
+                    {isMDB ? 'Marchand de Biens' : 'Particulier'}
+                  </span>
+                  <span style={{ fontSize: '12px', color: '#b0a898' }}>base : {prixBase.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+                {/* Tableau frais */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #f0ede8' }}>
+                      <td style={{ padding: '8px 0', color: '#3a2a20' }}>Émoluments avocat TTC</td>
+                      <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600, color: '#1a1210' }}>{frais.emoluments_ttc.toLocaleString('fr-FR')} {'\u20AC'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #f0ede8' }}>
+                      <td style={{ padding: '4px 0 4px 16px', color: '#7a6a60', fontSize: '12px' }}>dont avocat poursuivant (75&nbsp;%)</td>
+                      <td style={{ padding: '4px 0', textAlign: 'right', color: '#7a6a60', fontSize: '12px' }}>{frais.emoluments_poursuivant_ttc.toLocaleString('fr-FR')} {'\u20AC'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #f0ede8' }}>
+                      <td style={{ padding: '4px 0 8px 16px', color: '#7a6a60', fontSize: '12px' }}>dont avocat adjudicataire (25&nbsp;%)</td>
+                      <td style={{ padding: '4px 0 8px', textAlign: 'right', color: '#7a6a60', fontSize: '12px' }}>{frais.emoluments_adjudicataire_ttc.toLocaleString('fr-FR')} {'\u20AC'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #f0ede8' }}>
+                      <td style={{ padding: '8px 0', color: '#3a2a20' }}>Droits d{"'"}enregistrement ({frais.droits_enregistrement_pct}&nbsp;%{isMDB ? ' — taux réduit MDB' : ''})</td>
+                      <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600, color: '#1a1210' }}>{frais.droits_enregistrement.toLocaleString('fr-FR')} {'\u20AC'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: '2px solid #e8e2d8' }}>
+                      <td style={{ padding: '8px 0', color: '#3a2a20' }}>CSI — Contribution de Sécurité Immobilière (0,10&nbsp;%)</td>
+                      <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600, color: '#1a1210' }}>{frais.csi.toLocaleString('fr-FR')} {'\u20AC'}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '10px 0', color: '#1a1210', fontWeight: 700 }}>Total frais d{"'"}adjudication</td>
+                      <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 800, color: '#1a1210', fontSize: '15px' }}>
+                        {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'}
+                        <span style={{ fontWeight: 500, fontSize: '12px', color: '#7a6a60', marginLeft: '6px' }}>(~{Math.round(frais.pct_sans_prealables)}&nbsp;%)</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                {/* Note frais préalables */}
+                <div style={{ background: '#fdf8f0', border: '1px solid #f0d898', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#6a4a00' }}>
+                  <strong>Note :</strong> Ce calcul ne comprend pas les frais préalables (frais de procédure : commissaire de justice, annonces légales, diagnostics). Ces frais sont variables (~3 000 à 10 000&nbsp;{'\u20AC'}) et communiqués par le tribunal environ 1 semaine avant l{"'"}audience. Renseignez-les dans la case "Frais préalables" ci-dessus.
+                </div>
+              </div>
+            </ModalPanel>
+          )
+        })()}
 
       </div>
     </Layout>

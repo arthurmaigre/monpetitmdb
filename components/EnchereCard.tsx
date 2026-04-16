@@ -14,6 +14,7 @@ interface Props {
   inWatchlist?: boolean
   userToken?: string | null
   onWatchlistChange?: (enchereId: string, added: boolean) => void
+  isMDB?: boolean
 }
 
 function formatPrix(n: number) {
@@ -75,7 +76,7 @@ const STATUT_STYLES: Record<string, { bg: string; color: string; label: string }
   expire: { bg: '#e9ecef', color: '#6c757d', label: 'Expiré' },
 }
 
-export default function EnchereCard({ enchere, compact = false, inWatchlist: initialInWatchlist, userToken, onWatchlistChange }: Props) {
+export default function EnchereCard({ enchere, compact = false, inWatchlist: initialInWatchlist, userToken, onWatchlistChange, isMDB = false }: Props) {
   const [inWl, setInWl] = useState(initialInWatchlist || false)
   const [imgLoaded, setImgLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
@@ -279,10 +280,10 @@ export default function EnchereCard({ enchere, compact = false, inWatchlist: ini
             </span>
           )}
           {enchere.mise_a_prix && enchere.mise_a_prix > 0 && (() => {
-            const frais = calculerFraisEnchere(enchere.mise_a_prix)
+            const frais = calculerFraisEnchere(enchere.mise_a_prix, undefined, { isMDB })
             return (
-              <span style={pillStyle({ background: '#fdf3e7', color: '#9a5a00' })} title={`Frais d'adjudication estimés : ${Math.round(frais.total).toLocaleString('fr-FR')} €`}>
-                ~{Math.round(frais.pct * 100)}% frais
+              <span style={pillStyle({ background: '#fdf3e7', color: '#9a5a00' })} title={`Frais d'adjudication hors frais préalables : ${Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} € — émoluments avocat + droits enregistrement + CSI`}>
+                ~{Math.round(frais.pct_sans_prealables)}% frais
               </span>
             )
           })()}

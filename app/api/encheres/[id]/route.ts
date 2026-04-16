@@ -44,7 +44,7 @@ export async function PATCH(
 
   const { data: enchere } = await supabaseAdmin
     .from('encheres')
-    .select('surface, nb_pieces, nb_lots, loyer, charges_copro, taxe_fonc_ann, adresse, latitude, longitude, score_travaux, score_commentaire, mise_a_prix')
+    .select('surface, nb_pieces, nb_lots, loyer, charges_copro, taxe_fonc_ann, adresse, latitude, longitude, score_travaux, score_commentaire, mise_a_prix, frais_preemption')
     .eq('id', id)
     .maybeSingle()
 
@@ -55,6 +55,7 @@ export async function PATCH(
     'loyer', 'charges_copro', 'taxe_fonc_ann',
     'adresse', 'latitude', 'longitude',
     'score_travaux', 'score_commentaire',
+    'frais_preemption',
   ]
   const champsLibres = ['adresse', 'latitude', 'longitude', 'score_travaux', 'score_commentaire']
 
