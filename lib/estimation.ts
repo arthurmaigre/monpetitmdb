@@ -175,7 +175,7 @@ async function fetchDVFForPeriod(
   anneeMin: number, anneeMax?: number | null,
   nbPieces?: number | null
 ): Promise<DVFTransaction[]> {
-  let url = `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&nature_mutation=Vente&type_local=${dvfType}&anneemut_min=${anneeMin}&page_size=500`
+  let url = `https://apidf.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&nature_mutation=Vente&type_local=${dvfType}&anneemut_min=${anneeMin}&page_size=500`
   if (anneeMax) url += `&anneemut_max=${anneeMax}`
   // Filtre par nombre de pieces exact pour comparer des biens similaires
   if (nbPieces && nbPieces >= 1) {
@@ -257,7 +257,7 @@ export async function fetchDVFTransactions(
     try {
       // Requete sur les deux periodes en parallele avec filtre nb pieces
       const [txPrincipale, txReference] = await Promise.all([
-        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2022, null, nbPieces),
+        fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, new Date().getFullYear() - 3, null, nbPieces),
         fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2018, 2020, nbPieces)
       ])
 
@@ -283,7 +283,7 @@ export async function fetchDVFTransactions(
       const bbox = `${center.lng - rayon},${center.lat - rayon},${center.lng + rayon},${center.lat + rayon}`
       try {
         const [txP, txR] = await Promise.all([
-          fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2022),
+          fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, new Date().getFullYear() - 3),
           fetchDVFForPeriod(center, bbox, dvfType, surfaceMin, surfaceMax, 2018, 2020)
         ])
         const txRefP = txR.map(tx => ({ ...tx, weight: tx.weight * 1.0 }))
@@ -675,7 +675,8 @@ export async function estimerBien(
 
   // 4. Correcteurs qualitatifs
   const corrections = calculateCorrections(bien, prixParkingLocal)
-  const multiplicateurTotal = corrections.reduce((acc, c) => acc * c.multiplicateur, 1.0)
+  const multiplicateurTotalRaw = corrections.reduce((acc, c) => acc * c.multiplicateur, 1.0)
+  const multiplicateurTotal = Math.min(1.30, Math.max(0.75, multiplicateurTotalRaw))
   const prixM2Corrige = Math.round(prixM2Brut * multiplicateurTotal)
   const prixTotal = Math.round(prixM2Corrige * bien.surface)
 
