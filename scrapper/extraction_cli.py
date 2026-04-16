@@ -377,7 +377,7 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
              .eq("strategie_mdb", "Locataire en place")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
-             .or_("extraction_statut.is.null,extraction_statut.eq.echec_quota")
+             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
              .order("created_at", desc=False)
              .limit(fetch_size))
         if last_created_at:
@@ -534,7 +534,7 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
              .eq("strategie_mdb", "Immeuble de rapport")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
-             .or_("extraction_statut.is.null,extraction_statut.eq.echec_quota")
+             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
              .limit(limit))
     id_res = id_query.execute()
     ids = [r["id"] for r in (id_res.data or [])]
