@@ -207,7 +207,12 @@ export async function GET(req: NextRequest) {
   // itemsPerPage adaptatif : consomme exactement N items SE si limit défini
   const itemsPerPage = isFinite(limitPerStrategy) ? Math.min(limitPerStrategy, 30) : 30
 
-  const metropoleMap = await getMetropoleMap()
+  let metropoleMap: Map<string, string>
+  try {
+    metropoleMap = await getMetropoleMap()
+  } catch (err) {
+    return NextResponse.json({ error: 'getMetropoleMap failed', detail: String(err) }, { status: 500 })
+  }
 
   const summary: Record<string, {
     fetched: number; inserted: number; skipped: number
@@ -215,6 +220,7 @@ export async function GET(req: NextRequest) {
     exemples?: string[]
   }> = {}
 
+  try {
   for (const { strategie, propertyTypes, expressions } of STRATEGIES) {
     summary[strategie] = { fetched: 0, inserted: 0, skipped: 0, faux_positifs: 0, valides: 0, errors: 0 }
     if (dry) summary[strategie].exemples = []
@@ -264,6 +270,11 @@ export async function GET(req: NextRequest) {
 
       if (members.length > 0 && !dry && newOnPage === 0) break
     }
+  }
+
+  } catch (err) {
+    console.error('[SE polling] fatal error:', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true, fromDate, dry, summary })
