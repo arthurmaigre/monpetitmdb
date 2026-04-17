@@ -872,16 +872,16 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                       {!isEncheres && <th className="col-optional">{"M\u00E9tropole"}<span></span></th>}
                       {isEncheres ? (
                         <>
+                          <th>Sources<span></span></th>
                           <th>Tribunal<span></span></th>
                           <th>Date visite<span></span></th>
                           <th>Date audience<span></span></th>
-                          <th>Date surenchère<span></span></th>
                           <th>Statut<span></span></th>
                           <th>Mise à prix<span></span></th>
-                          <th>Prix adjugé<span></span></th>
                           <th>Occupation<span></span></th>
+                          <th>Date surenchère<span></span></th>
+                          <th>Prix adjugé<span></span></th>
                           <th>Avocat<span></span></th>
-                          <th>Sources<span></span></th>
                         </>
                       ) : (
                         <>
@@ -984,26 +984,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                           const occ = occupationLabels[e.occupation] || { label: e.occupation || '-', color: '#7a6a60' }
                           const dateAudience = e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
                           return <>
-                            <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: '#7a6a60' }}>{e.date_visite ? new Date(e.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#8a5a00' }}>{e.date_surenchere ? new Date(e.date_surenchere).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
-                            <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
-                            <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>
-                            <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
-                            <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
-                              {e.avocat_nom ? (
-                                <button onClick={() => setAvocatModal(e)} style={{
-                                  background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px',
-                                  padding: '4px 8px', fontSize: '11px', fontWeight: 600, color: '#7a6a60',
-                                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                                  maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
-                                }}>
-                                  {e.avocat_nom}
-                                </button>
-                              ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '12px' }}>-</span>}
-                            </td>
                             <td>{(() => {
                               const LOGOS: Record<string, { name: string; color: string; abbrev: string }> = {
                                 licitor: { name: 'Licitor', color: '#1565C0', abbrev: 'LIC' },
@@ -1028,6 +1008,26 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                 })}
                               </div>
                             })()}</td>
+                            <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: '#7a6a60' }}>{e.date_visite ? new Date(e.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
+                            <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
+                            <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>
+                            <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#8a5a00' }}>{e.date_surenchere ? new Date(e.date_surenchere).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
+                            <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {e.avocat_nom ? (
+                                <button onClick={() => setAvocatModal(e)} style={{
+                                  background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px',
+                                  padding: '4px 8px', fontSize: '11px', fontWeight: 600, color: '#7a6a60',
+                                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                                  maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
+                                }}>
+                                  {e.avocat_nom}
+                                </button>
+                              ) : <span style={{ color: '#c0b0a0', fontStyle: 'italic', fontSize: '12px' }}>-</span>}
+                            </td>
                           </>
                         })() : (
                         <>
