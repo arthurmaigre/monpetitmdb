@@ -14,6 +14,7 @@ const SE_API_KEY = process.env.STREAM_ESTATE_API_KEY!
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Expressions miroir exact des saved searches SE (inclusions + exclusions)
+// Un appel API par groupe → évite les URLs 414 trop longues
 // ──────────────────────────────────────────────────────────────────────────────
 
 type ExprWord = { word: string; includes: boolean; strict: boolean }
@@ -98,31 +99,27 @@ const STRATEGIES: { strategie: string; propertyTypes: number[]; expressions: Exp
 ]
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Appel SE API — GET /documents/properties
+// Appel SE API — 1 seul groupe d'expressions par appel (évite URL 414)
 // ──────────────────────────────────────────────────────────────────────────────
 
-async function searchSeProperties(
-  expressions: ExprGroup[],
+async function searchSeGroup(
+  group: ExprGroup,
   propertyTypes: number[],
   fromDate: string,
-  page: number,
   itemsPerPage: number,
-): Promise<{ members: any[]; totalItems: number; hasNext: boolean }> {
+): Promise<any[]> {
   const parts: string[] = []
 
-  expressions.forEach((group, gi) => {
-    group.forEach((expr, ei) => {
-      parts.push(`expressions[${gi}][${ei}][value]=${encodeURIComponent(expr.word)}`)
-      parts.push(`expressions[${gi}][${ei}][options][includes]=${expr.includes}`)
-      parts.push(`expressions[${gi}][${ei}][options][strict]=${expr.strict}`)
-    })
+  group.forEach((expr, ei) => {
+    parts.push(`expressions[0][${ei}][value]=${encodeURIComponent(expr.word)}`)
+    parts.push(`expressions[0][${ei}][options][includes]=${expr.includes}`)
+    parts.push(`expressions[0][${ei}][options][strict]=${expr.strict}`)
   })
 
   propertyTypes.forEach(t => parts.push(`propertyTypes[]=${t}`))
-
   parts.push(`transactionType=0`)
   parts.push(`fromDate=${encodeURIComponent(fromDate)}`)
-  parts.push(`page=${page}`)
+  parts.push(`page=1`)
   parts.push(`itemsPerPage=${itemsPerPage}`)
   parts.push(`order[createdAt]=desc`)
   parts.push(`lat=46.6`)
@@ -132,15 +129,10 @@ async function searchSeProperties(
 
   const url = `${SE_API}/documents/properties?${parts.join('&')}`
   const res = await fetch(url, { headers: { 'X-API-KEY': SE_API_KEY } })
-
   if (!res.ok) throw new Error(`SE API ${res.status}: ${await res.text()}`)
 
   const data = await res.json()
-  const members: any[] = data['hydra:member'] || []
-  const totalItems: number = data['hydra:totalItems'] || 0
-  const hasNext = !!data['hydra:view']?.['hydra:next']
-
-  return { members, totalItems, hasNext }
+  return data['hydra:member'] || []
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -169,7 +161,7 @@ async function processProperty(
 
   const sourceKeywords = detectMatchedKeywords(title, description, strategie)
   const isValid = await validateWithHaiku(title, description, strategie)
-  console.log(`[SE polling${dry ? ' DRY' : ''}] ${strategie} → ${isValid ? 'valide' : 'faux_positif'} (${sourceKeywords.join(', ')})`)
+  console.log(`[SE polling${dry ? ' DRY' : ''}] ${strategie} → ${isValid ? 'valide' : 'faux_positif'} (${sourceKeywords.join(', ') || 'aucun keyword local'})`)
 
   if (dry) {
     return { action: isValid ? 'valide' : 'faux_positif', haiku: isValid ? 'valide' : 'faux_positif', title, keywords: sourceKeywords }
@@ -204,78 +196,66 @@ export async function GET(req: NextRequest) {
   const limitPerStrategy = limitParam ? parseInt(limitParam, 10) : Infinity
   const dry = req.nextUrl.searchParams.get('dry') === 'true'
 
-  // itemsPerPage adaptatif : consomme exactement N items SE si limit défini
+  // itemsPerPage adaptatif : on demande exactement N items à SE si limit défini
   const itemsPerPage = isFinite(limitPerStrategy) ? Math.min(limitPerStrategy, 30) : 30
 
-  let metropoleMap: Map<string, string>
   try {
-    metropoleMap = await getMetropoleMap()
-  } catch (err) {
-    return NextResponse.json({ error: 'getMetropoleMap failed', detail: String(err) }, { status: 500 })
-  }
+    const metropoleMap = await getMetropoleMap()
 
-  const summary: Record<string, {
-    fetched: number; inserted: number; skipped: number
-    faux_positifs: number; valides: number; errors: number
-    exemples?: string[]
-  }> = {}
+    const summary: Record<string, {
+      fetched: number; inserted: number; skipped: number
+      faux_positifs: number; valides: number; errors: number
+      exemples?: string[]
+    }> = {}
 
-  try {
-  for (const { strategie, propertyTypes, expressions } of STRATEGIES) {
-    summary[strategie] = { fetched: 0, inserted: 0, skipped: 0, faux_positifs: 0, valides: 0, errors: 0 }
-    if (dry) summary[strategie].exemples = []
-    const seen = new Set<string>()
+    for (const { strategie, propertyTypes, expressions } of STRATEGIES) {
+      summary[strategie] = { fetched: 0, inserted: 0, skipped: 0, faux_positifs: 0, valides: 0, errors: 0 }
+      if (dry) summary[strategie].exemples = []
+      const seen = new Set<string>()
 
-    let page = 1
-    let hasNext = true
+      // Un appel par groupe d'expressions (évite URL 414)
+      for (const group of expressions) {
+        if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
 
-    while (hasNext) {
-      const { members, hasNext: next } = await searchSeProperties(expressions, propertyTypes, fromDate, page, itemsPerPage)
-      // En mode limité : 1 seule page suffit (itemsPerPage = limit)
-      hasNext = isFinite(limitPerStrategy) ? false : next
-      page++
+        const members = await searchSeGroup(group, propertyTypes, fromDate, itemsPerPage)
 
-      let newOnPage = 0
+        for (const property of members) {
+          const uuid: string = property.uuid
+          if (!uuid || seen.has(uuid)) continue
+          seen.add(uuid)
+          summary[strategie].fetched++
 
-      for (const property of members) {
-        const uuid: string = property.uuid
-        if (!uuid || seen.has(uuid)) continue
-        seen.add(uuid)
-        summary[strategie].fetched++
-
-        try {
-          const result = await processProperty(property, strategie, metropoleMap, dry)
-          if (dry) {
-            if (result.action === 'valide') {
-              summary[strategie].valides++
-              newOnPage++
-            } else if (result.action === 'faux_positif') {
-              summary[strategie].faux_positifs++
-            }
-            if (result.title) summary[strategie].exemples!.push(`[${result.action}] ${result.title} (${(result.keywords || []).join(', ') || 'aucun keyword'})`)
-          } else {
-            if (result.action === 'inserted') {
-              summary[strategie].inserted++
-              newOnPage++
-              if (result.haiku === 'faux_positif') summary[strategie].faux_positifs++
+          try {
+            const result = await processProperty(property, strategie, metropoleMap, dry)
+            if (dry) {
+              if (result.action === 'valide') summary[strategie].valides++
+              else if (result.action === 'faux_positif') summary[strategie].faux_positifs++
+              if (result.title) {
+                summary[strategie].exemples!.push(
+                  `[${result.action}] ${result.title} (${(result.keywords || []).join(', ') || 'aucun keyword'})`
+                )
+              }
             } else {
-              summary[strategie].skipped++
+              if (result.action === 'inserted') {
+                summary[strategie].inserted++
+                if (result.haiku === 'faux_positif') summary[strategie].faux_positifs++
+              } else {
+                summary[strategie].skipped++
+              }
             }
+          } catch (err) {
+            console.error(`[SE polling] error uuid=${uuid}:`, err)
+            summary[strategie].errors++
           }
-        } catch (err) {
-          console.error(`[SE polling] error uuid=${uuid}:`, err)
-          summary[strategie].errors++
+
+          if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
         }
       }
-
-      if (members.length > 0 && !dry && newOnPage === 0) break
     }
-  }
 
+    return NextResponse.json({ ok: true, fromDate, dry, summary })
   } catch (err) {
     console.error('[SE polling] fatal error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
-
-  return NextResponse.json({ ok: true, fromDate, dry, summary })
 }
