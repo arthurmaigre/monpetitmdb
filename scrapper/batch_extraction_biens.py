@@ -439,24 +439,8 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
         log.info(f"  Batch {batch_idx+1}/{len(batches)} : {len(items)} biens en {elapsed:.1f}s ({elapsed/len(items):.1f}s/bien)")
         return chunk, results
 
-    all_results = []
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {
-            executor.submit(process_one_batch, i, chunk, items): i
-            for i, (chunk, items) in enumerate(batches)
-        }
-        for future in as_completed(futures):
-            try:
-                chunk, results = future.result()
-                all_results.append((chunk, results))
-            except Exception as e:
-                batch_idx = futures[future]
-                log.error(f"  Batch {batch_idx+1} exception: {e}")
-                chunk, items = batches[batch_idx]
-                all_results.append((chunk, [None] * len(chunk)))
-
-    # Appliquer les résultats en DB
-    for chunk, results in all_results:
+    def write_locataire_to_db(chunk, results):
+        nonlocal processed, loyer_found, profil_found, errors
         for (bien, desc), parsed in zip(chunk, results):
             now = datetime.now(timezone.utc).isoformat()
             if not parsed:
@@ -477,7 +461,6 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
                 processed += 1
                 continue
 
-            # Construire l'update — même logique que route.ts
             update = {"extraction_statut": "ok", "extraction_date": now}
 
             if not bien.get("loyer") and parsed.get("loyer") and isinstance(parsed["loyer"], (int, float)):
@@ -506,7 +489,6 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
             else:
                 update["profil_locataire"] = "NC"
 
-            # Recalculer rendement_brut
             final_loyer = update.get("loyer") or bien.get("loyer")
             if final_loyer and bien.get("prix_fai"):
                 update["rendement_brut"] = round((final_loyer * 12 / bien["prix_fai"]) * 10000) / 10000
@@ -514,6 +496,21 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
             client.table("biens").update(update).eq("id", bien["id"]).execute()
             log.info(f"  [{bien['id']}] OK — loyer={update.get('loyer')}, profil={update.get('profil_locataire')}")
             processed += 1
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(process_one_batch, i, chunk, items): i
+            for i, (chunk, items) in enumerate(batches)
+        }
+        for future in as_completed(futures):
+            try:
+                chunk, results = future.result()
+            except Exception as e:
+                batch_idx = futures[future]
+                log.error(f"  Batch {batch_idx+1} exception: {e}")
+                chunk, items = batches[batch_idx]
+                results = [None] * len(chunk)
+            write_locataire_to_db(chunk, results)
 
     elapsed_total = time.time() - t_start
     log.info(f"\nRésultat : {processed} traités, {loyer_found} loyers trouvés, {profil_found} profils trouvés, {errors} erreurs — {elapsed_total:.0f}s total ({elapsed_total/max(processed,1):.1f}s/bien)")
@@ -599,24 +596,8 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
         log.info(f"  Batch {batch_idx+1}/{len(batches)} : {len(items)} biens en {elapsed:.1f}s ({elapsed/len(items):.1f}s/bien)")
         return chunk, results
 
-    all_results = []
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {
-            executor.submit(process_one_batch, i, chunk, items): i
-            for i, (chunk, items) in enumerate(batches)
-        }
-        for future in as_completed(futures):
-            try:
-                chunk, results = future.result()
-                all_results.append((chunk, results))
-            except Exception as e:
-                batch_idx = futures[future]
-                log.error(f"  Batch {batch_idx+1} exception: {e}")
-                chunk, items = batches[batch_idx]
-                all_results.append((chunk, [None] * len(chunk)))
-
-    # Appliquer les résultats
-    for chunk, results in all_results:
+    def write_idr_to_db(chunk, results):
+        nonlocal processed, lots_found, errors
         for (bien, text), parsed in zip(chunk, results):
             now = datetime.now(timezone.utc).isoformat()
             if not parsed:
@@ -662,6 +643,21 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
             client.table("biens").update(update).eq("id", bien["id"]).execute()
             log.info(f"  [{bien['id']}] OK — nb_lots={update.get('nb_lots')}, lots_data={'oui' if lots_found else 'non'}")
             processed += 1
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(process_one_batch, i, chunk, items): i
+            for i, (chunk, items) in enumerate(batches)
+        }
+        for future in as_completed(futures):
+            try:
+                chunk, results = future.result()
+            except Exception as e:
+                batch_idx = futures[future]
+                log.error(f"  Batch {batch_idx+1} exception: {e}")
+                chunk, items = batches[batch_idx]
+                results = [None] * len(chunk)
+            write_idr_to_db(chunk, results)
 
     elapsed_total = time.time() - t_start
     log.info(f"\nRésultat : {processed} traités, {lots_found} avec lots, {errors} erreurs — {elapsed_total:.0f}s total ({elapsed_total/max(processed,1):.1f}s/bien)")
