@@ -111,7 +111,7 @@ async function searchSeGroup(
   const parts: string[] = []
 
   group.forEach((expr, ei) => {
-    parts.push(`expressions[0][${ei}][value]=${encodeURIComponent(expr.word)}`)
+    parts.push(`expressions[0][${ei}][word]=${encodeURIComponent(expr.word)}`)
     parts.push(`expressions[0][${ei}][options][includes]=${expr.includes}`)
     parts.push(`expressions[0][${ei}][options][strict]=${expr.strict}`)
   })
