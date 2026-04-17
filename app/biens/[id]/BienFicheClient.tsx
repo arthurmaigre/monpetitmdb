@@ -975,8 +975,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
             <>
               <Row label={"Frais préalables"} value={fraisEnchere && fraisEnchere.frais_prealables > 0 ? `-${fmt(fraisEnchere.frais_prealables)} ${'\u20AC'}` : `0 ${'\u20AC'}`} rouge={fraisEnchere ? fraisEnchere.frais_prealables > 0 : false}
                 info={"Frais préalables engagés par l'avocat poursuivant avant l'audience (diagnostics, huissier, publication…). À demander à l'avocat et saisir dans la fiche une fois obtenus."} />
-              <Row label={`Frais d'adjudication (${fraisEnchere?.pct_sans_prealables ?? 0}\u00A0%)`} value={`-${fmt(fraisEnchere?.total_sans_prealables || 0)} ${'\u20AC'}`} rouge
-                info={`Émoluments avocat TTC : ${fmt(fraisEnchere?.emoluments_ttc || 0)}\u00A0${'\u20AC'}\nDroits d'enregistrement (${fraisEnchere?.droits_enregistrement_pct ?? 5.8}\u00A0%) : ${fmt(fraisEnchere?.droits_enregistrement || 0)}\u00A0${'\u20AC'}\nCSI (0,1\u00A0%) : ${fmt(fraisEnchere?.csi || 0)}\u00A0${'\u20AC'}\n\nTotal hors frais préalables : ${fmt(fraisEnchere?.total_sans_prealables || 0)}\u00A0${'\u20AC'}`} />
+              <Row label={`Frais de mutation (${fraisEnchere?.pct_sans_prealables ?? 0}\u00A0%)`} value={`-${fmt(fraisEnchere?.total_sans_prealables || 0)} ${'\u20AC'}`} rouge
+                info={`Émoluments avocat TTC : ${fmt(fraisEnchere?.emoluments_ttc || 0)}\u00A0${'\u20AC'}\nDroits de mutation (${fraisEnchere?.droits_enregistrement_pct ?? 5.8}\u00A0%) : ${fmt(fraisEnchere?.droits_enregistrement || 0)}\u00A0${'\u20AC'}\nCSI (0,1\u00A0%) : ${fmt(fraisEnchere?.csi || 0)}\u00A0${'\u20AC'}\n\nTotal hors frais préalables : ${fmt(fraisEnchere?.total_sans_prealables || 0)}\u00A0${'\u20AC'}`} />
             </>
           ) : (
             <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge
@@ -1903,6 +1903,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [estimationData, setEstimationData] = useState<any>(null)
   const [dureeRevente, setDureeRevente] = useState<number>(1)
   const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number | ''>(5) // 5% par defaut = frais agence inclus dans le FAI
+  const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(1500)
 
   useEffect(() => {
     async function load() {
@@ -2641,7 +2642,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 {bien.date_visite && <div className="data-item"><span className="data-label">Visite</span><span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div>}
                 {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
                 {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
-                {/* Frais préalables + Frais d'adjudication + Avocat — même ligne */}
+                {/* Frais préalables + Honoraires avocat + Frais de mutation + Avocat — même ligne */}
                 <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
                   <div className="data-item">
                     <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2652,7 +2653,32 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     </span>
                     <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
                   </div>
-                  {/* Frais d'adjudication */}
+                  {/* Honoraires d'avocat — libres */}
+                  <div className="data-item">
+                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      Honoraires d{"'"}avocat
+                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Honoraires libres — fixés par l{"'"}avocat mandaté pour vous représenter à l{"'"}audience. Généralement entre 1{'\u00A0'}000 et 3{'\u00A0'}000{'\u00A0'}{'\u20AC'}. 1{'\u00A0'}500{'\u00A0'}{'\u20AC'} par défaut.</span>
+                      </span>
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <input
+                        type="number"
+                        value={honorairesAvocat}
+                        onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
+                        onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
+                        placeholder="1500"
+                        style={{
+                          width: '80px', padding: '4px 8px', borderRadius: '6px',
+                          border: '1.5px solid #e8e2d8', fontSize: '13px', fontWeight: 600,
+                          fontFamily: "'DM Sans', sans-serif", textAlign: 'right',
+                          background: '#fff', color: '#1a1210',
+                        }}
+                      />
+                      <span style={{ fontSize: '13px', color: '#7a6a60' }}>{'\u20AC'}</span>
+                    </div>
+                  </div>
+                  {/* Frais de mutation */}
                   {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
                     const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
                     const isMDB = regime === 'marchand_de_biens'
@@ -2660,9 +2686,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     return (
                       <div className="data-item">
                         <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          Frais d{"'"}adjudication
+                          Frais de mutation
                           <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais d{"'"}acquisition calculés : émoluments avocat + droits d{"'"}enregistrement + CSI. Hors frais préalables (à renseigner séparément).</span>
+                            ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais d{"'"}acquisition calculés : émoluments avocat + droits de mutation + CSI. Hors frais préalables et honoraires (à renseigner séparément).</span>
                           </span>
                         </span>
                         <button onClick={() => setShowFraisModal(true)} style={{
@@ -3577,7 +3603,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           const isMDB = regime === 'marchand_de_biens'
           const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
           return (
-            <ModalPanel open={showFraisModal} onClose={() => setShowFraisModal(false)} title={"Frais d\u2019adjudication \u2014 D\u00E9tail"}>
+            <ModalPanel open={showFraisModal} onClose={() => setShowFraisModal(false)} title={"Frais de mutation \u2014 D\u00E9tail"}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Badge régime */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -3606,7 +3632,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       <td style={{ padding: '4px 0 8px', textAlign: 'right', color: '#7a6a60', fontSize: '12px' }}>{frais.emoluments_adjudicataire_ttc.toLocaleString('fr-FR')} {'\u20AC'}</td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #f0ede8' }}>
-                      <td style={{ padding: '8px 0', color: '#3a2a20' }}>Droits d{"'"}enregistrement ({frais.droits_enregistrement_pct}&nbsp;%{isMDB ? ' — taux réduit MDB' : ''})</td>
+                      <td style={{ padding: '8px 0', color: '#3a2a20' }}>Droits de mutation ({frais.droits_enregistrement_pct}&nbsp;%{isMDB ? ' — taux réduit MDB' : ''})</td>
                       <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600, color: '#1a1210' }}>{frais.droits_enregistrement.toLocaleString('fr-FR')} {'\u20AC'}</td>
                     </tr>
                     <tr style={{ borderBottom: '2px solid #e8e2d8' }}>
@@ -3614,7 +3640,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600, color: '#1a1210' }}>{frais.csi.toLocaleString('fr-FR')} {'\u20AC'}</td>
                     </tr>
                     <tr>
-                      <td style={{ padding: '10px 0', color: '#1a1210', fontWeight: 700 }}>Total frais d{"'"}adjudication</td>
+                      <td style={{ padding: '10px 0', color: '#1a1210', fontWeight: 700 }}>Total frais de mutation</td>
                       <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 800, color: '#1a1210', fontSize: '15px' }}>
                         {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'}
                         <span style={{ fontWeight: 500, fontSize: '12px', color: '#7a6a60', marginLeft: '6px' }}>(~{Math.round(frais.pct_sans_prealables)}&nbsp;%)</span>

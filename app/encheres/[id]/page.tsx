@@ -327,7 +327,7 @@ function ExpandableCharges({ label, total, isReel, isFree, details }: { label: s
   )
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false, honorairesAvocat = 0 }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { tauxCredit, tauxAssurance, dureeAns, typeCredit: typeCreditSimu } = financement
   const hasLoyer = loyer && loyer > 0
@@ -337,7 +337,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   // Frais d'acquisition : barème Didiercam pour enchères, % flat pour biens classiques
   const fraisEnchere = isEnchere ? calculerFraisEnchere(prix_fai, 0, { isMDB: isMarchand }) : null
   const colFraisNotairePct = isEnchere && fraisEnchere ? fraisEnchere.pct : (isMarchand ? 2.5 : (fraisNotaireBase || 7.5))
-  const colFraisNotaireMontant = isEnchere && fraisEnchere ? fraisEnchere.total : (prix_fai * colFraisNotairePct / 100)
+  const colFraisNotaireMontant = isEnchere && fraisEnchere ? fraisEnchere.total + honorairesAvocat : (prix_fai * colFraisNotairePct / 100)
   const colMontantEmprunte = Math.max(0, prix_fai + colFraisNotaireMontant - (apport || 0))
 
   const isMicro = (r: string) => r === 'nu_micro_foncier' || r === 'lmnp_micro_bic'
@@ -651,7 +651,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
           {isEnchere && fraisEnchere ? (
             <>
               <Row label="Émoluments avocat TTC" value={`-${fmt(fraisEnchere.emoluments_ttc)} \u20AC`} rouge info="Barème Didiercam : poursuivant 3/4 + adjudicataire 1/4" />
-              <Row label={`Droits d'enregistrement (${isMarchand ? '0,715%' : '5,8%'})`} value={`-${fmt(fraisEnchere.droits_enregistrement)} \u20AC`} rouge />
+              <Row label={`Droits de mutation (${isMarchand ? '0,715%' : '5,8%'})`} value={`-${fmt(fraisEnchere.droits_enregistrement)} \u20AC`} rouge />
               <Row label="CSI (0,10%)" value={`-${fmt(fraisEnchere.csi)} \u20AC`} rouge />
             </>
           ) : (
@@ -1251,6 +1251,7 @@ export default function FicheEncherePage() {
   const [estimationData, setEstimationData] = useState<any>(null)
   const [dureeRevente, setDureeRevente] = useState<number>(1)
   const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number | ''>(0) // 0% for auctions (no agency fees)
+  const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(1500)
 
   useEffect(() => {
     async function load() {
@@ -1441,10 +1442,11 @@ export default function FicheEncherePage() {
   const tauxAssuranceNum = tauxAssurance || 0
   const fraisAgenceNum = fraisAgenceRevente || 0
   const prixBase = enchere.mise_a_prix
-  // Frais d'adjudication barème Didiercam (remplace le % flat)
+  // Frais de mutation barème Didiercam (remplace le % flat)
+  const honorairesAvocatNum = honorairesAvocat || 0
   const fraisEnchereMain = calculerFraisEnchere(prixBase, 0, { isMDB: regime === 'marchand_de_biens' })
-  const montantProjet = prixBase + fraisEnchereMain.total + budgetTravCalc
-  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix - budgetTravCalc - fraisEnchereMain.total) / 1.2) : null
+  const montantProjet = prixBase + fraisEnchereMain.total + honorairesAvocatNum + budgetTravCalc
+  const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix - budgetTravCalc - fraisEnchereMain.total - honorairesAvocatNum) / 1.2) : null
   const montantEmprunte = Math.max(0, montantProjet - apportNum)
   const apportPct = montantProjet > 0 ? Math.round(apportNum / montantProjet * 1000) / 10 : 0
 
@@ -2089,9 +2091,14 @@ export default function FicheEncherePage() {
               <h2 className="section-title">Simulateur de Financement</h2>
                 <div>
                   <div className="param-group">
-                    <label className="param-label">Montant du projet (frais adjudication inclus)</label>
+                    <label className="param-label">Montant du projet (frais de mutation inclus)</label>
                     <div className="param-input" style={{ background: '#f0ede8', color: '#1a1210', fontWeight: 700, fontSize: '16px' }}>{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
-                    <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fmt(Math.round(fraisEnchereMain.total))} {'\u20AC'} frais ({fraisEnchereMain.pct}%){budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
+                    <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fmt(Math.round(fraisEnchereMain.total))} {'\u20AC'} frais ({fraisEnchereMain.pct}%) + {fmt(honorairesAvocatNum)} {'\u20AC'} honoraires{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
+                  </div>
+                  <div className="param-group">
+                    <label className="param-label">Honoraires d{"'"}avocat <span title="Honoraires libres — fixés par l'avocat mandaté" style={{ cursor: 'help', color: '#9a8a80', fontSize: '13px', fontWeight: 400 }}>ⓘ libres</span></label>
+                    <input className="param-input" type="number" value={honorairesAvocat} onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }} placeholder="1500" />
+                    <span className="param-hint">Honoraires libres fixés par l{"'"}avocat mandaté — 1{'\u00A0'}500{'\u00A0'}{'\u20AC'} par défaut</span>
                   </div>
                   <div className="param-group">
                     <label className="param-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</label>
@@ -2216,8 +2223,8 @@ export default function FicheEncherePage() {
                 </div>
               )}
               <div className="pnl-grid">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre régime)`} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere />
-                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre régime)`} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere honorairesAvocat={honorairesAvocatNum} />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bienLike, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere honorairesAvocat={honorairesAvocatNum} />
               </div>
             </div>
           </div>
