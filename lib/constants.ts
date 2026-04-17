@@ -27,6 +27,8 @@ export const TRIS = [
 export const TRIS_ENCHERES = [
   { label: 'Date audience \u2191', value: 'date_audience_asc' },
   { label: 'Date audience \u2193', value: 'date_audience_desc' },
+  { label: 'Date visite \u2191',   value: 'date_visite_asc' },
+  { label: 'Date visite \u2193',   value: 'date_visite_desc' },
   { label: 'Plus r\u00E9cents', value: 'recent' },
   { label: 'Prix \u2191',       value: 'prix_asc' },
   { label: 'Prix \u2193',       value: 'prix_desc' },

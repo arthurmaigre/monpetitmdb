@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
   else if (tri === 'prix_desc') { orderCol = 'mise_a_prix'; orderAsc = false }
   else if (tri === 'recent') { orderCol = 'created_at'; orderAsc = false }
   else if (tri === 'date_audience_desc') { orderCol = 'date_audience'; orderAsc = false }
+  else if (tri === 'date_visite_asc') { orderCol = 'date_visite'; orderAsc = true }
+  else if (tri === 'date_visite_desc') { orderCol = 'date_visite'; orderAsc = false }
 
   let query = supabaseAdmin
     .from('encheres')
