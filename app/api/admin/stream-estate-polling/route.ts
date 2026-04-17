@@ -110,32 +110,41 @@ async function searchSeGroup(
   itemsPerPage: number,
   surfaceMin?: number,
 ): Promise<any[]> {
-  const parts: string[] = []
+  const baseParts: string[] = []
 
   group.forEach((expr, ei) => {
-    parts.push(`expressions[0][${ei}][word]=${encodeURIComponent(expr.word)}`)
-    parts.push(`expressions[0][${ei}][options][includes]=${expr.includes}`)
-    parts.push(`expressions[0][${ei}][options][strict]=${expr.strict}`)
+    baseParts.push(`expressions[0][${ei}][word]=${encodeURIComponent(expr.word)}`)
+    baseParts.push(`expressions[0][${ei}][options][includes]=${expr.includes}`)
+    baseParts.push(`expressions[0][${ei}][options][strict]=${expr.strict}`)
   })
 
-  propertyTypes.forEach(t => parts.push(`propertyTypes[]=${t}`))
-  if (surfaceMin) parts.push(`surfaceMin=${surfaceMin}`)
-  parts.push(`transactionType=0`)
-  parts.push(`fromDate=${encodeURIComponent(fromDate)}`)
-  parts.push(`page=1`)
-  parts.push(`itemsPerPage=${itemsPerPage}`)
-  parts.push(`order[createdAt]=desc`)
-  parts.push(`lat=46.6`)
-  parts.push(`lon=2.2`)
-  parts.push(`radius=600`)
-  parts.push(`withCoherentPrice=true`)
+  propertyTypes.forEach(t => baseParts.push(`propertyTypes[]=${t}`))
+  if (surfaceMin) baseParts.push(`surfaceMin=${surfaceMin}`)
+  baseParts.push(`transactionType=0`)
+  baseParts.push(`fromDate=${encodeURIComponent(fromDate)}`)
+  baseParts.push(`itemsPerPage=${itemsPerPage}`)
+  baseParts.push(`order[createdAt]=desc`)
+  baseParts.push(`lat=46.6`)
+  baseParts.push(`lon=2.2`)
+  baseParts.push(`radius=600`)
+  baseParts.push(`withCoherentPrice=true`)
 
-  const url = `${SE_API}/documents/properties?${parts.join('&')}`
-  const res = await fetch(url, { headers: { 'X-API-KEY': SE_API_KEY } })
-  if (!res.ok) throw new Error(`SE API ${res.status}: ${await res.text()}`)
+  const all: any[] = []
+  let page = 1
 
-  const data = await res.json()
-  return data['hydra:member'] || []
+  while (true) {
+    const parts = [...baseParts, `page=${page}`]
+    const url = `${SE_API}/documents/properties?${parts.join('&')}`
+    const res = await fetch(url, { headers: { 'X-API-KEY': SE_API_KEY } })
+    if (!res.ok) throw new Error(`SE API ${res.status}: ${await res.text()}`)
+    const data = await res.json()
+    const members: any[] = data['hydra:member'] || []
+    all.push(...members)
+    if (members.length < itemsPerPage) break
+    page++
+  }
+
+  return all
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
