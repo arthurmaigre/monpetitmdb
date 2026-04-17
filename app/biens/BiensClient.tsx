@@ -951,7 +951,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                           <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${Math.round(bien.surface)} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
-                        <td style={{ minWidth: '140px' }}>
+                        <td style={{ minWidth: '140px', whiteSpace: 'nowrap' }}>
                           <span style={{ fontWeight: 500, display: 'block' }}>{bien.ville}</span>
                           {(bien as any).code_postal && <span style={{ fontSize: '12px', color: '#7a6a60' }}>{(bien as any).code_postal}</span>}
                         </td>
