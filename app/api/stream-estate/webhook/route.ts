@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = new Anthropic()
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Mapping Stream Estate → table biens
@@ -16,7 +19,103 @@ const SE_PROPERTY_TYPE_MAP: Record<number, string> = {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Detection strategie depuis le contenu (meme logique que webhook MI)
+// Keywords SE par stratégie (sans accents, identiques aux saved searches)
+// Mis à jour si on modifie les expressions dans Stream Estate
+// ──────────────────────────────────────────────────────────────────────────────
+
+const SE_KEYWORDS: Record<string, string[]> = {
+  'Locataire en place': [
+    'locataire en place', 'vendu loue', 'bail en cours', 'loyer actuel', 'location en cours',
+  ],
+  'Travaux lourds': [
+    'entierement a renover', 'a renover entierement', 'a renover integralement',
+    'a rehabiliter', 'inhabitable', 'tout a refaire', 'toiture a refaire',
+    'a restaurer', 'a rafraichir', 'a remettre aux normes', 'a remettre en etat',
+    'plateau a amenager', 'bien a renover', 'maison a renover',
+    'appartement a renover', 'immeuble a renover',
+  ],
+  'Division': [
+    'division possible', 'potentiel de division', 'bien divisible',
+    'maison divisible', 'appartement divisible', 'a diviser',
+  ],
+  'Immeuble de rapport': [
+    'immeuble de rapport', 'copropriete a creer', 'vente en bloc',
+    'vendu en bloc', 'immeuble locatif', 'immeuble entierement loue',
+  ],
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Prompts Haiku par stratégie — validation sémantique binaire
+// ──────────────────────────────────────────────────────────────────────────────
+
+const HAIKU_PROMPTS: Record<string, string> = {
+  'Locataire en place': "Ce bien immobilier est-il vendu avec un locataire en place (bail d'habitation en cours, loyer actuel mentionné, occupé par un locataire) ? Réponds uniquement OUI ou NON.",
+  'Travaux lourds': "Ce bien immobilier nécessite-t-il des travaux lourds (rénovation complète, gros œuvre, inhabitable, tout à refaire) — et non de simples travaux cosmétiques ou de finition ? Réponds uniquement OUI ou NON.",
+  'Division': "Ce bien immobilier a-t-il un vrai potentiel de division en plusieurs logements indépendants (surface suffisante, accès séparés possibles, mention explicite de division) ? Réponds uniquement OUI ou NON.",
+  'Immeuble de rapport': "Ce bien immobilier est-il un immeuble de rapport vendu en bloc (immeuble entier avec plusieurs lots locatifs, monopropriété) ? Réponds uniquement OUI ou NON.",
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// detectMatchedKeywords — texte complet sans troncature
+// ──────────────────────────────────────────────────────────────────────────────
+
+function detectMatchedKeywords(title: string, description: string, strategie: string): string[] {
+  const normalized = (title + ' ' + description)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  return (SE_KEYWORDS[strategie] || []).filter(kw => normalized.includes(kw))
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// validateWithHaiku — validation sémantique, fail open sur erreur
+// ──────────────────────────────────────────────────────────────────────────────
+
+async function validateWithHaiku(title: string, description: string, strategie: string): Promise<boolean> {
+  const prompt = HAIKU_PROMPTS[strategie]
+  if (!prompt) return true // stratégie inconnue → fail open
+
+  try {
+    const text = `Titre : ${title}\n\nDescription : ${description}`
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 5,
+      messages: [
+        { role: 'user', content: `${prompt}\n\n${text}` },
+      ],
+    })
+    const answer = (response.content[0] as { type: string; text: string }).text.trim().toUpperCase()
+    return answer.startsWith('OUI')
+  } catch (err) {
+    console.error('[SE webhook] Haiku validation error:', err)
+    return true // fail open
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Lookup strategie depuis table stream_estate_searches (cache en memoire)
+// ──────────────────────────────────────────────────────────────────────────────
+
+let _searchMap: Map<string, string> | null = null
+let _searchMapTs = 0
+
+async function getStrategieFromSearch(searchIri: string | undefined): Promise<string | null> {
+  if (!searchIri) return null
+  if (!_searchMap || Date.now() - _searchMapTs > 5 * 60 * 1000) {
+    const { data } = await supabaseAdmin
+      .from('stream_estate_searches')
+      .select('search_iri, strategie_mdb')
+    _searchMap = new Map()
+    if (data) {
+      for (const row of data) _searchMap.set(row.search_iri, row.strategie_mdb)
+    }
+    _searchMapTs = Date.now()
+  }
+  return _searchMap.get(searchIri) || null
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Detection strategie depuis le contenu (fallback si pas de search IRI)
 // ──────────────────────────────────────────────────────────────────────────────
 
 const STRATEGY_KEYWORDS: { strategie: string; patterns: RegExp[] }[] = [
@@ -42,32 +141,8 @@ function detectStrategieFromContent(text: string, propertyType?: number): string
   for (const { strategie, patterns } of STRATEGY_KEYWORDS) {
     if (patterns.some(re => re.test(text))) return strategie
   }
-  // Fallback : immeuble → IDR, sinon Travaux lourds
   if (propertyType === 2) return 'Immeuble de rapport'
   return 'Travaux lourds'
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Lookup strategie depuis table stream_estate_searches (cache en memoire)
-// ──────────────────────────────────────────────────────────────────────────────
-
-let _searchMap: Map<string, string> | null = null
-let _searchMapTs = 0
-
-async function getStrategieFromSearch(searchIri: string | undefined): Promise<string | null> {
-  if (!searchIri) return null
-  // Cache 5 min
-  if (!_searchMap || Date.now() - _searchMapTs > 5 * 60 * 1000) {
-    const { data } = await supabaseAdmin
-      .from('stream_estate_searches')
-      .select('search_iri, strategie_mdb')
-    _searchMap = new Map()
-    if (data) {
-      for (const row of data) _searchMap.set(row.search_iri, row.strategie_mdb)
-    }
-    _searchMapTs = Date.now()
-  }
-  return _searchMap.get(searchIri) || null
 }
 
 function mapPublisherType(type: number | undefined): string | null {
@@ -78,24 +153,19 @@ function mapPublisherType(type: number | undefined): string | null {
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Extract property + advert from SE webhook payload
-// Payload structure (doc SE) :
-//   Match : { match: { propertyDocument: {...}, search: "/searches/xxx" } }
-//   Event : { event: "ad.update.price", adEvent: {...}, match: { propertyDocument: {...} } }
 // ──────────────────────────────────────────────────────────────────────────────
 
 function extractPropertyAndAdvert(payload: any): { property: any; advert: any } | null {
   const propertyDoc = payload.match?.propertyDocument || payload.propertyDocument
   if (!propertyDoc) return null
-
   const adverts = propertyDoc.adverts || []
   const advert = adverts[0]
   if (!advert) return null
-
   return { property: propertyDoc, advert }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Build bien payload from SE property (colonnes IA JAMAIS incluses)
+// Build bien payload
 // ──────────────────────────────────────────────────────────────────────────────
 
 function buildBienPayload(
@@ -103,6 +173,8 @@ function buildBienPayload(
   advert: any,
   strategie: string,
   metropoleMap: Map<string, string>,
+  sourceKeywords: string[],
+  isValid: boolean,
 ) {
   const surface = property.surface || advert.surface || null
   const prix_fai = advert.price || null
@@ -111,7 +183,7 @@ function buildBienPayload(
   const bien: Record<string, unknown> = {
     url: advert.url,
     strategie_mdb: strategie,
-    statut: 'Toujours disponible',
+    statut: isValid ? 'Toujours disponible' : 'Faux positif',
     type_bien: SE_PROPERTY_TYPE_MAP[property.propertyType] || null,
     prix_fai,
     surface,
@@ -132,19 +204,18 @@ function buildBienPayload(
     latitude: property.location?.lat ?? property.locations?.lat ?? null,
     longitude: property.location?.lon ?? property.locations?.lon ?? null,
     surface_terrain: advert.landSurface || property.landSurface || null,
-    // Stream Estate specific
     stream_estate_id: property.uuid,
     source_provider: 'stream_estate',
     publisher_type: mapPublisherType(advert.publisher?.type),
     price_history: advert.events?.length ? advert.events : null,
-    // Ascenseur
+    // Validation Haiku inline
+    regex_statut: isValid ? 'valide' : 'faux_positif',
+    // Tracking keywords SE pour stats FP
+    source_keywords: sourceKeywords.length > 0 ? sourceKeywords : null,
     ...(advert.elevator === true || property.elevator === true ? { ascenseur: true } : {}),
     ...(advert.elevator === false || property.elevator === false ? { ascenseur: false } : {}),
-    // condominiumFees SE = annuel → diviser par 12 pour stocker mensuel
     ...(advert.condominiumFees ? { charges_copro: Math.round(advert.condominiumFees / 12) } : {}),
-    // taxe fonciere (annuel, stocke annuel en base)
     ...(advert.propertyTax ? { taxe_fonc_ann: advert.propertyTax } : {}),
-    // moteurimmo_data reutilise avec memes cles (compatible pipeline IA)
     moteurimmo_data: {
       uniqueId: property.uuid,
       origin: advert.publisher?.name || null,
@@ -168,7 +239,7 @@ function buildBienPayload(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Dedup : URL → stream_estate_id → duplicates MI → matching geo
+// Dedup : URL → stream_estate_id → biens_source_urls → geo
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function findExistingBien(
@@ -176,7 +247,6 @@ async function findExistingBien(
   property: any,
   advert: any,
 ): Promise<{ id: number; source_provider: string } | null> {
-  // 1. Check par URL source directe
   const { data: byUrl } = await supabaseAdmin
     .from('biens')
     .select('id, source_provider')
@@ -185,7 +255,6 @@ async function findExistingBien(
     .single()
   if (byUrl) return byUrl
 
-  // 2. Check par stream_estate_id (MAJ d'un bien deja rattache)
   if (property.uuid) {
     const { data: bySeid } = await supabaseAdmin
       .from('biens')
@@ -196,7 +265,6 @@ async function findExistingBien(
     if (bySeid) return bySeid
   }
 
-  // 3. Check via table biens_source_urls (index des URLs sources MI + SE)
   const { data: bySourceUrl } = await supabaseAdmin
     .from('biens_source_urls')
     .select('bien_id')
@@ -212,7 +280,6 @@ async function findExistingBien(
     if (bienFromUrl) return bienFromUrl
   }
 
-  // 4. Matching geographique + prix (fallback)
   const code_postal = property.city?.zipcode
   const surface = property.surface || advert.surface
   const prix = advert.price
@@ -239,7 +306,7 @@ async function findExistingBien(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Champs proteges : jamais ecrases par l'upsert SE
+// Champs protégés (jamais écrasés par upsert SE)
 // ──────────────────────────────────────────────────────────────────────────────
 
 const PROTECTED_FIELDS = new Set([
@@ -253,7 +320,6 @@ const PROTECTED_FIELDS = new Set([
   'photo_storage_path',
 ])
 
-// charges_copro et taxe_fonc_ann : inclure seulement si NULL en base (pour biens MI existants)
 const CONDITIONAL_FIELDS = new Set(['charges_copro', 'taxe_fonc_ann'])
 
 function stripProtectedFields(
@@ -270,7 +336,7 @@ function stripProtectedFields(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Load metropole map (cached en memoire pour la duree du lambda)
+// Metropole map (cache memoire)
 // ──────────────────────────────────────────────────────────────────────────────
 
 let _metropoleMap: Map<string, string> | null = null
@@ -291,7 +357,7 @@ async function getMetropoleMap(): Promise<Map<string, string>> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Event handlers
+// handlePropertyAdCreate
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function handlePropertyAdCreate(payload: any) {
@@ -302,28 +368,27 @@ async function handlePropertyAdCreate(payload: any) {
   if (!advert.url) return { action: 'skip', reason: 'no url' }
 
   const metropoleMap = await getMetropoleMap()
-  // Strategie : d'abord via la saved search (table), sinon detection par contenu
+
   const searchIri = payload.match?.search || null
   const strategieFromSearch = await getStrategieFromSearch(searchIri)
-  const text = [advert.title || '', advert.description || ''].join(' ')
+  const title = advert.title || property.title || ''
+  const description = advert.description || property.description || ''
+  const text = title + ' ' + description
   const strategie = strategieFromSearch || detectStrategieFromContent(text, property.propertyType)
 
-  // Filtrer les faux positifs Locataire en place (baux commerciaux, résidences gérées, EHPAD, tourisme)
-  if (strategie === 'Locataire en place') {
-    const EXCLUDE_PATTERNS = /bail commercial|local commercial|murs commerci|fonds de commerce|résidence de tourisme|résidence touristi|pierre.{0,3}vacances|résidence senior|ehpad|maison de retraite|résidence étudiante|résidence hôtelière|résidence de service|résidence gérée|lmnp|meublé non professionnel/i
-    if (EXCLUDE_PATTERNS.test(text)) {
-      return { action: 'skip', reason: 'excluded: bail commercial / résidence gérée' }
-    }
-  }
+  // Keyword tracking (texte complet, sans troncature)
+  const sourceKeywords = detectMatchedKeywords(title, description, strategie)
 
-  const bien = buildBienPayload(property, advert, strategie, metropoleMap)
+  // Validation sémantique Haiku
+  const isValid = await validateWithHaiku(title, description, strategie)
+  console.log(`[SE webhook] Haiku: ${strategie} → ${isValid ? 'valide' : 'faux_positif'} (keywords: ${sourceKeywords.join(', ')})`)
+
+  const bien = buildBienPayload(property, advert, strategie, metropoleMap, sourceKeywords, isValid)
   const existing = await findExistingBien(advert.url, property, advert)
 
   if (existing) {
-    // UPDATE — rattacher + MAJ donnees (colonnes IA protegees)
     const updatePayload = stripProtectedFields(bien, existing.source_provider)
 
-    // Pour les biens MI : charges_copro/taxe_fonc_ann seulement si NULL en base
     if (existing.source_provider === 'moteurimmo') {
       const { data: current } = await supabaseAdmin
         .from('biens')
@@ -349,7 +414,7 @@ async function handlePropertyAdCreate(payload: any) {
       console.error(`[SE webhook] update error id=${existing.id}: ${error.message}`)
       return { action: 'error', error: error.message }
     }
-    return { action: 'updated', id: existing.id, was: existing.source_provider }
+    return { action: 'updated', id: existing.id, was: existing.source_provider, haiku: isValid ? 'valide' : 'faux_positif' }
   }
 
   // INSERT nouveau bien
@@ -360,18 +425,14 @@ async function handlePropertyAdCreate(payload: any) {
     .single()
 
   if (error) {
-    if (error.code === '23505') {
-      return { action: 'duplicate', url: advert.url }
-    }
+    if (error.code === '23505') return { action: 'duplicate', url: advert.url }
     console.error(`[SE webhook] insert error: ${error.message}`)
     return { action: 'error', error: error.message }
   }
 
-  // Ajouter l'URL + duplicates dans biens_source_urls pour la dédup future
   if (inserted?.id) {
     const urlsToInsert: { bien_id: number; url: string }[] = []
     if (advert.url) urlsToInsert.push({ bien_id: inserted.id, url: advert.url })
-    // Ajouter les URLs des autres annonces du même bien (duplicates)
     const otherAdverts = (property.adverts || []).filter((a: any) => a.url && a.url !== advert.url)
     for (const a of otherAdverts) {
       urlsToInsert.push({ bien_id: inserted.id, url: a.url })
@@ -383,7 +444,7 @@ async function handlePropertyAdCreate(payload: any) {
     }
   }
 
-  return { action: 'inserted', id: inserted?.id }
+  return { action: 'inserted', id: inserted?.id, haiku: isValid ? 'valide' : 'faux_positif' }
 }
 
 async function handleAdUpdatePrice(payload: any) {
@@ -399,7 +460,6 @@ async function handleAdUpdatePrice(payload: any) {
   const url = advert.url
   const surface = property.surface || advert.surface
 
-  // Match par stream_estate_id d'abord, puis par URL
   const targets = [
     uuid ? { column: 'stream_estate_id', value: uuid } : null,
     url ? { column: 'url', value: url } : null,
@@ -463,7 +523,6 @@ async function handleAdUpdateExpired(payload: any) {
 
 // ──────────────────────────────────────────────────────────────────────────────
 // POST /api/stream-estate/webhook
-// Pas d'auth header (SE n'en envoie pas). Endpoint upsert-only, risque faible.
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -474,7 +533,6 @@ export async function POST(req: NextRequest) {
     let result: any
 
     if (event) {
-      // Event payload : { event, adEvent, match: { propertyDocument } }
       switch (event) {
         case 'ad.update.price':
           result = await handleAdUpdatePrice(payload)
@@ -486,13 +544,12 @@ export async function POST(req: NextRequest) {
           result = await handlePropertyAdCreate(payload)
           break
         case 'property.ad.update':
-          result = await handlePropertyAdCreate(payload) // traite comme create (upsert)
+          result = await handlePropertyAdCreate(payload)
           break
         default:
           result = { action: 'ignored', event }
       }
     } else if (payload.match?.propertyDocument || payload.propertyDocument) {
-      // Match payload (nouveau bien) : { match: { propertyDocument, search } }
       result = await handlePropertyAdCreate(payload)
     } else {
       result = { action: 'ignored', reason: 'unknown payload structure' }
