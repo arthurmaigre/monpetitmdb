@@ -536,17 +536,8 @@ export async function POST(req: NextRequest) {
 
     if (event) {
       switch (event) {
-        case 'ad.update.price':
-          result = await handleAdUpdatePrice(payload)
-          break
-        case 'ad.update.expired':
-          result = await handleAdUpdateExpired(payload)
-          break
         case 'property.ad.create':
           result = await handlePropertyAdCreate(payload)
-          break
-        case 'property.ad.update':
-          result = { action: 'ignored', event }
           break
         default:
           result = { action: 'ignored', event }
