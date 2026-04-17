@@ -182,10 +182,16 @@ export async function GET(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  // fromDate = début du jour courant UTC
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
-  const fromDate = today.toISOString()
+  // fromDate = paramètre optionnel, sinon début du jour courant UTC
+  const fromDateParam = req.nextUrl.searchParams.get('fromDate')
+  let fromDate: string
+  if (fromDateParam) {
+    fromDate = fromDateParam
+  } else {
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+    fromDate = today.toISOString()
+  }
 
   const metropoleMap = await getMetropoleMap()
 
