@@ -1655,8 +1655,20 @@ export default function FicheEncherePage() {
                   {/* Bouton contacter — toujours présent, disabled si pas d'email disponible */}
                   {(() => {
                     const emailEff = (!enchere.avocat_email || editingEmail) ? emailInput.trim() : enchere.avocat_email
+                    const adresseComplete = [enchere.adresse, enchere.code_postal, enchere.ville].filter(Boolean).join(', ')
+                    const tribunal = enchere.tribunal ? `TJ de ${enchere.tribunal}` : 'le tribunal compétent'
+                    const dateAudience = enchere.date_audience
+                      ? new Date(enchere.date_audience).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : 'NC'
+                    const signaturePrenom = profil?.prenom || ''
+                    const signatureNom = profil?.nom ? profil.nom.toUpperCase() : ''
+                    const signature = [signaturePrenom, signatureNom].filter(Boolean).join(' ')
+                    const ligneVisite = !enchere.date_visite
+                      ? `\nJe souhaiterais également connaître les dates de visite disponibles pour ce bien.`
+                      : ''
+                    const corps = `Maître,\n\nJe me permets de vous écrire concernant l'adjudication du bien situé ${adresseComplete || 'adresse non renseignée'}, mise en vente au ${tribunal} à l'audience du ${dateAudience}.\n\nJe souhaiterais vous demander le dossier de vente complet (cahier des conditions de vente, procès-verbal de description).${ligneVisite}\n\nEn vous remerciant,\n\nAvec mes salutations respectueuses,\n\n${signature}`
                     const mailtoHref = emailEff
-                      ? `mailto:${emailEff}?subject=${encodeURIComponent(`Demande de dossier — ${enchere.adresse || enchere.ville || 'enchère judiciaire'}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe suis intéressé par l'acquisition du bien mis en vente aux enchères judiciaires :\n${enchere.adresse ? enchere.adresse + ', ' : ''}${enchere.ville || ''}\nMise à prix : ${enchere.mise_a_prix ? enchere.mise_a_prix.toLocaleString('fr-FR') + ' \u20AC' : 'NC'}\n\nPouvez-vous m'adresser le dossier complet (cahier des conditions de vente, procès-verbal de description) ?\n\nCordialement`)}`
+                      ? `mailto:${emailEff}?subject=${encodeURIComponent(`Demande de dossier — ${adresseComplete || enchere.ville || 'enchère judiciaire'}`)}&body=${encodeURIComponent(corps)}`
                       : undefined
                     const handleClick = async (e: React.MouseEvent) => {
                       if (!emailEff) { e.preventDefault(); return }
