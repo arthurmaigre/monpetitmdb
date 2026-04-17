@@ -817,12 +817,16 @@ export default function MesBiensPage() {
                       <th>Commune<span></span></th>
                       {activeTab === 'Enchères' ? (
                         <>
+                          <th>Source<span></span></th>
                           <th>Tribunal<span></span></th>
+                          <th>Date visite<span></span></th>
                           <th>Date audience<span></span></th>
                           <th>Statut<span></span></th>
                           <th>Mise à prix<span></span></th>
-                          <th>Prix adjugé<span></span></th>
                           <th>Occupation<span></span></th>
+                          <th>Date surench.<span></span></th>
+                          <th>Prix adjugé<span></span></th>
+                          <th>Avocat<span></span></th>
                         </>
                       ) : (
                         <>
@@ -900,13 +904,25 @@ export default function MesBiensPage() {
                           }
                           const occ = occupationLabels[e.occupation] || { label: e.occupation || '-', color: '#7a6a60' }
                           const dateAudience = e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
+                          const dateVisite = e.date_visite ? new Date(e.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
+                          const dateSurenchere = e.date_surenchere ? new Date(e.date_surenchere).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
+                          const sourceLabels: Record<string, string> = { licitor: 'Licitor', avoventes: 'Avoventes', vench: 'Vench' }
+                          const sourceBgColors: Record<string, string> = { licitor: '#e8f0fd', avoventes: '#fdf0e8', vench: '#f0fde8' }
+                          const sourceTextColors: Record<string, string> = { licitor: '#1a4a9a', avoventes: '#9a4a1a', vench: '#1a7a40' }
+                          const srcLabel = sourceLabels[e.source] || e.source || '-'
+                          const srcBg = sourceBgColors[e.source] || '#f0ede8'
+                          const srcColor = sourceTextColors[e.source] || '#7a6a60'
                           return <>
+                            <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', borderRadius: '5px', background: srcBg, color: srcColor, whiteSpace: 'nowrap' }}>{srcLabel}</span></td>
                             <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: e.date_visite ? undefined : '#c0b0a0' }}>{dateVisite}</td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
                             <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
                             <td className="td-prix">{e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</td>
-                            <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: e.date_surenchere ? undefined : '#c0b0a0' }}>{dateSurenchere}</td>
+                            <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
+                            <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '160px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.avocat_nom || '-'}</td>
                           </>
                         })() : (
                         <>
