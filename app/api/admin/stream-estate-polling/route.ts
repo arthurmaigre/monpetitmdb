@@ -20,19 +20,19 @@ type ExprWord = { word: string; includes: boolean; strict: boolean }
 type ExprGroup = ExprWord[]
 
 const LEP_EXCLUSIONS: ExprWord[] = [
-  { word: 'bail commercial',      includes: false, strict: true },
-  { word: 'local commercial',     includes: false, strict: true },
-  { word: 'fonds de commerce',    includes: false, strict: true },
-  { word: 'murs commerciaux',     includes: false, strict: true },
-  { word: 'ehpad',                includes: false, strict: true },
-  { word: 'residence senior',     includes: false, strict: true },
-  { word: 'residence de tourisme',includes: false, strict: true },
-  { word: 'residence etudiante',  includes: false, strict: true },
-  { word: 'residence hoteliere',  includes: false, strict: true },
-  { word: 'residence de service', includes: false, strict: true },
-  { word: 'residence geree',      includes: false, strict: true },
-  { word: 'maison de retraite',   includes: false, strict: true },
-  { word: 'lmnp',                 includes: false, strict: true },
+  { word: 'bail commercial',       includes: false, strict: true },
+  { word: 'local commercial',      includes: false, strict: true },
+  { word: 'fonds de commerce',     includes: false, strict: true },
+  { word: 'murs commerciaux',      includes: false, strict: true },
+  { word: 'ehpad',                 includes: false, strict: true },
+  { word: 'residence senior',      includes: false, strict: true },
+  { word: 'residence de tourisme', includes: false, strict: true },
+  { word: 'residence etudiante',   includes: false, strict: true },
+  { word: 'residence hoteliere',   includes: false, strict: true },
+  { word: 'residence de service',  includes: false, strict: true },
+  { word: 'residence geree',       includes: false, strict: true },
+  { word: 'maison de retraite',    includes: false, strict: true },
+  { word: 'lmnp',                  includes: false, strict: true },
 ]
 
 function inc(word: string): ExprWord { return { word, includes: true, strict: true } }
@@ -106,6 +106,7 @@ async function searchSeProperties(
   propertyTypes: number[],
   fromDate: string,
   page: number,
+  itemsPerPage: number,
 ): Promise<{ members: any[]; totalItems: number; hasNext: boolean }> {
   const parts: string[] = []
 
@@ -122,7 +123,7 @@ async function searchSeProperties(
   parts.push(`transactionType=0`)
   parts.push(`fromDate=${encodeURIComponent(fromDate)}`)
   parts.push(`page=${page}`)
-  parts.push(`itemsPerPage=30`)
+  parts.push(`itemsPerPage=${itemsPerPage}`)
   parts.push(`order[createdAt]=desc`)
   parts.push(`lat=46.6`)
   parts.push(`lon=2.2`)
@@ -143,29 +144,36 @@ async function searchSeProperties(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Traitement d'une property SE → même pipeline que le webhook
+// Traitement d'une property SE → pipeline keyword + Haiku
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function processProperty(
   property: any,
   strategie: string,
   metropoleMap: Map<string, string>,
-): Promise<{ action: string; id?: number; haiku?: string }> {
+  dry: boolean,
+): Promise<{ action: string; id?: number; haiku?: string; title?: string; keywords?: string[] }> {
   const adverts: any[] = property.adverts || []
   if (adverts.length === 0) return { action: 'skip' }
 
   const advert = adverts[0]
   if (!advert.url) return { action: 'skip' }
 
-  const existing = await findExistingBien(advert.url, property, advert)
-  if (existing) return { action: 'skip_existing', id: existing.id }
+  if (!dry) {
+    const existing = await findExistingBien(advert.url, property, advert)
+    if (existing) return { action: 'skip_existing', id: existing.id }
+  }
 
   const title = advert.title || property.title || ''
   const description = advert.description || property.description || ''
 
   const sourceKeywords = detectMatchedKeywords(title, description, strategie)
   const isValid = await validateWithHaiku(title, description, strategie)
-  console.log(`[SE polling] ${strategie} → ${isValid ? 'valide' : 'faux_positif'} (${sourceKeywords.join(', ')})`)
+  console.log(`[SE polling${dry ? ' DRY' : ''}] ${strategie} → ${isValid ? 'valide' : 'faux_positif'} (${sourceKeywords.join(', ')})`)
+
+  if (dry) {
+    return { action: isValid ? 'valide' : 'faux_positif', haiku: isValid ? 'valide' : 'faux_positif', title, keywords: sourceKeywords }
+  }
 
   const bien = buildBienPayload(property, advert, strategie, metropoleMap, sourceKeywords, isValid)
   const result = await insertBienWithUrls(bien, property, advert)
@@ -182,7 +190,6 @@ export async function GET(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  // fromDate = paramètre optionnel, sinon début du jour courant UTC
   const fromDateParam = req.nextUrl.searchParams.get('fromDate')
   let fromDate: string
   if (fromDateParam) {
@@ -193,20 +200,33 @@ export async function GET(req: NextRequest) {
     fromDate = today.toISOString()
   }
 
+  const limitParam = req.nextUrl.searchParams.get('limit')
+  const limitPerStrategy = limitParam ? parseInt(limitParam, 10) : Infinity
+  const dry = req.nextUrl.searchParams.get('dry') === 'true'
+
+  // itemsPerPage adaptatif : consomme exactement N items SE si limit défini
+  const itemsPerPage = isFinite(limitPerStrategy) ? Math.min(limitPerStrategy, 30) : 30
+
   const metropoleMap = await getMetropoleMap()
 
-  const summary: Record<string, { fetched: number; inserted: number; skipped: number; faux_positifs: number; errors: number }> = {}
+  const summary: Record<string, {
+    fetched: number; inserted: number; skipped: number
+    faux_positifs: number; valides: number; errors: number
+    exemples?: string[]
+  }> = {}
 
   for (const { strategie, propertyTypes, expressions } of STRATEGIES) {
-    summary[strategie] = { fetched: 0, inserted: 0, skipped: 0, faux_positifs: 0, errors: 0 }
+    summary[strategie] = { fetched: 0, inserted: 0, skipped: 0, faux_positifs: 0, valides: 0, errors: 0 }
+    if (dry) summary[strategie].exemples = []
     const seen = new Set<string>()
 
     let page = 1
     let hasNext = true
 
     while (hasNext) {
-      const { members, hasNext: next } = await searchSeProperties(expressions, propertyTypes, fromDate, page)
-      hasNext = next
+      const { members, hasNext: next } = await searchSeProperties(expressions, propertyTypes, fromDate, page, itemsPerPage)
+      // En mode limité : 1 seule page suffit (itemsPerPage = limit)
+      hasNext = isFinite(limitPerStrategy) ? false : next
       page++
 
       let newOnPage = 0
@@ -218,13 +238,23 @@ export async function GET(req: NextRequest) {
         summary[strategie].fetched++
 
         try {
-          const result = await processProperty(property, strategie, metropoleMap)
-          if (result.action === 'inserted') {
-            summary[strategie].inserted++
-            newOnPage++
-            if (result.haiku === 'faux_positif') summary[strategie].faux_positifs++
+          const result = await processProperty(property, strategie, metropoleMap, dry)
+          if (dry) {
+            if (result.action === 'valide') {
+              summary[strategie].valides++
+              newOnPage++
+            } else if (result.action === 'faux_positif') {
+              summary[strategie].faux_positifs++
+            }
+            if (result.title) summary[strategie].exemples!.push(`[${result.action}] ${result.title} (${(result.keywords || []).join(', ') || 'aucun keyword'})`)
           } else {
-            summary[strategie].skipped++
+            if (result.action === 'inserted') {
+              summary[strategie].inserted++
+              newOnPage++
+              if (result.haiku === 'faux_positif') summary[strategie].faux_positifs++
+            } else {
+              summary[strategie].skipped++
+            }
           }
         } catch (err) {
           console.error(`[SE polling] error uuid=${uuid}:`, err)
@@ -232,9 +262,9 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      if (members.length > 0 && newOnPage === 0) break
+      if (members.length > 0 && !dry && newOnPage === 0) break
     }
   }
 
-  return NextResponse.json({ ok: true, fromDate, summary })
+  return NextResponse.json({ ok: true, fromDate, dry, summary })
 }
