@@ -181,6 +181,7 @@ def call_claude_batch(system_prompt: str, items: list[dict[str, str]], timeout: 
     items = [{"id": "xxx", "text": "description du bien"}, ...]
     Retourne une liste de même taille avec dict parsé ou None par item.
     """
+    global QUOTA_HIT
     if not items:
         return []
     if QUOTA_HIT:
@@ -246,6 +247,7 @@ def download_photo(url: str, dest_path: str) -> bool:
 
 def call_claude_with_photos(prompt: str, photo_paths: list[str], timeout: int = 120) -> dict | None:
     """Appelle claude -p avec --allowedTools Read pour lire les photos locales."""
+    global QUOTA_HIT
     # Ajouter les instructions de lecture des photos au prompt
     full_prompt = prompt
     if photo_paths:
