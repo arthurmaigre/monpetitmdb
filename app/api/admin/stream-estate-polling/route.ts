@@ -215,7 +215,7 @@ export async function GET(req: NextRequest) {
       const seen = new Set<string>()
 
       // Pour chaque expression : paginer et traiter chaque page immédiatement
-      const CHUNK_SIZE = 15
+      const CHUNK_SIZE = 10
       const CONCURRENCY = 3
 
       for (const group of expressions) {
