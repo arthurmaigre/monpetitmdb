@@ -368,75 +368,20 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
         log.error("Supabase non connecté")
         return
 
-    # Récupérer les biens à traiter — cursor id (index idx_biens_pipeline, pas de timeout)
-    PAGE_SIZE = 1000
-    biens = []
-    last_id = 0
-    while len(biens) < limit:
-        fetch_size = min(PAGE_SIZE, limit - len(biens))
-        q = (client.table("biens")
-             .select("id, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data")
-             .eq("strategie_mdb", "Locataire en place")
-             .eq("statut", "Toujours disponible")
-             .eq("regex_statut", "valide")
-             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
-             .order("id", desc=False)
-             .limit(fetch_size))
-        if last_id:
-            q = q.gt("id", last_id)
-        page = q.execute().data or []
-        if not page:
-            break
-        biens.extend(page)
-        last_id = page[-1]["id"]
-        log.info(f"  Pagination: {len(biens)} biens chargés (page {len(page)}, last_id={last_id})")
-        if len(page) < fetch_size:
-            break
-    log.info(f"Locataire en place : {len(biens)} biens à traiter (batch_size={batch_size}, workers={workers})")
-
     processed = 0
     loyer_found = 0
     profil_found = 0
     errors = 0
     t_start = time.time()
+    last_id = None
+    PAGE_SIZE = 1000
+    log.info(f"Locataire en place — limit={limit}, batch_size={batch_size}, workers={workers}")
 
-    # Séparer les biens sans description (traitement immédiat) et avec description (batch IA)
-    biens_with_desc = []
-    for bien in biens:
-        md = parse_moteurimmo_data(bien.get("moteurimmo_data"))
-        desc = (md.get("description", "") or "")[:800]
-        if not desc:
-            now = datetime.now(timezone.utc).isoformat()
-            if not dry_run:
-                client.table("biens").update({
-                    "profil_locataire": "NC",
-                    "extraction_statut": "no_data",
-                    "extraction_date": now
-                }).eq("id", bien["id"]).execute()
-            log.info(f"  [{bien['id']}] pas de description → no_data")
-            processed += 1
-        else:
-            biens_with_desc.append((bien, desc))
-
-    if not biens_with_desc:
-        log.info(f"\nRésultat : {processed} traités, 0 avec description")
-        return
-
-    # Découper en batches
-    batches = []
-    for i in range(0, len(biens_with_desc), batch_size):
-        chunk = biens_with_desc[i:i + batch_size]
-        items = [{"id": str(b["id"]), "text": desc} for b, desc in chunk]
-        batches.append((chunk, items))
-
-    log.info(f"  {len(biens_with_desc)} biens avec description → {len(batches)} batches de {batch_size}")
-
-    # Traiter les batches avec N workers en parallèle
-    def process_one_batch(batch_idx, chunk, items):
+    def process_one_batch(chunk, items):
         t0 = time.time()
         results = call_claude_batch(PROMPT_LOCATAIRE.rstrip().replace("\nAnnonce :\n", ""), items, timeout=180)
         elapsed = time.time() - t0
-        log.info(f"  Batch {batch_idx+1}/{len(batches)} : {len(items)} biens en {elapsed:.1f}s ({elapsed/len(items):.1f}s/bien)")
+        log.info(f"  Batch {len(items)} biens en {elapsed:.1f}s ({elapsed/len(items):.1f}s/bien)")
         return chunk, results
 
     def write_locataire_to_db(chunk, results):
@@ -497,20 +442,65 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
             log.info(f"  [{bien['id']}] OK — loyer={update.get('loyer')}, profil={update.get('profil_locataire')}")
             processed += 1
 
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {
-            executor.submit(process_one_batch, i, chunk, items): i
-            for i, (chunk, items) in enumerate(batches)
-        }
-        for future in as_completed(futures):
-            try:
-                chunk, results = future.result()
-            except Exception as e:
-                batch_idx = futures[future]
-                log.error(f"  Batch {batch_idx+1} exception: {e}")
-                chunk, items = batches[batch_idx]
-                results = [None] * len(chunk)
-            write_locataire_to_db(chunk, results)
+    # Boucle streaming : charger une page → traiter → page suivante
+    while processed < limit and not QUOTA_HIT:
+        fetch_size = min(PAGE_SIZE, limit - processed)
+        q = (client.table("biens")
+             .select("id, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data")
+             .eq("strategie_mdb", "Locataire en place")
+             .eq("statut", "Toujours disponible")
+             .eq("regex_statut", "valide")
+             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
+             .order("id", desc=True)
+             .limit(fetch_size))
+        if last_id is not None:
+            q = q.lt("id", last_id)
+        page = q.execute().data or []
+        if not page:
+            break
+        last_id = page[-1]["id"]
+        log.info(f"  Page {len(page)} biens chargés (last_id={last_id}, total traité={processed})")
+
+        biens_with_desc = []
+        for bien in page:
+            md = parse_moteurimmo_data(bien.get("moteurimmo_data"))
+            desc = (md.get("description", "") or "")[:800]
+            if not desc:
+                now = datetime.now(timezone.utc).isoformat()
+                if not dry_run:
+                    client.table("biens").update({
+                        "profil_locataire": "NC",
+                        "extraction_statut": "no_data",
+                        "extraction_date": now
+                    }).eq("id", bien["id"]).execute()
+                log.info(f"  [{bien['id']}] pas de description → no_data")
+                processed += 1
+            else:
+                biens_with_desc.append((bien, desc))
+
+        if not biens_with_desc:
+            if len(page) < fetch_size:
+                break
+            continue
+
+        batches = [(biens_with_desc[i:i + batch_size],
+                    [{"id": str(b["id"]), "text": d} for b, d in biens_with_desc[i:i + batch_size]])
+                   for i in range(0, len(biens_with_desc), batch_size)]
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one_batch, chunk, items): (chunk, items)
+                       for chunk, items in batches}
+            for future in as_completed(futures):
+                try:
+                    chunk, results = future.result()
+                except Exception as e:
+                    log.error(f"  Batch exception: {e}")
+                    chunk, _ = futures[future]
+                    results = [None] * len(chunk)
+                write_locataire_to_db(chunk, results)
+
+        if len(page) < fetch_size:
+            break
 
     elapsed_total = time.time() - t_start
     log.info(f"\nRésultat : {processed} traités, {loyer_found} loyers trouvés, {profil_found} profils trouvés, {errors} erreurs — {elapsed_total:.0f}s total ({elapsed_total/max(processed,1):.1f}s/bien)")
@@ -526,74 +516,19 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
         log.error("Supabase non connecté")
         return
 
-    # Récupérer les biens à traiter — cursor id (index idx_biens_pipeline, pas de timeout)
-    PAGE_SIZE = 1000
-    biens = []
-    last_id = 0
-    while len(biens) < limit:
-        fetch_size = min(PAGE_SIZE, limit - len(biens))
-        q = (client.table("biens")
-             .select("id, prix_fai, loyer, taxe_fonc_ann, moteurimmo_data")
-             .eq("strategie_mdb", "Immeuble de rapport")
-             .eq("statut", "Toujours disponible")
-             .eq("regex_statut", "valide")
-             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
-             .order("id", desc=False)
-             .limit(fetch_size))
-        if last_id:
-            q = q.gt("id", last_id)
-        page = q.execute().data or []
-        if not page:
-            break
-        biens.extend(page)
-        last_id = page[-1]["id"]
-        log.info(f"  Pagination IDR: {len(biens)} biens chargés (page {len(page)}, last_id={last_id})")
-        if len(page) < fetch_size:
-            break
-    log.info(f"IDR : {len(biens)} biens à traiter (batch_size={batch_size}, workers={workers})")
-
     processed = 0
     lots_found = 0
     errors = 0
     t_start = time.time()
+    last_id = None
+    PAGE_SIZE = 1000
+    log.info(f"IDR — limit={limit}, batch_size={batch_size}, workers={workers}")
 
-    # Séparer biens sans description
-    biens_with_desc = []
-    for bien in biens:
-        md = parse_moteurimmo_data(bien.get("moteurimmo_data"))
-        title = (md.get("title", "") or "")[:100]
-        desc = (md.get("description", "") or "")[:1200]
-        if not desc:
-            now = datetime.now(timezone.utc).isoformat()
-            if not dry_run:
-                client.table("biens").update({
-                    "extraction_statut": "no_data",
-                    "extraction_date": now
-                }).eq("id", bien["id"]).execute()
-            log.info(f"  [{bien['id']}] pas de description → no_data")
-            processed += 1
-        else:
-            biens_with_desc.append((bien, f"{title}\n\n{desc}"))
-
-    if not biens_with_desc:
-        log.info(f"\nRésultat : {processed} traités, 0 avec description")
-        return
-
-    # Découper en batches
-    batches = []
-    for i in range(0, len(biens_with_desc), batch_size):
-        chunk = biens_with_desc[i:i + batch_size]
-        items = [{"id": str(b["id"]), "text": text} for b, text in chunk]
-        batches.append((chunk, items))
-
-    log.info(f"  {len(biens_with_desc)} biens avec description → {len(batches)} batches de {batch_size}")
-
-    # Traiter en parallèle
-    def process_one_batch(batch_idx, chunk, items):
+    def process_one_batch(chunk, items):
         t0 = time.time()
         results = call_claude_batch(PROMPT_IDR.rstrip().replace("\nAnnonce :\n", ""), items, timeout=180)
         elapsed = time.time() - t0
-        log.info(f"  Batch {batch_idx+1}/{len(batches)} : {len(items)} biens en {elapsed:.1f}s ({elapsed/len(items):.1f}s/bien)")
+        log.info(f"  Batch {len(items)} biens en {elapsed:.1f}s ({elapsed/len(items):.1f}s/bien)")
         return chunk, results
 
     def write_idr_to_db(chunk, results):
@@ -644,20 +579,65 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
             log.info(f"  [{bien['id']}] OK — nb_lots={update.get('nb_lots')}, lots_data={'oui' if lots_found else 'non'}")
             processed += 1
 
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {
-            executor.submit(process_one_batch, i, chunk, items): i
-            for i, (chunk, items) in enumerate(batches)
-        }
-        for future in as_completed(futures):
-            try:
-                chunk, results = future.result()
-            except Exception as e:
-                batch_idx = futures[future]
-                log.error(f"  Batch {batch_idx+1} exception: {e}")
-                chunk, items = batches[batch_idx]
-                results = [None] * len(chunk)
-            write_idr_to_db(chunk, results)
+    # Boucle streaming : charger une page → traiter → page suivante (desc = plus récents en premier)
+    while processed < limit and not QUOTA_HIT:
+        fetch_size = min(PAGE_SIZE, limit - processed)
+        q = (client.table("biens")
+             .select("id, prix_fai, loyer, taxe_fonc_ann, moteurimmo_data")
+             .eq("strategie_mdb", "Immeuble de rapport")
+             .eq("statut", "Toujours disponible")
+             .eq("regex_statut", "valide")
+             .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
+             .order("id", desc=True)
+             .limit(fetch_size))
+        if last_id is not None:
+            q = q.lt("id", last_id)
+        page = q.execute().data or []
+        if not page:
+            break
+        last_id = page[-1]["id"]
+        log.info(f"  Page {len(page)} biens chargés (last_id={last_id}, total traité={processed})")
+
+        biens_with_desc = []
+        for bien in page:
+            md = parse_moteurimmo_data(bien.get("moteurimmo_data"))
+            title = (md.get("title", "") or "")[:100]
+            desc = (md.get("description", "") or "")[:1200]
+            if not desc:
+                now = datetime.now(timezone.utc).isoformat()
+                if not dry_run:
+                    client.table("biens").update({
+                        "extraction_statut": "no_data",
+                        "extraction_date": now
+                    }).eq("id", bien["id"]).execute()
+                log.info(f"  [{bien['id']}] pas de description → no_data")
+                processed += 1
+            else:
+                biens_with_desc.append((bien, f"{title}\n\n{desc}"))
+
+        if not biens_with_desc:
+            if len(page) < fetch_size:
+                break
+            continue
+
+        batches = [(biens_with_desc[i:i + batch_size],
+                    [{"id": str(b["id"]), "text": text} for b, text in biens_with_desc[i:i + batch_size]])
+                   for i in range(0, len(biens_with_desc), batch_size)]
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one_batch, chunk, items): (chunk, items)
+                       for chunk, items in batches}
+            for future in as_completed(futures):
+                try:
+                    chunk, results = future.result()
+                except Exception as e:
+                    log.error(f"  Batch exception: {e}")
+                    chunk, _ = futures[future]
+                    results = [None] * len(chunk)
+                write_idr_to_db(chunk, results)
+
+        if len(page) < fetch_size:
+            break
 
     elapsed_total = time.time() - t_start
     log.info(f"\nRésultat : {processed} traités, {lots_found} avec lots, {errors} erreurs — {elapsed_total:.0f}s total ({elapsed_total/max(processed,1):.1f}s/bien)")
@@ -673,119 +653,118 @@ def run_score(limit: int, dry_run: bool):
         log.error("Supabase non connecté")
         return
 
-    # Récupérer les biens à traiter — cursor id (index idx_biens_pipeline, pas de timeout)
+    processed = 0
+    scored = 0
+    errors = 0
+    last_id = None
     PAGE_SIZE = 1000
-    biens = []
-    last_id = 0
-    while len(biens) < limit:
-        fetch_size = min(PAGE_SIZE, limit - len(biens))
+    log.info(f"Score travaux — limit={limit}")
+
+    # Boucle streaming : charger une page → traiter → page suivante (desc = plus récents en premier)
+    while processed < limit and not QUOTA_HIT:
+        fetch_size = min(PAGE_SIZE, limit - processed)
         q = (client.table("biens")
              .select("id, dpe, annee_construction, prix_fai, surface, moteurimmo_data")
              .eq("strategie_mdb", "Travaux lourds")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
              .is_("score_travaux", "null")
-             .order("id", desc=False)
+             .order("id", desc=True)
              .limit(fetch_size))
-        if last_id:
-            q = q.gt("id", last_id)
+        if last_id is not None:
+            q = q.lt("id", last_id)
         page = q.execute().data or []
         if not page:
             break
-        biens.extend(page)
         last_id = page[-1]["id"]
-        log.info(f"  Pagination Score: {len(biens)} biens chargés (page {len(page)}, last_id={last_id})")
+        log.info(f"  Page {len(page)} biens chargés (last_id={last_id}, total traité={processed})")
+
+        for bien in page:
+            if processed >= limit or QUOTA_HIT:
+                break
+            now = datetime.now(timezone.utc).isoformat()
+            md = bien.get("moteurimmo_data")
+            if isinstance(md, str):
+                try:
+                    md = json.loads(md)
+                    if isinstance(md, str):
+                        md = json.loads(md)
+                except:
+                    md = {}
+
+            title = (md.get("title", "") or "") if md else ""
+            desc = (md.get("description", "") or "")[:900] if md else ""
+            photo_urls = (md.get("pictureUrls") or []) if md else []
+            if not desc and not title:
+                if not dry_run:
+                    client.table("biens").update({
+                        "score_travaux": 1,
+                        "score_commentaire": "Pas de description disponible",
+                        "score_analyse_statut": "no_data",
+                        "score_analyse_date": now
+                    }).eq("id", bien["id"]).execute()
+                processed += 1
+                continue
+
+            annonce = f"Titre: {title}\nDescription: {desc}\nDPE: {bien.get('dpe') or 'NC'}\nAnnee: {bien.get('annee_construction') or 'NC'}\nPrix: {bien.get('prix_fai')} | Surface: {bien.get('surface')}m2"
+
+            tmp_dir = None
+            photo_paths = []
+            if photo_urls:
+                tmp_dir = tempfile.mkdtemp(prefix="score_photos_")
+                for i, url in enumerate(photo_urls[:5]):
+                    ext = url.rsplit(".", 1)[-1][:4] if "." in url else "jpg"
+                    dest = os.path.join(tmp_dir, f"photo_{i+1}.{ext}")
+                    if download_photo(url, dest):
+                        photo_paths.append(dest)
+
+            nb_photos = len(photo_paths)
+            log.info(f"  [{bien['id']}] scoring en cours... ({nb_photos} photos)")
+
+            if photo_paths:
+                parsed = call_claude_with_photos(PROMPT_SCORE + annonce, photo_paths, timeout=120)
+            else:
+                parsed = call_claude(PROMPT_SCORE + annonce)
+
+            if tmp_dir:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+
+            if not parsed:
+                if not dry_run:
+                    status = "echec_quota" if QUOTA_HIT else "erreur"
+                    client.table("biens").update({
+                        "score_analyse_statut": status,
+                        "score_analyse_date": now
+                    }).eq("id", bien["id"]).execute()
+                log.warning(f"  [{bien['id']}] echec parsing{' (quota)' if QUOTA_HIT else ''}")
+                errors += 1
+                processed += 1
+                continue
+
+            score = parsed.get("score")
+            if not isinstance(score, (int, float)) or not (1 <= score <= 5):
+                log.warning(f"  [{bien['id']}] score invalide: {score}")
+                errors += 1
+                processed += 1
+                continue
+
+            if dry_run:
+                log.info(f"  [{bien['id']}] DRY RUN → score={int(score)}, {parsed.get('commentaire', '')[:80]}")
+                processed += 1
+                continue
+
+            client.table("biens").update({
+                "score_travaux": int(score),
+                "score_commentaire": str(parsed.get("commentaire", ""))[:800],
+                "score_analyse_statut": "ok",
+                "score_analyse_date": now
+            }).eq("id", bien["id"]).execute()
+            log.info(f"  [{bien['id']}] OK — score={int(score)}")
+            scored += 1
+            processed += 1
+
         if len(page) < fetch_size:
             break
-    log.info(f"Score travaux : {len(biens)} biens à traiter")
-
-    processed = 0
-    scored = 0
-    errors = 0
-
-    for bien in biens:
-        now = datetime.now(timezone.utc).isoformat()
-        md = bien.get("moteurimmo_data")
-        if isinstance(md, str):
-            try:
-                md = json.loads(md)
-                if isinstance(md, str):
-                    md = json.loads(md)
-            except:
-                md = {}
-
-        title = (md.get("title", "") or "") if md else ""
-        desc = (md.get("description", "") or "")[:900] if md else ""
-        photo_urls = (md.get("pictureUrls") or []) if md else []
-        if not desc and not title:
-            if not dry_run:
-                client.table("biens").update({
-                    "score_travaux": 1,
-                    "score_commentaire": "Pas de description disponible",
-                    "score_analyse_statut": "no_data",
-                    "score_analyse_date": now
-                }).eq("id", bien["id"]).execute()
-            processed += 1
-            continue
-
-        annonce = f"Titre: {title}\nDescription: {desc}\nDPE: {bien.get('dpe') or 'NC'}\nAnnee: {bien.get('annee_construction') or 'NC'}\nPrix: {bien.get('prix_fai')} | Surface: {bien.get('surface')}m2"
-
-        # Télécharger les photos (max 5 pour limiter le temps)
-        tmp_dir = None
-        photo_paths = []
-        if photo_urls:
-            tmp_dir = tempfile.mkdtemp(prefix="score_photos_")
-            for i, url in enumerate(photo_urls[:5]):
-                ext = url.rsplit(".", 1)[-1][:4] if "." in url else "jpg"
-                dest = os.path.join(tmp_dir, f"photo_{i+1}.{ext}")
-                if download_photo(url, dest):
-                    photo_paths.append(dest)
-
-        nb_photos = len(photo_paths)
-        log.info(f"  [{bien['id']}] scoring en cours... ({nb_photos} photos)")
-
-        if photo_paths:
-            parsed = call_claude_with_photos(PROMPT_SCORE + annonce, photo_paths, timeout=120)
-        else:
-            parsed = call_claude(PROMPT_SCORE + annonce)
-
-        # Nettoyage du dossier temporaire
-        if tmp_dir:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-
-        if not parsed:
-            if not dry_run:
-                status = "echec_quota" if QUOTA_HIT else "erreur"
-                client.table("biens").update({
-                    "score_analyse_statut": status,
-                    "score_analyse_date": now
-                }).eq("id", bien["id"]).execute()
-            log.warning(f"  [{bien['id']}] echec parsing{' (quota)' if QUOTA_HIT else ''}")
-            errors += 1
-            processed += 1
-            continue
-
-        score = parsed.get("score")
-        if not isinstance(score, (int, float)) or not (1 <= score <= 5):
-            log.warning(f"  [{bien['id']}] score invalide: {score}")
-            errors += 1
-            processed += 1
-            continue
-
-        if dry_run:
-            log.info(f"  [{bien['id']}] DRY RUN → score={int(score)}, {parsed.get('commentaire', '')[:80]}")
-            processed += 1
-            continue
-
-        client.table("biens").update({
-            "score_travaux": int(score),
-            "score_commentaire": str(parsed.get("commentaire", ""))[:800],
-            "score_analyse_statut": "ok",
-            "score_analyse_date": now
-        }).eq("id", bien["id"]).execute()
-        log.info(f"  [{bien['id']}] OK — score={int(score)}")
-        scored += 1
-        processed += 1
 
     log.info(f"\nRésultat : {processed} traités, {scored} scorés, {errors} erreurs")
 
