@@ -474,16 +474,16 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
         .list-table thead { position: sticky; top: 0; z-index: 5; }
         .list-table thead tr { background: #f7f4f0; }
-        .list-table thead th { padding: 12px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #7a6a60; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
+        .list-table thead th { padding: 10px 8px; text-align: center; font-size: 11px; font-weight: 600; color: #7a6a60; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; vertical-align: bottom; border-bottom: 2px solid #ede8e0; }
         .list-table thead th span { display: block; font-size: 10px; font-weight: 400; color: #b0a898; letter-spacing: 0; text-transform: none; margin-top: 2px; height: 14px; }
         .list-table tbody tr { transition: background 150ms ease; }
         .list-table tbody tr:hover { background: #faf8f5; }
-        .list-table td { padding: 8px 12px; font-size: 14px; vertical-align: middle; border-bottom: 1px solid #f0ede8; text-align: center; }
+        .list-table td { padding: 6px 8px; font-size: 13px; vertical-align: middle; border-bottom: 1px solid #f0ede8; text-align: center; }
         .sticky-col { position: sticky; z-index: 2; background: #fff; text-align: left; }
         .sticky-col-head { position: sticky; z-index: 3; background: #f7f4f0; text-align: left !important; }
         .list-table tbody tr:hover .sticky-col { background: #faf8f5; }
-        .list-thumb { width: 72px; height: 52px; border-radius: 8px; object-fit: cover; cursor: zoom-in; }
-        .list-thumb-empty { width: 72px; height: 52px; border-radius: 8px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
+        .list-thumb { width: 60px; height: 44px; border-radius: 6px; object-fit: cover; cursor: zoom-in; }
+        .list-thumb-empty { width: 60px; height: 44px; border-radius: 6px; background: #ede8e0; display: inline-flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
         .td-bien-title { font-weight: 600; color: #1a1210; display: block; margin-bottom: 2px; }
         .td-bien-quartier { font-size: 12px; color: #b0a898; display: block; }
         .td-prix { font-weight: 500; font-size: 14px; letter-spacing: -0.01em; white-space: nowrap; }
@@ -865,10 +865,10 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                 <div className="list-wrap" ref={tableWrapRef} onScroll={() => syncScroll('table')}><table className="list-table">
                   <thead>
                     <tr>
-                      <th className="sticky-col-head" style={{ left: 0, width: '40px', minWidth: '40px' }}><span></span></th>
-                      <th className="sticky-col-head" style={{ left: '40px', width: '80px', minWidth: '80px' }}><span></span></th>
-                      <th className="sticky-col-head" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
-                      <th>Commune<span></span></th>
+                      <th className="sticky-col-head" style={{ left: 0, width: '36px', minWidth: '36px' }}><span></span></th>
+                      <th className="sticky-col-head" style={{ left: '36px', width: '64px', minWidth: '64px' }}><span></span></th>
+                      <th className="sticky-col-head" style={{ left: '100px', minWidth: '185px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
+                      <th style={{ minWidth: '140px' }}>Commune<span></span></th>
                       {!isEncheres && <th className="col-optional">{"M\u00E9tropole"}<span></span></th>}
                       {isEncheres ? (
                         <>
@@ -918,7 +918,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                   <tbody>
                     {filtered.map(bien => (
                       <tr key={bien.id}>
-                        <td className="sticky-col" style={{ left: 0, width: '40px', minWidth: '40px' }}>
+                        <td className="sticky-col" style={{ left: 0, width: '36px', minWidth: '36px', padding: '6px 4px' }}>
                           <button
                             className="td-heart"
                             onClick={async () => {
@@ -946,12 +946,12 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             {watchlistIds.has(String(bien.id)) ? '♥' : '♡'}
                           </button>
                         </td>
-                        <td className="sticky-col" style={{ left: '40px', width: '80px', minWidth: '80px' }}>{bien.photo_url ? <Image src={bien.photo_url} alt="" width={80} height={60} className="list-thumb" onMouseEnter={e => { const r = (e.target as HTMLElement).getBoundingClientRect(); const urls = (bien as any).pictureUrls?.length > 0 ? (bien as any).pictureUrls : bien.photo_url ? [bien.photo_url] : []; setHoverPhoto({ urls, x: r.right + 16, y: r.top, idx: 0 }) }} style={{ objectFit: 'cover' }} /> : <div className="list-thumb-empty">-</div>}</td>
-                        <td className="sticky-col" style={{ left: '120px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
+                        <td className="sticky-col" style={{ left: '36px', width: '64px', minWidth: '64px', padding: '4px 6px' }}>{bien.photo_url ? <Image src={bien.photo_url} alt="" width={80} height={60} className="list-thumb" onMouseEnter={e => { const r = (e.target as HTMLElement).getBoundingClientRect(); const urls = (bien as any).pictureUrls?.length > 0 ? (bien as any).pictureUrls : bien.photo_url ? [bien.photo_url] : []; setHoverPhoto({ urls, x: r.right + 16, y: r.top, idx: 0 }) }} style={{ objectFit: 'cover' }} /> : <div className="list-thumb-empty">-</div>}</td>
+                        <td className="sticky-col" style={{ left: '100px', minWidth: '185px', borderRight: '2px solid #f0ede8' }}>
                           <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${Math.round(bien.surface)} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
-                        <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{(bien as any).code_postal ? ` - ${(bien as any).code_postal}` : ''}</td>
+                        <td style={{ fontWeight: 500, minWidth: '140px' }}>{bien.ville}{(bien as any).code_postal ? ` - ${(bien as any).code_postal}` : ''}</td>
                         {isEncheres ? (() => {
                           const e = bien as any
                           const miseAPrix = e.mise_a_prix || 0
