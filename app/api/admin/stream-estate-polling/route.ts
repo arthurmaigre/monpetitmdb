@@ -139,10 +139,12 @@ export async function GET(req: NextRequest) {
     let page = 1
     let hasNext = true
 
-    while (hasNext && page <= 10) {
+    while (hasNext) {
       const { members, hasNext: next } = await searchSeProperties(keywords, propertyTypes, fromDate, page)
       hasNext = next
       page++
+
+      let newOnPage = 0
 
       for (const property of members) {
         const uuid: string = property.uuid
@@ -154,6 +156,7 @@ export async function GET(req: NextRequest) {
           const result = await processProperty(property, strategie, metropoleMap)
           if (result.action === 'inserted') {
             summary[strategie].inserted++
+            newOnPage++
             if (result.haiku === 'faux_positif') summary[strategie].faux_positifs++
           } else {
             summary[strategie].skipped++
@@ -163,6 +166,9 @@ export async function GET(req: NextRequest) {
           summary[strategie].errors++
         }
       }
+
+      // Early stop : page entière sans nouvelle insertion → les suivantes sont plus anciennes
+      if (members.length > 0 && newOnPage === 0) break
     }
   }
 
