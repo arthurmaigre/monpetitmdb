@@ -67,14 +67,14 @@ echo "" | tee -a "$LOG_FILE"
 echo ">>> PHASE 2 : Extraction Opus (nouveaux biens)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-$PYTHON batch_encheres_extraction.py 2>&1 | tee -a "$LOG_FILE"
+$PYTHON batch_extraction_encheres.py 2>&1 | tee -a "$LOG_FILE"
 
 # ── Phase 3 : Dédup cross-source ────────────────────────────────────────────
 echo "" | tee -a "$LOG_FILE"
 echo ">>> PHASE 3 : Dédup cross-source" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-$PYTHON dedup_cross_source.py 2>&1 | tee -a "$LOG_FILE"
+$PYTHON batch_dedup_cross.py 2>&1 | tee -a "$LOG_FILE"
 
 # ── Phase 4 : Mise à jour statuts (enchères passées → adjugé/surenchère) ────
 echo "" | tee -a "$LOG_FILE"

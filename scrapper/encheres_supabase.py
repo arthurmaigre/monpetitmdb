@@ -2,7 +2,7 @@
 encheres_supabase.py — Module Supabase pour la table enchères judiciaires
 
 Dedup INTRA-SOURCE uniquement (source + id_source).
-La dedup cross-source se fait APRÈS l'extraction Sonnet (dedup_cross_source.py).
+La dedup cross-source se fait APRÈS l'extraction Sonnet (batch_dedup_cross.py).
 """
 import os, json, logging, re, unicodedata
 from datetime import datetime, timezone
@@ -111,7 +111,7 @@ def upsert_encheres_batch(items: list, dry_run: bool = False) -> dict:
     - Si (source, id_source) existe → UPDATE champs fiables (pas les champs Sonnet)
     - Sinon → INSERT (nouveau bien, enrichissement_statut = NULL)
 
-    La dedup cross-source est gérée par dedup_cross_source.py après Sonnet.
+    La dedup cross-source est gérée par batch_dedup_cross.py après Sonnet.
     """
     stats = {"inserted": 0, "updated": 0, "skipped": 0, "errors": 0}
 

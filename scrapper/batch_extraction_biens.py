@@ -1,5 +1,5 @@
 """
-extraction_cli.py — Extraction IA via Claude Code Max CLI (remplace API Anthropic)
+batch_extraction_biens.py — Extraction IA via Claude Code Max CLI (remplace API Anthropic)
 
 Même logique que les routes Next.js /api/admin/extraction, /extraction-idr, /score-travaux
 mais utilise `claude -p --model sonnet` au lieu du SDK Anthropic.
@@ -9,11 +9,11 @@ Les biens sont envoyés par batch (N descriptions par appel CLI) pour éviter
 le coût du startup CLI (~5s) à chaque bien. Workers parallèles optionnels.
 
 Usage :
-  python extraction_cli.py locataire                           # 50 biens, batch 15, 1 worker
-  python extraction_cli.py locataire --limit 1000 --workers 3  # 1000 biens, 3 workers parallèles
-  python extraction_cli.py idr --batch-size 5                  # IDR, batch de 5
-  python extraction_cli.py score                               # Score travaux (pas de batch, photos)
-  python extraction_cli.py --dry-run locataire                 # Voir sans modifier la DB
+  python batch_extraction_biens.py locataire                           # 50 biens, batch 15, 1 worker
+  python batch_extraction_biens.py locataire --limit 1000 --workers 3  # 1000 biens, 3 workers parallèles
+  python batch_extraction_biens.py idr --batch-size 5                  # IDR, batch de 5
+  python batch_extraction_biens.py score                               # Score travaux (pas de batch, photos)
+  python batch_extraction_biens.py --dry-run locataire                 # Voir sans modifier la DB
 """
 import os, sys, json, logging, argparse, subprocess, time, tempfile, shutil, re
 from pathlib import Path
@@ -26,7 +26,7 @@ load_dotenv(Path(__file__).parent / ".env")
 
 from supabase_client import get_client
 
-log = logging.getLogger("extraction_cli")
+log = logging.getLogger("batch_extraction_biens")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 # ── Détection quota CLI Max ────────────────────────────────────────────────
@@ -366,28 +366,28 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
         log.error("Supabase non connecté")
         return
 
-    # Récupérer les biens à traiter — pagination pour dépasser le plafond 1000 de PostgREST
+    # Récupérer les biens à traiter — cursor id (index idx_biens_pipeline, pas de timeout)
     PAGE_SIZE = 1000
     biens = []
-    last_created_at = None
+    last_id = 0
     while len(biens) < limit:
         fetch_size = min(PAGE_SIZE, limit - len(biens))
         q = (client.table("biens")
-             .select("id, created_at, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data")
+             .select("id, prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, fin_bail, profil_locataire, nb_sdb, nb_chambres, moteurimmo_data")
              .eq("strategie_mdb", "Locataire en place")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
              .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
-             .order("created_at", desc=False)
+             .order("id", desc=False)
              .limit(fetch_size))
-        if last_created_at:
-            q = q.gt("created_at", last_created_at)
+        if last_id:
+            q = q.gt("id", last_id)
         page = q.execute().data or []
         if not page:
             break
         biens.extend(page)
-        last_created_at = page[-1]["created_at"]
-        log.info(f"  Pagination: {len(biens)} biens chargés (page {len(page)})")
+        last_id = page[-1]["id"]
+        log.info(f"  Pagination: {len(biens)} biens chargés (page {len(page)}, last_id={last_id})")
         if len(page) < fetch_size:
             break
     log.info(f"Locataire en place : {len(biens)} biens à traiter (batch_size={batch_size}, workers={workers})")
@@ -527,28 +527,31 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
         log.error("Supabase non connecté")
         return
 
-    # Étape 1 : récupérer les IDs (sans moteurimmo_data pour éviter timeout Supabase)
-    # Note: pas d'order(created_at) car timeout Supabase sans index composite
-    id_query = (client.table("biens")
-             .select("id")
+    # Récupérer les biens à traiter — cursor id (index idx_biens_pipeline, pas de timeout)
+    PAGE_SIZE = 1000
+    biens = []
+    last_id = 0
+    while len(biens) < limit:
+        fetch_size = min(PAGE_SIZE, limit - len(biens))
+        q = (client.table("biens")
+             .select("id, prix_fai, loyer, taxe_fonc_ann, moteurimmo_data")
              .eq("strategie_mdb", "Immeuble de rapport")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
              .or_("extraction_statut.is.null,extraction_statut.eq.echec,extraction_statut.eq.echec_quota")
-             .limit(limit))
-    id_res = id_query.execute()
-    ids = [r["id"] for r in (id_res.data or [])]
-    log.info(f"IDR : {len(ids)} biens à traiter (batch_size={batch_size}, workers={workers})")
-
-    # Étape 2 : fetch le détail par petits groupes de 50
-    biens = []
-    for i in range(0, len(ids), 50):
-        chunk_ids = ids[i:i + 50]
-        res = (client.table("biens")
-               .select("id, created_at, prix_fai, loyer, taxe_fonc_ann, moteurimmo_data")
-               .in_("id", chunk_ids)
-               .execute())
-        biens.extend(res.data or [])
+             .order("id", desc=False)
+             .limit(fetch_size))
+        if last_id:
+            q = q.gt("id", last_id)
+        page = q.execute().data or []
+        if not page:
+            break
+        biens.extend(page)
+        last_id = page[-1]["id"]
+        log.info(f"  Pagination IDR: {len(biens)} biens chargés (page {len(page)}, last_id={last_id})")
+        if len(page) < fetch_size:
+            break
+    log.info(f"IDR : {len(biens)} biens à traiter (batch_size={batch_size}, workers={workers})")
 
     processed = 0
     lots_found = 0
@@ -672,16 +675,30 @@ def run_score(limit: int, dry_run: bool):
         log.error("Supabase non connecté")
         return
 
-    query = (client.table("biens")
-             .select("id, created_at, dpe, annee_construction, prix_fai, surface, moteurimmo_data")
+    # Récupérer les biens à traiter — cursor id (index idx_biens_pipeline, pas de timeout)
+    PAGE_SIZE = 1000
+    biens = []
+    last_id = 0
+    while len(biens) < limit:
+        fetch_size = min(PAGE_SIZE, limit - len(biens))
+        q = (client.table("biens")
+             .select("id, dpe, annee_construction, prix_fai, surface, moteurimmo_data")
              .eq("strategie_mdb", "Travaux lourds")
              .eq("statut", "Toujours disponible")
              .eq("regex_statut", "valide")
              .is_("score_travaux", "null")
-             .order("created_at", desc=False)
-             .limit(limit))
-    res = query.execute()
-    biens = res.data or []
+             .order("id", desc=False)
+             .limit(fetch_size))
+        if last_id:
+            q = q.gt("id", last_id)
+        page = q.execute().data or []
+        if not page:
+            break
+        biens.extend(page)
+        last_id = page[-1]["id"]
+        log.info(f"  Pagination Score: {len(biens)} biens chargés (page {len(page)}, last_id={last_id})")
+        if len(page) < fetch_size:
+            break
     log.info(f"Score travaux : {len(biens)} biens à traiter")
 
     processed = 0

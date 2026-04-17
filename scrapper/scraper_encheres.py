@@ -8,8 +8,8 @@ Sources actives :
 
 Pipeline complet (cron_encheres.sh) :
   1. scraper_encheres.py         → scraping minimaliste (données fiables + raw_text)
-  2. batch_encheres_extraction.py → Sonnet extrait/normalise toutes les colonnes texte
-  3. dedup_cross_source.py        → fusion cross-source sur données propres
+  2. batch_extraction_encheres.py → Sonnet extrait/normalise toutes les colonnes texte
+  3. batch_dedup_cross.py         → fusion cross-source sur données propres
 
 Usage :
   python scraper_encheres.py                          # Les 3 sources actives

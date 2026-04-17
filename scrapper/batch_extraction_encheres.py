@@ -1,5 +1,5 @@
 """
-batch_encheres_extraction.py — Extraction IA (Opus via CLI Claude Max) pour les enchères judiciaires
+batch_extraction_encheres.py — Extraction IA (Opus via CLI Claude Max) pour les enchères judiciaires
 
 Opus est la SOURCE AUTORITAIRE pour toutes les colonnes texte.
 Le scraping ne fournit que les données fiables (prix, dates, GPS, URLs).
@@ -9,11 +9,11 @@ Utilise le CLI claude (abonnement Max) au lieu de l'API Anthropic.
 Pré-requis : claude CLI connecté (claude login), poppler-utils installé.
 
 Usage :
-  python batch_encheres_extraction.py                     # Texte + PDFs
-  python batch_encheres_extraction.py --no-pdfs            # Texte seul
-  python batch_encheres_extraction.py --limit 10
-  python batch_encheres_extraction.py --reprocess          # Re-traiter les "ok" existants
-  python batch_encheres_extraction.py --dry-run
+  python batch_extraction_encheres.py                     # Texte + PDFs
+  python batch_extraction_encheres.py --no-pdfs            # Texte seul
+  python batch_extraction_encheres.py --limit 10
+  python batch_extraction_encheres.py --reprocess          # Re-traiter les "ok" existants
+  python batch_extraction_encheres.py --dry-run
 """
 import os, sys, json, logging, time, argparse, re, subprocess, tempfile, shutil
 from pathlib import Path

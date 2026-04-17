@@ -1,13 +1,13 @@
 """
-dedup_cross_source.py — Déduplication cross-source APRÈS extraction Sonnet
+batch_dedup_cross.py — Déduplication cross-source APRÈS extraction Sonnet
 
-Tourne après batch_encheres_extraction.py.
+Tourne après batch_extraction_encheres.py.
 Utilise les données propres de Sonnet (ville, date_audience, mise_a_prix)
 pour détecter et fusionner les doublons entre Licitor, Avoventes et Vench.
 
 Usage :
-  python dedup_cross_source.py                # Production
-  python dedup_cross_source.py --dry-run      # Afficher les fusions sans écrire
+  python batch_dedup_cross.py                # Production
+  python batch_dedup_cross.py --dry-run      # Afficher les fusions sans écrire
 """
 import os, json, logging, re, unicodedata, argparse
 from pathlib import Path

@@ -30,7 +30,7 @@ echo "=================================================" >> "$LOG_FILE"
 echo "$(date) — Démarrage score travaux lourds" >> "$LOG_FILE"
 echo "=================================================" >> "$LOG_FILE"
 
-$PYTHON extraction_cli.py score --limit 100 2>&1 | tee -a "$LOG_FILE"
+$PYTHON batch_extraction_biens.py score --limit 100 2>&1 | tee -a "$LOG_FILE"
 
 echo "$(date) — Terminé" >> "$LOG_FILE"
 

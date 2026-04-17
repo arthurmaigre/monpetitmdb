@@ -173,23 +173,11 @@ export default function AdminSourcingPage() {
   const [regexShowKeywords, setRegexShowKeywords] = useState(false)
   const regexStopRef = useRef(false)
 
-  // Extraction state
-  const [extractRunning, setExtractRunning] = useState(false)
-  const [extractAuto, setExtractAuto] = useState(false)
-  const [extractStats, setExtractStats] = useState({ processed: 0, total: 0, loyer_found: 0, profil_found: 0, errors: 0 })
-  const extractStopRef = useRef(false)
-
   // Extraction IDR state
   const [idrRunning, setIdrRunning] = useState(false)
   const [idrStats, setIdrStats] = useState({ processed: 0, total: 0, lots_found: 0, errors: 0 })
   const idrStopRef = useRef(false)
   const [idrPending, setIdrPending] = useState(0)
-
-  // Score travaux state
-  const [scoreRunning, setScoreRunning] = useState(false)
-  const [scoreWithPhotos, setScoreWithPhotos] = useState(false)
-  const [scoreStats, setScoreStats] = useState({ processed: 0, total: 0, scored: 0, errors: 0 })
-  const scoreStopRef = useRef(false)
 
   // Estimation DVF state
   const [estimRunning, setEstimRunning] = useState(false)
@@ -216,7 +204,7 @@ export default function AdminSourcingPage() {
   }, [])
 
   // Any batch running flag for auto-refresh
-  const anyRunning = ingestRunning || regexRunning || extractRunning || scoreRunning || statutRunning
+  const anyRunning = ingestRunning || regexRunning || idrRunning || estimRunning || statutRunning
 
   // Auth check
   useEffect(() => {
@@ -391,42 +379,6 @@ export default function AdminSourcingPage() {
     fetchStats()
   }
 
-  // ---------- Extraction IA ----------
-  async function startExtraction() {
-    if (!token) return
-    setExtractRunning(true)
-    extractStopRef.current = false
-    setExtractStats({ processed: 0, total: 0, loyer_found: 0, profil_found: 0, errors: 0 })
-
-    let cursor: string | null = null
-    while (!extractStopRef.current) {
-      try {
-        const res: Response = await fetch('/api/admin/extraction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ cursor }),
-        })
-        const data = await res.json()
-        setExtractStats(prev => ({
-          processed: prev.processed + (data.processed || 0),
-          total: data.total || prev.total,
-          loyer_found: prev.loyer_found + (data.loyer_found || 0),
-          profil_found: prev.profil_found + (data.profil_found || 0),
-          errors: prev.errors + (data.errors || 0),
-        }))
-        cursor = data.next_cursor || null
-        if (!cursor || data.remaining === 0) break
-      } catch {
-        setExtractStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-        break
-      }
-      await new Promise(resolve => setTimeout(resolve, 2000))
-    }
-
-    setExtractRunning(false)
-    fetchStats()
-  }
-
   // ---------- Extraction IDR (Immeuble de rapport) ----------
   async function startExtractionIDR() {
     if (!token) return
@@ -459,41 +411,6 @@ export default function AdminSourcingPage() {
     }
 
     setIdrRunning(false)
-    fetchStats()
-  }
-
-  // ---------- Score Travaux ----------
-  async function startScore() {
-    if (!token) return
-    setScoreRunning(true)
-    scoreStopRef.current = false
-    setScoreStats({ processed: 0, total: 0, scored: 0, errors: 0 })
-
-    let cursor: string | null = null
-    while (!scoreStopRef.current) {
-      try {
-        const res: Response = await fetch('/api/admin/score-travaux', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ cursor, withPhotos: scoreWithPhotos }),
-        })
-        const data = await res.json()
-        setScoreStats(prev => ({
-          processed: prev.processed + (data.processed || 0),
-          total: data.total || prev.total,
-          scored: prev.scored + (data.scored || 0),
-          errors: prev.errors + (data.errors || 0),
-        }))
-        cursor = data.next_cursor || null
-        if (!cursor || data.remaining === 0) break
-      } catch {
-        setScoreStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-        break
-      }
-      await new Promise(resolve => setTimeout(resolve, 2000))
-    }
-
-    setScoreRunning(false)
     fetchStats()
   }
 
@@ -582,15 +499,6 @@ export default function AdminSourcingPage() {
       </Layout>
     )
   }
-
-  // Haiku 4.5: $0.80/MTok input + $4/MTok output — ~$0.001/bien extraction, ~$0.0007/bien score, ~$0.003/bien score+photos
-  const COST_EXTRACTION = 0.001
-  const COST_SCORE = scoreWithPhotos ? 0.003 : 0.0007
-  const extractCost = (extractStats.processed * COST_EXTRACTION).toFixed(2)
-  const extractEstimatedTotal = (stats.extraction_pending || 0) * COST_EXTRACTION
-  const scorePendingCount = stats.score_pending || stats.trav_sans_score || 0
-  const scoreEstimatedTotal = scorePendingCount * COST_SCORE
-  const scoreCost = (scoreStats.processed * COST_SCORE).toFixed(2)
 
   // Strategy bar chart data
   const stratValues = [
@@ -1143,62 +1051,6 @@ export default function AdminSourcingPage() {
         </div>
 
         {/* ===== Extraction données locatives ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#1a7a40' }}>
-          <div className="src-section-header">
-            <StepNumber num={3} color="#1a7a40" />
-            <div className="src-section-title">{"Extraction donn\u00e9es locatives (Haiku)"}</div>
-          </div>
-          <div className="src-section-desc">
-            Strat{'\u00e9'}gie : <strong>Locataire en place</strong> uniquement. Claude Haiku analyse la description de l{"'"}annonce pour extraire les donn{'\u00e9'}es cl{'\u00e9'}s.
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-            {['Loyer (HC/CC)', 'Charges r\u00e9cup.', 'Charges copro', 'Taxe fonci\u00e8re', 'Fin de bail', 'Type de bail', 'Profil locataire'].map(f => (
-              <span key={f} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4f5e0', color: '#1a7a40' }}>{f}</span>
-            ))}
-          </div>
-          {(stats.extraction_pending || 0) > 0 && !extractRunning && (
-            <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#1a1210' }}>
-                <strong>{fmt(stats.extraction_pending)}</strong> biens {'\u00e0'} traiter
-              </span>
-              <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
-                {"Co\u00fbt estim\u00e9 : ~"}{extractEstimatedTotal < 1 ? extractEstimatedTotal.toFixed(2) : Math.round(extractEstimatedTotal)} {'\u20ac'} (Haiku)
-              </span>
-            </div>
-          )}
-          <div className="src-row">
-            {!extractRunning ? (
-              <button className="src-btn src-btn-red" onClick={startExtraction}>{'\u25B6'} Lancer</button>
-            ) : (
-              <button className="src-btn src-btn-stop" onClick={() => { extractStopRef.current = true }}>{'\u25A0'} Stop</button>
-            )}
-            <label className="src-toggle" role="switch">
-              <input type="checkbox" checked={extractAuto} onChange={e => setExtractAuto(e.target.checked)} />
-              <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
-              Auto (cron)
-            </label>
-          </div>
-          {(extractRunning || extractStats.processed > 0) && (
-            <div className="progress-wrap">
-              {extractRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Extraction en cours...</div>}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1210', minWidth: 100, fontFamily: "'Fraunces', serif" }}>
-                  {fmt(extractStats.processed)} / {fmt(extractStats.total)}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <ProgressBar value={extractStats.processed} max={extractStats.total} color="#1a7a40" />
-                </div>
-              </div>
-              <div className="src-stats-row">
-                <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(extractStats.loyer_found)}</strong> loyers</Pill>
-                <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(extractStats.profil_found)}</strong> profils</Pill>
-                {extractStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(extractStats.errors)}</strong> erreurs</Pill>}
-                <Pill color="#a06010" bg="#fff8f0"><strong>~{extractCost} {'\u20AC'}</strong> co{'\u00fb'}t estim{'\u00e9'}</Pill>
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* ===== STEP 3bis: Extraction IDR ===== */}
         <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
           <div className="src-section-header">
@@ -1249,70 +1101,10 @@ export default function AdminSourcingPage() {
           )}
         </div>
 
-        {/* ===== STEP 4: Score Travaux IA ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#a06010' }}>
-          <div className="src-section-header">
-            <StepNumber num={4} color="#a06010" />
-            <div className="src-section-title">Score Travaux IA (Haiku)</div>
-          </div>
-          <div className="src-section-desc">
-            Strat{'\u00e9'}gie : <strong>Travaux lourds</strong> uniquement. Score de 1 (rafra{'\u00ee'}chissement) {'\u00e0'} 5 (r{'\u00e9'}habilitation totale).
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-            {['Description', 'DPE', 'Ann\u00e9e construction', 'Prix/surface'].map(f => (
-              <span key={f} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fff8f0', color: '#a06010' }}>{f}</span>
-            ))}
-            {scoreWithPhotos && (
-              <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4f5e0', color: '#1a7a40' }}>Photos (max 3)</span>
-            )}
-          </div>
-          {scorePendingCount > 0 && !scoreRunning && (
-            <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#1a1210' }}>
-                <strong>{fmt(scorePendingCount)}</strong> biens {'\u00e0'} scorer
-              </span>
-              <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
-                {"Co\u00fbt estim\u00e9 : ~"}{scoreEstimatedTotal < 1 ? scoreEstimatedTotal.toFixed(2) : Math.round(scoreEstimatedTotal)} {'\u20ac'} (Haiku{scoreWithPhotos ? ' + photos' : ''})
-              </span>
-            </div>
-          )}
-          <div className="src-row">
-            {!scoreRunning ? (
-              <button className="src-btn src-btn-red" onClick={startScore}>{'\u25B6'} Lancer</button>
-            ) : (
-              <button className="src-btn src-btn-stop" onClick={() => { scoreStopRef.current = true }}>{'\u25A0'} Stop</button>
-            )}
-            <label className="src-toggle" role="switch">
-              <input type="checkbox" checked={scoreWithPhotos} onChange={e => setScoreWithPhotos(e.target.checked)} disabled={scoreRunning} />
-              <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
-              Analyser les photos
-            </label>
-            {scoreWithPhotos && <span className="src-muted" style={{ fontSize: 11 }}>(co{'\u00fb'}t ~3x plus {'\u00e9'}lev{'\u00e9'})</span>}
-          </div>
-          {(scoreRunning || scoreStats.processed > 0) && (
-            <div className="progress-wrap">
-              {scoreRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Scoring en cours...</div>}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1210', minWidth: 100, fontFamily: "'Fraunces', serif" }}>
-                  {fmt(scoreStats.processed)} / {fmt(scoreStats.total)}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <ProgressBar value={scoreStats.processed} max={scoreStats.total} color="#a06010" />
-                </div>
-              </div>
-              <div className="src-stats-row">
-                <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(scoreStats.scored)}</strong> scor{'\u00e9'}s</Pill>
-                {scoreStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(scoreStats.errors)}</strong> erreurs</Pill>}
-                <Pill color="#a06010" bg="#fff8f0"><strong>~{scoreCost} {'\u20AC'}</strong> co{'\u00fb'}t</Pill>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ===== STEP 5: Estimation DVF ===== */}
+        {/* ===== STEP 4: Estimation DVF ===== */}
         <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
           <div className="src-section-header">
-            <StepNumber num={5} color="#2a4a8a" />
+            <StepNumber num={4} color="#2a4a8a" />
             <div className="src-section-title">Estimation DVF (batch)</div>
           </div>
           <div className="src-section-desc">
@@ -1355,10 +1147,10 @@ export default function AdminSourcingPage() {
           )}
         </div>
 
-        {/* ===== STEP 6: Configuration Cron ===== */}
+        {/* ===== STEP 5: Configuration Cron ===== */}
         <div className="src-section" style={{ borderLeftColor: '#c0392b' }}>
           <div className="src-section-header">
-            <StepNumber num={6} color="#c0392b" />
+            <StepNumber num={5} color="#c0392b" />
             <div className="src-section-title">{"Planification automatique"}</div>
           </div>
           <div className="src-section-desc">
