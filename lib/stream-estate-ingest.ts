@@ -37,7 +37,7 @@ export const SE_KEYWORDS: Record<string, string[]> = {
 const HAIKU_PROMPTS: Record<string, string> = {
   'Locataire en place': "Ce bien immobilier est-il vendu avec un locataire en place (bail d'habitation en cours, loyer actuel mentionné, occupé par un locataire) ? Réponds uniquement OUI ou NON.",
   'Travaux lourds': "Ce bien immobilier nécessite-t-il des travaux lourds (rénovation complète, gros œuvre, inhabitable, tout à refaire) — et non de simples travaux cosmétiques ou de finition ? Réponds uniquement OUI ou NON.",
-  'Division': "Ce bien immobilier a-t-il un vrai potentiel de division en plusieurs logements indépendants (surface suffisante, accès séparés possibles, mention explicite de division) ? Réponds uniquement OUI ou NON.",
+  'Division': "Ce bien immobilier a-t-il un vrai potentiel de division en plusieurs logements résidentiels indépendants (maison, immeuble, atelier ou entrepôt à convertir en appartements — surface suffisante, accès séparés possibles, mention explicite de division ou conversion) ? Exclus les divisions de bureaux ou locaux commerciaux sans vocation résidentielle. Réponds uniquement OUI ou NON.",
   'Immeuble de rapport': "Ce bien immobilier est-il un immeuble de rapport vendu en bloc (immeuble entier avec plusieurs lots locatifs, monopropriété) ? Réponds uniquement OUI ou NON.",
 }
 

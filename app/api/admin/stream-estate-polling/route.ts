@@ -38,7 +38,7 @@ const LEP_EXCLUSIONS: ExprWord[] = [
 
 function inc(word: string): ExprWord { return { word, includes: true, strict: true } }
 
-const STRATEGIES: { strategie: string; propertyTypes: number[]; expressions: ExprGroup[] }[] = [
+const STRATEGIES: { strategie: string; propertyTypes: number[]; expressions: ExprGroup[]; surfaceMin?: number }[] = [
   {
     strategie: 'Locataire en place',
     propertyTypes: [0, 1, 2],
@@ -75,6 +75,7 @@ const STRATEGIES: { strategie: string; propertyTypes: number[]; expressions: Exp
   {
     strategie: 'Division',
     propertyTypes: [0, 1, 2],
+    surfaceMin: 100,
     expressions: [
       [inc('division possible')],
       [inc('potentiel de division')],
@@ -107,6 +108,7 @@ async function searchSeGroup(
   propertyTypes: number[],
   fromDate: string,
   itemsPerPage: number,
+  surfaceMin?: number,
 ): Promise<any[]> {
   const parts: string[] = []
 
@@ -117,6 +119,7 @@ async function searchSeGroup(
   })
 
   propertyTypes.forEach(t => parts.push(`propertyTypes[]=${t}`))
+  if (surfaceMin) parts.push(`surfaceMin=${surfaceMin}`)
   parts.push(`transactionType=0`)
   parts.push(`fromDate=${encodeURIComponent(fromDate)}`)
   parts.push(`page=1`)
@@ -187,9 +190,8 @@ export async function GET(req: NextRequest) {
   if (fromDateParam) {
     fromDate = fromDateParam
   } else {
-    const today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
-    fromDate = today.toISOString()
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    fromDate = since.toISOString()
   }
 
   const limitParam = req.nextUrl.searchParams.get('limit')
@@ -208,7 +210,7 @@ export async function GET(req: NextRequest) {
       exemples?: string[]
     }> = {}
 
-    for (const { strategie, propertyTypes, expressions } of STRATEGIES) {
+    for (const { strategie, propertyTypes, expressions, surfaceMin } of STRATEGIES) {
       summary[strategie] = { fetched: 0, inserted: 0, skipped: 0, faux_positifs: 0, valides: 0, errors: 0 }
       if (dry) summary[strategie].exemples = []
       const seen = new Set<string>()
@@ -217,7 +219,7 @@ export async function GET(req: NextRequest) {
       for (const group of expressions) {
         if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
 
-        const members = await searchSeGroup(group, propertyTypes, fromDate, itemsPerPage)
+        const members = await searchSeGroup(group, propertyTypes, fromDate, itemsPerPage, surfaceMin)
 
         for (const property of members) {
           const uuid: string = property.uuid
