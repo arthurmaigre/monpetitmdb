@@ -283,10 +283,19 @@ export default function MesBiensPage() {
       items.forEach((w: any) => { suiviInit[w.bien_id] = w.suivi || 'a_analyser' })
       setSuiviMap(suiviInit)
       if (items.length > 0) {
-        const biensRes = await fetch('/api/biens?ids=' + items.map((w: any) => w.bien_id).join(','))
-        const biensData = await biensRes.json()
-        setBiens(biensData.biens || [])
-        const strats = [...new Set((biensData.biens || []).map((x: any) => x.strategie_mdb).filter(Boolean))]
+        const biensIds2 = items.filter((w: any) => w.source_table !== 'encheres').map((w: any) => w.bien_id)
+        const encheresIds2 = items.filter((w: any) => w.source_table === 'encheres').map((w: any) => w.bien_id)
+        const authHeaders2 = { headers: { Authorization: `Bearer ${userToken}` } }
+        const [biensRes2, encheresRes2] = await Promise.all([
+          biensIds2.length > 0 ? fetch('/api/biens?ids=' + biensIds2.join(','), authHeaders2) : Promise.resolve(null),
+          encheresIds2.length > 0 ? fetch('/api/encheres?ids=' + encheresIds2.join(','), authHeaders2) : Promise.resolve(null),
+        ])
+        const biensData2 = biensRes2 && biensRes2.ok ? await biensRes2.json() : { biens: [] }
+        const encheresData2 = encheresRes2 && encheresRes2.ok ? await encheresRes2.json() : { encheres: [] }
+        const encheresAvecStrategie2 = (encheresData2.encheres || []).map((e: any) => ({ ...e, strategie_mdb: 'Enchères' }))
+        const allBiens2 = [...(biensData2.biens || []), ...encheresAvecStrategie2]
+        setBiens(allBiens2)
+        const strats = [...new Set(allBiens2.map((x: any) => x.strategie_mdb).filter(Boolean))]
         if (strats.length > 0 && !strats.includes(activeTab)) setActiveTab(strats[0] as string)
       }
       setShowAddModal(false)
@@ -817,7 +826,7 @@ export default function MesBiensPage() {
                       <th>Commune<span></span></th>
                       {activeTab === 'Enchères' ? (
                         <>
-                          <th>Source<span></span></th>
+                          <th>Sources<span></span></th>
                           <th>Tribunal<span></span></th>
                           <th>Date visite<span></span></th>
                           <th>Date audience<span></span></th>
@@ -830,7 +839,7 @@ export default function MesBiensPage() {
                         </>
                       ) : (
                         <>
-                          <th>{"M\u00E9tropole"}<span></span></th>
+                          <th className="col-optional">{"M\u00E9tropole"}<span></span></th>
                           <th>Prix FAI<span></span></th>
                           {activeTab !== 'Travaux lourds' && <th>Prix cible<span></span></th>}
                           {activeTab !== 'Travaux lourds' && <th>{"\u00C9cart"}<span></span></th>}
@@ -846,8 +855,8 @@ export default function MesBiensPage() {
                           ) : (
                             <>
                               <th>Loyer<span>/mois</span></th>
-                              <th>Type loyer<span></span></th>
-                              <th>{"Charges r\u00E9cup."}<span>/mois</span></th>
+                              <th className="col-optional">Type loyer<span></span></th>
+                              <th className="col-optional">{"Charges r\u00E9cup."}<span>/mois</span></th>
                               <th>Charges copro<span>/mois</span></th>
                               <th>{"Taxe fonci\u00E8re"}<span>/an</span></th>
                               <th>Rendement brut<span></span></th>
@@ -926,7 +935,7 @@ export default function MesBiensPage() {
                           </>
                         })() : (
                         <>
-                        <td><MetroBadge metropole={bien.metropole} /></td>
+                        <td className="col-optional"><MetroBadge metropole={bien.metropole} /></td>
                         {(() => {
                           const peutCalculer = bien.loyer && bien.prix_fai
                           const resultat = peutCalculer ? calculerCashflow(
@@ -990,8 +999,8 @@ export default function MesBiensPage() {
                             ) : (
                               <>
                                 <td><CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} /></td>
-                                <td><CellTypeLoyer bien={bien} /></td>
-                                <td><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
+                                <td className="col-optional"><CellTypeLoyer bien={bien} /></td>
+                                <td className="col-optional"><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
                                 <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
                                 <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
@@ -1008,8 +1017,7 @@ export default function MesBiensPage() {
                         )}
                         <td style={{ whiteSpace: 'nowrap' }}>
                           <a href={activeTab === 'Enchères' ? `/biens/${bien.id}?source=encheres` : `/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
-                          {' '}
-                          <a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{"R\u00E9cup\u00E9rer les donn\u00E9es"}</a>
+                          {activeTab !== 'Enchères' && <>{' '}<a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{"R\u00E9cup\u00E9rer les donn\u00E9es"}</a></>}
                         </td>
                       </tr>
                     ))}
