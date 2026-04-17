@@ -83,8 +83,9 @@ export async function GET(request: NextRequest) {
   // Type bien
   const type_bien = searchParams.get('type_bien')
   if (type_bien) {
-    query = query.eq('type_bien', type_bien)
-    countQuery = countQuery.eq('type_bien', type_bien)
+    const types = type_bien.split(',').filter(Boolean)
+    if (types.length === 1) { query = query.eq('type_bien', types[0]); countQuery = countQuery.eq('type_bien', types[0]) }
+    else if (types.length > 1) { query = query.in('type_bien', types); countQuery = countQuery.in('type_bien', types) }
   }
 
   // Localisation

@@ -276,7 +276,11 @@ export async function GET(request: NextRequest) {
   if (prix_min) { query = query.gte('prix_fai', Number(prix_min)); countQuery = countQuery.gte('prix_fai', Number(prix_min)) }
   if (prix_max) { query = query.lte('prix_fai', Number(prix_max)); countQuery = countQuery.lte('prix_fai', Number(prix_max)) }
   if (rendement_min) { query = query.gte('rendement_brut', Number(rendement_min) / 100); countQuery = countQuery.gte('rendement_brut', Number(rendement_min) / 100) }
-  if (type_bien) { query = query.eq('type_bien', type_bien); countQuery = countQuery.eq('type_bien', type_bien) }
+  if (type_bien) {
+    const types = type_bien.split(',').filter(Boolean)
+    if (types.length === 1) { query = query.eq('type_bien', types[0]); countQuery = countQuery.eq('type_bien', types[0]) }
+    else if (types.length > 1) { query = query.in('type_bien', types); countQuery = countQuery.in('type_bien', types) }
+  }
 
   const surface_min = searchParams.get('surface_min')
   const surface_max = searchParams.get('surface_max')

@@ -10,7 +10,7 @@ export const METROPOLE_LABELS: Record<string, string> = {
   'Rennes':    'Métropole Rennaise',
 }
 
-export const TYPES_BIEN = ['Tous', 'Appartement', 'Maison', 'Studio', 'Immeuble', 'Loft', 'Local', 'Autre']
+export const TYPES_BIEN = ['Appartement', 'Maison', 'Studio', 'Immeuble', 'Loft', 'Local', 'Autre']
 
 export const TRIS = [
   { label: 'Plus r\u00E9cents', value: 'recent' },

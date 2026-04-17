@@ -52,7 +52,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedCommune, setSelectedCommune] = useState<{ code_postal: string, nom_commune: string, type?: string, label?: string } | null>(saved.current?.selectedCommune || null)
   const communeTimeout = useRef<any>(null)
-  const [typeBien, setTypeBien] = useState(saved.current?.typeBien || 'Tous')
+  const [typesBien, setTypesBien] = useState<Set<string>>(new Set(saved.current?.typesBien || []))
   const [prixMin, setPrixMin] = useState(saved.current?.prixMin || '')
   const [prixMax, setPrixMax] = useState(saved.current?.prixMax || '')
   const [surfaceMin, setSurfaceMin] = useState(saved.current?.surfaceMin || '')
@@ -116,11 +116,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     try {
       sessionStorage.setItem('biens_filters', JSON.stringify({
         strategie, metropole, ville, communeSearch, selectedCommune,
-        typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keyword: keywordSearch, tri, view,
+        typesBien: Array.from(typesBien), prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keyword: keywordSearch, tri, view,
         enchereStatut, enchereOccupation, enchereSources: Array.from(enchereSources), enchereDelocalise,
       }))
     } catch {}
-  }, [strategie, metropole, ville, communeSearch, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, tri, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise])
+  }, [strategie, metropole, ville, communeSearch, selectedCommune, typesBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, tri, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise])
 
   // Sauvegarder la position de scroll avant de quitter
   useEffect(() => {
@@ -168,7 +168,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         params.set('locationValue', selectedCommune.nom_commune)
         params.set('locationCP', selectedCommune.code_postal)
       }
-      if (typeBien !== 'Tous') params.set('type_bien', typeBien)
+      if (typesBien.size > 0) params.set('type_bien', Array.from(typesBien).join(','))
       if (prixMin) params.set('prix_min', prixMin)
       if (prixMax) params.set('prix_max', prixMax)
       if (surfaceMin) params.set('surface_min', surfaceMin)
@@ -189,7 +189,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
       params.set('locationValue', selectedCommune.nom_commune)
       params.set('locationCP', selectedCommune.code_postal)
     }
-    if (typeBien !== 'Tous') params.set('type_bien', typeBien)
+    if (typesBien.size > 0) params.set('type_bien', Array.from(typesBien).join(','))
     if (prixMin) params.set('prix_min', prixMin)
     if (prixMax) params.set('prix_max', prixMax)
     if (surfaceMin) params.set('surface_min', surfaceMin)
@@ -242,7 +242,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         setLoading(false)
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
-  }, [strategie, selectedCommune, typeBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise, tri, authChecked])
+  }, [strategie, selectedCommune, typesBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise, tri, authChecked])
 
   // Charger plus de biens
   const loadMoreRef = useRef<(() => void) | undefined>(undefined)
@@ -604,9 +604,19 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
           </div>
           <div className="filter-group">
             <label className="filter-label">Type</label>
-            <select value={typeBien} onChange={e => setTypeBien(e.target.value)}>
-              {TYPES_BIEN.map(t => <option key={t}>{t}</option>)}
-            </select>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', maxWidth: '320px', alignItems: 'center', minHeight: '38px' }}>
+              {TYPES_BIEN.map(t => {
+                const active = typesBien.has(t)
+                return (
+                  <button key={t} onClick={() => setTypesBien(prev => { const next = new Set(prev); if (next.has(t)) { next.delete(t) } else { next.add(t) }; return next })} style={{
+                    padding: '4px 9px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', whiteSpace: 'nowrap',
+                    background: active ? '#1a1210' : '#f0ede8',
+                    color: active ? '#fff' : '#7a6a60',
+                  }}>{t}</button>
+                )
+              })}
+            </div>
           </div>
           <div className="filter-sep" />
           <div className="filter-group">
@@ -739,11 +749,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
             <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
             <button className={`view-btn ${view === 'map' ? 'active' : ''}`} onClick={() => setView('map')}>Carte</button>
           </div>
-          {(prixMin || prixMax || surfaceMin || surfaceMax || rendMin || scoreTravauxMin || typeBien !== 'Tous' || selectedCommune) && (
+          {(prixMin || prixMax || surfaceMin || surfaceMax || rendMin || scoreTravauxMin || typesBien.size > 0 || selectedCommune) && (
             <button
               onClick={() => {
                 setPrixMin(''); setPrixMax(''); setSurfaceMin(''); setSurfaceMax(''); setRendMin(''); setScoreTravauxMin('')
-                setTypeBien('Tous'); clearCommune()
+                setTypesBien(new Set()); clearCommune()
               }}
               style={{
                 background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px',
@@ -776,13 +786,13 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                 {strategie && <> - {strategie}</>}
                 {metropole !== 'Toutes' && <> - {metropole}</>}
                 {ville !== 'Toutes' && <> - {ville}</>}
-                {typeBien !== 'Tous' && <> - {typeBien}</>}
+                {typesBien.size > 0 && <> - {Array.from(typesBien).join(', ')}</>}
                 {(() => {
                   const count = [
                     strategie,
                     metropole !== 'Toutes' ? metropole : '',
                     selectedCommune,
-                    typeBien !== 'Tous' ? typeBien : '',
+                    typesBien.size > 0 ? 'x' : '',
                     prixMin,
                     prixMax,
                     rendMin,
@@ -828,7 +838,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                 <h3>{"Aucun bien ne correspond \u00E0 vos crit\u00E8res"}</h3>
                 <p style={{ marginBottom: '24px' }}>{"Essayez d\u2019\u00E9largir vos filtres ou de changer de localisation."}</p>
                 <button
-                  onClick={() => { setPrixMin(''); setPrixMax(''); setRendMin(''); setScoreTravauxMin(''); setTypeBien('Tous'); clearCommune() }}
+                  onClick={() => { setPrixMin(''); setPrixMax(''); setRendMin(''); setScoreTravauxMin(''); setTypesBien(new Set()); clearCommune() }}
                   style={{ background: '#c0392b', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
                 >
                   {"\u00C9largir les filtres"}
