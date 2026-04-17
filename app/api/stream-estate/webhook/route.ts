@@ -376,17 +376,13 @@ async function handlePropertyAdCreate(payload: any) {
   const text = title + ' ' + description
   const strategie = strategieFromSearch || detectStrategieFromContent(text, property.propertyType)
 
-  // Keyword tracking (texte complet, sans troncature)
-  const sourceKeywords = detectMatchedKeywords(title, description, strategie)
-
-  // Validation sémantique Haiku
-  const isValid = await validateWithHaiku(title, description, strategie)
-  console.log(`[SE webhook] Haiku: ${strategie} → ${isValid ? 'valide' : 'faux_positif'} (keywords: ${sourceKeywords.join(', ')})`)
-
-  const bien = buildBienPayload(property, advert, strategie, metropoleMap, sourceKeywords, isValid)
+  // Vérifier d'abord si le bien existe (évite Haiku inutile pour les ad.update)
   const existing = await findExistingBien(advert.url, property, advert)
 
   if (existing) {
+    // Bien déjà en DB : mise à jour sans Haiku (regex_statut est protégé)
+    const sourceKeywords = detectMatchedKeywords(title, description, strategie)
+    const bien = buildBienPayload(property, advert, strategie, metropoleMap, sourceKeywords, true)
     const updatePayload = stripProtectedFields(bien, existing.source_provider)
 
     if (existing.source_provider === 'moteurimmo') {
@@ -414,10 +410,16 @@ async function handlePropertyAdCreate(payload: any) {
       console.error(`[SE webhook] update error id=${existing.id}: ${error.message}`)
       return { action: 'error', error: error.message }
     }
-    return { action: 'updated', id: existing.id, was: existing.source_provider, haiku: isValid ? 'valide' : 'faux_positif' }
+    return { action: 'updated', id: existing.id, was: existing.source_provider }
   }
 
-  // INSERT nouveau bien
+  // Nouveau bien : validation Haiku + INSERT
+  const sourceKeywords = detectMatchedKeywords(title, description, strategie)
+  const isValid = await validateWithHaiku(title, description, strategie)
+  console.log(`[SE webhook] Haiku: ${strategie} → ${isValid ? 'valide' : 'faux_positif'} (keywords: ${sourceKeywords.join(', ')})`)
+
+  const bien = buildBienPayload(property, advert, strategie, metropoleMap, sourceKeywords, isValid)
+
   const { data: inserted, error } = await supabaseAdmin
     .from('biens')
     .insert(bien)
@@ -544,7 +546,7 @@ export async function POST(req: NextRequest) {
           result = await handlePropertyAdCreate(payload)
           break
         case 'property.ad.update':
-          result = await handlePropertyAdCreate(payload)
+          result = { action: 'ignored', event }
           break
         default:
           result = { action: 'ignored', event }
