@@ -13,29 +13,87 @@ const SE_API = 'https://api.stream.estate'
 const SE_API_KEY = process.env.STREAM_ESTATE_API_KEY!
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Config des 4 stratégies — miroir des saved searches SE
+// Expressions miroir exact des saved searches SE (inclusions + exclusions)
 // ──────────────────────────────────────────────────────────────────────────────
 
-const STRATEGIES = [
+type ExprWord = { word: string; includes: boolean; strict: boolean }
+type ExprGroup = ExprWord[]
+
+const LEP_EXCLUSIONS: ExprWord[] = [
+  { word: 'bail commercial',      includes: false, strict: true },
+  { word: 'local commercial',     includes: false, strict: true },
+  { word: 'fonds de commerce',    includes: false, strict: true },
+  { word: 'murs commerciaux',     includes: false, strict: true },
+  { word: 'ehpad',                includes: false, strict: true },
+  { word: 'residence senior',     includes: false, strict: true },
+  { word: 'residence de tourisme',includes: false, strict: true },
+  { word: 'residence etudiante',  includes: false, strict: true },
+  { word: 'residence hoteliere',  includes: false, strict: true },
+  { word: 'residence de service', includes: false, strict: true },
+  { word: 'residence geree',      includes: false, strict: true },
+  { word: 'maison de retraite',   includes: false, strict: true },
+  { word: 'lmnp',                 includes: false, strict: true },
+]
+
+function inc(word: string): ExprWord { return { word, includes: true, strict: true } }
+
+const STRATEGIES: { strategie: string; propertyTypes: number[]; expressions: ExprGroup[] }[] = [
   {
     strategie: 'Locataire en place',
     propertyTypes: [0, 1, 2],
-    keywords: SE_KEYWORDS['Locataire en place'],
+    expressions: [
+      [inc('locataire en place'), ...LEP_EXCLUSIONS],
+      [inc('vendu loue'),         ...LEP_EXCLUSIONS],
+      [inc('bail en cours'),      ...LEP_EXCLUSIONS],
+      [inc('loyer actuel'),       ...LEP_EXCLUSIONS],
+      [inc('location en cours'),  ...LEP_EXCLUSIONS],
+    ],
   },
   {
     strategie: 'Travaux lourds',
     propertyTypes: [0, 1, 2],
-    keywords: SE_KEYWORDS['Travaux lourds'],
+    expressions: [
+      [inc('entierement a renover')],
+      [inc('a renover entierement')],
+      [inc('a renover integralement')],
+      [inc('a rehabiliter')],
+      [inc('inhabitable')],
+      [inc('tout a refaire')],
+      [inc('toiture a refaire')],
+      [inc('a restaurer')],
+      [inc('a rafraichir')],
+      [inc('a remettre aux normes')],
+      [inc('a remettre en etat')],
+      [inc('plateau a amenager')],
+      [inc('bien a renover')],
+      [inc('maison a renover')],
+      [inc('appartement a renover')],
+      [inc('immeuble a renover')],
+    ],
   },
   {
     strategie: 'Division',
     propertyTypes: [0, 1, 2],
-    keywords: SE_KEYWORDS['Division'],
+    expressions: [
+      [inc('division possible')],
+      [inc('potentiel de division')],
+      [inc('bien divisible')],
+      [inc('maison divisible')],
+      [inc('appartement divisible')],
+      [inc('a diviser')],
+    ],
   },
   {
     strategie: 'Immeuble de rapport',
     propertyTypes: [2, 1],
-    keywords: SE_KEYWORDS['Immeuble de rapport'],
+    expressions: [
+      [inc('immeuble de rapport')],
+      [inc('copropriete a creer')],
+      [inc('vente en bloc')],
+      [inc('vendu en bloc')],
+      [inc('immeuble locatif')],
+      [inc('immeuble entierement loue')],
+    ],
   },
 ]
 
@@ -44,18 +102,19 @@ const STRATEGIES = [
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function searchSeProperties(
-  keywords: string[],
+  expressions: ExprGroup[],
   propertyTypes: number[],
   fromDate: string,
   page: number,
 ): Promise<{ members: any[]; totalItems: number; hasNext: boolean }> {
   const parts: string[] = []
 
-  // Chaque keyword = une expression group OR indépendante
-  keywords.forEach((kw, i) => {
-    parts.push(`expressions[${i}][0][value]=${encodeURIComponent(kw)}`)
-    parts.push(`expressions[${i}][0][options][includes]=true`)
-    parts.push(`expressions[${i}][0][options][strict]=true`)
+  expressions.forEach((group, gi) => {
+    group.forEach((expr, ei) => {
+      parts.push(`expressions[${gi}][${ei}][value]=${encodeURIComponent(expr.word)}`)
+      parts.push(`expressions[${gi}][${ei}][options][includes]=${expr.includes}`)
+      parts.push(`expressions[${gi}][${ei}][options][strict]=${expr.strict}`)
+    })
   })
 
   propertyTypes.forEach(t => parts.push(`propertyTypes[]=${t}`))
@@ -132,15 +191,15 @@ export async function GET(req: NextRequest) {
 
   const summary: Record<string, { fetched: number; inserted: number; skipped: number; faux_positifs: number; errors: number }> = {}
 
-  for (const { strategie, propertyTypes, keywords } of STRATEGIES) {
+  for (const { strategie, propertyTypes, expressions } of STRATEGIES) {
     summary[strategie] = { fetched: 0, inserted: 0, skipped: 0, faux_positifs: 0, errors: 0 }
-    const seen = new Set<string>() // dédup UUID dans ce run
+    const seen = new Set<string>()
 
     let page = 1
     let hasNext = true
 
     while (hasNext) {
-      const { members, hasNext: next } = await searchSeProperties(keywords, propertyTypes, fromDate, page)
+      const { members, hasNext: next } = await searchSeProperties(expressions, propertyTypes, fromDate, page)
       hasNext = next
       page++
 
@@ -167,7 +226,6 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Early stop : page entière sans nouvelle insertion → les suivantes sont plus anciennes
       if (members.length > 0 && newOnPage === 0) break
     }
   }
