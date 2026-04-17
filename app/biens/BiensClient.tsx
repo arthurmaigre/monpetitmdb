@@ -447,7 +447,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   return (
     <Layout>
       <style>{`
-        .main { max-width: 1600px; margin: 0 auto; padding: 32px 48px; box-sizing: border-box; }
+        .main { max-width: 1600px; margin: 0 auto; padding: 32px 24px; box-sizing: border-box; }
         .page-h1 { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; letter-spacing: -.02em; color: #1a1210; margin: 0 0 20px 0; line-height: 1.1; }
         .page-h1 em { font-style: normal; color: #c0392b; }
         .filter-bar { background: #fff; border-radius: 16px; padding: 16px 24px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
@@ -469,7 +469,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 24px; }
         .list-wrap { position: relative; overflow-x: scroll; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .list-wrap::-webkit-scrollbar { height: 0; }
-        .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 16px; max-width: 1504px; margin: 0 auto; }
+        .floating-scroll { position: fixed; bottom: 0; left: 24px; right: 24px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 16px; max-width: 1552px; margin: 0 auto; }
         .floating-scroll-inner { height: 1px; pointer-events: none; }
         .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
         .list-table thead { position: sticky; top: 0; z-index: 5; }
@@ -542,10 +542,10 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
 
         /* Responsive: Tablet (640px - 1023px) */
         @media (min-width: 640px) and (max-width: 1023px) {
-          .main { padding: 24px 32px; }
+          .main { padding: 24px 16px; }
           .grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
           .commune-input { width: 240px; }
-          .floating-scroll { left: 32px; right: 32px; }
+          .floating-scroll { left: 16px; right: 16px; }
           .col-optional { display: none; }
         }
 
