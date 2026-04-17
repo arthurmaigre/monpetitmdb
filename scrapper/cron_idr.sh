@@ -30,7 +30,7 @@ echo "=================================================" >> "$LOG_FILE"
 echo "$(date) — Démarrage extraction IDR" >> "$LOG_FILE"
 echo "=================================================" >> "$LOG_FILE"
 
-$PYTHON batch_extraction_biens.py idr --limit 200 2>&1 | tee -a "$LOG_FILE"
+$PYTHON batch_extraction_biens.py idr --limit 200 --batch-size 3 2>&1 | tee -a "$LOG_FILE"
 
 echo "$(date) — Terminé" >> "$LOG_FILE"
 
