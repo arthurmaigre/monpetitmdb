@@ -103,48 +103,38 @@ const STRATEGIES: { strategie: string; propertyTypes: number[]; expressions: Exp
 // Appel SE API — 1 seul groupe d'expressions par appel (évite URL 414)
 // ──────────────────────────────────────────────────────────────────────────────
 
-async function searchSeGroup(
+function buildSeBaseParts(
   group: ExprGroup,
   propertyTypes: number[],
   fromDate: string,
   itemsPerPage: number,
   surfaceMin?: number,
-): Promise<any[]> {
-  const baseParts: string[] = []
-
+): string[] {
+  const parts: string[] = []
   group.forEach((expr, ei) => {
-    baseParts.push(`expressions[0][${ei}][word]=${encodeURIComponent(expr.word)}`)
-    baseParts.push(`expressions[0][${ei}][options][includes]=${expr.includes}`)
-    baseParts.push(`expressions[0][${ei}][options][strict]=${expr.strict}`)
+    parts.push(`expressions[0][${ei}][word]=${encodeURIComponent(expr.word)}`)
+    parts.push(`expressions[0][${ei}][options][includes]=${expr.includes}`)
+    parts.push(`expressions[0][${ei}][options][strict]=${expr.strict}`)
   })
+  propertyTypes.forEach(t => parts.push(`propertyTypes[]=${t}`))
+  if (surfaceMin) parts.push(`surfaceMin=${surfaceMin}`)
+  parts.push(`transactionType=0`)
+  parts.push(`fromDate=${encodeURIComponent(fromDate)}`)
+  parts.push(`itemsPerPage=${itemsPerPage}`)
+  parts.push(`order[createdAt]=desc`)
+  parts.push(`lat=46.6`)
+  parts.push(`lon=2.2`)
+  parts.push(`radius=600`)
+  parts.push(`withCoherentPrice=true`)
+  return parts
+}
 
-  propertyTypes.forEach(t => baseParts.push(`propertyTypes[]=${t}`))
-  if (surfaceMin) baseParts.push(`surfaceMin=${surfaceMin}`)
-  baseParts.push(`transactionType=0`)
-  baseParts.push(`fromDate=${encodeURIComponent(fromDate)}`)
-  baseParts.push(`itemsPerPage=${itemsPerPage}`)
-  baseParts.push(`order[createdAt]=desc`)
-  baseParts.push(`lat=46.6`)
-  baseParts.push(`lon=2.2`)
-  baseParts.push(`radius=600`)
-  baseParts.push(`withCoherentPrice=true`)
-
-  const all: any[] = []
-  let page = 1
-
-  while (true) {
-    const parts = [...baseParts, `page=${page}`]
-    const url = `${SE_API}/documents/properties?${parts.join('&')}`
-    const res = await fetch(url, { headers: { 'X-API-KEY': SE_API_KEY } })
-    if (!res.ok) throw new Error(`SE API ${res.status}: ${await res.text()}`)
-    const data = await res.json()
-    const members: any[] = data['hydra:member'] || []
-    all.push(...members)
-    if (members.length < itemsPerPage) break
-    page++
-  }
-
-  return all
+async function fetchSeGroupPage(baseParts: string[], page: number): Promise<any[]> {
+  const url = `${SE_API}/documents/properties?${[...baseParts, `page=${page}`].join('&')}`
+  const res = await fetch(url, { headers: { 'X-API-KEY': SE_API_KEY } })
+  if (!res.ok) throw new Error(`SE API ${res.status}: ${await res.text()}`)
+  const data = await res.json()
+  return data['hydra:member'] || []
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -224,68 +214,79 @@ export async function GET(req: NextRequest) {
       if (dry) summary[strategie].exemples = []
       const seen = new Set<string>()
 
-      // 1. Collecter tous les biens uniques (un appel SE par groupe d'expressions)
-      const collected: any[] = []
-      for (const group of expressions) {
-        if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
-        const members = await searchSeGroup(group, propertyTypes, fromDate, itemsPerPage, surfaceMin)
-        for (const property of members) {
-          const uuid: string = property.uuid
-          if (!uuid || seen.has(uuid)) continue
-          seen.add(uuid)
-          collected.push(property)
-          if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
-        }
-      }
-
-      summary[strategie].fetched = collected.length
-      if (collected.length === 0) continue
-
-      // 2. Traiter en chunks de 15, 3 chunks en parallèle (Haiku)
+      // Pour chaque expression : paginer et traiter chaque page immédiatement
       const CHUNK_SIZE = 15
       const CONCURRENCY = 3
-      const chunks: any[][] = []
-      for (let i = 0; i < collected.length; i += CHUNK_SIZE) {
-        chunks.push(collected.slice(i, i + CHUNK_SIZE))
-      }
 
-      for (let i = 0; i < chunks.length; i += CONCURRENCY) {
-        const batch = chunks.slice(i, i + CONCURRENCY)
-        const batchResults = await Promise.all(
-          batch.map(chunk =>
-            Promise.all(
-              chunk.map(async (property: any) => {
-                try {
-                  return { uuid: property.uuid, result: await processProperty(property, strategie, metropoleMap, dry) }
-                } catch (err) {
-                  console.error(`[SE polling] error uuid=${property.uuid}:`, err)
-                  return { uuid: property.uuid, result: null }
-                }
-              })
-            )
-          )
-        )
+      for (const group of expressions) {
+        if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
 
-        for (const chunkResults of batchResults) {
-          for (const { result } of chunkResults) {
-            if (!result) { summary[strategie].errors++; continue }
-            if (dry) {
-              if (result.action === 'valide') summary[strategie].valides++
-              else if (result.action === 'faux_positif') summary[strategie].faux_positifs++
-              if (result.title) {
-                summary[strategie].exemples!.push(
-                  `[${result.action}] ${result.title} (${(result.keywords || []).join(', ') || 'aucun keyword'})`
+        const baseParts = buildSeBaseParts(group, propertyTypes, fromDate, itemsPerPage, surfaceMin)
+        let page = 1
+
+        while (true) {
+          if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
+
+          const members = await fetchSeGroupPage(baseParts, page)
+          const newProperties: any[] = []
+          for (const property of members) {
+            const uuid: string = property.uuid
+            if (!uuid || seen.has(uuid)) continue
+            seen.add(uuid)
+            newProperties.push(property)
+            if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
+          }
+
+          summary[strategie].fetched += newProperties.length
+
+          // Traiter cette page en chunks parallèles
+          const chunks: any[][] = []
+          for (let i = 0; i < newProperties.length; i += CHUNK_SIZE) {
+            chunks.push(newProperties.slice(i, i + CHUNK_SIZE))
+          }
+
+          for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+            const batch = chunks.slice(i, i + CONCURRENCY)
+            const batchResults = await Promise.all(
+              batch.map(chunk =>
+                Promise.all(
+                  chunk.map(async (property: any) => {
+                    try {
+                      return { result: await processProperty(property, strategie, metropoleMap, dry) }
+                    } catch (err) {
+                      console.error(`[SE polling] error uuid=${property.uuid}:`, err)
+                      return { result: null }
+                    }
+                  })
                 )
-              }
-            } else {
-              if (result.action === 'inserted') {
-                summary[strategie].inserted++
-                if (result.haiku === 'faux_positif') summary[strategie].faux_positifs++
-              } else {
-                summary[strategie].skipped++
+              )
+            )
+
+            for (const chunkResults of batchResults) {
+              for (const { result } of chunkResults) {
+                if (!result) { summary[strategie].errors++; continue }
+                if (dry) {
+                  if (result.action === 'valide') summary[strategie].valides++
+                  else if (result.action === 'faux_positif') summary[strategie].faux_positifs++
+                  if (result.title) {
+                    summary[strategie].exemples!.push(
+                      `[${result.action}] ${result.title} (${(result.keywords || []).join(', ') || 'aucun keyword'})`
+                    )
+                  }
+                } else {
+                  if (result.action === 'inserted') {
+                    summary[strategie].inserted++
+                    if (result.haiku === 'faux_positif') summary[strategie].faux_positifs++
+                  } else {
+                    summary[strategie].skipped++
+                  }
+                }
               }
             }
           }
+
+          if (members.length < itemsPerPage) break
+          page++
         }
       }
     }
