@@ -1233,6 +1233,9 @@ export default function FicheEncherePage() {
   const [coutCompteursParLot, setCoutCompteursParLot] = useState(1500)
   const [coutTravauxGlobal, setCoutTravauxGlobal] = useState(0)
   const [prixReventeLots, setPrixReventeLots] = useState<Record<number, number>>({})
+  const [emailInput, setEmailInput] = useState('')
+  const [editingEmail, setEditingEmail] = useState(false)
+  const [savingEmail, setSavingEmail] = useState(false)
 
   const [apport, setApport] = useState<number | ''>(0)
   const [taux, setTaux] = useState<number | ''>(3.5)
@@ -1621,20 +1624,82 @@ export default function FicheEncherePage() {
                 <span className="data-value">{enchere.avocat_nom}{enchere.avocat_cabinet ? ` (${enchere.avocat_cabinet})` : ''}{enchere.avocat_tel ? ` — ${enchere.avocat_tel}` : ''}</span>
               </div>
             )}
-            {enchere.avocat_email && (
+            {(enchere.avocat_nom || enchere.avocat_email) && (
               <div className="data-item">
                 <span className="data-label"></span>
-                <a
-                  href={`mailto:${enchere.avocat_email}?subject=${encodeURIComponent(`Demande de dossier — ${enchere.adresse || enchere.ville || 'enchère judiciaire'}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe suis intéressé par l'acquisition du bien mis en vente aux enchères judiciaires :\n${enchere.adresse ? enchere.adresse + ', ' : ''}${enchere.ville || ''}\nMise à prix : ${enchere.mise_a_prix ? enchere.mise_a_prix.toLocaleString('fr-FR') + ' €' : 'NC'}\n\nPouvez-vous m'adresser le dossier complet (cahier des conditions de vente, procès-verbal de description) ?\n\nCordialement`)}`}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    padding: '8px 16px', borderRadius: '6px',
-                    background: '#c0392b', color: '#fff',
-                    textDecoration: 'none', fontSize: '13px', fontWeight: 600,
-                  }}
-                >
-                  ✉ Contacter l{"'"}avocat poursuivant
-                </a>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Champ email éditable si absent ou en mode édition */}
+                  {userToken && (!enchere.avocat_email || editingEmail) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input
+                        type="email"
+                        value={editingEmail && enchere.avocat_email ? emailInput || enchere.avocat_email : emailInput}
+                        onChange={e => setEmailInput(e.target.value)}
+                        placeholder="Email de l'avocat…"
+                        style={{
+                          padding: '6px 10px', borderRadius: '6px', border: '1.5px solid #d4ccc4',
+                          fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: '#1a1210',
+                          background: '#faf8f5', outline: 'none', width: '220px',
+                        }}
+                      />
+                      {editingEmail && (
+                        <button
+                          onClick={() => { setEditingEmail(false); setEmailInput('') }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#7a6a60', padding: '4px' }}
+                        >
+                          Annuler
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {/* Bouton contacter — toujours présent, disabled si pas d'email disponible */}
+                  {(() => {
+                    const emailEff = (!enchere.avocat_email || editingEmail) ? emailInput.trim() : enchere.avocat_email
+                    const mailtoHref = emailEff
+                      ? `mailto:${emailEff}?subject=${encodeURIComponent(`Demande de dossier — ${enchere.adresse || enchere.ville || 'enchère judiciaire'}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe suis intéressé par l'acquisition du bien mis en vente aux enchères judiciaires :\n${enchere.adresse ? enchere.adresse + ', ' : ''}${enchere.ville || ''}\nMise à prix : ${enchere.mise_a_prix ? enchere.mise_a_prix.toLocaleString('fr-FR') + ' \u20AC' : 'NC'}\n\nPouvez-vous m'adresser le dossier complet (cahier des conditions de vente, procès-verbal de description) ?\n\nCordialement`)}`
+                      : undefined
+                    const handleClick = async (e: React.MouseEvent) => {
+                      if (!emailEff) { e.preventDefault(); return }
+                      if (userToken && emailEff && (!enchere.avocat_email || editingEmail)) {
+                        setSavingEmail(true)
+                        await handleUpdate('avocat_email', emailEff)
+                        setEditingEmail(false)
+                        setEmailInput('')
+                        setSavingEmail(false)
+                      }
+                    }
+                    return (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <a
+                          href={mailtoHref}
+                          onClick={handleClick}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            padding: '8px 16px', borderRadius: '6px',
+                            background: emailEff ? '#c0392b' : '#d4ccc4', color: '#fff',
+                            textDecoration: 'none', fontSize: '13px', fontWeight: 600,
+                            cursor: emailEff ? 'pointer' : 'not-allowed', opacity: savingEmail ? 0.6 : 1,
+                            pointerEvents: savingEmail ? 'none' : 'auto',
+                          }}
+                        >
+                          ✉ Contacter l{"'"}avocat poursuivant
+                        </a>
+                        {/* Crayon pour corriger un email déjà renseigné */}
+                        {userToken && enchere.avocat_email && !editingEmail && (
+                          <button
+                            onClick={() => { setEditingEmail(true); setEmailInput(enchere.avocat_email) }}
+                            title="Corriger l'email"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
               </div>
             )}
           </div>

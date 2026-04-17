@@ -66,8 +66,9 @@ export async function PATCH(
     'adresse', 'latitude', 'longitude',
     'score_travaux', 'score_commentaire', 'lots_data',
     'frais_preemption',
+    'avocat_email',
   ]
-  const champsLibres = ['adresse', 'latitude', 'longitude', 'score_travaux', 'score_commentaire', 'lots_data']
+  const champsLibres = ['adresse', 'latitude', 'longitude', 'score_travaux', 'score_commentaire', 'lots_data', 'avocat_email']
 
   const { data: userEdits } = await supabaseAdmin
     .from('biens_user_edits')
