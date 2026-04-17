@@ -215,20 +215,51 @@ export async function GET(req: NextRequest) {
       if (dry) summary[strategie].exemples = []
       const seen = new Set<string>()
 
-      // Un appel par groupe d'expressions (évite URL 414)
+      // 1. Collecter tous les biens uniques (un appel SE par groupe d'expressions)
+      const collected: any[] = []
       for (const group of expressions) {
         if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
-
         const members = await searchSeGroup(group, propertyTypes, fromDate, itemsPerPage, surfaceMin)
-
         for (const property of members) {
           const uuid: string = property.uuid
           if (!uuid || seen.has(uuid)) continue
           seen.add(uuid)
-          summary[strategie].fetched++
+          collected.push(property)
+          if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
+        }
+      }
 
-          try {
-            const result = await processProperty(property, strategie, metropoleMap, dry)
+      summary[strategie].fetched = collected.length
+      if (collected.length === 0) continue
+
+      // 2. Traiter en chunks de 15, 3 chunks en parallèle (Haiku)
+      const CHUNK_SIZE = 15
+      const CONCURRENCY = 3
+      const chunks: any[][] = []
+      for (let i = 0; i < collected.length; i += CHUNK_SIZE) {
+        chunks.push(collected.slice(i, i + CHUNK_SIZE))
+      }
+
+      for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+        const batch = chunks.slice(i, i + CONCURRENCY)
+        const batchResults = await Promise.all(
+          batch.map(chunk =>
+            Promise.all(
+              chunk.map(async (property: any) => {
+                try {
+                  return { uuid: property.uuid, result: await processProperty(property, strategie, metropoleMap, dry) }
+                } catch (err) {
+                  console.error(`[SE polling] error uuid=${property.uuid}:`, err)
+                  return { uuid: property.uuid, result: null }
+                }
+              })
+            )
+          )
+        )
+
+        for (const chunkResults of batchResults) {
+          for (const { result } of chunkResults) {
+            if (!result) { summary[strategie].errors++; continue }
             if (dry) {
               if (result.action === 'valide') summary[strategie].valides++
               else if (result.action === 'faux_positif') summary[strategie].faux_positifs++
@@ -245,12 +276,7 @@ export async function GET(req: NextRequest) {
                 summary[strategie].skipped++
               }
             }
-          } catch (err) {
-            console.error(`[SE polling] error uuid=${uuid}:`, err)
-            summary[strategie].errors++
           }
-
-          if (isFinite(limitPerStrategy) && seen.size >= limitPerStrategy) break
         }
       }
     }
