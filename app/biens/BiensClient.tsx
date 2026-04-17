@@ -64,6 +64,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [enchereOccupation, setEnchereOccupation] = useState(saved.current?.enchereOccupation || '')
   const [enchereSources, setEnchereSources] = useState<Set<string>>(new Set(saved.current?.enchereSources || []))
   const [enchereDelocalise, setEnchereDelocalise] = useState<boolean>(saved.current?.enchereDelocalise || false)
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const [avocatModal, setAvocatModal] = useState<any>(null)
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const keywordTimeout = useRef<any>(null)
@@ -602,21 +603,29 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               )}
             </div>
           </div>
-          <div className="filter-group">
+          <div className="filter-group" style={{ position: 'relative' }}>
             <label className="filter-label">Type</label>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', maxWidth: '320px', alignItems: 'center', minHeight: '38px' }}>
-              {TYPES_BIEN.map(t => {
-                const active = typesBien.has(t)
-                return (
-                  <button key={t} onClick={() => setTypesBien(prev => { const next = new Set(prev); if (next.has(t)) { next.delete(t) } else { next.add(t) }; return next })} style={{
-                    padding: '4px 9px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                    fontSize: '12px', fontWeight: 600, transition: 'all 0.15s', whiteSpace: 'nowrap',
-                    background: active ? '#1a1210' : '#f0ede8',
-                    color: active ? '#fff' : '#7a6a60',
-                  }}>{t}</button>
-                )
-              })}
-            </div>
+            <button onMouseDown={() => setTypeDropdownOpen(p => !p)} onBlur={e => { if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setTypeDropdownOpen(false) }} style={{ padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', background: typesBien.size > 0 ? '#1a1210' : '#f7f4f0', color: typesBien.size > 0 ? '#fff' : '#1a1210', cursor: 'pointer', width: '140px', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', outline: 'none' }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typesBien.size === 0 ? 'Tous' : typesBien.size === 1 ? Array.from(typesBien)[0] : `${typesBien.size} types`}</span>
+              <span style={{ fontSize: '10px', marginLeft: '6px' }}>▾</span>
+            </button>
+            {typeDropdownOpen && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 30, minWidth: '160px', padding: '6px 0' }}>
+                {TYPES_BIEN.map(t => (
+                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '14px', color: '#1a1210', transition: 'background 0.1s' }} onMouseOver={e => (e.currentTarget.style.background = '#faf8f5')} onMouseOut={e => (e.currentTarget.style.background = '')}>
+                    <input type="checkbox" checked={typesBien.has(t)} onChange={() => setTypesBien(prev => { const next = new Set(prev); next.has(t) ? next.delete(t) : next.add(t); return next })} style={{ accentColor: '#1a1210', width: '14px', height: '14px' }} />
+                    {t}
+                  </label>
+                ))}
+                {typesBien.size > 0 && (
+                  <div style={{ borderTop: '1px solid #f0ede8', margin: '4px 0 2px', padding: '4px 14px' }}>
+                    <button onMouseDown={() => { setTypesBien(new Set()); setTypeDropdownOpen(false) }} style={{ fontSize: '12px', color: '#c0392b', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, padding: 0 }}>
+                      Tout décocher
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="filter-sep" />
           <div className="filter-group">
