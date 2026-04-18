@@ -62,6 +62,7 @@ const STRATEGIES: { strategie: string; propertyTypes: number[]; expressions: Exp
       [inc('tout a refaire')],
       [inc('toiture a refaire')],
       [inc('a restaurer')],
+      [inc('vetuste')],
       [inc('a remettre aux normes')],
       [inc('a remettre en etat')],
       [inc('plateau a amenager')],

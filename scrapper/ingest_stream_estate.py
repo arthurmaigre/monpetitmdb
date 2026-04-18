@@ -70,7 +70,7 @@ STRATEGIES = {
             "a rehabiliter", "inhabitable", "tout a refaire", "toiture a refaire",
             "a restaurer", "a remettre aux normes", "a remettre en etat",
             "plateau a amenager", "bien a renover", "maison a renover",
-            "appartement a renover", "immeuble a renover",
+            "appartement a renover", "immeuble a renover", "vetuste",
         ],
         "exclusions": [],
     },
@@ -107,9 +107,10 @@ HAIKU_PROMPTS = {
         "Réponds uniquement OUI ou NON."
     ),
     "Travaux lourds": (
-        "Ce bien immobilier nécessite-t-il des travaux lourds "
-        "(rénovation complète, gros œuvre, inhabitable, tout à refaire) "
-        "— et non de simples travaux cosmétiques ou de finition ? "
+        "Ce bien immobilier nécessite-t-il des travaux importants qui décotent significativement le prix "
+        "(rénovation complète, gros œuvre, inhabitable, tout à refaire, vétuste, "
+        "remise aux normes lourde, ou rénovation énergétique majeure DPE F ou G) "
+        "— et non de simples travaux cosmétiques, de peinture ou de finition ? "
         "Réponds uniquement OUI ou NON."
     ),
     "Division": (
@@ -123,6 +124,7 @@ HAIKU_PROMPTS = {
         "Ce bien immobilier est-il un immeuble de rapport destiné à l'investissement locatif "
         "(immeuble avec plusieurs logements ou lots locatifs, vendu en bloc ou en monopropriété, "
         "avec ou sans locataires en place) ? "
+        "Inclus les immeubles avec plusieurs lots indépendants même s'ils sont vides. "
         "Exclus les maisons individuelles résidentielles, les villas et les appartements seuls. "
         "Réponds uniquement OUI ou NON."
     ),
