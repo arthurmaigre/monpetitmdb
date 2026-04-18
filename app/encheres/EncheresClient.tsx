@@ -88,14 +88,23 @@ export default function EncheresPage() {
   // Auth
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
+  const [userPlan, setUserPlan] = useState<string | null>(null)
 
   // Sentinel for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       setUserId(data?.session?.user?.id || null)
-      setUserToken(data?.session?.access_token || null)
+      const token = data?.session?.access_token || null
+      setUserToken(token)
+      if (token) {
+        const res = await fetch('/api/profile', { headers: { Authorization: `Bearer ${token}` } })
+        const json = await res.json()
+        setUserPlan(json?.profile?.plan || 'free')
+      } else {
+        setUserPlan('free')
+      }
     })
   }, [])
 
@@ -203,6 +212,49 @@ export default function EncheresPage() {
     fontSize: '11px', fontWeight: 600, color: theme.colors.muted,
     textTransform: 'uppercase' as const, letterSpacing: '0.05em',
     marginBottom: '4px', display: 'block',
+  }
+
+  if (userPlan === null) {
+    return (
+      <Layout>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: `${theme.spacing[6]} ${theme.spacing[4]}`, textAlign: 'center', color: theme.colors.muted }}>
+          Chargement...
+        </div>
+      </Layout>
+    )
+  }
+
+  if (userPlan !== 'expert') {
+    return (
+      <Layout>
+        <div style={{ maxWidth: 640, margin: '80px auto', padding: `0 ${theme.spacing[4]}`, textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '24px' }}>🏛</div>
+          <h1 style={{ fontFamily: theme.fonts.display, fontSize: '28px', fontWeight: 700, color: theme.colors.ink, marginBottom: '12px' }}>
+            {"Enchères Judiciaires"}
+          </h1>
+          <p style={{ color: theme.colors.muted, fontSize: '15px', lineHeight: 1.6, marginBottom: '8px' }}>
+            {"Seule plateforme à agréger les enchères judiciaires en France."}
+          </p>
+          <p style={{ color: theme.colors.muted, fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}>
+            {"Repérez des biens en dessous du marché, analysez la mise à prix et estimez la valeur réelle — réservé au plan Expert."}
+          </p>
+          <a
+            href="/#pricing"
+            style={{
+              display: 'inline-block', padding: '14px 32px',
+              background: '#e8503a', color: '#fff', borderRadius: '8px',
+              fontFamily: theme.fonts.body, fontWeight: 700, fontSize: '15px',
+              textDecoration: 'none',
+            }}
+          >
+            {"Passer au plan Expert →"}
+          </a>
+          <p style={{ marginTop: '16px', fontSize: '13px', color: theme.colors.muted }}>
+            {"49 €/mois — sans engagement"}
+          </p>
+        </div>
+      </Layout>
+    )
   }
 
   return (

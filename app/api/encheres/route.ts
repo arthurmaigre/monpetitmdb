@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
+  const { data: profile } = await supabaseAdmin.from('profiles').select('plan').eq('id', user.id).single()
+  if (profile?.plan !== 'expert') return NextResponse.json({ error: 'Réservé au plan Expert' }, { status: 403 })
+
   const { searchParams } = new URL(request.url)
 
   // Watchlist mode : charger des IDs spécifiques

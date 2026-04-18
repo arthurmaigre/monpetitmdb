@@ -354,6 +354,9 @@ export default function Home() {
             <div className="eyebrow-w">{"4 strat\u00E9gies disponibles"}</div>
             <h2>{"Choisissez votre strat\u00E9gie"}</h2>
             <p className="strats-desc">{"Mon Petit MDB filtre et analyse les annonces selon votre strat\u00E9gie. Chaque bien est \u00E9valu\u00E9 selon ses propres crit\u00E8res."}</p>
+            <div style={{ background: 'rgba(232,80,58,0.08)', border: '1px solid rgba(232,80,58,0.2)', borderRadius: '8px', padding: '10px 16px', marginBottom: '24px', fontSize: '13px', color: '#c0a090', textAlign: 'center' }}>
+              <strong style={{ color: '#e8503a' }}>{"Exclusivit\u00E9 :"}</strong>{" seule plateforme \u00E0 agr\u00E9ger les ench\u00E8res judiciaires en France"}
+            </div>
             <div className="strat-grid">
               <div className="strat-card">
                 <div className="strat-icon">
@@ -389,6 +392,7 @@ export default function Home() {
                 <div className="strat-name">{"Ench\u00E8res"}</div>
                 <p className="strat-desc">{"Rep\u00E9rez les biens aux ench\u00E8res judiciaires et notariales. Prix en dessous du march\u00E9, analyse de la mise \u00E0 prix et estimation de la valeur r\u00E9elle."}</p>
                 <span className="strat-tag">{"D\u00E9cote garantie"}</span>
+                <span className="strat-tag" style={{ background: 'rgba(232,80,58,0.12)', color: '#e8503a', border: '1px solid rgba(232,80,58,0.25)', marginTop: '4px' }}>{"Expert exclusif"}</span>
                 <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
               </div>
             </div>
@@ -673,6 +677,7 @@ export default function Home() {
                   <li><span className="pck">{'\u2713'}</span>1 alerte email</li>
                   <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA (50 msg/jour)</li>
                   <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Immeuble de rapport"}</span></li>
+                  <li><span className="pcx" style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.3)' }}>{'\u2717'}</span><span style={{ color: 'rgba(255,255,255,.3)' }}>{"Ench\u00E8res judiciaires"}</span></li>
                 </ul>
                 <PricingCta plan="pro" label="Passer au Pro" className="plan-cta" />
               </div>
@@ -685,6 +690,7 @@ export default function Home() {
                 <ul className="plan-feats">
                   <li><span className="pck">{'\u2713'}</span>Tout le plan Pro</li>
                   <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB (dont IDR)"}</li>
+                  <li><span className="pck">{'\u2713'}</span><strong>{"Ench\u00E8res judiciaires"}</strong>{" \u2014 exclusif Expert"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Watchlist illimit\u00E9e"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison tous les r\u00E9gimes"}</li>
                   <li><span className="pck">{'\u2713'}</span>5 alertes email</li>
