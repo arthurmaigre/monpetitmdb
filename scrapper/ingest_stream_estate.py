@@ -330,32 +330,6 @@ def load_existing_sets(client):
     return urls, se_ids
 
 
-def check_source_url_dup(client, url: str) -> bool:
-    """Niveau 3 : vérifie si l'URL existe dans biens_source_urls (requête DB)."""
-    try:
-        res = client.table("biens_source_urls").select("bien_id").eq("url", url).limit(1).execute()
-        return bool(res.data)
-    except Exception:
-        return False
-
-
-def check_geo_dup(client, bien: dict) -> bool:
-    """Niveau 4 : dédup géographique (code_postal + type + pièces + surface±1 + prix±2%)."""
-    cp, surf, prix, tb, pieces = (bien.get(k) for k in
-        ["code_postal", "surface", "prix_fai", "type_bien", "nb_pieces"])
-    if not all([cp, surf, prix, tb, pieces]):
-        return False
-    try:
-        res = (client.table("biens")
-               .select("id")
-               .eq("code_postal", cp).eq("type_bien", tb).eq("nb_pieces", pieces)
-               .gte("surface", surf - 1).lte("surface", surf + 1)
-               .gte("prix_fai", prix * 0.98).lte("prix_fai", prix * 1.02)
-               .limit(1).execute())
-        return bool(res.data)
-    except Exception:
-        return False
-
 
 def insert_bien_with_urls(client, bien: dict, prop_doc: dict, advert: dict) -> str:
     """Insère le bien + toutes ses URLs dans biens_source_urls. Retourne 'inserted' ou 'duplicate'."""
@@ -398,20 +372,11 @@ def process_property(
     existing_se_ids: set,
     dry_run: bool,
 ) -> str:
-    """Traite 1 bien : dedup niveaux 3-4, Haiku, build, insert. Retourne action."""
+    """Traite 1 bien : Haiku + build + insert. Retourne action.
+    Dédup niveaux 1-2 (URL + SE ID) déjà fait en amont dans la boucle principale.
+    """
     url  = advert.get("url")
     uuid = prop_doc.get("uuid")
-
-    # Niveau 3 : source_urls (déjà chargé dans existing_urls au démarrage)
-    # Niveau 4 : géo fallback
-    if check_geo_dup(client, {
-        "code_postal": (prop_doc.get("city") or {}).get("zipcode"),
-        "surface": prop_doc.get("surface") or advert.get("surface"),
-        "prix_fai": advert.get("price"),
-        "type_bien": SE_PROPERTY_TYPE_MAP.get(prop_doc.get("propertyType")),
-        "nb_pieces": f"T{prop_doc.get('room')}" if prop_doc.get("room") else None,
-    }):
-        return "skip_geo"
 
     title = advert.get("title") or prop_doc.get("title") or ""
     desc  = advert.get("description") or prop_doc.get("description") or ""
@@ -433,6 +398,7 @@ def process_property(
         if uuid: existing_se_ids.add(uuid)
         for a in prop_doc.get("adverts", []):
             if a.get("url"): existing_urls.add(a["url"])
+        return "inserted_fp" if not is_valid else "inserted"
 
     return action
 
@@ -482,11 +448,12 @@ def run_ingestion(
         property_types = strat["property_types"]
         surface_min  = strat["surface_min"]
 
-        strat_inserted = 0
-        strat_skipped  = 0
-        strat_faux_pos = 0
-        strat_fetched  = 0   # items reçus de SE (= crédits consommés)
-        seen_uuids     = set()
+        strat_inserted  = 0
+        strat_faux_pos  = 0
+        strat_fetched   = 0   # items reçus de SE (= crédits consommés)
+        skip_url        = 0   # niveau 1 : URL déjà en base
+        skip_seid       = 0   # niveau 2 : SE ID déjà en base
+        seen_uuids      = set()
 
         log.info(f"\n{'='*60}")
         log.info(f"Stratégie: {strategie_mdb} | {len(keywords)} keywords | surfaceMin={surface_min}")
@@ -528,19 +495,12 @@ def run_ingestion(
                         continue
                     # Niveau 1 : URL
                     if url in existing_urls:
-                        strat_skipped += 1
+                        skip_url += 1
                         continue
                     # Niveau 2 : SE ID
                     if uuid in existing_se_ids:
-                        strat_skipped += 1
+                        skip_seid += 1
                         continue
-                    # Niveau 3 : URLs des autres adverts → biens_source_urls (requête DB)
-                    dup = (check_source_url_dup(client, url) or
-                           any(a.get("url") in existing_urls for a in adverts if a.get("url")))
-                    if dup:
-                        strat_skipped += 1
-                        continue
-
                     seen_uuids.add(uuid)
                     new_props.append((prop_doc, advert))
 
@@ -573,12 +533,14 @@ def run_ingestion(
                             if action == "inserted":
                                 strat_inserted += 1
                                 total_inserted += 1
+                            elif action == "inserted_fp":
+                                strat_inserted += 1
+                                strat_faux_pos += 1
+                                total_inserted += 1
                             elif action == "valide":  # dry_run
                                 strat_inserted += 1
-                            elif action == "faux_positif":
+                            elif action == "faux_positif":  # dry_run
                                 strat_faux_pos += 1
-                            else:
-                                strat_skipped += 1
 
                 if len(members) < 30:
                     break  # dernière page
@@ -586,8 +548,11 @@ def run_ingestion(
                 page += 1
                 time.sleep(0.1)  # rate limiting SE
 
+        strat_skipped = skip_url + skip_seid
         label = "seraient insérés" if dry_run else "insérés"
-        log.info(f"  {strategie_mdb} : {strat_inserted} {label}, {strat_faux_pos} faux positifs, {strat_skipped} skippés | {strat_fetched} items SE fetchés")
+        log.info(f"  {strategie_mdb} : {strat_inserted} {label} dont {strat_faux_pos} FP, "
+                 f"{strat_skipped} skippés (url={skip_url} seid={skip_seid}) "
+                 f"| {strat_fetched} crédits SE")
         total_inserted += strat_inserted if dry_run else 0
         total_faux_pos += strat_faux_pos
         total_skipped  += strat_skipped
