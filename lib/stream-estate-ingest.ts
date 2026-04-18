@@ -20,7 +20,7 @@ export const SE_KEYWORDS: Record<string, string[]> = {
   'Travaux lourds': [
     'entierement a renover', 'a renover entierement', 'a renover integralement',
     'a rehabiliter', 'inhabitable', 'tout a refaire', 'toiture a refaire',
-    'a restaurer', 'a rafraichir', 'a remettre aux normes', 'a remettre en etat',
+    'a restaurer', 'a remettre aux normes', 'a remettre en etat',
     'plateau a amenager', 'bien a renover', 'maison a renover',
     'appartement a renover', 'immeuble a renover',
   ],
@@ -37,8 +37,8 @@ export const SE_KEYWORDS: Record<string, string[]> = {
 const HAIKU_PROMPTS: Record<string, string> = {
   'Locataire en place': "Ce bien immobilier est-il vendu avec un locataire en place (bail d'habitation en cours, loyer actuel mentionné, occupé par un locataire) ? Réponds uniquement OUI ou NON.",
   'Travaux lourds': "Ce bien immobilier nécessite-t-il des travaux lourds (rénovation complète, gros œuvre, inhabitable, tout à refaire) — et non de simples travaux cosmétiques ou de finition ? Réponds uniquement OUI ou NON.",
-  'Division': "Ce bien immobilier a-t-il un vrai potentiel de division en plusieurs logements résidentiels indépendants (maison, immeuble, atelier ou entrepôt à convertir en appartements — surface suffisante, accès séparés possibles, mention explicite de division ou conversion) ? Exclus les divisions de bureaux ou locaux commerciaux sans vocation résidentielle. Réponds uniquement OUI ou NON.",
-  'Immeuble de rapport': "Ce bien immobilier est-il un immeuble de rapport vendu en bloc (immeuble entier avec plusieurs lots locatifs, monopropriété) ? Réponds uniquement OUI ou NON.",
+  'Division': "Ce bien immobilier a-t-il un vrai potentiel de division (en plusieurs logements résidentiels indépendants, ou division parcellaire/terrain permettant de construire) ? Inclus les maisons avec grand terrain divisible, les immeubles à convertir, les plateaux à aménager. Exclus les divisions de bureaux ou locaux commerciaux sans vocation résidentielle. Réponds uniquement OUI ou NON.",
+  'Immeuble de rapport': "Ce bien immobilier est-il un immeuble de rapport destiné à l'investissement locatif (immeuble avec plusieurs logements ou lots locatifs, vendu en bloc ou en monopropriété, avec ou sans locataires en place) ? Exclus les maisons individuelles résidentielles, les villas et les appartements seuls. Réponds uniquement OUI ou NON.",
 }
 
 export function detectMatchedKeywords(title: string, description: string, strategie: string): string[] {

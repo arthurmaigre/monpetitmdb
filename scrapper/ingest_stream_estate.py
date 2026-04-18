@@ -1,19 +1,24 @@
 """
-ingest_stream_estate.py — Ingestion bulk via API Stream Estate (notif.immo)
+ingest_stream_estate.py — Ingestion bulk via API Stream Estate
 
-Appelle /documents/properties avec expressions filtrées, stratégie par stratégie,
-déduplique, filtre les faux positifs, et insère dans Supabase.
+Copie conforme du cron Next.js /api/admin/stream-estate-polling :
+- Mêmes expressions SE (groupes inclusion + exclusions via API)
+- Même validation Haiku (prompts identiques à lib/stream-estate-ingest.ts)
+- Même déduplication 4 niveaux (URL, SE ID, source_urls, géo fallback)
+- Même pipeline page par page (Haiku + insert immédiat par page)
+- CHUNK_SIZE=10, CONCURRENCY=8 (80 Haiku simultanés)
 
 Usage :
-  python3 ingest_stream_estate.py --dry-run                    # Voir sans insérer
-  python3 ingest_stream_estate.py --strategie locataire        # Une seule stratégie
-  python3 ingest_stream_estate.py --from-date 2026-03-25       # Depuis une date
-  python3 ingest_stream_estate.py --max-pages 5                # Limiter les pages
+  python3 ingest_stream_estate.py --dry-run
+  python3 ingest_stream_estate.py --from-date 2026-04-10 --to-date 2026-04-17
+  python3 ingest_stream_estate.py --from-date 2026-04-10 --to-date 2026-04-17 --limit 50
+  python3 ingest_stream_estate.py --strategie locataire --limit 50 --dry-run
 """
-import os, sys, json, logging, argparse, re, time
+import os, sys, json, logging, argparse, unicodedata, time
 from pathlib import Path
-from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import anthropic as anthropic_sdk
 import requests as http_requests
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
@@ -23,105 +28,179 @@ from supabase_client import get_client
 log = logging.getLogger("ingest_se")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-API_KEY = os.getenv("STREAM_ESTATE_API_KEY", "646dbf20852d6524745430b553e70802")
+API_KEY  = os.getenv("STREAM_ESTATE_API_KEY", "646dbf20852d6524745430b553e70802")
 API_BASE = "https://api.notif.immo/documents/properties"
 
-SE_PROPERTY_TYPE_MAP = {0: "Appartement", 1: "Maison", 2: "Immeuble", 3: "Parking", 4: "Bureau", 5: "Terrain", 6: "Local commercial"}
+CHUNK_SIZE  = 10
+CONCURRENCY = 8  # 80 Haiku simultanés
+
+SE_PROPERTY_TYPE_MAP = {
+    0: "Appartement", 1: "Maison", 2: "Immeuble",
+    3: "Parking", 4: "Bureau", 5: "Terrain", 6: "Local commercial",
+}
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Stratégies et mots-clés (sans accents, testés et validés)
+# Stratégies — identiques à route.ts
 # ══════════════════════════════════════════════════════════════════════════════
+
+LEP_EXCLUSIONS = [
+    "bail commercial", "local commercial", "fonds de commerce", "murs commerciaux",
+    "ehpad", "residence senior", "residence de tourisme", "residence etudiante",
+    "residence hoteliere", "residence de service", "residence geree",
+    "maison de retraite", "lmnp",
+]
 
 STRATEGIES = {
     "locataire": {
         "strategie_mdb": "Locataire en place",
         "property_types": [0, 1, 2],
+        "surface_min": None,
         "keywords": [
-            "locataire en place",
-            "vendu loue",
-            "bail en cours",
-            "loyer actuel",
-            "location en cours",
+            "locataire en place", "vendu loue", "bail en cours",
+            "loyer actuel", "location en cours",
         ],
+        "exclusions": LEP_EXCLUSIONS,
     },
     "travaux": {
         "strategie_mdb": "Travaux lourds",
         "property_types": [0, 1, 2],
+        "surface_min": None,
         "keywords": [
-            "entierement a renover",
-            "a renover entierement",
-            "a renover integralement",
-            "a rehabiliter",
-            "inhabitable",
-            "tout a refaire",
-            "toiture a refaire",
-            "a restaurer",
-            "a rafraichir",
-            "a remettre aux normes",
-            "a remettre en etat",
-            "plateau a amenager",
-            "bien a renover",
-            "maison a renover",
-            "appartement a renover",
-            "immeuble a renover",
+            "entierement a renover", "a renover entierement", "a renover integralement",
+            "a rehabiliter", "inhabitable", "tout a refaire", "toiture a refaire",
+            "a restaurer", "a remettre aux normes", "a remettre en etat",
+            "plateau a amenager", "bien a renover", "maison a renover",
+            "appartement a renover", "immeuble a renover",
         ],
+        "exclusions": [],
     },
     "division": {
         "strategie_mdb": "Division",
         "property_types": [0, 1, 2],
+        "surface_min": 100,
         "keywords": [
-            "division possible",
-            "potentiel de division",
-            "bien divisible",
-            "maison divisible",
-            "appartement divisible",
-            "a diviser",
+            "division possible", "potentiel de division", "bien divisible",
+            "maison divisible", "appartement divisible", "a diviser",
         ],
+        "exclusions": [],
     },
     "idr": {
         "strategie_mdb": "Immeuble de rapport",
-        "property_types": [1, 2],
+        "property_types": [2, 1],
+        "surface_min": None,
         "keywords": [
-            "immeuble de rapport",
-            "copropriete a creer",
-            "vente en bloc",
-            "vendu en bloc",
-            "immeuble locatif",
-            "immeuble entierement loue",
+            "immeuble de rapport", "copropriete a creer", "vente en bloc",
+            "vendu en bloc", "immeuble locatif", "immeuble entierement loue",
         ],
+        "exclusions": [],
     },
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Filtres d'exclusion — faux positifs Locataire en place
+# Haiku — prompts identiques à lib/stream-estate-ingest.ts
 # ══════════════════════════════════════════════════════════════════════════════
 
-EXCLUDE_LOCATAIRE = re.compile(
-    r"bail commercial|local commercial|murs commerci|fonds de commerce"
-    r"|r.sidence.{0,15}tourisme|r.sidence.{0,15}touristi|pierre.{0,3}vacances"
-    r"|r.sidence.{0,15}senior|ehpad|maison de retraite"
-    r"|r.sidence.{0,15}[eé]tudiante|r.sidence.{0,15}h[oô]teli[eè]re"
-    r"|r.sidence.{0,15}service|r.sidence.{0,15}g[eé]r[eé]e"
-    r"|lmnp|meubl[eé] non professionnel",
-    re.IGNORECASE,
-)
+HAIKU_PROMPTS = {
+    "Locataire en place": (
+        "Ce bien immobilier est-il vendu avec un locataire en place "
+        "(bail d'habitation en cours, loyer actuel mentionné, occupé par un locataire) ? "
+        "Réponds uniquement OUI ou NON."
+    ),
+    "Travaux lourds": (
+        "Ce bien immobilier nécessite-t-il des travaux lourds "
+        "(rénovation complète, gros œuvre, inhabitable, tout à refaire) "
+        "— et non de simples travaux cosmétiques ou de finition ? "
+        "Réponds uniquement OUI ou NON."
+    ),
+    "Division": (
+        "Ce bien immobilier a-t-il un vrai potentiel de division (en plusieurs logements "
+        "résidentiels indépendants, ou division parcellaire/terrain permettant de construire) ? "
+        "Inclus les maisons avec grand terrain divisible, les immeubles à convertir, "
+        "les plateaux à aménager. Exclus les divisions de bureaux ou locaux commerciaux "
+        "sans vocation résidentielle. Réponds uniquement OUI ou NON."
+    ),
+    "Immeuble de rapport": (
+        "Ce bien immobilier est-il un immeuble de rapport destiné à l'investissement locatif "
+        "(immeuble avec plusieurs logements ou lots locatifs, vendu en bloc ou en monopropriété, "
+        "avec ou sans locataires en place) ? "
+        "Exclus les maisons individuelles résidentielles, les villas et les appartements seuls. "
+        "Réponds uniquement OUI ou NON."
+    ),
+}
+
+_ai_client = None
+
+def get_ai_client():
+    global _ai_client
+    if _ai_client is None:
+        _ai_client = anthropic_sdk.Anthropic()
+    return _ai_client
+
+
+def validate_with_haiku(title: str, description: str, strategie_mdb: str) -> bool:
+    prompt = HAIKU_PROMPTS.get(strategie_mdb)
+    if not prompt:
+        return True
+    try:
+        msg = get_ai_client().messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=5,
+            messages=[{
+                "role": "user",
+                "content": f"{prompt}\n\nTitre : {title}\n\nDescription : {description}",
+            }],
+        )
+        return msg.content[0].text.strip().upper().startswith("OUI")
+    except Exception as e:
+        log.error(f"[Haiku] erreur: {e}")
+        return True  # fail open
+
+
+def detect_keywords(title: str, description: str, strat_key: str) -> list:
+    """Détecte les keywords présents dans le texte (sans accents, lowercase)."""
+    raw = (title + " " + description).lower()
+    normalized = unicodedata.normalize("NFD", raw)
+    text = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
+    return [kw for kw in STRATEGIES[strat_key]["keywords"] if kw in text]
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Appel API Stream Estate
+# Appel API Stream Estate — groupes d'expressions (miroir Next.js)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def fetch_properties(keyword: str, property_types: list, page: int = 1, from_date: str = None, to_date: str = None) -> dict:
-    """Appelle /documents/properties avec un mot-clé et des filtres."""
+def fetch_group(
+    keyword: str,
+    exclusions: list,
+    property_types: list,
+    page: int,
+    from_date: str = None,
+    to_date: str = None,
+    surface_min: int = None,
+) -> list:
+    """Appelle SE API avec 1 inclusion + N exclusions dans le même appel."""
     params = {
-        "limit": 10,
+        "itemsPerPage": 30,
         "page": page,
         "transactionType": 0,
-        "expressions[0][0][word]": keyword,
-        "expressions[0][0][options][includes]": "true",
-        "expressions[0][0][options][strict]": "true",
+        "order[createdAt]": "desc",
+        "lat": 46.6,
+        "lon": 2.2,
+        "radius": 600,
+        "withCoherentPrice": "true",
     }
-    for i, pt in enumerate(property_types):
-        params[f"propertyTypes[{i}]"] = pt
+    # Inclusion
+    params["expressions[0][0][word]"] = keyword
+    params["expressions[0][0][options][includes]"] = "true"
+    params["expressions[0][0][options][strict]"] = "true"
+    # Exclusions
+    for i, word in enumerate(exclusions, start=1):
+        params[f"expressions[0][{i}][word]"] = word
+        params[f"expressions[0][{i}][options][includes]"] = "false"
+        params[f"expressions[0][{i}][options][strict]"] = "true"
+    # Types de bien
+    for j, pt in enumerate(property_types):
+        params[f"propertyTypes[{j}]"] = pt
+    if surface_min is not None:
+        params["surfaceMin"] = surface_min
     if from_date:
         params["fromDate"] = from_date
     if to_date:
@@ -130,69 +209,78 @@ def fetch_properties(keyword: str, property_types: list, page: int = 1, from_dat
     headers = {"X-Api-Key": API_KEY}
     r = http_requests.get(API_BASE, headers=headers, params=params, timeout=30)
     r.raise_for_status()
-    return r.json()
-
+    return r.json().get("hydra:member", [])
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Construction payload Supabase (même format que webhook)
+# Construction payload Supabase — miroir buildBienPayload (stream-estate-ingest.ts)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def build_bien(property_doc: dict, advert: dict, strategie: str, metropole_map: dict) -> dict:
-    """Construit un dict bien pour insert Supabase — même logique que route.ts."""
-    surface = property_doc.get("surface") or advert.get("surface")
-    prix = advert.get("price")
-    code_postal = (property_doc.get("city") or {}).get("zipcode")
-    ptype = property_doc.get("propertyType")
-    room = property_doc.get("room") or advert.get("room")
-    floor = advert.get("floor")
+def build_bien(
+    prop_doc: dict,
+    advert: dict,
+    strategie_mdb: str,
+    metropole_map: dict,
+    source_keywords: list,
+    is_valid: bool,
+) -> dict:
+    surface   = prop_doc.get("surface") or advert.get("surface")
+    prix_fai  = advert.get("price")
+    code_postal = (prop_doc.get("city") or {}).get("zipcode")
+    ptype     = prop_doc.get("propertyType")
+    room      = prop_doc.get("room") or advert.get("room")
+    floor     = advert.get("floor")
+    location  = prop_doc.get("location") or prop_doc.get("locations") or {}
 
     bien = {
-        "url": advert.get("url"),
-        "strategie_mdb": strategie,
-        "statut": "Toujours disponible",
-        "type_bien": SE_PROPERTY_TYPE_MAP.get(ptype),
-        "prix_fai": prix,
-        "surface": surface,
-        "prix_m2": round(prix / surface * 100) / 100 if prix and surface else None,
-        "nb_pieces": f"T{room}" if room else None,
-        "nb_chambres": property_doc.get("bedroom") or advert.get("bedroom"),
-        "etage": ("RDC" if floor == 0 else str(floor)) if floor is not None else None,
-        "annee_construction": advert.get("constructionYear") or property_doc.get("constructionYear"),
-        "dpe": (advert.get("energy") or {}).get("category"),
-        "dpe_valeur": (advert.get("energy") or {}).get("value"),
-        "ges": (advert.get("greenHouseGas") or {}).get("category"),
-        "ville": (property_doc.get("city") or {}).get("name"),
-        "code_postal": code_postal,
-        "metropole": metropole_map.get(code_postal) if code_postal else None,
-        "photo_url": (advert.get("pictures") or [None])[0] or (property_doc.get("pictures") or [None])[0],
-        "latitude": (property_doc.get("location") or {}).get("lat"),
-        "longitude": (property_doc.get("location") or {}).get("lon"),
-        "surface_terrain": advert.get("landSurface") or property_doc.get("landSurface"),
-        "stream_estate_id": property_doc.get("uuid"),
-        "source_provider": "stream_estate",
-        "publisher_type": "professionnel" if (advert.get("publisher") or {}).get("type") == 1 else ("particulier" if (advert.get("publisher") or {}).get("type") == 0 else None),
-        "price_history": advert.get("events") if advert.get("events") else None,
+        "url":               advert.get("url"),
+        "strategie_mdb":     strategie_mdb,
+        "statut":            "Toujours disponible" if is_valid else "Faux positif",
+        "regex_statut":      "valide" if is_valid else "faux_positif",
+        "source_keywords":   source_keywords if source_keywords else None,
+        "type_bien":         SE_PROPERTY_TYPE_MAP.get(ptype),
+        "prix_fai":          prix_fai,
+        "surface":           surface,
+        "prix_m2":           round(prix_fai / surface * 100) / 100 if prix_fai and surface else None,
+        "nb_pieces":         f"T{room}" if room else None,
+        "nb_chambres":       prop_doc.get("bedroom") or advert.get("bedroom"),
+        "etage":             ("RDC" if floor == 0 else str(floor)) if floor is not None else None,
+        "annee_construction": advert.get("constructionYear") or prop_doc.get("constructionYear"),
+        "dpe":               (advert.get("energy") or {}).get("category"),
+        "dpe_valeur":        (advert.get("energy") or {}).get("value"),
+        "ges":               (advert.get("greenHouseGas") or {}).get("category"),
+        "ville":             (prop_doc.get("city") or {}).get("name"),
+        "code_postal":       code_postal,
+        "metropole":         metropole_map.get(code_postal) if code_postal else None,
+        "photo_url":         (advert.get("pictures") or [None])[0] or (prop_doc.get("pictures") or [None])[0],
+        "latitude":          location.get("lat"),
+        "longitude":         location.get("lon"),
+        "surface_terrain":   advert.get("landSurface") or prop_doc.get("landSurface"),
+        "stream_estate_id":  prop_doc.get("uuid"),
+        "source_provider":   "stream_estate",
+        "publisher_type":    (
+            "professionnel" if (advert.get("publisher") or {}).get("type") == 1
+            else "particulier" if (advert.get("publisher") or {}).get("type") == 0
+            else None
+        ),
+        "price_history":     advert.get("events") if advert.get("events") else None,
         "moteurimmo_data": {
-            "uniqueId": property_doc.get("uuid"),
-            "origin": (advert.get("publisher") or {}).get("name"),
-            "title": advert.get("title") or property_doc.get("title"),
-            "description": advert.get("description") or property_doc.get("description"),
-            "pictureUrls": advert.get("pictures") or property_doc.get("pictures") or [],
-            "publisher": {"name": (advert.get("contact") or {}).get("name")},
+            "uniqueId":    prop_doc.get("uuid"),
+            "origin":      (advert.get("publisher") or {}).get("name"),
+            "title":       advert.get("title") or prop_doc.get("title"),
+            "description": advert.get("description") or prop_doc.get("description"),
+            "pictureUrls": advert.get("pictures") or prop_doc.get("pictures") or [],
+            "publisher":   {"name": (advert.get("contact") or {}).get("name")},
             "duplicates": [
                 {"url": a.get("url"), "origin": (a.get("publisher") or {}).get("name")}
-                for a in property_doc.get("adverts", [])
+                for a in prop_doc.get("adverts", [])
                 if a.get("url") != advert.get("url")
             ],
-            "category": SE_PROPERTY_TYPE_MAP.get(ptype),
-            "creationDate": advert.get("createdAt"),
-            "source": "stream_estate",
-            "priceHistory": advert.get("events"),
-            "stations": property_doc.get("stations"),
-            "features": advert.get("features"),
-            "departement": ((property_doc.get("city") or {}).get("department") or {}).get("code"),
-            "floorQuantity": advert.get("floorQuantity"),
-            "furnished": advert.get("furnished"),
+            "category":      SE_PROPERTY_TYPE_MAP.get(ptype),
+            "creationDate":  advert.get("createdAt"),
+            "source":        "stream_estate",
+            "priceHistory":  advert.get("events"),
+            "stations":      prop_doc.get("stations"),
+            "features":      advert.get("features"),
         },
     }
 
@@ -203,52 +291,160 @@ def build_bien(property_doc: dict, advert: dict, strategie: str, metropole_map: 
     if advert.get("propertyTax"):
         bien["taxe_fonc_ann"] = advert["propertyTax"]
     # Ascenseur
-    if advert.get("elevator") is True or property_doc.get("elevator") is True:
+    elev_advert = advert.get("elevator")
+    elev_prop   = prop_doc.get("elevator")
+    if elev_advert is True or elev_prop is True:
         bien["ascenseur"] = True
-    elif advert.get("elevator") is False or property_doc.get("elevator") is False:
+    elif elev_advert is False or elev_prop is False:
         bien["ascenseur"] = False
 
     return bien
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Déduplication — 4 niveaux (miroir findExistingBien + sets en mémoire)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def load_existing_sets(client):
+    """Charge URLs et SE IDs depuis biens en mémoire (avec pagination).
+    biens_source_urls (~360k lignes) N'est PAS pré-chargé — vérification par requête DB (niveau 3).
+    """
+    urls, se_ids = set(), set()
+    try:
+        PAGE = 1000
+        offset = 0
+        while True:
+            res = (client.table("biens")
+                   .select("url, stream_estate_id")
+                   .range(offset, offset + PAGE - 1)
+                   .execute())
+            rows = res.data or []
+            for r in rows:
+                if r.get("url"):              urls.add(r["url"])
+                if r.get("stream_estate_id"): se_ids.add(r["stream_estate_id"])
+            if len(rows) < PAGE:
+                break
+            offset += PAGE
+    except Exception as e:
+        log.warning(f"Erreur chargement sets dédup: {e}")
+    log.info(f"Dédup sets : {len(urls)} URLs biens, {len(se_ids)} SE IDs")
+    return urls, se_ids
+
+
+def check_source_url_dup(client, url: str) -> bool:
+    """Niveau 3 : vérifie si l'URL existe dans biens_source_urls (requête DB)."""
+    try:
+        res = client.table("biens_source_urls").select("bien_id").eq("url", url).limit(1).execute()
+        return bool(res.data)
+    except Exception:
+        return False
+
+
+def check_geo_dup(client, bien: dict) -> bool:
+    """Niveau 4 : dédup géographique (code_postal + type + pièces + surface±1 + prix±2%)."""
+    cp, surf, prix, tb, pieces = (bien.get(k) for k in
+        ["code_postal", "surface", "prix_fai", "type_bien", "nb_pieces"])
+    if not all([cp, surf, prix, tb, pieces]):
+        return False
+    try:
+        res = (client.table("biens")
+               .select("id")
+               .eq("code_postal", cp).eq("type_bien", tb).eq("nb_pieces", pieces)
+               .gte("surface", surf - 1).lte("surface", surf + 1)
+               .gte("prix_fai", prix * 0.98).lte("prix_fai", prix * 1.02)
+               .limit(1).execute())
+        return bool(res.data)
+    except Exception:
+        return False
+
+
+def insert_bien_with_urls(client, bien: dict, prop_doc: dict, advert: dict) -> str:
+    """Insère le bien + toutes ses URLs dans biens_source_urls. Retourne 'inserted' ou 'duplicate'."""
+    try:
+        res = client.table("biens").insert(bien).execute()
+        inserted = (res.data or [None])[0]
+        if not inserted:
+            return "duplicate"
+        bien_id = inserted["id"]
+
+        url_rows = []
+        if advert.get("url"):
+            url_rows.append({"bien_id": bien_id, "url": advert["url"]})
+        for a in prop_doc.get("adverts", []):
+            if a.get("url") and a["url"] != advert.get("url"):
+                url_rows.append({"bien_id": bien_id, "url": a["url"]})
+        if url_rows:
+            client.table("biens_source_urls").upsert(
+                url_rows, on_conflict="url", ignore_duplicates=True
+            ).execute()
+        return "inserted"
+    except Exception as e:
+        if "23505" in str(e):
+            return "duplicate"
+        log.error(f"Insert error: {e}")
+        return "error"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Déduplication
+# Traitement d'un bien : dédup DB + Haiku + build_bien
 # ══════════════════════════════════════════════════════════════════════════════
 
-def load_existing_urls(client) -> set:
-    """Charge les URLs depuis biens_source_urls pour dédup rapide."""
-    urls = set()
-    try:
-        # URLs principales
-        res = client.table("biens").select("url").eq("source_provider", "stream_estate").execute()
-        for r in (res.data or []):
-            if r.get("url"):
-                urls.add(r["url"])
-    except Exception as e:
-        log.warning(f"Erreur chargement URLs existantes: {e}")
-    log.info(f"URLs existantes chargées: {len(urls)}")
-    return urls
+def process_property(
+    prop_doc: dict,
+    advert: dict,
+    strat_key: str,
+    strategie_mdb: str,
+    metropole_map: dict,
+    client,
+    existing_urls: set,
+    existing_se_ids: set,
+    dry_run: bool,
+) -> str:
+    """Traite 1 bien : dedup niveaux 3-4, Haiku, build, insert. Retourne action."""
+    url  = advert.get("url")
+    uuid = prop_doc.get("uuid")
 
+    # Niveau 3 : source_urls (déjà chargé dans existing_urls au démarrage)
+    # Niveau 4 : géo fallback
+    if check_geo_dup(client, {
+        "code_postal": (prop_doc.get("city") or {}).get("zipcode"),
+        "surface": prop_doc.get("surface") or advert.get("surface"),
+        "prix_fai": advert.get("price"),
+        "type_bien": SE_PROPERTY_TYPE_MAP.get(prop_doc.get("propertyType")),
+        "nb_pieces": f"T{prop_doc.get('room')}" if prop_doc.get("room") else None,
+    }):
+        return "skip_geo"
 
-def load_existing_se_ids(client) -> set:
-    """Charge les stream_estate_id existants."""
-    ids = set()
-    try:
-        res = client.table("biens").select("stream_estate_id").not_.is_("stream_estate_id", "null").execute()
-        for r in (res.data or []):
-            if r.get("stream_estate_id"):
-                ids.add(r["stream_estate_id"])
-    except Exception as e:
-        log.warning(f"Erreur chargement SE IDs: {e}")
-    log.info(f"SE IDs existants chargés: {len(ids)}")
-    return ids
+    title = advert.get("title") or prop_doc.get("title") or ""
+    desc  = advert.get("description") or prop_doc.get("description") or ""
 
+    keywords = detect_keywords(title, desc, strat_key)
+    is_valid = validate_with_haiku(title, desc, strategie_mdb)
+
+    log.info(f"  [{strategie_mdb}] {'✅' if is_valid else '❌'} {title[:60]!r} ({', '.join(keywords) or '—'})")
+
+    if dry_run:
+        return "valide" if is_valid else "faux_positif"
+
+    bien = build_bien(prop_doc, advert, strategie_mdb, metropole_map, keywords, is_valid)
+    action = insert_bien_with_urls(client, bien, prop_doc, advert)
+
+    # Mettre à jour le set en mémoire pour dédup intra-run
+    if action == "inserted":
+        if url:  existing_urls.add(url)
+        if uuid: existing_se_ids.add(uuid)
+        for a in prop_doc.get("adverts", []):
+            if a.get("url"): existing_urls.add(a["url"])
+
+    return action
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Ingestion principale — page par page, Haiku immédiat (miroir Next.js)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def load_metropole_map(client) -> dict:
-    """Charge le mapping code_postal → métropole."""
     m = {}
     try:
-        res = client.table("ref_communes").select("code_postal, metropole").not_.is_("metropole", "null").execute()
+        res = client.table("ref_communes").select("code_postal, metropole") \
+            .not_.is_("metropole", "null").execute()
         for r in (res.data or []):
             if r.get("metropole"):
                 m[r["code_postal"]] = r["metropole"]
@@ -257,174 +453,181 @@ def load_metropole_map(client) -> dict:
     return m
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Main
-# ══════════════════════════════════════════════════════════════════════════════
-
-def run_ingestion(strategies: list, dry_run: bool, max_pages: int, from_date: str = None, to_date: str = None):
+def run_ingestion(
+    strategies: list,
+    dry_run: bool,
+    max_pages: int,
+    from_date: str = None,
+    to_date: str = None,
+    limit_per_strat: int = None,
+):
     client = get_client()
     if not client:
         log.error("Supabase non connecté")
         return
 
-    metropole_map = load_metropole_map(client)
-    existing_urls = load_existing_urls(client)
-    existing_se_ids = load_existing_se_ids(client)
+    metropole_map  = load_metropole_map(client)
+    existing_urls, existing_se_ids = load_existing_sets(client)
 
-    # Collecter tous les biens par stratégie, dédupliquer par UUID
-    seen_uuids = set()
-    total_fetched = 0
-    total_new = 0
-    total_excluded = 0
-    total_duplicate = 0
     total_inserted = 0
+    total_faux_pos = 0
+    total_skipped  = 0
+    total_fetched  = 0
 
     for strat_key in strategies:
-        strat = STRATEGIES[strat_key]
+        strat        = STRATEGIES[strat_key]
         strategie_mdb = strat["strategie_mdb"]
+        keywords     = strat["keywords"]
+        exclusions   = strat["exclusions"]
         property_types = strat["property_types"]
-        keywords = strat["keywords"]
+        surface_min  = strat["surface_min"]
+
+        strat_inserted = 0
+        strat_skipped  = 0
+        strat_faux_pos = 0
+        strat_fetched  = 0   # items reçus de SE (= crédits consommés)
+        seen_uuids     = set()
 
         log.info(f"\n{'='*60}")
-        log.info(f"Stratégie: {strategie_mdb} ({len(keywords)} mots-clés)")
+        log.info(f"Stratégie: {strategie_mdb} | {len(keywords)} keywords | surfaceMin={surface_min}")
         log.info(f"{'='*60}")
 
-        strat_new = 0
-        strat_dup = 0
-        strat_excl = 0
-        biens_to_insert = []
-
         for kw in keywords:
-            kw_count = 0
-            for page in range(1, max_pages + 1):
+            if limit_per_strat and strat_fetched >= limit_per_strat:
+                break
+
+            page = 1
+            while page <= max_pages:
+                if limit_per_strat and strat_fetched >= limit_per_strat:
+                    break
+
                 try:
-                    data = fetch_properties(kw, property_types, page, from_date, to_date)
+                    members = fetch_group(kw, exclusions, property_types, page,
+                                          from_date, to_date, surface_min)
                 except Exception as e:
                     log.error(f"  API erreur [{kw}] page {page}: {e}")
                     break
 
-                members = data.get("hydra:member", [])
                 if not members:
                     break
 
-                total_api = data.get("hydra:totalItems", "?")
+                strat_fetched += len(members)  # compte les crédits SE consommés
 
+                # Filtrer UUIDs déjà vus intra-run + dédup mémoire niveaux 1-2
+                new_props = []
                 for prop_doc in members:
-                    total_fetched += 1
                     uuid = prop_doc.get("uuid")
-                    adverts = prop_doc.get("adverts", [])
-                    if not adverts:
+                    adverts = prop_doc.get("adverts") or []
+                    if not adverts or not uuid:
+                        continue
+                    if uuid in seen_uuids:
                         continue
                     advert = adverts[0]
                     url = advert.get("url")
-
-                    # Dédup intra-run (même bien matché par plusieurs mots-clés)
-                    if uuid in seen_uuids:
+                    if not url:
                         continue
+                    # Niveau 1 : URL
+                    if url in existing_urls:
+                        strat_skipped += 1
+                        continue
+                    # Niveau 2 : SE ID
+                    if uuid in existing_se_ids:
+                        strat_skipped += 1
+                        continue
+                    # Niveau 3 : URLs des autres adverts → biens_source_urls (requête DB)
+                    dup = (check_source_url_dup(client, url) or
+                           any(a.get("url") in existing_urls for a in adverts if a.get("url")))
+                    if dup:
+                        strat_skipped += 1
+                        continue
+
                     seen_uuids.add(uuid)
+                    new_props.append((prop_doc, advert))
 
-                    # Dédup vs base existante
-                    if url and url in existing_urls:
-                        strat_dup += 1
-                        total_duplicate += 1
-                        continue
-                    if uuid and uuid in existing_se_ids:
-                        strat_dup += 1
-                        total_duplicate += 1
-                        continue
+                log.info(f"  [{kw}] page {page} → {len(members)} SE, {len(new_props)} nouveaux")
 
-                    # Vérifier aussi les URLs des autres adverts
-                    dup_found = False
-                    for a in adverts:
-                        if a.get("url") and a["url"] in existing_urls:
-                            dup_found = True
-                            break
-                    if dup_found:
-                        strat_dup += 1
-                        total_duplicate += 1
-                        continue
+                # Traitement Haiku en parallèle — CHUNK_SIZE=10, CONCURRENCY=8
+                chunks = [new_props[i:i+CHUNK_SIZE] for i in range(0, len(new_props), CHUNK_SIZE)]
 
-                    # Filtre faux positifs Locataire en place
-                    if strat_key == "locataire":
-                        all_text = " ".join(
-                            (a.get("title") or "") + " " + (a.get("description") or "")
-                            for a in adverts
-                        )
-                        if EXCLUDE_LOCATAIRE.search(all_text):
-                            strat_excl += 1
-                            total_excluded += 1
-                            continue
+                for i in range(0, len(chunks), CONCURRENCY):
+                    batch_chunks = chunks[i:i+CONCURRENCY]
+                    flat = [(p, a) for chunk in batch_chunks for p, a in chunk]
 
-                    bien = build_bien(prop_doc, advert, strategie_mdb, metropole_map)
-                    biens_to_insert.append(bien)
-                    strat_new += 1
-                    total_new += 1
-                    kw_count += 1
+                    with ThreadPoolExecutor(max_workers=len(flat)) as ex:
+                        future_to_prop = {
+                            ex.submit(
+                                process_property,
+                                p, a, strat_key, strategie_mdb,
+                                metropole_map, client,
+                                existing_urls, existing_se_ids, dry_run,
+                            ): (p, a)
+                            for p, a in flat
+                        }
+                        for future in as_completed(future_to_prop):
+                            try:
+                                action = future.result()
+                            except Exception as e:
+                                log.error(f"  process_property error: {e}")
+                                action = "error"
 
-                # Pagination : si moins de 10 résultats, c'est la dernière page
-                if len(members) < 10:
-                    break
+                            if action == "inserted":
+                                strat_inserted += 1
+                                total_inserted += 1
+                            elif action == "valide":  # dry_run
+                                strat_inserted += 1
+                            elif action == "faux_positif":
+                                strat_faux_pos += 1
+                            else:
+                                strat_skipped += 1
 
-                time.sleep(0.2)  # Rate limiting
+                if len(members) < 30:
+                    break  # dernière page
 
-            if kw_count > 0:
-                log.info(f"  \"{kw}\" → {kw_count} nouveaux")
+                page += 1
+                time.sleep(0.1)  # rate limiting SE
 
-        log.info(f"  {strategie_mdb}: {strat_new} nouveaux, {strat_dup} doublons, {strat_excl} exclus")
-
-        # Insertion batch
-        if biens_to_insert and not dry_run:
-            batch_size = 50
-            for i in range(0, len(biens_to_insert), batch_size):
-                batch = biens_to_insert[i:i + batch_size]
-                try:
-                    result = client.table("biens").insert(batch).execute()
-                    inserted_ids = [r["id"] for r in (result.data or [])]
-                    total_inserted += len(inserted_ids)
-
-                    # Ajouter les URLs dans biens_source_urls
-                    url_rows = []
-                    for bien, inserted_id in zip(batch, inserted_ids):
-                        if bien.get("url"):
-                            url_rows.append({"bien_id": inserted_id, "url": bien["url"]})
-                        # URLs des duplicates
-                        for dup in (bien.get("moteurimmo_data") or {}).get("duplicates", []):
-                            if dup.get("url"):
-                                url_rows.append({"bien_id": inserted_id, "url": dup["url"]})
-                    if url_rows:
-                        client.table("biens_source_urls").upsert(
-                            url_rows, on_conflict="url", ignore_duplicates=True
-                        ).execute()
-
-                    log.info(f"  Inséré batch {i//batch_size + 1}: {len(inserted_ids)} biens")
-                except Exception as e:
-                    log.error(f"  Erreur insertion batch: {e}")
-        elif biens_to_insert and dry_run:
-            log.info(f"  DRY RUN — {len(biens_to_insert)} biens auraient été insérés")
-            for b in biens_to_insert[:3]:
-                log.info(f"    → {b.get('type_bien')} {b.get('ville')} {b.get('prix_fai')}€ {b.get('surface')}m2")
+        label = "seraient insérés" if dry_run else "insérés"
+        log.info(f"  {strategie_mdb} : {strat_inserted} {label}, {strat_faux_pos} faux positifs, {strat_skipped} skippés | {strat_fetched} items SE fetchés")
+        total_inserted += strat_inserted if dry_run else 0
+        total_faux_pos += strat_faux_pos
+        total_skipped  += strat_skipped
+        total_fetched  += strat_fetched
 
     log.info(f"\n{'='*60}")
-    log.info(f"RÉSUMÉ")
-    log.info(f"  Biens fetchés API:  {total_fetched}")
-    log.info(f"  Doublons existants: {total_duplicate}")
-    log.info(f"  Exclus (FP):        {total_excluded}")
-    log.info(f"  Nouveaux:           {total_new}")
-    log.info(f"  Insérés en base:    {total_inserted}")
+    log.info(f"RÉSUMÉ FINAL {'(DRY RUN)' if dry_run else ''}")
+    log.info(f"  Crédits SE consommés : {total_fetched}")
+    log.info(f"  {'Seraient insérés' if dry_run else 'Insérés'} : {total_inserted}")
+    log.info(f"  Faux pos             : {total_faux_pos}")
+    log.info(f"  Skippés              : {total_skipped}")
     log.info(f"{'='*60}")
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CLI
+# ══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description="Ingestion Stream Estate → Supabase")
-    parser.add_argument("--strategie", choices=list(STRATEGIES.keys()), help="Une seule stratégie")
-    parser.add_argument("--dry-run", action="store_true", help="Voir sans insérer")
-    parser.add_argument("--max-pages", type=int, default=100, help="Max pages par mot-clé (défaut: 100)")
-    parser.add_argument("--from-date", help="Date début (YYYY-MM-DD)")
-    parser.add_argument("--to-date", help="Date fin (YYYY-MM-DD)")
+    parser = argparse.ArgumentParser(description="Ingestion Stream Estate → Supabase (conforme Next.js)")
+    parser.add_argument("--strategie", choices=list(STRATEGIES.keys()),
+                        help="Une seule stratégie (défaut: toutes)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Simulation sans insertion en base")
+    parser.add_argument("--max-pages", type=int, default=100,
+                        help="Max pages SE par mot-clé (défaut: 100)")
+    parser.add_argument("--from-date", help="Date début ISO (ex: 2026-04-10 ou 2026-04-10T20:30:00Z)")
+    parser.add_argument("--to-date",   help="Date fin ISO (ex: 2026-04-17 ou 2026-04-17T20:30:00Z)")
+    parser.add_argument("--limit",     type=int, default=None,
+                        help="Max biens insérés par stratégie (ex: 50 pour test)")
     args = parser.parse_args()
 
     strategies = [args.strategie] if args.strategie else list(STRATEGIES.keys())
-    run_ingestion(strategies, args.dry_run, args.max_pages, args.from_date, args.to_date)
+    run_ingestion(
+        strategies,
+        dry_run=args.dry_run,
+        max_pages=args.max_pages,
+        from_date=args.from_date,
+        to_date=args.to_date,
+        limit_per_strat=args.limit,
+    )
 
 
 if __name__ == "__main__":
