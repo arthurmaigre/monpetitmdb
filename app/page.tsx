@@ -281,7 +281,7 @@ export default function Home() {
                 {"Mon Petit MDB agr\u00E8ge 60+ plateformes, estime les prix via les donn\u00E9es DVF et simule chaque op\u00E9ration : achat-revente, investissement locatif ou les deux. 7 r\u00E9gimes fiscaux, du micro-foncier au marchand de biens."}
               </p>
               <div className="hero-btns">
-                <a href="/biens" className="btn-hero">{"Voir les biens disponibles \u2014 Gratuit"}</a>
+                <a href="/biens" className="btn-hero">{"Voir les biens disponibles"}</a>
                 <a href="#how" className="btn-ghost">{"Comment \u00E7a marche"}</a>
               </div>
               <div className="hero-stats">
