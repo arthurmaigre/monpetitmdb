@@ -70,7 +70,7 @@ STRATEGIES = {
             "a rehabiliter", "inhabitable", "tout a refaire", "toiture a refaire",
             "a restaurer", "a remettre aux normes", "a remettre en etat",
             "plateau a amenager", "bien a renover", "maison a renover",
-            "appartement a renover", "immeuble a renover", "vetuste",
+            "appartement a renover", "immeuble a renover",
         ],
         "exclusions": [],
     },
