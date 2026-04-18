@@ -690,11 +690,11 @@ export default function Home() {
                 <ul className="plan-feats">
                   <li><span className="pck">{'\u2713'}</span>Tout le plan Pro</li>
                   <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB (dont IDR)"}</li>
-                  <li><span className="pck">{'\u2713'}</span><strong>{"Ench\u00E8res judiciaires"}</strong>{" \u2014 exclusif Expert"}</li>
+                  <li><span className="pck">{'\u2713'}</span>{"Ench\u00E8res judiciaires \u2014 exclusif Expert"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Watchlist illimit\u00E9e"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison tous les r\u00E9gimes"}</li>
                   <li><span className="pck">{'\u2713'}</span>5 alertes email</li>
-                  <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span> {'\u2014'} assistant IA illimit\u00E9</li>
+                  <li><span className="pck">{'\u2713'}</span><span title={"Memo est votre assistant IA int\u00E9gr\u00E9 pour r\u00E9pondre \u00E0 vos questions immobili\u00E8res"} style={{borderBottom:'1px dashed rgba(255,255,255,0.3)',cursor:'help'}}>Memo</span>{" \u2014 assistant IA illimit\u00E9"}</li>
                   <li><span className="pck">{'\u2713'}</span>Export Excel</li>
                   <li><span className="pck">{'\u2713'}</span>{"Support prioritaire"}</li>
                 </ul>
