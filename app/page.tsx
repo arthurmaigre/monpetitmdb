@@ -689,8 +689,7 @@ export default function Home() {
                 <div className="plan-div" />
                 <ul className="plan-feats">
                   <li><span className="pck">{'\u2713'}</span>Tout le plan Pro</li>
-                  <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB (dont IDR)"}</li>
-                  <li><span className="pck">{'\u2713'}</span>{"Ench\u00E8res judiciaires \u2014 exclusif Expert"}</li>
+                  <li><span className="pck">{'\u2713'}</span>{"Toutes les strat\u00E9gies MDB (dont Immeuble de rapport et Ench\u00E8res)"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Watchlist illimit\u00E9e"}</li>
                   <li><span className="pck">{'\u2713'}</span>{"Comparaison tous les r\u00E9gimes"}</li>
                   <li><span className="pck">{'\u2713'}</span>5 alertes email</li>
