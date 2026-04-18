@@ -278,7 +278,7 @@ export default function Home() {
               <div className="eyebrow">{"Sourcing immobilier \u2014 France enti\u00E8re"}</div>
               <h1>{"Trouvez, analysez, d\u00E9cidez \u2014 comme un "}<em>marchand de biens</em></h1>
               <p className="hero-desc">
-                {"Mon Petit MDB agr\u00E8ge 60+ plateformes, estime les prix via les donn\u00E9es DVF et simule chaque op\u00E9ration : achat-revente, investissement locatif ou les deux. 7 r\u00E9gimes fiscaux, du micro-foncier au marchand de biens."}
+                {"Mon Petit MDB agr\u00E8ge 60+ plateformes d\u2019annonces immobili\u00E8res et 3 plateformes d\u2019ench\u00E8res judiciaires, estime les prix via les donn\u00E9es DVF et simule chaque op\u00E9ration\u00A0: achat-revente, investissement locatif ou les deux. 7 r\u00E9gimes fiscaux, du micro-foncier au marchand de biens."}
               </p>
               <div className="hero-btns">
                 <a href="/biens" className="btn-hero">{"Voir les biens disponibles"}</a>
