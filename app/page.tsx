@@ -44,7 +44,7 @@ export default function Home() {
         .stat-num{font-family:'Fraunces',serif;font-size:28px;font-weight:800;}
         .stat-lbl{font-size:12px;color:var(--muted);}
         /* HERO VISUAL */
-        .hero-visual{position:relative;height:600px;}
+        .hero-visual{position:relative;height:680px;}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
         .mc{background:#fff;border-radius:20px;box-shadow:0 24px 64px rgba(26,18,16,.12);overflow:hidden;position:absolute;}
         .mc-main{width:400px;right:0;top:0;bottom:0;animation:float 6s ease-in-out infinite;}
