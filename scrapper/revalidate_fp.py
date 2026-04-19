@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Revalide les biens avec regex_statut IS NULL ou echec_quota via Claude CLI (haiku).
-15 biens par batch, 3 workers paralleles.
+Revalide les biens Stream Estate avec regex_statut IS NULL ou echec_quota via Claude CLI (haiku).
+5 biens par appel CLI, 5 workers paralleles. Cible uniquement stream_estate_id IS NOT NULL.
 """
 
 import os, sys, subprocess, logging
@@ -19,70 +19,84 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 HAIKU_PROMPTS = {
     "Locataire en place": (
         "Ce bien immobilier est-il vendu avec un locataire en place "
-        "(bail d'habitation en cours, loyer actuel mentionn\u00e9, occup\u00e9 par un locataire) ? "
-        "R\u00e9ponds uniquement OUI ou NON."
+        "(bail d'habitation en cours, loyer actuel mentionné, occupé par un locataire) ? "
+        "Réponds uniquement OUI ou NON."
     ),
     "Travaux lourds": (
-        "Ce bien immobilier n\u00e9cessite-t-il des travaux importants qui d\u00e9cotent significativement le prix "
-        "(r\u00e9novation compl\u00e8te, gros \u0153uvre, inhabitable, tout \u00e0 refaire, v\u00e9tuste, "
-        "remise aux normes lourde, ou r\u00e9novation \u00e9nerg\u00e9tique majeure DPE F ou G) "
-        "\u2014 et non de simples travaux cosm\u00e9tiques, de peinture ou de finition ? "
-        "R\u00e9ponds uniquement OUI ou NON."
+        "Ce bien immobilier nécessite-t-il des travaux importants qui décotent significativement le prix "
+        "(rénovation complète, gros oeuvre, inhabitable, tout à refaire, vétuste, "
+        "remise aux normes lourde, ou rénovation énergétique majeure DPE F ou G) "
+        "— et non de simples travaux cosmétiques, de peinture ou de finition ? "
+        "Réponds uniquement OUI ou NON."
     ),
     "Division": (
         "Ce bien immobilier a-t-il un vrai potentiel de division (en plusieurs logements "
-        "r\u00e9sidentiels ind\u00e9pendants, ou division parcellaire/terrain permettant de construire) ? "
-        "Inclus les maisons avec grand terrain divisible, les immeubles \u00e0 convertir, "
-        "les plateaux \u00e0 am\u00e9nager. Exclus les divisions de bureaux ou locaux commerciaux "
-        "sans vocation r\u00e9sidentielle. R\u00e9ponds uniquement OUI ou NON."
+        "résidentiels indépendants, ou division parcellaire/terrain permettant de construire) ? "
+        "Inclus les maisons avec grand terrain divisible, les immeubles à convertir, "
+        "les plateaux à aménager. Exclus les divisions de bureaux ou locaux commerciaux "
+        "sans vocation résidentielle. Réponds uniquement OUI ou NON."
     ),
     "Immeuble de rapport": (
-        "Ce bien immobilier est-il un immeuble de rapport destin\u00e9 \u00e0 l'investissement locatif "
-        "(immeuble avec plusieurs logements ou lots locatifs, vendu en bloc ou en monopropri\u00e9t\u00e9, "
+        "Ce bien immobilier est-il un immeuble de rapport destiné à l'investissement locatif "
+        "(immeuble avec plusieurs logements ou lots locatifs, vendu en bloc ou en monopropriété, "
         "avec ou sans locataires en place) ? "
-        "Inclus les immeubles avec plusieurs lots ind\u00e9pendants m\u00eame s'ils sont vides. "
-        "Exclus les maisons individuelles r\u00e9sidentielles, les villas et les appartements seuls. "
-        "R\u00e9ponds uniquement OUI ou NON."
+        "Inclus les immeubles avec plusieurs lots indépendants même s'ils sont vides. "
+        "Exclus les maisons individuelles résidentielles, les villas et les appartements seuls. "
+        "Réponds uniquement OUI ou NON."
     ),
 }
 
 QUOTA_KW = ["usage limit", "rate limit", "quota", "overloaded", "too many", "capacity", "error", "unavailable"]
-BATCH_SIZE = 15
-CONCURRENCY = 3
+BATCH_SIZE = 5
+CONCURRENCY = 5
 
 
-def validate_one(bien):
-    strategie = bien["strategie_mdb"]
+def validate_batch(biens):
+    """1 appel CLI Haiku pour le batch entier. Tous les biens ont la meme strategie."""
+    if not biens:
+        return {}
+    strategie = biens[0]["strategie_mdb"]
     prompt_base = HAIKU_PROMPTS.get(strategie, "")
     if not prompt_base:
-        return bien["id"], "valide"
+        return {b["id"]: "valide" for b in biens}
     nl = chr(10)
-    title = (bien.get("title") or "").replace(nl, " ")[:200]
-    desc = (bien.get("description") or "").replace(nl, " ")[:800]
-    text = prompt_base + nl + nl + "Titre : " + title + nl + nl + "Description : " + desc
+    items = []
+    for i, b in enumerate(biens, 1):
+        title = (b.get("title") or "").replace(nl, " ")[:200]
+        desc = (b.get("description") or "").replace(nl, " ")[:800]
+        items.append("Bien " + str(i) + ":" + nl + "Titre : " + title + nl + "Description : " + desc)
+    text = (
+        prompt_base + nl + nl
+        + "Evalue les " + str(len(biens)) + " biens suivants. "
+        + "Pour chaque bien, reponds uniquement OUI ou NON sur une ligne separee (dans l'ordre)."
+        + nl + nl + (nl + nl).join(items)
+    )
     try:
         env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
         result = subprocess.run(
             ["claude", "-p", text, "--model", "haiku", "--output-format", "text", "--max-turns", "1"],
-            capture_output=True, text=True, timeout=60, env=env,
+            capture_output=True, text=True, timeout=120, env=env,
         )
         out = result.stdout.strip().upper()
         err = result.stderr.strip().lower()
         if any(k in err for k in QUOTA_KW) or (not out and result.returncode != 0):
-            log.warning("[haiku] quota/erreur -> echec_quota id=" + str(bien["id"]))
-            return bien["id"], "echec_quota"
-        return bien["id"], "valide" if out.startswith("OUI") else "faux_positif"
+            log.warning("[haiku] quota/erreur batch -> echec_quota x" + str(len(biens)))
+            return {b["id"]: "echec_quota" for b in biens}
+        lines = [l.strip() for l in out.splitlines() if l.strip()]
+        oui_non = [l for l in lines if l.startswith("OUI") or l.startswith("NON")]
+        results = {}
+        for i, b in enumerate(biens):
+            if i < len(oui_non):
+                results[b["id"]] = "valide" if oui_non[i].startswith("OUI") else "faux_positif"
+            else:
+                log.warning("[haiku] reponse manquante bien " + str(b["id"]) + " -> echec_quota")
+                results[b["id"]] = "echec_quota"
+        return results
     except Exception as e:
-        log.error("[haiku] exception id=" + str(bien["id"]) + ": " + str(e))
-        return bien["id"], "echec_quota"
+        log.error("[haiku] exception batch: " + str(e))
+        return {b["id"]: "echec_quota" for b in biens}
 
 
-def validate_batch(biens):
-    results = {}
-    for b in biens:
-        bid, statut = validate_one(b)
-        results[bid] = statut
-    return results
 def fetch_biens(limit=None):
     all_biens = []
     offset = 0
@@ -90,7 +104,9 @@ def fetch_biens(limit=None):
     while True:
         q = (supabase.from_('biens')
              .select('id, strategie_mdb, moteurimmo_data')
+             .not_.is_('stream_estate_id', 'null')
              .or_('regex_statut.is.null,regex_statut.eq.echec_quota')
+             .order('created_at', desc=True)
              .range(offset, offset + page_size - 1))
         resp = q.execute()
         rows = resp.data or []
@@ -133,7 +149,7 @@ def main():
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
 
-    log.info("Chargement des biens (limit=" + str(args.limit or 'tous') + ")...")
+    log.info("Chargement des biens SE (stream_estate_id IS NOT NULL, limit=" + str(args.limit or 'tous') + ")...")
     biens = fetch_biens(limit=args.limit)
     log.info(str(len(biens)) + " biens a revalider")
 
