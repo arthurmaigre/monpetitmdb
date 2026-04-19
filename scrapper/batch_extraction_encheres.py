@@ -238,9 +238,10 @@ def call_claude_cli(prompt: str, system_prompt: str = None, timeout: int = 180) 
     global QUOTA_HIT
     if QUOTA_HIT:
         return None
+    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
     try:
         result = subprocess.run(
-            cmd, input=prompt, capture_output=True, text=True, timeout=timeout,
+            cmd, input=prompt, capture_output=True, text=True, timeout=timeout, env=env,
         )
         if result.returncode != 0:
             err_text = (result.stderr + result.stdout).strip()

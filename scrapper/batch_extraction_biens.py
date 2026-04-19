@@ -142,10 +142,11 @@ def call_claude(prompt: str, timeout: int = 60) -> dict | None:
     global QUOTA_HIT
     if QUOTA_HIT:
         return None
+    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
     try:
         result = subprocess.run(
             ["claude", "-p", prompt, "--model", "sonnet", "--output-format", "json", "--max-turns", "1"],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True, text=True, timeout=timeout, env=env,
         )
         if result.returncode != 0:
             err_text = (result.stderr + result.stdout).strip()
@@ -194,10 +195,11 @@ def call_claude_batch(system_prompt: str, items: list[dict[str, str]], timeout: 
         batch_prompt += f"\n=== ANNONCE {i+1} (id:{item['id']}) ===\n{item['text']}\n"
     batch_prompt += f"\n--- Reponds avec UN SEUL tableau JSON de {len(items)} objets. Pas de texte avant ou apres. ---"
 
+    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
     try:
         result = subprocess.run(
             ["claude", "-p", batch_prompt, "--model", "sonnet", "--output-format", "json", "--max-turns", "1"],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True, text=True, timeout=timeout, env=env,
         )
         if result.returncode != 0:
             err_text = (result.stderr + result.stdout).strip()
@@ -255,10 +257,11 @@ def call_claude_with_photos(prompt: str, photo_paths: list[str], timeout: int = 
         for p in photo_paths:
             full_prompt += f"Regarde la photo {p} avec l'outil Read.\n"
 
+    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
     try:
         result = subprocess.run(
             ["claude", "-p", "--model", "sonnet", "--allowedTools", "Read", "--max-turns", str(2 + len(photo_paths))],
-            input=full_prompt, capture_output=True, text=True, timeout=timeout,
+            input=full_prompt, capture_output=True, text=True, timeout=timeout, env=env,
         )
         if result.returncode != 0:
             err_text = (result.stderr + result.stdout).strip()
