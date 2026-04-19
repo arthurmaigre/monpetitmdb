@@ -8,8 +8,7 @@
 
 ## Crons actifs (VPS)
 
-Toutes les 3h (0h, 8h, 11h, 14h, 17h, 20h) — **Phase 1 uniquement** (scraping seul).
-Phases 2-5 DÉSACTIVÉES en attente vérification manuelle des 409 enchères à enrichir.
+Pipeline complet toutes les nuits à **23h** (`0 23 * * *`) — phases 1 à 4 actives.
 
 ```bash
 # Voir les crons
