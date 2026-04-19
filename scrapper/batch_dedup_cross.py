@@ -240,9 +240,9 @@ def merge_into_master(master: dict, duplicates: list[dict], client, dry_run: boo
         # Update master
         client.table(TABLE).update(update).eq("id", master["id"]).execute()
 
-        # Supprimer les doublons
+        # Marquer les doublons (soft delete) — évite la ré-insertion par le scraper
         for dup_id in dup_ids:
-            client.table(TABLE).delete().eq("id", dup_id).execute()
+            client.table(TABLE).update({"enrichissement_statut": "doublon"}).eq("id", dup_id).execute()
 
         return True
     except Exception as e:
