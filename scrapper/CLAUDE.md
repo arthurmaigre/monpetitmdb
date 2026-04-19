@@ -19,15 +19,24 @@ ssh openclaw@178.104.58.122 "tail -50 /home/openclaw/logs/encheres.log"
 ssh openclaw@178.104.58.122 "cd /home/openclaw/monpetitmdb/scrapper && python scraper_encheres.py"
 ```
 
-## Pipeline enchères (5 phases)
+## Pipeline enchères (4 phases — toutes ACTIVES)
 
 ```
-Phase 1 : Scraping (ACTIF)     → scraper_encheres.py (Licitor + Avoventes + Vench)
-Phase 2 : Extraction Sonnet    → batch_extraction_encheres.py (DÉSACTIVÉ ~$20)
-Phase 3 : Dedup cross-source   → batch_dedup_cross.py (DÉSACTIVÉ)
-Phase 4 : Statuts              → encheres_supabase.py (DÉSACTIVÉ)
-Phase 5 : Normalisation        → encheres_supabase.py (DÉSACTIVÉ)
+Phase 1 : Scraping             → scraper_encheres.py (Licitor + Avoventes + Vench)
+Phase 2 : Extraction Sonnet    → batch_extraction_encheres.py (CLI Claude Max)
+Phase 3 : Dedup cross-source   → batch_dedup_cross.py (soft delete doublons)
+Phase 4 : Statuts              → encheres_supabase.py (adjugé / surenchère)
 ```
+
+**Relancer l'extraction seule (sans scraping) :**
+```bash
+ssh openclaw@178.104.58.122 "cd /home/openclaw/monpetitmdb/scrapper && python3 batch_extraction_encheres.py --no-pdfs"
+```
+
+**Points critiques :**
+- `ANTHROPIC_API_KEY` dans `.env` ne doit PAS être transmise au subprocess CLI Claude → filtré dans `call_claude_cli()` via `env=`
+- Doublons cross-source : soft delete (`enrichissement_statut = 'doublon'`) pour éviter ré-insertion par le scraper
+- Extraction ne retente que `NULL / echec / echec_quota` — jamais `ok` ni `doublon`
 
 ## Sources enchères
 
