@@ -73,7 +73,7 @@ IDR (Immeuble de rapport) = Expert only.
 - Auto-deploy : git push → GitHub → Vercel (pas de `vercel --prod` manuel)
 - Domaine : `www.monpetitmdb.fr`
 - Crons externes : cron-job.org — uniquement alertes (9h) et regex (3h30, 15h30) — header `Authorization: Bearer <CRON_SECRET>`
-- Cron SE polling : crontab VPS (`30 22 * * *`) → `python3 ingest_stream_estate.py` (24h glissantes, Claude CLI)
+- Cron SE polling : crontab VPS (`0 23 * * *`) → `python3 ingest_stream_estate.py` (24h glissantes, Claude CLI)
 - Cron extraction VPS : `0 4 * * *` → `run_extraction_nuit.sh` (Sonnet via Max, `--source stream_estate`)
 - Routes admin : `CRON_SECRET` pour les crons, token user pour appels UI
 
