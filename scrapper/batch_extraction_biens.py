@@ -365,7 +365,7 @@ def process_batch_worker(system_prompt: str, items: list[dict[str, str]], batch_
 # Extraction Locataire en place
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int = 1):
+def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int = 1, source: str | None = None):
     client = get_client()
     if not client:
         log.error("Supabase non connecté")
@@ -458,6 +458,8 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
              .limit(fetch_size))
         if last_id is not None:
             q = q.lt("id", last_id)
+        if source:
+            q = q.eq("source_provider", source)
         page = q.execute().data or []
         if not page:
             break
@@ -513,7 +515,7 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
 # Extraction Immeuble de rapport
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
+def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1, source: str | None = None):
     client = get_client()
     if not client:
         log.error("Supabase non connecté")
@@ -595,6 +597,8 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
              .limit(fetch_size))
         if last_id is not None:
             q = q.lt("id", last_id)
+        if source:
+            q = q.eq("source_provider", source)
         page = q.execute().data or []
         if not page:
             break
@@ -650,7 +654,7 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1):
 # Score Travaux
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_score(limit: int, dry_run: bool):
+def run_score(limit: int, dry_run: bool, source: str | None = None):
     client = get_client()
     if not client:
         log.error("Supabase non connecté")
@@ -676,6 +680,8 @@ def run_score(limit: int, dry_run: bool):
              .limit(fetch_size))
         if last_id is not None:
             q = q.lt("id", last_id)
+        if source:
+            q = q.eq("source_provider", source)
         page = q.execute().data or []
         if not page:
             break
@@ -783,18 +789,19 @@ def main():
     parser.add_argument("--batch-size", type=int, default=None, help="Biens par appel CLI (défaut: 15 locataire, 10 IDR)")
     parser.add_argument("--workers", type=int, default=1, help="Workers parallèles (défaut: 1)")
     parser.add_argument("--dry-run", action="store_true", help="Afficher sans modifier la DB")
+    parser.add_argument("--source", type=str, default=None, help="Filtrer par source_provider (ex: stream_estate)")
     args = parser.parse_args()
 
-    log.info(f"=== Extraction CLI — {args.type} — limit={args.limit} — workers={args.workers} — dry_run={args.dry_run} ===")
+    log.info(f"=== Extraction CLI — {args.type} — limit={args.limit} — workers={args.workers} — source={args.source} — dry_run={args.dry_run} ===")
 
     if args.type == "locataire":
         bs = args.batch_size or 15
-        run_locataire(args.limit, args.dry_run, batch_size=bs, workers=args.workers)
+        run_locataire(args.limit, args.dry_run, batch_size=bs, workers=args.workers, source=args.source)
     elif args.type == "idr":
         bs = args.batch_size or 10
-        run_idr(args.limit, args.dry_run, batch_size=bs, workers=args.workers)
+        run_idr(args.limit, args.dry_run, batch_size=bs, workers=args.workers, source=args.source)
     elif args.type == "score":
-        run_score(args.limit, args.dry_run)
+        run_score(args.limit, args.dry_run, source=args.source)
 
 
 if __name__ == "__main__":
