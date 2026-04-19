@@ -18,7 +18,7 @@ import os, sys, json, logging, argparse, unicodedata, time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import anthropic as anthropic_sdk
+import subprocess
 import requests as http_requests
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
@@ -31,8 +31,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 API_KEY  = os.getenv("STREAM_ESTATE_API_KEY", "646dbf20852d6524745430b553e70802")
 API_BASE = "https://api.notif.immo/documents/properties"
 
-CHUNK_SIZE  = 10
-CONCURRENCY = 8  # 80 Haiku simultanés
+CHUNK_SIZE  = 5
+CONCURRENCY = 2  # 10 appels CLI max simultanés
 
 SE_PROPERTY_TYPE_MAP = {
     0: "Appartement", 1: "Maison", 2: "Immeuble",
@@ -130,33 +130,30 @@ HAIKU_PROMPTS = {
     ),
 }
 
-_ai_client = None
-
-def get_ai_client():
-    global _ai_client
-    if _ai_client is None:
-        _ai_client = anthropic_sdk.Anthropic()
-    return _ai_client
-
-
 def validate_with_haiku(title: str, description: str, strategie_mdb: str) -> bool:
+    """Validation OUI/NON via claude CLI (Claude Code Max, 0 EUR API)."""
     prompt = HAIKU_PROMPTS.get(strategie_mdb)
     if not prompt:
         return True
+    nl = chr(10)
+    text = prompt + nl + nl + "Titre : " + title + nl + nl + "Description : " + description[:800]
     try:
-        msg = get_ai_client().messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=5,
-            messages=[{
-                "role": "user",
-                "content": f"{prompt}\n\nTitre : {title}\n\nDescription : {description}",
-            }],
+        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+        result = subprocess.run(
+            ["claude", "-p", text, "--model", "haiku", "--output-format", "text", "--max-turns", "1"],
+            capture_output=True, text=True, timeout=60, env=env,
         )
-        return msg.content[0].text.strip().upper().startswith("OUI")
+        out = result.stdout.strip().upper()
+        err = result.stderr.strip().lower()
+        # Si quota épuisé ou erreur CLI → fail open (ne pas rejeter à tort)
+        quota_keywords = ["usage limit", "rate limit", "quota", "overloaded", "too many", "capacity", "error", "unavailable"]
+        if any(k in err for k in quota_keywords) or (not out and result.returncode != 0):
+            log.warning(f"[Haiku CLI] quota/erreur détecté, fail open")
+            return True
+        return out.startswith("OUI")
     except Exception as e:
-        log.error(f"[Haiku] erreur: {e}")
+        log.error(f"[Haiku CLI] erreur: {e}")
         return True  # fail open
-
 
 def detect_keywords(title: str, description: str, strat_key: str) -> list:
     """Détecte les keywords présents dans le texte (sans accents, lowercase)."""
