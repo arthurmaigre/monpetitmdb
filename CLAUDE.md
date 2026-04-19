@@ -10,7 +10,7 @@ Stratégies : **Locataire en place** / **Travaux lourds** / **Division** / **Imm
 - **DB** : Supabase Pro (West EU) — auth + tables + storage bucket `mdb-files`
 - **Auth** : Supabase Auth email/password + OAuth Google/Facebook — `@supabase/ssr`, middleware SSR
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (live)
-- **Sourcing** : Stream Estate polling quotidien via `scrapper/ingest_stream_estate.py` (cron VPS 22h30, Claude CLI) — webhooks PAUSÉ crédits épuisés 2026-04-12
+- **Sourcing** : Stream Estate polling quotidien via `scrapper/ingest_stream_estate.py` (cron VPS 22h30, Claude CLI) — webhooks PAUSÉ crédits épuisés 2026-04-12. Revalidation Haiku backfill avril TERMINÉE (9 475 biens, ~15% FP — analyse FP à faire)
 - **Enchères** : Python scrapers → Licitor / Avoventes (Playwright) / Vench — VPS Hetzner 178.104.58.122
 - **AI** : Anthropic Claude (Haiku regex ingestion SE, Sonnet extraction locataire/IDR/enchères, Opus édito)
 - **Email** : Brevo API — alertes nouveaux biens
@@ -73,7 +73,7 @@ IDR (Immeuble de rapport) = Expert only.
 - Auto-deploy : git push → GitHub → Vercel (pas de `vercel --prod` manuel)
 - Domaine : `www.monpetitmdb.fr`
 - Crons externes : cron-job.org avec header `Authorization: Bearer <CRON_SECRET>` (alertes, regex, etc.)
-- Cron SE polling : crontab VPS (`30 22 * * *`) → `python3 ingest_stream_estate.py` (24h glissantes, Claude CLI)
+- Cron SE polling : crontab VPS (`0 23 * * *`) → `python3 ingest_stream_estate.py` (24h glissantes, Claude CLI)
 - Routes admin : `CRON_SECRET` pour les crons, token user pour appels UI
 
 ## OpenClaw (PAUSÉ)
