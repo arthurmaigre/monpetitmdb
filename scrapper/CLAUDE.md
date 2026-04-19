@@ -8,7 +8,7 @@
 
 ## Crons actifs (VPS)
 
-Pipeline complet toutes les nuits à **23h** (`0 23 * * *`) — phases 1 à 4 actives.
+Pipeline complet toutes les nuits à **23h30** (`30 23 * * *`) — phases 1 à 4 actives.
 
 ```bash
 # Voir les crons
