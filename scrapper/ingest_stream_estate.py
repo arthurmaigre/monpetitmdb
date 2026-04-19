@@ -29,7 +29,7 @@ log = logging.getLogger("ingest_se")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 API_KEY  = os.getenv("STREAM_ESTATE_API_KEY", "646dbf20852d6524745430b553e70802")
-API_BASE = "https://api.notif.immo/documents/properties"
+API_BASE = "https://api.stream.estate/documents/properties"
 
 CHUNK_SIZE  = 5
 CONCURRENCY = 2  # 10 appels CLI max simultanés
@@ -582,6 +582,11 @@ def main():
     parser.add_argument("--limit",     type=int, default=None,
                         help="Max biens insérés par stratégie (ex: 50 pour test)")
     args = parser.parse_args()
+
+    if not args.from_date:
+        from datetime import datetime, timedelta, timezone
+        args.from_date = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime('%Y-%m-%dT%H:%M:%SZ')
+        log.info(f'--from-date non fourni, défaut: dernières 24h ({args.from_date})')
 
     strategies = [args.strategie] if args.strategie else list(STRATEGIES.keys())
     run_ingestion(

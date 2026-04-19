@@ -28,7 +28,7 @@ echo "=================================================" >> "$LOG_FILE"
 echo "$(date) — Démarrage extraction Locataire en place" >> "$LOG_FILE"
 echo "=================================================" >> "$LOG_FILE"
 
-$PYTHON batch_extraction_biens.py locataire --limit 20000 --workers 3 --batch-size 5 2>&1 | tee -a "$LOG_FILE"
+$PYTHON batch_extraction_biens.py locataire --limit 20000 --workers 3 --batch-size 15 2>&1 | tee -a "$LOG_FILE"
 
 echo "$(date) — Terminé" >> "$LOG_FILE"
 
