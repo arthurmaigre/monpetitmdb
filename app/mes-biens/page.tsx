@@ -46,6 +46,7 @@ export default function MesBiensPage() {
   const [error, setError] = useState('')
   const [plan, setPlan] = useState<string>('free')
   const [suiviMap, setSuiviMap] = useState<Record<string, string>>({})
+  const [commentaireMap, setCommentaireMap] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [showAddModal, setShowAddModal] = useState(false)
@@ -94,8 +95,13 @@ export default function MesBiensPage() {
         const items = wData.watchlist || []
         setWatchlistIds(new Set(items.map((w: any) => String(w.bien_id))))
         const suiviInit: Record<string, string> = {}
-        items.forEach((w: any) => { suiviInit[String(w.bien_id)] = w.suivi || 'a_analyser' })
+        const commentaireInit: Record<string, string> = {}
+        items.forEach((w: any) => {
+          suiviInit[String(w.bien_id)] = w.suivi || 'a_analyser'
+          commentaireInit[String(w.bien_id)] = w.commentaire || ''
+        })
         setSuiviMap(suiviInit)
+        setCommentaireMap(commentaireInit)
 
         if (items.length === 0) { setLoading(false); return }
 
@@ -112,8 +118,23 @@ export default function MesBiensPage() {
         const biensData = biensRes && biensRes.ok ? await biensRes.json() : { biens: [] }
         const encheresData = encheresRes && encheresRes.ok ? await encheresRes.json() : { encheres: [] }
 
-        const encheresAvecStrategie = (encheresData.encheres || []).map((e: any) => ({ ...e, strategie_mdb: 'Enchères' }))
-        const allBiens = [...(biensData.biens || []), ...encheresAvecStrategie]
+        // Fallback sur snapshot pour les annonces disparues
+        const liveBiensMap = new Map((biensData.biens || []).map((b: any) => [String(b.id), b]))
+        const liveEncheresMap = new Map((encheresData.encheres || []).map((e: any) => [String(e.id), e]))
+        const allBiensItems = items
+          .filter((w: any) => w.source_table !== 'encheres')
+          .map((w: any) => liveBiensMap.get(String(w.bien_id)) || (w.snapshot_data ? { ...w.snapshot_data, _fromSnapshot: true } : null))
+          .filter(Boolean)
+        const allEncheresItems = items
+          .filter((w: any) => w.source_table === 'encheres')
+          .map((w: any) => {
+            const live = liveEncheresMap.get(String(w.bien_id))
+            if (live) return { ...(live as any), strategie_mdb: 'Ench\u00E8res' }
+            if (w.snapshot_data) return { ...w.snapshot_data, strategie_mdb: 'Ench\u00E8res', _fromSnapshot: true }
+            return null
+          })
+          .filter(Boolean)
+        const allBiens = [...allBiensItems, ...allEncheresItems]
         setBiens(allBiens)
 
         const strategies = [...new Set(allBiens.map((x: any) => x.strategie_mdb).filter(Boolean))]
@@ -186,6 +207,17 @@ export default function MesBiensPage() {
 
   function handleRemove(bienId: string) {
     handleArchive(bienId)
+  }
+
+  async function handleCommentaireBlur(bien: any, value: string) {
+    if (!userToken) return
+    setCommentaireMap(prev => ({ ...prev, [String(bien.id)]: value }))
+    const sourceTable = bien.strategie_mdb === 'Ench\u00E8res' ? 'encheres' : 'biens'
+    await fetch('/api/watchlist', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ bien_id: bien.id, source_table: sourceTable, commentaire: value }),
+    })
   }
 
   async function updateBien(bien: any, champ: string, valeur: any) {
@@ -652,6 +684,10 @@ export default function MesBiensPage() {
         .edit-hint { font-size: 12px; color: #7a6a60; margin-bottom: 12px; font-style: italic; }
         .suivi-select { font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid #e8e2d8; cursor: pointer; outline: none; min-width: 155px; }
         .suivi-select:focus { border-color: #c0392b; box-shadow: 0 0 0 2px rgba(192,57,43,0.1); }
+        .commentaire-area { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #7a6a60; background: transparent; resize: vertical; outline: none; line-height: 1.4; }
+        .commentaire-area:focus { border-color: #c0392b; background: #faf8f5; }
+        .commentaire-area::placeholder { color: #c0b0a0; font-style: italic; }
+        .expired-badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; color: #95a5a6; background: #f0f0f0; border: 1px solid #d0ccc8; box-shadow: 0 1px 3px rgba(0,0,0,0.06); pointer-events: none; }
         @media (max-width: 768px) {
           .mes-biens-wrap { padding: 24px 16px; }
           .mes-biens-title { font-size: 24px; }
@@ -788,26 +824,40 @@ export default function MesBiensPage() {
                       </button>
                     </div>
                   ) : (
-                  <div key={bien.id} style={{ position: 'relative' }}>
-                    <span style={{
-                      position: 'absolute', top: '10px', left: '10px', zIndex: 10,
-                      display: 'inline-block', padding: '3px 8px', borderRadius: '20px',
-                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.01em',
-                      color: opt.color, background: opt.bg,
-                      border: `1px solid ${opt.color}33`,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                      pointerEvents: 'none',
-                    }}>{opt.label}</span>
-                    <BienCard
-                      bien={bien}
-                      inWatchlist={true}
-                      userToken={userToken}
-                      onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
-                      extraTitleRight={
-                        <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg, flexShrink: 0 }}>
-                          {SUIVI_OPTIONS.map(o => o.value !== 'archive' && <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      }
+                  <div key={bien.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{
+                        position: 'absolute', top: '10px', left: '10px', zIndex: 10,
+                        display: 'inline-block', padding: '3px 8px', borderRadius: '20px',
+                        fontSize: '11px', fontWeight: 700, letterSpacing: '0.01em',
+                        color: opt.color, background: opt.bg,
+                        border: `1px solid ${opt.color}33`,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        pointerEvents: 'none',
+                      }}>{opt.label}</span>
+                      {bien._fromSnapshot && (
+                        <span className="expired-badge" style={{ position: 'absolute', top: '36px', left: '10px', zIndex: 10 }}>
+                          Annonce expir{'\u00E9'}e
+                        </span>
+                      )}
+                      <BienCard
+                        bien={bien}
+                        inWatchlist={true}
+                        userToken={userToken}
+                        onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
+                        extraTitleRight={
+                          <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg, flexShrink: 0 }}>
+                            {SUIVI_OPTIONS.map(o => o.value !== 'archive' && <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        }
+                      />
+                    </div>
+                    <textarea
+                      className="commentaire-area"
+                      defaultValue={commentaireMap[String(bien.id)] || ''}
+                      onBlur={e => handleCommentaireBlur(bien, e.target.value)}
+                      placeholder="Ajouter un commentaire..."
+                      rows={2}
                     />
                   </div>
                   )
@@ -867,6 +917,7 @@ export default function MesBiensPage() {
                           )}
                         </>
                       )}
+                      <th>Commentaire<span></span></th>
                       <th>Actions<span></span></th>
                     </tr>
                   </thead>
@@ -893,6 +944,7 @@ export default function MesBiensPage() {
                           <span className="td-bien-title">
                             {bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}
                           </span>
+                          {bien._fromSnapshot && <span className="expired-badge" style={{ marginTop: '2px' }}>Annonce expir{'\u00E9'}e</span>}
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
@@ -1015,6 +1067,16 @@ export default function MesBiensPage() {
                         })()}
                         </>
                         )}
+                        <td style={{ minWidth: '180px', maxWidth: '260px' }}>
+                          <textarea
+                            className="commentaire-area"
+                            defaultValue={commentaireMap[String(bien.id)] || ''}
+                            onBlur={e => handleCommentaireBlur(bien, e.target.value)}
+                            placeholder="Ajouter un commentaire..."
+                            rows={2}
+                            style={{ marginTop: 0 }}
+                          />
+                        </td>
                         <td style={{ whiteSpace: 'nowrap' }}>
                           <a href={activeTab === 'Enchères' ? `/biens/${bien.id}?source=encheres` : `/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
                           {activeTab !== 'Enchères' && <>{' '}<a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{"R\u00E9cup\u00E9rer les donn\u00E9es"}</a></>}
