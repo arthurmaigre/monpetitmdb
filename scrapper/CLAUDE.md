@@ -37,6 +37,8 @@ ssh openclaw@178.104.58.122 "cd /home/openclaw/monpetitmdb/scrapper && python3 b
 - `ANTHROPIC_API_KEY` dans `.env` ne doit PAS être transmise au subprocess CLI Claude → filtré dans `call_claude_cli()` via `env=`
 - Doublons cross-source : soft delete (`enrichissement_statut = 'doublon'`) pour éviter ré-insertion par le scraper
 - Extraction ne retente que `NULL / echec / echec_quota` — jamais `ok` ni `doublon`
+- `departement` est dérivé depuis `code_postal[:2]` dans `_normalize_output` (pas depuis ce que Sonnet extrait) — `code_postal` doit être normalisé en premier
+- `tribunal` est stocké au format `"TJ de Ville"` (ex: `"TJ de Paris"`) — le dictionnaire TypeScript `TRIBUNAL_DEPARTEMENT` dans `lib/utils-encheres.ts` utilise ce format exact
 
 ## Batch sizes par type d'extraction
 
