@@ -38,6 +38,41 @@ ssh openclaw@178.104.58.122 "cd /home/openclaw/monpetitmdb/scrapper && python3 b
 - Doublons cross-source : soft delete (`enrichissement_statut = 'doublon'`) pour éviter ré-insertion par le scraper
 - Extraction ne retente que `NULL / echec / echec_quota` — jamais `ok` ni `doublon`
 
+## Batch sizes par type d'extraction
+
+| Type | batch-size | workers | Raison |
+|---|---|---|---|
+| locataire | 15 | 2 | Prompt simple, OK |
+| idr | **5** | **5** | Prompt complexe (lots/surfaces/loyers) → timeout 180s avec batch≥10 ; batch-size 5 = ~70-90s OK |
+| score | défaut | 1 | — |
+
+**Ne pas remonter l'IDR au-dessus de 3** — testé le 2026-04-20, batch-size 10 = 100% timeout.
+
+## Auth CLI Max — problème connu + fix à implémenter
+
+Le token OAuth Claude CLI (`~/.claude/.credentials.json`) expire ~24h après la dernière authentification interactive. En mode non-interactif (`claude -p ...` via cron), le CLI **ne rafraîchit pas automatiquement** le token → erreur `Invalid API key` sur tous les appels.
+
+**Symptômes observés :**
+- `locataire_20260419_0400.log` : 1 000 biens chargés, 1 000 erreurs `echec parsing (quota)`, 0 extraits, 88s — le script continuait malgré l'échec auth car `"invalid api key"` n'est pas dans `QUOTA_KEYWORDS`
+
+**Fix à implémenter (3 changements) :**
+
+1. **Keepalive crons** dans le crontab VPS — forcent un refresh du token avant les batches :
+   ```bash
+   25 23 * * * claude -p "ok" --max-turns 1 --output-format json > /dev/null 2>&1 || echo "$(date) AUTH FAIL pre-encheres" >> /home/openclaw/logs/auth-keepalive.log
+   50  3 * * * claude -p "ok" --max-turns 1 --output-format json > /dev/null 2>&1 || echo "$(date) AUTH FAIL pre-extraction" >> /home/openclaw/logs/auth-keepalive.log
+   ```
+
+2. **Pre-flight bloquant** dans `run_extraction_nuit.sh` (après le fix `python3`) :
+   ```bash
+   if ! claude -p "ok" --max-turns 1 --output-format json > /dev/null 2>&1; then
+       echo "ERREUR AUTH: Claude CLI non authentifié — batch annulé" | tee -a "$LOG"
+       exit 1
+   fi
+   ```
+
+3. **Détection auth failure** dans `batch_extraction_biens.py` — ajouter `"invalid api key"` dans une liste séparée `AUTH_FAIL_KEYWORDS` qui stop immédiatement sans marquer les biens en `echec_quota`.
+
 ## Sources enchères
 
 | Source | Biens | Tech | Notes |
