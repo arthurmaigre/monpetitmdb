@@ -136,7 +136,7 @@ def validate_with_haiku(title: str, description: str, strategie_mdb: str) -> boo
     if not prompt:
         return True
     nl = chr(10)
-    text = prompt + nl + nl + "Titre : " + title + nl + nl + "Description : " + description[:800]
+    text = prompt + nl + nl + "Titre : " + title + nl + nl + "Description : " + description
     try:
         env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
         result = subprocess.run(
