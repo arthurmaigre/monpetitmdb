@@ -48,13 +48,15 @@ ssh openclaw@178.104.58.122 "cd /home/openclaw/monpetitmdb/scrapper && python3 b
 
 ## Batch sizes par type d'extraction
 
-| Type | batch-size | workers | Raison |
-|---|---|---|---|
-| locataire | 15 | 2 | Prompt simple, OK |
-| idr | **5** | **5** | Prompt complexe (lots/surfaces/loyers) → timeout 180s avec batch≥10 ; batch-size 5 = ~70-90s OK |
-| score | défaut | 1 | — |
+| Type | batch-size | workers | PAGE_SIZE | Raison |
+|---|---|---|---|---|
+| locataire | 15 | 2 | 1000 | Prompt simple, OK |
+| idr | **5** | **5** | **200** | Prompt complexe → timeout CLI si batch≥10 ; PAGE_SIZE 1000 = timeout Supabase |
+| score | défaut | 1 | **200** | PAGE_SIZE 1000 = timeout Supabase sur grosses tables |
 
-**Ne pas remonter l'IDR au-dessus de 3** — testé le 2026-04-20, batch-size 10 = 100% timeout.
+**Ne pas remonter l'IDR au-dessus de batch-size 5** — testé le 2026-04-20, batch-size 10 = 100% timeout CLI.
+
+**PAGE_SIZE IDR/score = 200** — cursor `last_id` initialisé à `9_999_999` pour forcer l'usage de l'index id dès la première page. PAGE_SIZE 1000 = timeout Supabase (`57014`) sur la table `biens` volumineuse.
 
 ## Auth CLI Max — problème connu + fix à implémenter
 
