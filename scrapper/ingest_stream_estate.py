@@ -6,7 +6,7 @@ Copie conforme du cron Next.js /api/admin/stream-estate-polling :
 - Même validation Haiku (prompts identiques à lib/stream-estate-ingest.ts)
 - Même déduplication 4 niveaux (URL, SE ID, source_urls, géo fallback)
 - Même pipeline page par page (Haiku + insert immédiat par page)
-- CHUNK_SIZE=10, CONCURRENCY=8 (80 Haiku simultanés)
+- CHUNK_SIZE=5, CONCURRENCY=2 (10 Haiku simultanés)
 
 Usage :
   python3 ingest_stream_estate.py --dry-run
@@ -552,7 +552,6 @@ def run_ingestion(
         log.info(f"  {strategie_mdb} : {strat_inserted} {label} dont {strat_faux_pos} FP, "
                  f"{strat_skipped} skippés (url={skip_url} seid={skip_seid}) "
                  f"| {strat_fetched} crédits SE")
-        total_inserted += strat_inserted if dry_run else 0
         total_faux_pos += strat_faux_pos
         total_skipped  += strat_skipped
         total_fetched  += strat_fetched

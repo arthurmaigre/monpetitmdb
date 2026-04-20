@@ -8,15 +8,21 @@
 
 ## Crons actifs (VPS)
 
-Pipeline complet toutes les nuits à **23h30** (`30 23 * * *`) — phases 1 à 4 actives.
+| Heure | Script | Log |
+|---|---|---|
+| `25 23` | keepalive auth CLI Max (pre-enchères) | `/home/openclaw/logs/auth-keepalive.log` |
+| `30 23` | `cron_encheres.sh` — pipeline 4 phases | `/home/openclaw/logs/encheres/encheres_cron.log` |
+| `0 23` | `ingest_stream_estate.py` — SE polling 24h | `/home/openclaw/logs/se-polling.log` |
+| `50 3` | keepalive auth CLI Max (pre-extraction) | `/home/openclaw/logs/auth-keepalive.log` |
+| `0 4` | `run_extraction_nuit.sh` — locataire+IDR+score | `/home/openclaw/logs/extractions/nuit_YYYY-MM-DD.log` |
 
 ```bash
 # Voir les crons
-ssh openclaw@178.104.58.122 "crontab -l"
-# Voir les logs
-ssh openclaw@178.104.58.122 "tail -50 /home/openclaw/logs/encheres.log"
+crontab -l
+# Voir les logs enchères
+tail -50 /home/openclaw/logs/encheres/encheres_cron.log
 # Lancer manuellement phase 1
-ssh openclaw@178.104.58.122 "cd /home/openclaw/monpetitmdb/scrapper && python scraper_encheres.py"
+cd /home/openclaw/monpetitmdb/scrapper && python scraper_encheres.py
 ```
 
 ## Pipeline enchères (4 phases — toutes ACTIVES)
@@ -104,7 +110,7 @@ scraper_encheres.py           → CLI unifié (lance les 3 sources)
 batch_extraction_encheres.py  → Extraction Sonnet v3 + vision PDF
 batch_dedup_cross.py         → Fusion cross-source post-Sonnet
 encheres_supabase.py          → Upsert intra-source, statuts, normalisation
-cron_encheres.sh              → Script cron VPS 5 phases
+cron_encheres.sh              → Script cron VPS 4 phases
 encheres_learning.json        → Exemples auto-logués pour améliorer Sonnet
 ```
 

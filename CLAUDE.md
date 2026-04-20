@@ -10,7 +10,7 @@ Stratégies : **Locataire en place** / **Travaux lourds** / **Division** / **Imm
 - **DB** : Supabase Pro (West EU) — auth + tables + storage bucket `mdb-files`
 - **Auth** : Supabase Auth email/password + OAuth Google/Facebook — `@supabase/ssr`, middleware SSR
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (live)
-- **Sourcing** : Stream Estate polling quotidien via `scrapper/ingest_stream_estate.py` (cron VPS 22h30, Claude CLI) — webhooks PAUSÉ crédits épuisés 2026-04-12. Revalidation Haiku backfill avril TERMINÉE (9 475 biens, ~15% FP — analyse FP à faire)
+- **Sourcing** : Stream Estate polling quotidien via `scrapper/ingest_stream_estate.py` (cron VPS 23h00, Claude CLI) — webhooks PAUSÉ crédits épuisés 2026-04-12. Revalidation Haiku backfill avril TERMINÉE (9 475 biens, ~15% FP — analyse FP à faire)
 - **Enchères** : Python scrapers → Licitor / Avoventes (Playwright) / Vench — VPS Hetzner 178.104.58.122
 - **AI** : Anthropic Claude (Haiku regex ingestion SE, Sonnet extraction locataire/IDR/enchères, Opus édito)
 - **Email** : Brevo API — alertes nouveaux biens
