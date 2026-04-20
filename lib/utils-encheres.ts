@@ -171,9 +171,9 @@ const TRIBUNAL_DEPARTEMENT: Record<string, string> = {
   'TJ de Gap': '05',
   'TJ de Carpentras': '84',
 
-  // Corse
-  'TJ de Bastia': '2b',
-  'TJ de Ajaccio': '2a',
+  // Corse — CP commencent tous par "20" (2A et 2B confondus par code_postal[:2])
+  'TJ de Bastia': '20',
+  'TJ de Ajaccio': '20',
 
   // DOM
   'TJ de Basse Terre': '97',
