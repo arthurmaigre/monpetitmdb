@@ -10,8 +10,8 @@
 
 | Heure | Script | Log |
 |---|---|---|
-| `25 23` | keepalive auth CLI Max (pre-enchères) | `/home/openclaw/logs/auth-keepalive.log` |
-| `30 23` | `cron_encheres.sh` — pipeline 4 phases | `/home/openclaw/logs/encheres/encheres_cron.log` |
+| `1 0` | keepalive auth CLI Max (pre-enchères) | `/home/openclaw/logs/auth-keepalive.log` |
+| `5 0` | `cron_encheres.sh` — pipeline 4 phases | `/home/openclaw/logs/encheres/encheres_cron.log` |
 | `0 23` | `ingest_stream_estate.py` — SE polling 24h | `/home/openclaw/logs/se-polling.log` |
 | `50 3` | keepalive auth CLI Max (pre-extraction) | `/home/openclaw/logs/auth-keepalive.log` |
 | `0 4` | `run_extraction_nuit.sh` — locataire+IDR+score | `/home/openclaw/logs/extractions/nuit_YYYY-MM-DD.log` |
