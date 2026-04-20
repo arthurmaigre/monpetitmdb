@@ -68,7 +68,6 @@ Retourne UNIQUEMENT le JSON, sans commentaire ni explication.
   "adresse_complete": null,
   "code_postal": null,
   "ville": null,
-  "departement": null,
   "avocat_nom": null,
   "avocat_cabinet": null,
   "avocat_tel": null,
@@ -96,8 +95,6 @@ VILLE :
 - Ne PAS inclure le code postal, le département, ni "Cedex"
 
 CODE_POSTAL : exactement 5 chiffres. Ne PAS confondre avec le CP de l'avocat ou du tribunal.
-
-DEPARTEMENT : nom du département (ex: "Indre-et-Loire", "Loire-Atlantique"), PAS le numéro.
 
 TYPE_BIEN :
 - "Appartement" : tout logement en copropriété (studio, T1-T5, duplex)

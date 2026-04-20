@@ -24,7 +24,7 @@
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-LOG_DIR="/var/log/encheres"
+LOG_DIR="/home/openclaw/logs/encheres"
 LOG_FILE="$LOG_DIR/encheres_$(date +%Y%m%d_%H%M).log"
 PYTHON="${PYTHON:-python3}"
 LOCK_FILE="/tmp/cron_encheres.lock"
@@ -33,7 +33,7 @@ LOCK_FILE="/tmp/cron_encheres.lock"
 if [ -f "$LOCK_FILE" ]; then
     PID=$(cat "$LOCK_FILE")
     if kill -0 "$PID" 2>/dev/null; then
-        echo "$(date) — Run déjà en cours (PID $PID), skip" >> /var/log/encheres_cron.log
+        echo "$(date) — Run déjà en cours (PID $PID), skip" >> /home/openclaw/logs/encheres/encheres_cron.log
         exit 0
     fi
     rm -f "$LOCK_FILE"
