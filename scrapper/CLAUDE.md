@@ -82,7 +82,17 @@ Le token OAuth Claude CLI (`~/.claude/.credentials.json`) expire ~24h après la 
 | Vench | ~440 | requests + login | Abo actif : vestamdb@gmail.com / Fcn@vench44 |
 
 **Dédup intra-source** : `(source, id_source)` unique — 0 doublon confirmé.
-**Dédup cross-source** : ville + date_audience + prix ±5%.
+**Dédup cross-source** : ville normalisée (arrondissements strippés) + date_audience + prix ±5%.
+
+**Conventions id_source licitor :**
+- Page simple : `{id}` (ex: `107826`)
+- Page multi-lots (N lots sur une même page) : `{id}_lot{n}` (ex: `107826_lot2`)
+- Les anciens records sans suffixe coexistent — suppression manuelle prévue
+
+**Cas couverts par la dédup :**
+- `enrichissement_statut` = `ok` ET `no_data` (les deux sont chargés)
+- Licitor "Vente sur saisie immobilière" → date extraite par pattern jour-de-semaine (pas conditionnel sur le header)
+- Arrondissements : "Marseille 7ème" = "Marseille", "Paris 17ème" = "Paris"
 
 ## Fichiers clés
 
