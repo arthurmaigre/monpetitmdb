@@ -143,7 +143,42 @@ def extract_raw_text(soup: BeautifulSoup) -> str:
     return "\n".join(cleaned)
 
 
-def scrape_detail(url: str, session: requests.Session) -> dict | None:
+def split_into_lots(item: dict, text: str) -> list[dict]:
+    """Détecte les pages multi-lots licitor et crée un item par lot.
+
+    Une page licitor peut regrouper N lots d'une même vente judiciaire avec
+    N mises à prix distinctes. Vench crée une page par lot.
+    Cette fonction permet la déduplication croisée lot par lot.
+
+    Convention id_source : '{base_id}_lot{n}' (ex: '107826_lot2').
+    Les anciens records sans suffixe (créés avant ce fix) sont conservés.
+    """
+    base_id = item.get("id_source", "")
+    lot_matches = list(re.finditer(r"\bLot\s+n[°o]?\s*(\d+)\b", text, re.I))
+    if len(lot_matches) < 2:
+        return [item]  # Page simple, comportement inchangé
+
+    items = []
+    for i, m in enumerate(lot_matches):
+        lot_num = int(m.group(1))
+        start = m.start()
+        end = lot_matches[i + 1].start() if i + 1 < len(lot_matches) else len(text)
+        segment = text[start:end]
+
+        pm = re.search(r"[Mm]ise\s+[àa]\s+prix\s*:?\s*([\d\s.,]+)\s*€", segment)
+        lot_prix = parse_prix(pm.group(1)) if pm else None
+
+        lot_item = dict(item)
+        lot_item["id_source"] = f"{base_id}_lot{lot_num}"
+        if lot_prix is not None:
+            lot_item["mise_a_prix"] = lot_prix
+        items.append(lot_item)
+
+    log.info(f"Multi-lots détecté : {base_id} → {len(items)} lots")
+    return items
+
+
+def scrape_detail(url: str, session: requests.Session) -> list[dict]:
     """Scrape une page détail Licitor — extraction minimaliste.
 
     Données fiables (regex) : mise_a_prix, date_audience, date_visite, GPS
@@ -179,13 +214,14 @@ def scrape_detail(url: str, session: requests.Session) -> dict | None:
     if m:
         item["mise_a_prix"] = parse_prix(m.group(1))
 
-    # ── Date audience (fiable : format structurel) ───────────────────────
+    # ── Date audience (fiable : pattern jour-de-semaine) ─────────────────
+    # Robuste à "Vente aux enchères publiques" ET "Vente sur saisie immobilière"
     lines = [l.strip() for l in soup.get_text("\n", strip=True).split("\n") if l.strip()]
-    for i, line in enumerate(lines):
-        ll = line.lower()
-        if ll.startswith("vente aux enchères publiques") or ll.startswith("vente aux encheres publiques"):
-            if i + 1 < len(lines):
-                item["date_audience"] = parse_date_fr(lines[i + 1], year=2026)
+    _JOURS = r"(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)"
+    for line in lines:
+        m = re.search(rf"{_JOURS}\s+\d{{1,2}}\s+\w+\s+\d{{4}}", line, re.I)
+        if m:
+            item["date_audience"] = parse_date_fr(m.group(), year=2026)
             break
 
     # ── Date visite (fiable) ─────────────────────────────────────────────
@@ -240,7 +276,7 @@ def scrape_detail(url: str, session: requests.Session) -> dict | None:
         if "licitor" not in email.lower():
             item["avocat_email"] = email
 
-    return item
+    return split_into_lots(item, text)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -257,10 +293,11 @@ def run(dry_run: bool = False, limit: int = None) -> dict:
     log.info(f"Phase 2 : Scraping {len(urls)} pages détail")
     items = []
     for i, url in enumerate(urls, 1):
-        item = scrape_detail(url, session)
-        if item:
-            items.append(item)
-            log.info(f"[{i}/{len(urls)}] {item.get('mise_a_prix', '?')}€ — {url[-40:]}")
+        lot_items = scrape_detail(url, session)
+        if lot_items:
+            items.extend(lot_items)
+            prix_str = "/".join(str(it.get("mise_a_prix", "?")) for it in lot_items)
+            log.info(f"[{i}/{len(urls)}] {prix_str}€ ({len(lot_items)} lot(s)) — {url[-40:]}")
         else:
             log.warning(f"[{i}/{len(urls)}] Échec: {url}")
         if i < len(urls):

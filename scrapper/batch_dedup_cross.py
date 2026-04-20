@@ -35,12 +35,16 @@ def _strip_accents(s: str) -> str:
 def normalize_ville(name: str) -> str:
     """Normalise le nom de ville pour matching.
     "Saint-Jean-de-Védas" → "saint jean de vedas"
+    "Marseille 7ème" → "marseille" (arrondissements strippés)
+    "Paris 17ème" → "paris"
     """
     if not name:
         return ""
     s = _strip_accents(name.lower().strip())
     s = s.replace("-", " ")
     s = re.sub(r"\s+", " ", s).strip()
+    # Supprimer suffixe arrondissement : "marseille 7eme" → "marseille"
+    s = re.sub(r"\s+\d+\s*(?:ieme|ieme|iere|ieme|ere|eme|ier|er|e)\s*$", "", s).strip()
     return s
 
 
@@ -73,7 +77,7 @@ def load_enriched_encheres() -> list[dict]:
             "photo_url, latitude, longitude, "
             "nb_pieces, nb_lots, nb_chambres, occupation, loyer, "
             "enrichissement_statut, enrichissement_data, created_at"
-        ).eq("enrichissement_statut", "ok") \
+        ).in_("enrichissement_statut", ["ok", "no_data"]) \
          .range(offset, offset + 999).execute()
         rows = r.data or []
         if not rows:
