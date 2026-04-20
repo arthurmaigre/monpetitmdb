@@ -525,8 +525,8 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1, s
     lots_found = 0
     errors = 0
     t_start = time.time()
-    last_id = None
-    PAGE_SIZE = 1000
+    last_id = 9_999_999  # cursor toujours actif dès la 1ère page → index utilisé
+    PAGE_SIZE = 200       # réduit pour éviter timeout Supabase sur grosses tables
     log.info(f"IDR — limit={limit}, batch_size={batch_size}, workers={workers}")
 
     def process_one_batch(chunk, items):
@@ -663,8 +663,8 @@ def run_score(limit: int, dry_run: bool, source: str | None = None):
     processed = 0
     scored = 0
     errors = 0
-    last_id = None
-    PAGE_SIZE = 1000
+    last_id = 9_999_999  # cursor toujours actif dès la 1ère page → index utilisé
+    PAGE_SIZE = 200       # réduit pour éviter timeout Supabase sur grosses tables
     log.info(f"Score travaux — limit={limit}")
 
     # Boucle streaming : charger une page → traiter → page suivante (desc = plus récents en premier)
