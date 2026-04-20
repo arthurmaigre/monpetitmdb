@@ -394,17 +394,18 @@ def _normalize_output(data: dict) -> dict:
         ville = _titlecase_fr(ville)
         data["ville"] = ville
 
-    # Département : "44" → laisser (on ne peut pas deviner le nom), mais nettoyer
-    dept = data.get("departement")
-    if dept:
-        dept = dept.strip().rstrip(",.")
-        data["departement"] = dept
-
     # Code postal : garder uniquement 5 chiffres
     cp = data.get("code_postal")
     if cp:
         m = re.search(r"\d{5}", str(cp))
         data["code_postal"] = m.group(0) if m else None
+
+    # Département : dériver le code numérique depuis le code postal (fiable, extrait par regex)
+    cp_norm = data.get("code_postal")
+    if cp_norm and re.match(r"^\d{5}$", cp_norm):
+        data["departement"] = cp_norm[:2]
+    elif data.get("departement"):
+        data["departement"] = data["departement"].strip().rstrip(",.")
 
     # Type bien : normaliser
     type_map = {
