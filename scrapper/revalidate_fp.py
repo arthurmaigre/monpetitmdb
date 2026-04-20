@@ -63,7 +63,7 @@ def validate_batch(biens):
     items = []
     for i, b in enumerate(biens, 1):
         title = (b.get("title") or "").replace(nl, " ")[:200]
-        desc = (b.get("description") or "").replace(nl, " ")[:800]
+        desc = (b.get("description") or "").replace(nl, " ")
         items.append("Bien " + str(i) + ":" + nl + "Titre : " + title + nl + "Description : " + desc)
     text = (
         prompt_base + nl + nl
