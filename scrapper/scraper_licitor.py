@@ -215,7 +215,9 @@ def scrape_detail(url: str, session: requests.Session) -> list[dict]:
 
     # ── Date audience (fiable : pattern jour-de-semaine) ─────────────────
     # Robuste à "Vente aux enchères publiques" ET "Vente sur saisie immobilière"
-    lines = [l.strip() for l in soup.get_text("\n", strip=True).split("\n") if l.strip()]
+    # Utiliser legalad_div pour éviter les dates du header navigation (ex: "mardi 21 avril 2026")
+    date_scope = legalad_div if legalad_div else soup
+    lines = [l.strip() for l in date_scope.get_text("\n", strip=True).split("\n") if l.strip()]
     _JOURS = r"(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)"
     for line in lines:
         m = re.search(rf"{_JOURS}\s+\d{{1,2}}\s+\w+\s+\d{{4}}", line, re.I)
