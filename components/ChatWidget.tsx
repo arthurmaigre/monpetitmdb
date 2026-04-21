@@ -66,7 +66,9 @@ function saveHistory(messages: Message[]): void {
 }
 
 export default function ChatWidget({ plan, context }: ChatWidgetProps) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => { if (window.innerWidth > 767) setOpen(true) }, [])
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
