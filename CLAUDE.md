@@ -84,6 +84,25 @@ IDR (Immeuble de rapport) = Expert only.
 10 agents IA sur VPS Hetzner — **temporairement désactivé**.
 Voir `OPENCLAW.md` pour la configuration complète (à charger avec `@OPENCLAW.md`).
 
+## SEO
+
+**Audit complet :** `AUDIT_SEO_2026-04-21.md` — état de chaque page, mots-clés, concurrents, stratégie contenu.
+
+**État technique (2026-04-21) — score 8.5/10 :**
+- Metadata + canonical + OG : complets sur toutes les pages publiques ✅
+- JSON-LD : WebSite (+ SearchAction) + Organization + SoftwareApp (/) · CollectionPage (/biens, /encheres) · HowTo (/strategies) · FAQPage 15 Q (/faq) · Article+BreadcrumbList (/blog/[slug]) · RealEstateListing (/encheres/[id]) ✅
+- robots.txt + sitemap.xml (statiques + blog) ✅ · GTM async conditionnel ✅ · GSC + Meta Pixel actifs ✅
+- Biens et enchères [id] : auth-protected → Google ne crawle pas → **ne pas ajouter au sitemap**
+
+**Règles SEO (ne pas déroger) :**
+- Blog `/blog/[slug]` = **seul canal SEO** — pas de route `/guide/` séparée
+- Positionnement : **MdB first** — "marchand de biens", "enchères judiciaires", "division immobilière", "TVA sur marge"
+- **Ne pas cibler** "simulateur investissement locatif" / "calcul rendement locatif" → Horiz.io domine, mauvais persona
+- "investissement locatif" uniquement en bridge discret pour investisseurs particuliers (angle : "analyser comme un MdB")
+- Blanc stratégique : agrégation Licitor + Vench + Avoventes + analyse fiscale = 0 concurrent SaaS
+
+**Prochain chantier :** article pilier `/blog/encheres-judiciaires-immobilieres-guide-complet` (priorité P0)
+
 ## Contexte supplémentaire (chargé à la demande)
 
 - `scrapper/CLAUDE.md` — pipeline Python enchères, VPS, crons
