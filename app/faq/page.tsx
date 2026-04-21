@@ -52,6 +52,22 @@ const faqs = [
     question: "Puis-je annuler mon abonnement\u00A0?",
     answer: "Oui, \u00E0 tout moment depuis votre espace Mon Profil \u2192 Facturation \u2192 G\u00E9rer mon abonnement. L\u2019annulation prend effet \u00E0 la fin de la p\u00E9riode en cours. Vos donn\u00E9es sont conserv\u00E9es en plan Free."
   },
+  {
+    question: "Qu\u2019est-ce qu\u2019une vente aux ench\u00E8res judiciaires\u00A0?",
+    answer: "Une vente aux ench\u00E8res judiciaires est une vente forc\u00E9e ordonn\u00E9e par un tribunal, g\u00E9n\u00E9ralement suite \u00E0 une saisie immobili\u00E8re ou une succession. Le bien est mis en vente \u00E0 une mise \u00E0 prix fix\u00E9e par le juge, souvent en dessous du prix du march\u00E9. En France, ces ventes sont organis\u00E9es par les tribunaux judiciaires et accessibles sur des plateformes comme Licitor, Vench et Avoventes. Mon Petit MDB agr\u00E8ge les annonces de ces 3 plateformes pour vous offrir une vue compl\u00E8te du march\u00E9 des ench\u00E8res."
+  },
+  {
+    question: "Comment acheter aux ench\u00E8res judiciaires immobili\u00E8res en France\u00A0?",
+    answer: "Pour acheter aux ench\u00E8res judiciaires, il faut\u00A0: (1) identifier un bien via Licitor, Vench ou Avoventes (ou directement sur Mon Petit MDB qui agr\u00E8ge les trois), (2) consulter le cahier des conditions de vente au greffe du tribunal, (3) mandater un avocat inscrit au barreau (obligatoire pour ench\u00E9rir), (4) d\u00E9poser une cons\u00E9cration bancaire le jour de l\u2019audience (g\u00E9n\u00E9ralement 10\u00A0% de la mise \u00E0 prix ou 3\u00A0000\u00A0\u20AC minimum), (5) en cas d\u2019adjudication, r\u00E9gler le solde sous 2 mois. Mon Petit MDB calcule automatiquement votre prix cible maximum pour viser une plus-value brute de 20\u00A0%."
+  },
+  {
+    question: "Quelle est la diff\u00E9rence entre mise \u00E0 prix et prix adjug\u00E9\u00A0?",
+    answer: "La mise \u00E0 prix est le montant de d\u00E9part fix\u00E9 par le juge, souvent 50 \u00E0 70\u00A0% de la valeur estim\u00E9e du bien. Le prix adjug\u00E9 est le prix final atteint apr\u00E8s les ench\u00E8res. En pratique, la d\u00E9cote par rapport au prix du march\u00E9 est de 10 \u00E0 40\u00A0% pour les acheteurs les mieux pr\u00E9par\u00E9s. Mon Petit MDB affiche les deux valeurs et calcule l\u2019estimation DVF pour vous aider \u00E0 \u00E9valuer la rentabilit\u00E9 avant de vous engager."
+  },
+  {
+    question: "Quels sont les frais \u00E0 pr\u00E9voir pour une vente judiciaire\u00A0?",
+    answer: "En plus du prix adjug\u00E9, il faut compter\u00A0: les honoraires de l\u2019avocat (en g\u00E9n\u00E9ral 1 \u00E0 3\u00A0% du prix), les frais d\u2019adjudication (environ 7 \u00E0 12\u00A0% du prix pour les droits d\u2019enregistrement et les frais de greffe), et \u00E9ventuellement les frais de publication au service de publicit\u00E9 fonci\u00E8re. La TVA sur marge s\u2019applique si le bien est revendu par un marchand de biens dans les 5 ans. Mon Petit MDB int\u00E8gre ces frais dans ses simulations fiscales pour calculer votre marge nette r\u00E9elle."
+  },
 ]
 
 export default function FaqPage() {
