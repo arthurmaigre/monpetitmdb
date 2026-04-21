@@ -1555,7 +1555,7 @@ export default function FicheEncherePage() {
         .modal-body { padding: 0 24px 24px; overflow-y: auto; flex: 1; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 767px) { .fiche-wrap { padding: 16px 0; } .hero-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } .two-cols { flex-direction: column; } .sticky-nav { padding: 3px; } .sticky-nav-item { padding: 8px 14px; font-size: 12px; } .modal-panel { max-width: 100%; max-height: 90vh; } .data-grid { grid-template-columns: repeat(3, 1fr); } .section { padding: 16px 14px; } .breadcrumb { padding: 0 14px; } .fiche-info { padding: 0 14px; } }
+        @media (max-width: 767px) { .fiche-wrap { padding: 16px 0; } .hero-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } .two-cols { flex-direction: column; } .col { width: 100%; } .sticky-nav { padding: 3px; } .sticky-nav-item { padding: 8px 14px; font-size: 12px; } .modal-panel { max-width: 100%; max-height: 90vh; } .data-grid { grid-template-columns: repeat(3, 1fr); } .section { padding: 16px 14px; } .breadcrumb { padding: 0 14px; } .fiche-info { padding: 0 14px; } }
       `}</style>
 
       <div className="fiche-wrap">

@@ -1691,7 +1691,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
       </div>
 
       {/* --- Bloc principal : 3 colonnes --- */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0', marginBottom: '24px' }}>
+      <div className="estimation-price-grid" style={{ marginBottom: '24px' }}>
 
         {/* Colonne gauche : Prix FAI */}
         <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -2226,6 +2226,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .section { background: #fff; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 16px; }
         .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a1210; }
         .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .estimation-price-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; }
         .data-subtitle { grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 8px; border-top: 1px solid #e8e2d8; margin-top: 4px; }
         .data-item { display: flex; flex-direction: column; gap: 4px; }
         .data-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -2304,7 +2305,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .modal-body { padding: 0 24px 24px; overflow-y: auto; flex: 1; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-        @media (max-width: 767px) { .fiche-wrap { padding: 16px 0; } .hero-grid { grid-template-columns: 1fr; } .dual-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } .two-cols { flex-direction: column; } .sticky-nav { padding: 3px; } .sticky-nav-item { padding: 8px 14px; font-size: 12px; } .modal-panel { max-width: 100%; max-height: 90vh; } .data-grid { grid-template-columns: repeat(3, 1fr); } .section { padding: 16px 14px; } .breadcrumb { padding: 0 14px; } .fiche-info { padding: 0 14px; } }
+        @media (max-width: 767px) { .fiche-wrap { padding: 16px 0; } .hero-grid { grid-template-columns: 1fr; } .dual-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } .two-cols { flex-direction: column; } .col { width: 100%; } .sticky-nav { padding: 3px; } .sticky-nav-item { padding: 8px 14px; font-size: 12px; } .modal-panel { max-width: 100%; max-height: 90vh; } .data-grid { grid-template-columns: repeat(3, 1fr); } .section { padding: 16px 14px; } .breadcrumb { padding: 0 14px; } .fiche-info { padding: 0 14px; } .estimation-price-grid { grid-template-columns: 1fr !important; } .estimation-price-grid > div { padding: 10px 0 !important; border-left: none !important; border-right: none !important; } }
       `}</style>
 
       <div className="fiche-wrap">
