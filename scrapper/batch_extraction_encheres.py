@@ -136,6 +136,13 @@ HEURE_AUDIENCE : heure de l'audience au format "HH:MM" (ex: "10:30", "14:00"). C
 LOTS_DATA (si multi-lots uniquement) :
 [{"type": "Appartement", "surface": 52.23, "etage": "1er", "occupation": "occupe", "loyer": 450}, ...]
 
+RÈGLE MULTI-LOTS :
+Si les DONNÉES STRUCTURÉES indiquent un numéro de lot et une mise à prix,
+concentre-toi UNIQUEMENT sur ce lot pour les champs principaux (surface, type_bien, etage, occupation, nb_pieces, etc.).
+Utilise la mise à prix comme ancre pour identifier le bon lot dans la description.
+Ignore les infos des autres lots pour les champs principaux.
+Remplis lots_data avec le détail de TOUS les lots visibles dans le texte.
+
 DESCRIPTION_PROPRE : 2-3 phrases résumant le bien. Pas d'infos juridiques, DVF, ni publicités.
 
 PRIORITÉ DES SOURCES : en cas de conflit entre le texte de la page web et le contenu d'un PDF (CCV, PV descriptif), le PDF fait foi (document officiel du tribunal).
@@ -187,6 +194,16 @@ def build_prompt_text(item: dict, pdf_paths: list[str] = None) -> str:
         hints.append(f"Tel avocat : {item['avocat_tel']}")
     if item.get("avocat_email"):
         hints.append(f"Email avocat : {item['avocat_email']}")
+    if item.get("mise_a_prix"):
+        hints.append(f"Mise à prix de CE lot : {item['mise_a_prix']} €")
+    id_src = str(item.get("id_source", ""))
+    if "_lot" in id_src:
+        lot_n = id_src.split("_lot")[-1]
+        hints.append(
+            f"Ce bien correspond au lot n°{lot_n} de cette vente multi-lots. "
+            f"Extraire UNIQUEMENT les informations de ce lot (surface, type, étage, occupation, etc.). "
+            f"Utilise la mise à prix comme ancre pour identifier le bon lot dans le texte."
+        )
     if hints:
         text_parts.append("\n--- DONNÉES STRUCTURÉES (fiables) ---\n" + "\n".join(hints))
 
