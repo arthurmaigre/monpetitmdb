@@ -196,6 +196,11 @@ def scrape_detail(url: str, session: requests.Session) -> list[dict]:
     raw_text = extract_raw_text(soup)
     text = soup.get_text(" ", strip=True)
 
+    # Texte restreint à la section legalad pour la détection multi-lots
+    # (évite le faux-positif : h1 header + h3 legalad = 2 occurrences sur pages simples)
+    legalad_div = soup.find("div", id="legalad") or soup.find("article", class_="LegalAd")
+    lots_text = legalad_div.get_text(" ", strip=True) if legalad_div else text
+
     item = {
         "source": SOURCE,
         "id_source": id_source,
@@ -270,7 +275,7 @@ def scrape_detail(url: str, session: requests.Session) -> list[dict]:
         if "licitor" not in email.lower():
             item["avocat_email"] = email
 
-    return split_into_lots(item, text)
+    return split_into_lots(item, lots_text)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
