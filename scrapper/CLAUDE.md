@@ -99,6 +99,18 @@ Le token OAuth Claude CLI (`~/.claude/.credentials.json`) expire ~24h après la 
 - Page multi-lots (N lots sur une même page) : `{id}_lot{n}` (ex: `107826_lot2`)
 - Les anciens records sans suffixe coexistent — suppression manuelle prévue
 
+**Détection multi-lots (`split_into_lots`) :**
+- Compte les occurrences de "Mise à prix" dans `div#legalad` uniquement (pas la page entière)
+- `div#legalad` → 1 match = page simple, N matches = N lots
+- NE PAS utiliser `soup.get_text()` complet : le `<h1>` header répète "Mise à prix" → faux positif
+- Bug corrigé 2026-04-21 : toutes les pages généraient `_lot1/_lot2` → 865 faux doublons purgés
+
+**Extraction Sonnet multi-lots :**
+- Chaque lot reçoit la même `description` (texte complet de la page)
+- `build_prompt_text()` injecte `mise_a_prix` + numéro de lot comme hints structurés
+- Sonnet utilise la mise à prix comme ancre pour extraire les infos du bon lot
+- Données communes (adresse, tribunal, avocat) : copiées sur tous les lots via `dict(item)` dans `split_into_lots`
+
 **Cas couverts par la dédup :**
 - `enrichissement_statut` = `ok` ET `no_data` (les deux sont chargés)
 - Licitor "Vente sur saisie immobilière" → date extraite par pattern jour-de-semaine (pas conditionnel sur le header)
