@@ -43,8 +43,43 @@ crontab -l
 # Voir les logs enchères
 tail -50 /home/openclaw/logs/encheres/encheres_cron.log
 # Lancer manuellement phase 1
-cd /home/openclaw/monpetitmdb/scrapper && python scraper_encheres.py
+cd /home/openclaw/monpetitmdb/scrapper && python3 scraper_encheres.py
 ```
+
+## Diagnostic extraction — commandes utiles (VPS)
+
+```bash
+# Logs extraction nuit (dernier run)
+tail -100 /home/openclaw/logs/extractions/nuit_$(date +%Y-%m-%d).log
+
+# Vérifier si une extraction tourne
+ps aux | grep batch_extraction | grep -v grep
+
+# Lancer manuellement une stratégie (sans dry-run = en base)
+cd /home/openclaw/monpetitmdb/scrapper
+python3 batch_extraction_biens.py locataire --source stream_estate --limit 50
+python3 batch_extraction_biens.py idr       --source stream_estate --limit 20 --batch-size 5 --workers 5
+python3 batch_extraction_biens.py score     --source stream_estate --limit 10
+
+# Test dry-run (sans écriture en base)
+python3 batch_extraction_biens.py locataire --source stream_estate --limit 5 --dry-run
+
+# Vérifier le token OAuth Claude CLI
+claude -p "ok" --max-turns 1 --output-format json
+
+# Relancer le run complet nuit (en background)
+nohup bash run_extraction_nuit.sh >> /home/openclaw/logs/extractions/manuel_$(date +%Y-%m-%d_%H%M).log 2>&1 &
+
+# Voir les échecs auth keepalive
+cat /home/openclaw/logs/auth-keepalive.log
+```
+
+**Statuts extraction à surveiller dans les logs :**
+- `Page N biens chargés` → requête OK, index utilisé
+- `HTTP/2 500` + `57014` → timeout Supabase, vérifier les index
+- `AUTH CLI ECHOUEE` → token expiré, relancer `claude` en interactif
+- `QUOTA CLI MAX ATTEINT` → quota épuisé, attendre reset à 3h
+- `Résultat : N traités, 0 erreurs` → run propre ✅
 
 ## Pipeline enchères (4 phases — toutes ACTIVES)
 
