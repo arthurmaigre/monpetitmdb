@@ -58,30 +58,46 @@ ssh openclaw@178.104.58.122 "cd /home/openclaw/monpetitmdb/scrapper && python3 b
 
 **PAGE_SIZE IDR/score = 200** — cursor `last_id` initialisé à `9_999_999` pour forcer l'usage de l'index id dès la première page. PAGE_SIZE 1000 = timeout Supabase (`57014`) sur la table `biens` volumineuse.
 
-## Auth CLI Max — problème connu + fix à implémenter
+**`last_id = 9_999_999` pour locataire aussi** — corrigé 2026-04-22 (était `None`, index non utilisé à la 1ère page).
 
-Le token OAuth Claude CLI (`~/.claude/.credentials.json`) expire ~24h après la dernière authentification interactive. En mode non-interactif (`claude -p ...` via cron), le CLI **ne rafraîchit pas automatiquement** le token → erreur `Invalid API key` sur tous les appels.
+## Auth CLI Max — RÉSOLU (2026-04-22)
 
-**Symptômes observés :**
-- `locataire_20260419_0400.log` : 1 000 biens chargés, 1 000 erreurs `echec parsing (quota)`, 0 extraits, 88s — le script continuait malgré l'échec auth car `"invalid api key"` n'est pas dans `QUOTA_KEYWORDS`
+Le token OAuth Claude CLI (`~/.claude/.credentials.json`) expire ~24h après la dernière authentification interactive.
 
-**Fix à implémenter (3 changements) :**
+**Fixes déployés :**
 
-1. **Keepalive crons** dans le crontab VPS — forcent un refresh du token avant les batches :
-   ```bash
-   25 23 * * * claude -p "ok" --max-turns 1 --output-format json > /dev/null 2>&1 || echo "$(date) AUTH FAIL pre-encheres" >> /home/openclaw/logs/auth-keepalive.log
-   50  3 * * * claude -p "ok" --max-turns 1 --output-format json > /dev/null 2>&1 || echo "$(date) AUTH FAIL pre-extraction" >> /home/openclaw/logs/auth-keepalive.log
+1. **Keepalive crons** dans le crontab VPS (`1 0` et `50 3`) — refresh du token avant chaque pipeline ✅
+
+2. **Pre-flight bloquant** dans `run_extraction_nuit.sh` — `exit 1` si token expiré ✅
+
+3. **`AUTH_FAIL_KEYWORDS`** dans `batch_extraction_biens.py` — détection séparée de `QUOTA_KEYWORDS` :
+   ```python
+   AUTH_FAIL_KEYWORDS = ["invalid api key", "authentication", "unauthorized", "401"]
    ```
+   → arrêt immédiat, biens **non** marqués `echec_quota` (restent `NULL`, repris au prochain run) ✅
 
-2. **Pre-flight bloquant** dans `run_extraction_nuit.sh` (après le fix `python3`) :
-   ```bash
-   if ! claude -p "ok" --max-turns 1 --output-format json > /dev/null 2>&1; then
-       echo "ERREUR AUTH: Claude CLI non authentifié — batch annulé" | tee -a "$LOG"
-       exit 1
-   fi
-   ```
+## Index Supabase — pipeline extraction (2026-04-22)
 
-3. **Détection auth failure** dans `batch_extraction_biens.py` — ajouter `"invalid api key"` dans une liste séparée `AUTH_FAIL_KEYWORDS` qui stop immédiatement sans marquer les biens en `echec_quota`.
+Indexes partiels sur `biens (id DESC)` — condition OR exacte pour correspondre à la requête Python :
+
+```sql
+CREATE INDEX idx_biens_locataire ON biens (id DESC)
+WHERE strategie_mdb = 'Locataire en place' AND statut = 'Toujours disponible'
+  AND regex_statut = 'valide' AND source_provider = 'stream_estate'
+  AND (extraction_statut IS NULL OR extraction_statut IN ('echec', 'echec_quota'));
+
+CREATE INDEX idx_biens_idr ON biens (id DESC)
+WHERE strategie_mdb = 'Immeuble de rapport' AND statut = 'Toujours disponible'
+  AND regex_statut = 'valide' AND source_provider = 'stream_estate'
+  AND (extraction_statut IS NULL OR extraction_statut IN ('echec', 'echec_quota'));
+
+CREATE INDEX idx_biens_travaux ON biens (id DESC)
+WHERE strategie_mdb = 'Travaux lourds' AND statut = 'Toujours disponible'
+  AND regex_statut = 'valide' AND source_provider = 'stream_estate'
+  AND score_travaux IS NULL;
+```
+
+**Important :** la condition de l'index doit correspondre exactement à la requête Python — `IS DISTINCT FROM 'ok'` ne fonctionne pas car Postgres ne reconnaît pas l'équivalence avec `or_(is.null, eq.echec, eq.echec_quota)` → timeout 57014.
 
 ## Sources enchères
 
