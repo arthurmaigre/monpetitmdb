@@ -33,6 +33,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 QUOTA_HIT = False
 QUOTA_KEYWORDS = ["usage limit", "rate limit", "429", "quota", "overloaded", "too many requests", "capacity"]
 
+# ── Détection auth failure (token OAuth expiré) ────────────────────────────
+# Séparé de QUOTA_KEYWORDS : les biens ne sont PAS marqués echec_quota
+# → ils restent NULL et seront retraités au prochain run
+AUTH_FAIL = False
+AUTH_FAIL_KEYWORDS = ["invalid api key", "authentication", "unauthorized", "401"]
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Prompts — identiques aux routes TypeScript
 # ══════════════════════════════════════════════════════════════════════════════
@@ -151,7 +157,12 @@ def call_claude(prompt: str, timeout: int = 60) -> dict | None:
         if result.returncode != 0:
             err_text = (result.stderr + result.stdout).strip()
             log.error(f"Claude CLI exit {result.returncode} — {err_text[:500] or '(vide)'}")
-            if any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
+            if any(kw in err_text.lower() for kw in AUTH_FAIL_KEYWORDS):
+                log.critical("AUTH CLI ECHOUEE — token OAuth expire, arret immediat (biens non marques echec_quota)")
+                global AUTH_FAIL
+                AUTH_FAIL = True
+                QUOTA_HIT = True
+            elif any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
                 log.critical("QUOTA CLI MAX ATTEINT — arret du batch")
                 QUOTA_HIT = True
             return None
@@ -204,7 +215,12 @@ def call_claude_batch(system_prompt: str, items: list[dict[str, str]], timeout: 
         if result.returncode != 0:
             err_text = (result.stderr + result.stdout).strip()
             log.error(f"Claude CLI batch exit {result.returncode} — {err_text[:500] or '(vide)'}")
-            if any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
+            if any(kw in err_text.lower() for kw in AUTH_FAIL_KEYWORDS):
+                log.critical("AUTH CLI ECHOUEE — token OAuth expire, arret immediat (biens non marques echec_quota)")
+                global AUTH_FAIL
+                AUTH_FAIL = True
+                QUOTA_HIT = True
+            elif any(kw in err_text.lower() for kw in QUOTA_KEYWORDS):
                 log.critical("QUOTA CLI MAX ATTEINT — arret du batch")
                 QUOTA_HIT = True
             return [None] * len(items)
@@ -376,7 +392,7 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
     profil_found = 0
     errors = 0
     t_start = time.time()
-    last_id = None
+    last_id = 9_999_999  # cursor toujours actif dès la 1ère page → index idx_biens_locataire utilisé
     PAGE_SIZE = 1000
     log.info(f"Locataire en place — limit={limit}, batch_size={batch_size}, workers={workers}")
 
@@ -393,7 +409,7 @@ def run_locataire(limit: int, dry_run: bool, batch_size: int = 15, workers: int 
             now = datetime.now(timezone.utc).isoformat()
             if not parsed:
                 if not dry_run:
-                    status = "echec_quota" if QUOTA_HIT else "echec"
+                    status = "echec" if AUTH_FAIL else ("echec_quota" if QUOTA_HIT else "echec")
                     client.table("biens").update({
                         "profil_locataire": "NC",
                         "extraction_statut": status,
@@ -542,7 +558,7 @@ def run_idr(limit: int, dry_run: bool, batch_size: int = 10, workers: int = 1, s
             now = datetime.now(timezone.utc).isoformat()
             if not parsed:
                 if not dry_run:
-                    status = "echec_quota" if QUOTA_HIT else "echec"
+                    status = "echec" if AUTH_FAIL else ("echec_quota" if QUOTA_HIT else "echec")
                     client.table("biens").update({
                         "extraction_statut": status,
                         "extraction_date": now
@@ -740,7 +756,7 @@ def run_score(limit: int, dry_run: bool, source: str | None = None):
 
             if not parsed:
                 if not dry_run:
-                    status = "echec_quota" if QUOTA_HIT else "erreur"
+                    status = "erreur" if AUTH_FAIL else ("echec_quota" if QUOTA_HIT else "erreur")
                     client.table("biens").update({
                         "score_analyse_statut": status,
                         "score_analyse_date": now
