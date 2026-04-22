@@ -6,6 +6,27 @@
 - Python 3.12 + Playwright + Chromium + psql
 - **SSH** : `ssh openclaw@178.104.58.122` (clé SSH configurée)
 
+## Workflow git pour les scripts scrapper
+
+**Toujours modifier les scripts depuis le VPS**, pas en local :
+
+```bash
+# 1. Modifier sur le VPS
+ssh openclaw@178.104.58.122
+vim /home/openclaw/monpetitmdb/scrapper/batch_extraction_biens.py
+
+# 2. Commit + push depuis le VPS
+cd /home/openclaw/monpetitmdb
+git add scrapper/batch_extraction_biens.py
+git commit -m "fix: ..."
+git push origin main
+
+# 3. Pull en local
+git pull origin main
+```
+
+**Ne jamais** modifier en local puis scp vers le VPS → crée des conflits git (local changes non trackées côté VPS).
+
 ## Crons actifs (VPS)
 
 | Heure | Script | Log |
