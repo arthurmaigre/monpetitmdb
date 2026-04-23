@@ -53,7 +53,7 @@ LEP_EXCLUSIONS = [
 STRATEGIES = {
     "locataire": {
         "strategie_mdb": "Locataire en place",
-        "property_types": [0, 1, 2],
+        "property_types": [0, 1],
         "surface_min": None,
         "keywords": [
             "locataire en place", "vendu loue", "bail en cours",
