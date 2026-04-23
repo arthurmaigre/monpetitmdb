@@ -10,11 +10,27 @@ Stratégies : **Locataire en place** / **Travaux lourds** / **Division** / **Imm
 - **DB** : Supabase Pro (West EU) — auth + tables + storage bucket `mdb-files`
 - **Auth** : Supabase Auth email/password + OAuth Google/Facebook — `@supabase/ssr`, middleware SSR
 - **Paiement** : Stripe Checkout + Customer Portal + Webhooks (live)
-- **Sourcing** : Stream Estate polling quotidien via `scrapper/ingest_stream_estate.py` (cron VPS 23h00, Claude CLI) — webhooks PAUSÉ crédits épuisés 2026-04-12. Revalidation Haiku backfill avril TERMINÉE (9 475 biens, ~15% FP — analyse FP à faire)
+- **Sourcing** : Stream Estate polling quotidien via `scrapper/ingest_stream_estate.py` (cron VPS 23h00, Claude CLI) — webhooks PAUSÉ (à réactiver manuellement). Crédits rechargés 2026-04-23 (€79.66 overage). Backfill 21-22/04 effectué (~410 biens). Bug fix : `--from-date`/`--to-date` nécessite format `T00:00:00Z` (corrigé). Saved searches SE : LEP+Division+IDR à jour, **Travaux expressions vides** → corriger dashboard SE avant réactivation webhooks.
 - **Enchères** : Python scrapers → Licitor / Avoventes (Playwright) / Vench — VPS Hetzner 178.104.58.122
 - **AI** : Anthropic Claude (Haiku regex ingestion SE, Sonnet extraction locataire/IDR/enchères, Opus édito)
 - **Email** : Brevo API — alertes nouveaux biens
 - **Schémas DB** : utiliser le MCP Supabase pour interroger les tables directement
+
+## Plugins MCP installés (machine locale uniquement)
+
+| Plugin | Usage principal |
+|---|---|
+| `mcp__supabase` | Requêtes SQL, migrations, logs, schémas DB |
+| `mcp__vercel` | Déploiements, logs runtime, projets |
+| `mcp__stream-estate` | Recherche annonces, webhooks SE |
+| `mcp__brave-search` | Recherche web |
+| `mcp__stripe` | Compte, API search |
+| `mcp__Claude_in_Chrome` | Navigation browser, scraping |
+| `mcp__Claude_Preview` | Preview UI, screenshots |
+| `mcp__context7` | Docs libraries/frameworks |
+| `mcp__sequential-thinking` | Raisonnement structuré |
+
+> Ces plugins sont configurés dans `~/.claude/settings.json` (global) et `.claude/settings.local.json` (projet). **Non disponibles sur le VPS** — le VPS utilise Claude CLI sans plugins MCP.
 
 ## Commandes
 
