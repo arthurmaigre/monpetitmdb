@@ -201,9 +201,9 @@ def fetch_group(
     if surface_min is not None:
         params["surfaceMin"] = surface_min
     if from_date:
-        params["fromDate"] = from_date
+        params["fromDate"] = from_date if 'T' in from_date else from_date + 'T00:00:00Z'
     if to_date:
-        params["toDate"] = to_date
+        params["toDate"] = to_date if 'T' in to_date else to_date + 'T23:59:59Z'
 
     headers = {"X-Api-Key": API_KEY}
     r = http_requests.get(API_BASE, headers=headers, params=params, timeout=30)
