@@ -438,6 +438,7 @@ def run_ingestion(
     total_faux_pos = 0
     total_skipped  = 0
     total_fetched  = 0
+    strat_stats: dict = {}
 
     for strat_key in strategies:
         strat        = STRATEGIES[strat_key]
@@ -555,6 +556,7 @@ def run_ingestion(
         total_faux_pos += strat_faux_pos
         total_skipped  += strat_skipped
         total_fetched  += strat_fetched
+        strat_stats[strat_key] = {'inserted': strat_inserted, 'fp': strat_faux_pos, 'credits': strat_fetched}
 
     log.info(f"\n{'='*60}")
     log.info(f"RÉSUMÉ FINAL {'(DRY RUN)' if dry_run else ''}")
@@ -563,6 +565,26 @@ def run_ingestion(
     log.info(f"  Faux pos             : {total_faux_pos}")
     log.info(f"  Skippés              : {total_skipped}")
     log.info(f"{'='*60}")
+
+    if not dry_run:
+        from datetime import datetime, timezone
+        try:
+            client.table('cron_config').upsert({
+                'id': 'poll_se',
+                'enabled': True,
+                'schedule': '0 23 * * *',
+                'last_run': datetime.now(timezone.utc).isoformat(),
+                'last_result': {
+                    'new': total_inserted,
+                    'fp': total_faux_pos,
+                    'credits': total_fetched,
+                    'by_strategie': strat_stats,
+                    'status': 'success',
+                },
+            }, on_conflict='id').execute()
+            log.info("cron_config poll_se mis à jour")
+        except Exception as e:
+            log.warning(f"cron_config write failed: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CLI

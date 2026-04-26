@@ -94,6 +94,7 @@ IDR (Immeuble de rapport) = Expert only.
 - Cron extraction VPS : `0 4 * * *` → `run_extraction_nuit.sh` (Sonnet via Max, locataire + IDR + score)
 - Keepalive auth CLI Max : `1 0` (pre-enchères) et `50 3` (pre-extraction)
 - Routes admin : `CRON_SECRET` pour les crons, token user pour appels UI
+- **Monitoring process** : les 3 crons VPS écrivent leurs résultats dans `cron_config` (Supabase) à la fin de chaque run. L'API `app/api/admin/process-status/route.ts` lit `cron_config` + files d'attente → affiché dans `/admin/sourcing` (3 cartes : Poll SE, Extraction IA Nuit, Enchères). Badge ok/warning/error selon âge du dernier run (ok <26h, warning 26-48h, error >48h).
 
 ## OpenClaw (PAUSÉ)
 
