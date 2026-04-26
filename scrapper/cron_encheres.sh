@@ -4,7 +4,7 @@
 #
 # Pipeline :
 #   1. Scraping 3 sources (Licitor + Avoventes + Vench) → données fiables + raw_text
-#   2. Extraction Opus (CLI Claude Max) → normalise et peuple toutes les colonnes texte
+#   2. Extraction Sonnet (CLI Claude Max) → normalise et peuple toutes les colonnes texte
 #   3. Dédup cross-source → fusionne les doublons entre sources
 #   4. Mise à jour statuts → enchères passées marquées adjugé/surenchère
 #
@@ -62,9 +62,9 @@ if [ $SCRAPING_EXIT -ne 0 ]; then
     echo "ERREUR scraping (exit $SCRAPING_EXIT) — on continue avec l'extraction" | tee -a "$LOG_FILE"
 fi
 
-# ── Phase 2 : Extraction Opus (via CLI Claude Max) ──────────────────────────
+# ── Phase 2 : Extraction Sonnet (via CLI Claude Max) ──────────────────────────
 echo "" | tee -a "$LOG_FILE"
-echo ">>> PHASE 2 : Extraction Opus (nouveaux biens)" | tee -a "$LOG_FILE"
+echo ">>> PHASE 2 : Extraction Sonnet (nouveaux biens)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
 $PYTHON batch_extraction_encheres.py 2>&1 | tee -a "$LOG_FILE"
