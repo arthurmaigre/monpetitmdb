@@ -724,7 +724,7 @@ export default function AdminSourcingPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, marginBottom: 12 }}>
                   <div>
-                    <span style={{ fontWeight: 600, color: '#7a6a60', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phase 2 — Extraction Opus</span>
+                    <span style={{ fontWeight: 600, color: '#7a6a60', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phase 2 — Extraction Sonnet</span>
                     <div style={{ marginTop: 4 }}>
                       <Pill color="#1a7a40" bg="#d4f5e0"><strong>{encP2.extracted ?? 0}</strong> extraites</Pill>
                       {(encP2.errors ?? 0) > 0 && <> <Pill color="#c0392b" bg="#fde0dc"><strong>{encP2.errors}</strong> erreurs</Pill></>}

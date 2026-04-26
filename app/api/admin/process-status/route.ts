@@ -36,22 +36,25 @@ export async function GET(req: NextRequest) {
       .select('id,last_run,last_result')
       .in('id', ['poll_se', 'encheres_pipeline', 'extraction_nuit']),
 
-    // File d'attente LEP (locataire en place sans extraction)
+    // File d'attente LEP (valides sans extraction ou en échec)
     supabaseAdmin.from('biens').select('id', { count: 'exact', head: true })
       .eq('strategie_mdb', 'Locataire en place')
       .eq('statut', 'Toujours disponible')
-      .is('extraction_statut', null),
+      .eq('regex_statut', 'valide')
+      .or('extraction_statut.is.null,extraction_statut.in.(echec,echec_quota)'),
 
-    // File d'attente IDR (sans lots_data)
+    // File d'attente IDR (valides sans extraction ou en échec)
     supabaseAdmin.from('biens').select('id', { count: 'exact', head: true })
       .eq('strategie_mdb', 'Immeuble de rapport')
       .eq('statut', 'Toujours disponible')
-      .is('lots_data', null),
+      .eq('regex_statut', 'valide')
+      .or('extraction_statut.is.null,extraction_statut.in.(echec,echec_quota)'),
 
-    // File d'attente Travaux (sans score)
+    // File d'attente Travaux (valides sans score)
     supabaseAdmin.from('biens').select('id', { count: 'exact', head: true })
       .eq('strategie_mdb', 'Travaux lourds')
       .eq('statut', 'Toujours disponible')
+      .eq('regex_statut', 'valide')
       .is('score_travaux', null),
 
     // Totaux enchères
