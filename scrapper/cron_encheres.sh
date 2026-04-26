@@ -98,3 +98,62 @@ echo "════════════════════════�
 
 # Nettoyage vieux logs (garder 30 jours)
 find "$LOG_DIR" -name "encheres_*.log" -mtime +30 -delete 2>/dev/null || true
+
+# ── Écriture des résultats dans cron_config Supabase ─────────────────────────
+source "$SCRIPT_DIR/.env" 2>/dev/null || true
+if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
+    SUMMARY=$($PYTHON - "$LOG_FILE" <<'PYEOF' 2>/dev/null
+import json, re, sys
+
+log_file = sys.argv[1] if len(sys.argv) > 1 else ''
+if not log_file:
+    sys.exit(1)
+try:
+    content = open(log_file).read()
+except Exception:
+    sys.exit(1)
+
+def parse_json(pattern, text):
+    m = re.search(pattern, text)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except Exception:
+            pass
+    return {}
+
+phase1 = {}
+for src in ['licitor', 'avoventes', 'vench']:
+    d = parse_json(rf'{src} INFO Résultat: (\{{[^}}]+\}})', content)
+    phase1[src] = {'nouveaux': d.get('inserted', 0), 'deja_en_base': d.get('updated', 0)}
+
+phase2 = parse_json(r'Terminé: (\{[^}]+\})', content)
+phase3 = parse_json(r'Dédup terminée: (\{[^}]+\})', content)
+
+m4 = re.search(r'Statuts mis à jour : (\d+)', content)
+phase4_count = int(m4.group(1)) if m4 else 0
+
+p1_total = sum(v['nouveaux'] for v in phase1.values())
+p1_deja = sum(v['deja_en_base'] for v in phase1.values())
+result = {
+    'phase1': {**phase1, 'total_nouveaux': p1_total, 'total_deja_en_base': p1_deja},
+    'phase2': {'extracted': phase2.get('ok', 0), 'errors': phase2.get('echec', 0) + phase2.get('no_data', 0)},
+    'phase3': {'fusions': phase3.get('merged', 0), 'supprimes': phase3.get('duplicates_removed', 0)},
+    'phase4': {'updated': phase4_count},
+    'status': 'success',
+}
+print(json.dumps(result))
+PYEOF
+)
+    if [ -n "$SUMMARY" ]; then
+        NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        PAYLOAD="{\"id\":\"encheres_pipeline\",\"enabled\":true,\"schedule\":\"5 0 * * *\",\"last_run\":\"$NOW\",\"last_result\":$SUMMARY}"
+        curl -s -X POST "${SUPABASE_URL}/rest/v1/cron_config" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -d "$PAYLOAD" > /dev/null
+        echo "$(date) cron_config encheres_pipeline mis à jour" | tee -a "$LOG_FILE"
+    fi
+fi

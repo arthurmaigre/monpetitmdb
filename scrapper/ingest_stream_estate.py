@@ -201,9 +201,9 @@ def fetch_group(
     if surface_min is not None:
         params["surfaceMin"] = surface_min
     if from_date:
-        params["fromDate"] = from_date
+        params["fromDate"] = from_date if 'T' in from_date else from_date + 'T00:00:00Z'
     if to_date:
-        params["toDate"] = to_date
+        params["toDate"] = to_date if 'T' in to_date else to_date + 'T23:59:59Z'
 
     headers = {"X-Api-Key": API_KEY}
     r = http_requests.get(API_BASE, headers=headers, params=params, timeout=30)
@@ -438,6 +438,7 @@ def run_ingestion(
     total_faux_pos = 0
     total_skipped  = 0
     total_fetched  = 0
+    strat_stats: dict = {}
 
     for strat_key in strategies:
         strat        = STRATEGIES[strat_key]
@@ -555,6 +556,7 @@ def run_ingestion(
         total_faux_pos += strat_faux_pos
         total_skipped  += strat_skipped
         total_fetched  += strat_fetched
+        strat_stats[strat_key] = {'inserted': strat_inserted, 'fp': strat_faux_pos, 'credits': strat_fetched}
 
     log.info(f"\n{'='*60}")
     log.info(f"RÉSUMÉ FINAL {'(DRY RUN)' if dry_run else ''}")
@@ -563,6 +565,26 @@ def run_ingestion(
     log.info(f"  Faux pos             : {total_faux_pos}")
     log.info(f"  Skippés              : {total_skipped}")
     log.info(f"{'='*60}")
+
+    if not dry_run:
+        from datetime import datetime, timezone
+        try:
+            client.table('cron_config').upsert({
+                'id': 'poll_se',
+                'enabled': True,
+                'schedule': '0 23 * * *',
+                'last_run': datetime.now(timezone.utc).isoformat(),
+                'last_result': {
+                    'new': total_inserted,
+                    'fp': total_faux_pos,
+                    'credits': total_fetched,
+                    'by_strategie': strat_stats,
+                    'status': 'success',
+                },
+            }, on_conflict='id').execute()
+            log.info("cron_config poll_se mis à jour")
+        except Exception as e:
+            log.warning(f"cron_config write failed: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CLI

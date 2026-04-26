@@ -29,13 +29,18 @@ git pull origin main
 
 ## Crons actifs (VPS)
 
-| Heure | Script | Log |
-|---|---|---|
-| `1 0` | keepalive auth CLI Max (pre-enchères) | `/home/openclaw/logs/auth-keepalive.log` |
-| `5 0` | `cron_encheres.sh` — pipeline 4 phases | `/home/openclaw/logs/encheres/encheres_cron.log` |
-| `0 23` | `ingest_stream_estate.py` — SE polling 24h | `/home/openclaw/logs/se-polling.log` |
-| `50 3` | keepalive auth CLI Max (pre-extraction) | `/home/openclaw/logs/auth-keepalive.log` |
-| `0 4` | `run_extraction_nuit.sh` — locataire+IDR+score | `/home/openclaw/logs/extractions/nuit_YYYY-MM-DD.log` |
+| Heure | Script | Log | cron_config id |
+|---|---|---|---|
+| `1 0` | keepalive auth CLI Max (pre-enchères) | `/home/openclaw/logs/auth-keepalive.log` | — |
+| `5 0` | `cron_encheres.sh` — pipeline 4 phases | `/home/openclaw/logs/encheres/encheres_cron.log` | `encheres_pipeline` |
+| `0 23` | `ingest_stream_estate.py` — SE polling 24h | `/home/openclaw/logs/se-polling.log` | `poll_se` |
+| `50 3` | keepalive auth CLI Max (pre-extraction) | `/home/openclaw/logs/auth-keepalive.log` | — |
+| `0 4` | `run_extraction_nuit.sh` — locataire+IDR+score | `/home/openclaw/logs/extractions/nuit_YYYY-MM-DD.log` | `extraction_nuit` |
+
+**Chaque script VPS écrit ses résultats dans `cron_config` (upsert sur `id`) à la fin du run.** Format `last_result` :
+- `poll_se` : `{ new, fp, credits, by_strategie: { lep, travaux, division, idr: { inserted, fp, credits } }, status }`
+- `extraction_nuit` : `{ lep: { processed, loyers, profils, errors }, idr: { processed, avec_lots, errors }, travaux: { processed, errors }, status }`
+- `encheres_pipeline` : `{ phase1: { licitor, avoventes, vench, total_nouveaux, total_deja_en_base }, phase2: { extracted, errors }, phase3: { fusions, supprimes }, phase4: { updated }, status }`
 
 ```bash
 # Voir les crons

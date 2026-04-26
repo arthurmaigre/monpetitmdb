@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
@@ -40,28 +40,6 @@ function StatusDot({ active }: { active: boolean }) {
   )
 }
 
-function Spinner() {
-  return (
-    <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #e8e2d8', borderTopColor: '#c0392b', borderRadius: '50%', animation: 'spin 0.6s linear infinite', verticalAlign: 'middle', marginRight: 8 }} />
-  )
-}
-
-function PulsingDot() {
-  return (
-    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#1a7a40', animation: 'pulse 1.4s ease-in-out infinite', marginRight: 8, verticalAlign: 'middle' }} />
-  )
-}
-
-function StepNumber({ num, color }: { num: number; color: string }) {
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 28, height: 28, borderRadius: '50%', background: color, color: '#fff',
-      fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif", marginRight: 12,
-      flexShrink: 0,
-    }}>{num}</span>
-  )
-}
 
 function Pill({ children, color, bg }: { children: React.ReactNode; color: string; bg: string }) {
   return (
@@ -151,60 +129,13 @@ export default function AdminSourcingPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashStats>(defaultStats)
 
-  // Ingestion state
-  const [ingestStrategy, setIngestStrategy] = useState('')
-  const [ingestSince, setIngestSince] = useState('2024-01-01')
-  const [ingestUntil, setIngestUntil] = useState(new Date().toISOString().slice(0, 10))
-  const [ingestRunning, setIngestRunning] = useState(false)
-  const [ingestStats, setIngestStats] = useState({ new: 0, updated: 0, errors: 0, processed: 0, total: 0 })
-  const [ingestHistory, setIngestHistory] = useState<Array<{
-    startDate: string; endDate: string; strategies: string; dateRange: string;
-    totalNew: number; totalUpdated: number; totalErrors: number; totalApi: number;
-    calls: number; status: 'ok' | 'erreur' | 'arret'
-  }>>([])
-  const ingestSessionRef = useRef({ calls: 0, totalNew: 0, totalUpdated: 0, totalErrors: 0, totalApi: 0, strategies: new Set<string>(), startDate: '' })
-  const [webhookActive, setWebhookActive] = useState(false)
-  const ingestStopRef = useRef(false)
-
-  // Regex state
-  const [regexRunning, setRegexRunning] = useState(false)
-  const [regexStrategy, setRegexStrategy] = useState('')
-  const [regexStats, setRegexStats] = useState({ faux_positifs: 0, processed: 0, total: 0, last_run: '' })
-  const [regexShowKeywords, setRegexShowKeywords] = useState(false)
-  const regexStopRef = useRef(false)
-
-  // Extraction IDR state
-  const [idrRunning, setIdrRunning] = useState(false)
-  const [idrStats, setIdrStats] = useState({ processed: 0, total: 0, lots_found: 0, errors: 0 })
-  const idrStopRef = useRef(false)
-  const [idrPending, setIdrPending] = useState(0)
-
-  // Estimation DVF state
-  const [estimRunning, setEstimRunning] = useState(false)
-  const [estimStats, setEstimStats] = useState({ total: 0, done: 0, errors: 0, skipped: 0 })
-
-  // Statut annonces state
-  const [statutRunning, setStatutRunning] = useState(false)
-  const [statutStats, setStatutStats] = useState({ expired: 0, checked: 0, last_check: '' })
-  const [statutSince, setStatutSince] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
-  const [statutHistory, setStatutHistory] = useState<Array<{
-    startDate: string; endDate: string; period: string;
-    checked: number; expired: number; errors: number; status: 'ok' | 'erreur'
-  }>>([])
+  // Process status state
+  const [processStatus, setProcessStatus] = useState<Record<string, unknown> | null>(null)
 
   // Cron config state
   const [cronConfigs, setCronConfigs] = useState<Array<{ id: string; enabled: boolean; schedule: string; last_run: string | null; last_result: Record<string, unknown> | null; params: Record<string, unknown> }>>([])
   const [cronSaving, setCronSaving] = useState<string | null>(null)
 
-
-  // Load histories from localStorage
-  useEffect(() => {
-    try { const h = localStorage.getItem('mdb_ingest_history'); if (h) setIngestHistory(JSON.parse(h)) } catch {}
-    try { const h = localStorage.getItem('mdb_statut_history'); if (h) setStatutHistory(JSON.parse(h)) } catch {}
-  }, [])
-
-  // Any batch running flag for auto-refresh
-  const anyRunning = ingestRunning || regexRunning || idrRunning || estimRunning || statutRunning
 
   // Auth check
   useEffect(() => {
@@ -245,222 +176,18 @@ export default function AdminSourcingPage() {
     if (token) { fetchStats().then(() => fetchCronConfig()) }
   }, [token, fetchStats, fetchCronConfig])
 
-  // Auto-refresh stats every 30s when a batch is running
+  const fetchProcessStatus = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch('/api/admin/process-status', { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) setProcessStatus(await res.json())
+    } catch (e) { console.error('Process status fetch error:', e) }
+  }, [token])
+
   useEffect(() => {
-    if (!anyRunning || !token) return
-    const interval = setInterval(fetchStats, 30000)
-    return () => clearInterval(interval)
-  }, [anyRunning, token, fetchStats])
+    if (token) fetchProcessStatus()
+  }, [token, fetchProcessStatus])
 
-  // ---------- Ingestion ----------
-  async function startIngestion() {
-    if (!token) return
-    setIngestRunning(true)
-    ingestStopRef.current = false
-    setIngestStats({ new: 0, updated: 0, errors: 0, processed: 0, total: 0 })
-
-    const session = ingestSessionRef.current
-    session.calls = 0; session.totalNew = 0; session.totalUpdated = 0; session.totalErrors = 0; session.totalApi = 0
-    session.strategies = new Set()
-    session.startDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-
-    const since = new Date(ingestSince)
-    const until = new Date(ingestUntil)
-    const strategiesToRun = ingestStrategy
-      ? [ingestStrategy]
-      : STRATEGIES.filter(s => s.value).map(s => s.value)
-    let stopped = false
-
-    for (const strat of strategiesToRun) {
-      if (ingestStopRef.current) { stopped = true; break }
-      let sliceStart = new Date(since)
-
-      while (!ingestStopRef.current && sliceStart < until) {
-        const sliceEnd = new Date(sliceStart)
-        sliceEnd.setDate(sliceEnd.getDate() + 30)
-        if (sliceEnd > until) sliceEnd.setTime(until.getTime())
-
-        try {
-          const res: Response = await fetch('/api/admin/ingest', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              strategie: strat,
-              dateAfter: sliceStart.toISOString().slice(0, 10),
-              dateBefore: sliceEnd.toISOString().slice(0, 10),
-            }),
-          })
-          const data = await res.json()
-          session.calls++
-          session.totalNew += data.new || 0
-          session.totalUpdated += data.updated || 0
-          session.totalErrors += data.errors || 0
-          session.totalApi += data.total_api || data.new || 0
-          session.strategies.add(strat)
-          setIngestStats(prev => ({
-            new: prev.new + (data.new || 0),
-            updated: prev.updated + (data.updated || 0),
-            errors: prev.errors + (data.errors || 0),
-            processed: prev.processed + (data.processed || 0),
-            total: data.total || prev.total,
-          }))
-          if (data.webhook_active !== undefined) setWebhookActive(data.webhook_active)
-        } catch {
-          session.calls++
-          session.totalErrors++
-          setIngestStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-        }
-
-        sliceStart = new Date(sliceEnd)
-        if (!ingestStopRef.current && sliceStart < until) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
-        }
-      }
-      if (ingestStopRef.current) { stopped = true; break }
-    }
-
-    // Save session summary
-    const endDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    const status: 'ok' | 'erreur' | 'arret' = stopped ? 'arret' : session.totalErrors > 0 ? 'erreur' : 'ok'
-    const entry = {
-      startDate: session.startDate, endDate,
-      strategies: [...session.strategies].join(', ') || 'Aucune',
-      dateRange: `${ingestSince} \u2192 ${ingestUntil}`,
-      totalNew: session.totalNew, totalUpdated: session.totalUpdated,
-      totalErrors: session.totalErrors, totalApi: session.totalApi,
-      calls: session.calls, status,
-    }
-    setIngestHistory(prev => {
-      const updated = [entry, ...prev].slice(0, 10)
-      try { localStorage.setItem('mdb_ingest_history', JSON.stringify(updated)) } catch {}
-      return updated
-    })
-
-    setIngestRunning(false)
-    fetchStats()
-  }
-
-  // ---------- Regex Validation ----------
-  async function startRegex() {
-    if (!token) return
-    setRegexRunning(true)
-    regexStopRef.current = false
-    setRegexStats({ faux_positifs: 0, processed: 0, total: 0, last_run: '' })
-
-    const strats = regexStrategy ? [regexStrategy] : ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport']
-    for (const strat of strats) {
-      if (regexStopRef.current) break
-      let cursor: string | null = null
-
-      while (!regexStopRef.current) {
-        try {
-          const regexRes: Response = await fetch('/api/admin/regex', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ strategie: strat, cursor }),
-          })
-          const data = await regexRes.json()
-          setRegexStats(prev => ({
-            faux_positifs: prev.faux_positifs + (data.faux_positifs || 0),
-            processed: prev.processed + (data.processed || 0),
-            total: data.total || prev.total,
-            last_run: new Date().toLocaleString('fr-FR'),
-          }))
-          cursor = data.next_cursor || null
-          if (!cursor) break
-        } catch {
-          break
-        }
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      }
-    }
-
-    setRegexRunning(false)
-    fetchStats()
-  }
-
-  // ---------- Extraction IDR (Immeuble de rapport) ----------
-  async function startExtractionIDR() {
-    if (!token) return
-    setIdrRunning(true)
-    idrStopRef.current = false
-    setIdrStats({ processed: 0, total: 0, lots_found: 0, errors: 0 })
-
-    let cursor: string | null = null
-    while (!idrStopRef.current) {
-      try {
-        const res: Response = await fetch('/api/admin/extraction-idr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ cursor }),
-        })
-        const data = await res.json()
-        setIdrStats(prev => ({
-          processed: prev.processed + (data.processed || 0),
-          total: data.remaining ? prev.processed + (data.processed || 0) + data.remaining : prev.total,
-          lots_found: prev.lots_found + (data.lots_found || 0),
-          errors: prev.errors + (data.errors || 0),
-        }))
-        cursor = data.next_cursor || null
-        if (!cursor || data.remaining === 0) break
-      } catch {
-        setIdrStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-        break
-      }
-      await new Promise(resolve => setTimeout(resolve, 2000))
-    }
-
-    setIdrRunning(false)
-    fetchStats()
-  }
-
-  // ---------- Statut Annonces ----------
-  async function startEstimation() {
-    setEstimRunning(true)
-    setEstimStats({ total: 0, done: 0, errors: 0, skipped: 0 })
-    try {
-      const res = await fetch('/api/admin/estimation-batch?limit=50')
-      const data = await res.json()
-      setEstimStats({ total: data.total || 0, done: data.done || 0, errors: data.errors || 0, skipped: data.skipped || 0 })
-    } catch {
-      setEstimStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-    }
-    setEstimRunning(false)
-  }
-
-  async function startStatut() {
-    if (!token) return
-    setStatutRunning(true)
-    const startDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    let checked = 0, expired = 0, errors = 0
-    try {
-      const res: Response = await fetch('/api/admin/statut', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ since: statutSince }),
-      })
-      const data = await res.json()
-      checked = data.checked || 0
-      expired = data.expired || 0
-      errors = data.errors || 0
-      setStatutStats({
-        expired,
-        checked,
-        last_check: new Date().toLocaleString('fr-FR'),
-      })
-    } catch {
-      errors = 1
-    }
-    const endDate = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    const entry = { startDate, endDate, period: `depuis ${statutSince}`, checked, expired, errors, status: (errors > 0 ? 'erreur' : 'ok') as 'ok' | 'erreur' }
-    setStatutHistory(prev => {
-      const updated = [entry, ...prev].slice(0, 10)
-      try { localStorage.setItem('mdb_statut_history', JSON.stringify(updated)) } catch {}
-      return updated
-    })
-    setStatutRunning(false)
-    fetchStats()
-  }
 
   async function updateCron(id: string, update: Record<string, unknown>) {
     if (!token) return
@@ -477,20 +204,28 @@ export default function AdminSourcingPage() {
   }
 
   const CRON_LABELS: Record<string, string> = {
-    ingest: 'Ingestion Moteur Immo',
-    regex: 'Validation regex',
-    extraction: 'Extraction donn\u00e9es locatives',
-    score_travaux: 'Score travaux IA',
+    poll_se: 'Poll Stream Estate',
+    encheres_pipeline: 'Scrapping Ench\u00e8res',
+    extraction_nuit: 'Extraction IA Nuit',
+    extraction_idr: 'Extraction IDR (API)',
     statut: 'V\u00e9rification statut annonces',
+    alertes: 'Alertes email',
+    estimation: 'Estimation DVF',
+    estimation_batch: 'Estimation DVF (batch)',
   }
 
   const CRON_COLORS: Record<string, string> = {
-    ingest: '#2a4a8a',
-    regex: '#f0a830',
-    extraction: '#1a7a40',
-    score_travaux: '#a06010',
+    poll_se: '#2a4a8a',
+    encheres_pipeline: '#c0392b',
+    extraction_nuit: '#1a7a40',
+    extraction_idr: '#1a7a40',
     statut: '#7a6a60',
+    alertes: '#c0392b',
+    estimation: '#2a4a8a',
+    estimation_batch: '#2a4a8a',
   }
+
+  const VPS_CRON_IDS = new Set(['poll_se', 'encheres_pipeline', 'extraction_nuit'])
 
   if (loading) {
     return (
@@ -781,390 +516,260 @@ export default function AdminSourcingPage() {
           </div>
         </div>
 
-        {/* ==================== GROUPE: MOTEUR IMMO ==================== */}
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#2a4a8a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {'\uD83C\uDFE0'} Moteur Immo
+        {/* ==================== MONITORING ==================== */}
+        <div style={{ marginBottom: 8, marginTop: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1210', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Monitoring process</span>
+            <button
+              onClick={fetchProcessStatus}
+              style={{ background: 'none', border: '1.5px solid #e8e2d8', borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', color: '#7a6a60', display: 'flex', alignItems: 'center', gap: 5 }}
+            >
+              {'↻'} Rafraîchir
+            </button>
+          </div>
         </div>
 
-        {/* ===== Ingestion Moteur Immo ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
-          <div className="src-section-header">
-            <StepNumber num={1} color="#2a4a8a" />
-            <div className="src-section-title">Ingestion Moteur Immo</div>
+        {!processStatus ? (
+          <div className="src-section" style={{ borderLeftColor: '#e8e2d8', textAlign: 'center', color: '#7a6a60', fontSize: 13 }}>
+            Chargement du monitoring...
           </div>
-          {(stats.added_24h !== undefined || stats.added_7d !== undefined) && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.added_24h)}</span>
-                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"nouveaux biens (24h)"}</span>
-              </div>
-              <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.added_7d)}</span>
-                <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"nouveaux biens (7j)"}</span>
-              </div>
-              {stats.added_7d > 0 && (
-                <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                  <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>~{fmt(Math.round(stats.added_7d / 7))}</span>
-                  <span style={{ color: '#2a4a8a', marginLeft: 6 }}>/jour en moyenne</span>
-                </div>
-              )}
-              {stats.added_24h === 0 && (
-                <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-                  <span style={{ fontWeight: 700, color: '#c0392b' }}>{'\u26A0'} Aucun bien ajout{'\u00E9'} depuis 24h</span>
-                </div>
-              )}
-            </div>
-          )}
-          <div className="src-row">
-            <select className="src-select" value={ingestStrategy} onChange={e => setIngestStrategy(e.target.value)} disabled={ingestRunning}>
-              {STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-            <label style={{ fontSize: 13, color: '#7a6a60', display: 'flex', alignItems: 'center', gap: 6 }}>
-              Depuis
-              <input type="date" className="src-input" value={ingestSince} onChange={e => setIngestSince(e.target.value)} disabled={ingestRunning} />
-            </label>
-            <label style={{ fontSize: 13, color: '#7a6a60', display: 'flex', alignItems: 'center', gap: 6 }}>
-              {"Jusqu'\u00e0"}
-              <input type="date" className="src-input" value={ingestUntil} onChange={e => setIngestUntil(e.target.value)} disabled={ingestRunning} />
-            </label>
-            {!ingestRunning ? (
-              <button className="src-btn src-btn-red" onClick={startIngestion}>{'\u25B6'} Lancer l{"'"}ingestion</button>
-            ) : (
-              <button className="src-btn src-btn-stop" onClick={() => { ingestStopRef.current = true }}>{'\u25A0'} Stop</button>
-            )}
-          </div>
-          <div className="src-webhook" style={{ display: 'none' }}>
-            <StatusDot active={webhookActive} />
-            <span>{webhookActive ? 'Webhook actif' : 'Webhook inactif'}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 12 }}>
-            {/* Stats en cours */}
-            {(ingestRunning || ingestStats.processed > 0) && (
-              <div className="progress-wrap" style={{ flex: '1 1 300px' }}>
-                {ingestRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Ingestion en cours...</div>}
-                {ingestStats.total > 0 && <ProgressBar value={ingestStats.processed} max={ingestStats.total} />}
-                <div className="src-stats-row">
-                  <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(ingestStats.new)}</strong> nouveaux</Pill>
-                  <Pill color="#7a6a60" bg="#f0ede8"><strong>{fmt(ingestStats.updated)}</strong> {"d\u00E9j\u00E0 en base"}</Pill>
-                  {ingestStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(ingestStats.errors)}</strong> erreurs</Pill>}
-                </div>
-              </div>
-            )}
+        ) : (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ps = processStatus as any
 
-            {/* Historique des dernieres ingestions manuelles */}
-            {ingestHistory.length > 0 && (
-              <div style={{ flex: '1 1 100%', background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '12px 16px', fontSize: 11 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>Historique des ingestions manuelles</span>
-                  <button onClick={() => { setIngestHistory([]); try { localStorage.removeItem('mdb_ingest_history') } catch {} }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#c0b8ae' }}>Effacer</button>
+          function StatusBadge({ status }: { status: 'ok' | 'warning' | 'error' | string }) {
+            const cfg = status === 'ok'
+              ? { bg: '#d4f5e0', color: '#1a7a40', label: 'OK' }
+              : status === 'warning'
+              ? { bg: '#fff3cd', color: '#a06010', label: 'Warning' }
+              : { bg: '#fde0dc', color: '#c0392b', label: 'Erreur' }
+            return (
+              <span style={{ background: cfg.bg, color: cfg.color, borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                {cfg.label}
+              </span>
+            )
+          }
+
+          function MonitorCard({ title, icon, color, lastRun, status, children }: {
+            title: string; icon: string; color: string; lastRun: string | null; status: string; children: React.ReactNode
+          }) {
+            return (
+              <div className="src-section" style={{ borderLeftColor: color }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>{icon}</span>
+                    <div>
+                      <div className="src-section-title">{title}</div>
+                      {lastRun && (
+                        <div style={{ fontSize: 11, color: '#7a6a60', marginTop: 2 }}>
+                          {new Date(lastRun).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                          {' à '}
+                          {new Date(lastRun).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          <span style={{ color: '#c0b8ae', marginLeft: 8 }}>({timeAgo(lastRun)})</span>
+                        </div>
+                      )}
+                      {!lastRun && <div style={{ fontSize: 11, color: '#c0392b', marginTop: 2 }}>Jamais exécuté</div>}
+                    </div>
+                  </div>
+                  <StatusBadge status={status} />
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                {children}
+              </div>
+            )
+          }
+
+          // ── Card Poll SE ───────────────────────────────────────
+          const se = ps.poll_se
+          const seRes = se?.result || {}
+          const seByStrat = seRes.by_strategie || {}
+          const STRAT_LABELS: Record<string, string> = { lep: 'LEP', travaux: 'Travaux', division: 'Division', idr: 'IDR' }
+          const STRAT_ORDER = ['lep', 'travaux', 'division', 'idr']
+          const seTotal = { inserted: seRes.new || 0, fp: seRes.fp || 0, credits: seRes.credits || 0 }
+          const seFpRate = seTotal.credits > 0 ? Math.round((seTotal.fp / seTotal.credits) * 100) : 0
+
+          // ── Card Extraction IA ─────────────────────────────────
+          const ex = ps.extraction_nuit
+          const exRes = ex?.result || {}
+          const exQueue = ex?.queue || {}
+
+          // ── Card Encheres ──────────────────────────────────────
+          const enc = ps.encheres_pipeline
+          const encRes = enc?.result || {}
+          const encP1 = encRes.phase1 || {}
+          const encP2 = encRes.phase2 || {}
+          const encP3 = encRes.phase3 || {}
+          const encP4 = encRes.phase4 || {}
+          const encSources = ['licitor', 'avoventes', 'vench']
+          const encSourceLabels: Record<string, string> = { licitor: 'Licitor', avoventes: 'Avoventes', vench: 'Vench' }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {/* Poll SE */}
+              <MonitorCard title="Poll Stream Estate" icon="🔄" color="#2a4a8a" lastRun={se?.last_run ?? null} status={se?.status ?? 'error'}>
+                {Object.keys(seByStrat).length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #e8e2d8' }}>
+                        <th style={{ textAlign: 'left', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Stratégie"}</th>
+                        <th style={{ textAlign: 'right', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Insérés"}</th>
+                        <th style={{ textAlign: 'right', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>Faux positifs</th>
+                        <th style={{ textAlign: 'right', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Crédits SE"}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {STRAT_ORDER.filter(k => seByStrat[k]).map(k => {
+                        const s = seByStrat[k]
+                        const rate = s.credits > 0 ? Math.round((s.fp / s.credits) * 100) : 0
+                        return (
+                          <tr key={k} style={{ borderBottom: '1px solid #f0ede8' }}>
+                            <td style={{ padding: '5px 8px', fontWeight: 600, color: '#1a1210' }}>{STRAT_LABELS[k] || k}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{s.inserted ?? 0}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: s.fp > 0 ? '#c0392b' : '#7a6a60' }}>
+                              {s.fp ?? 0}{s.fp > 0 ? ` (${rate}%)` : ''}
+                            </td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: '#2a4a8a' }}>{s.credits ?? 0}</td>
+                          </tr>
+                        )
+                      })}
+                      <tr style={{ borderTop: '1.5px solid #e8e2d8', fontWeight: 700 }}>
+                        <td style={{ padding: '5px 8px', color: '#1a1210' }}>Total</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: '#1a7a40' }}>{seTotal.inserted}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: seTotal.fp > 0 ? '#c0392b' : '#7a6a60' }}>
+                          {seTotal.fp}{seFpRate > 0 ? ` (${seFpRate}%)` : ''}
+                        </td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: '#2a4a8a' }}>{seTotal.credits}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ color: '#7a6a60', fontSize: 12, fontStyle: 'italic' }}>Aucune donnée disponible</div>
+                )}
+              </MonitorCard>
+
+              {/* Extraction IA */}
+              <MonitorCard title="Extraction IA Nuit" icon="🤖" color="#1a7a40" lastRun={ex?.last_run ?? null} status={ex?.status ?? 'error'}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
                   <thead>
-                    <tr style={{ borderBottom: '1.5px solid #ede8e0' }}>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Fin</th>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
-                      <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"Strat\u00E9gies"}</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Appels</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"Re\u00E7us"}</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Nouv.</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"D\u00E9dup."}</th>
-                      <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Err.</th>
-                      <th style={{ textAlign: 'center', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Statut</th>
+                    <tr style={{ borderBottom: '1.5px solid #e8e2d8' }}>
+                      <th style={{ textAlign: 'left', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>Process</th>
+                      <th style={{ textAlign: 'right', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Traités"}</th>
+                      <th style={{ textAlign: 'right', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>Erreurs</th>
+                      <th style={{ textAlign: 'left', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Détail"}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {ingestHistory.map((h, i) => (
-                      <tr key={i} style={{ borderBottom: i < ingestHistory.length - 1 ? '1px solid #f0ede8' : 'none' }}>
-                        <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.startDate}</td>
-                        <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.endDate}</td>
-                        <td style={{ padding: '5px 6px', color: '#1a1210', fontSize: 10 }}>{h.dateRange}</td>
-                        <td style={{ padding: '5px 6px', fontWeight: 600, color: '#1a1210', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.strategies}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a' }}>{h.calls}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a' }}>{fmt(h.totalApi)}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{h.totalNew > 0 ? `+${fmt(h.totalNew)}` : '0'}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'right', color: '#7a6a60' }}>{fmt(h.totalUpdated)}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'right', color: h.totalErrors > 0 ? '#c0392b' : '#7a6a60', fontWeight: h.totalErrors > 0 ? 700 : 400 }}>{h.totalErrors}</td>
-                        <td style={{ padding: '5px 6px', textAlign: 'center' }}>
-                          {h.status === 'ok' && <span style={{ color: '#1a7a40', fontWeight: 700, background: '#d4f5e0', padding: '2px 8px', borderRadius: 6 }}>{'\u2713'} Termin{'\u00E9'}</span>}
-                          {h.status === 'erreur' && <span style={{ color: '#c0392b', fontWeight: 700, background: '#fde0dc', padding: '2px 8px', borderRadius: 6 }}>{'\u2717'} Erreurs</span>}
-                          {h.status === 'arret' && <span style={{ color: '#a06010', fontWeight: 700, background: '#fff8f0', padding: '2px 8px', borderRadius: 6 }}>{'\u25A0'} {"Arr\u00EAt\u00E9"}</span>}
+                    {exRes.lep && (
+                      <tr style={{ borderBottom: '1px solid #f0ede8' }}>
+                        <td style={{ padding: '5px 8px', fontWeight: 600, color: '#1a1210' }}>LEP</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{exRes.lep.processed ?? 0}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: (exRes.lep.errors ?? 0) > 0 ? '#c0392b' : '#7a6a60' }}>{exRes.lep.errors ?? 0}</td>
+                        <td style={{ padding: '5px 8px', color: '#7a6a60' }}>
+                          {exRes.lep.loyers > 0 ? `${exRes.lep.loyers} loyers` : ''}{exRes.lep.loyers > 0 && exRes.lep.profils > 0 ? ', ' : ''}{exRes.lep.profils > 0 ? `${exRes.lep.profils} profils` : ''}
                         </td>
                       </tr>
-                    ))}
+                    )}
+                    {exRes.idr && (
+                      <tr style={{ borderBottom: '1px solid #f0ede8' }}>
+                        <td style={{ padding: '5px 8px', fontWeight: 600, color: '#1a1210' }}>IDR</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{exRes.idr.processed ?? 0}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: (exRes.idr.errors ?? 0) > 0 ? '#c0392b' : '#7a6a60' }}>{exRes.idr.errors ?? 0}</td>
+                        <td style={{ padding: '5px 8px', color: '#7a6a60' }}>{exRes.idr.avec_lots > 0 ? `${exRes.idr.avec_lots} avec lots` : '—'}</td>
+                      </tr>
+                    )}
+                    {exRes.travaux && (
+                      <tr>
+                        <td style={{ padding: '5px 8px', fontWeight: 600, color: '#1a1210' }}>Travaux</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: '#1a7a40', fontWeight: 700 }}>{exRes.travaux.processed ?? 0}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: (exRes.travaux.errors ?? 0) > 0 ? '#c0392b' : '#7a6a60' }}>{exRes.travaux.errors ?? 0}</td>
+                        <td style={{ padding: '5px 8px', color: '#c0b8ae' }}>—</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ===== Statut Annonces ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#7a6a60' }}>
-          <div className="src-section-header">
-            <StepNumber num={2} color="#7a6a60" />
-            <div className="src-section-title">{"V\u00E9rification statut annonces"}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-            <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-              <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.verified_24h)}</span>
-              <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"v\u00E9rifi\u00E9s (24h)"}</span>
-            </div>
-            <div style={{ background: '#d4ddf5', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-              <span style={{ fontWeight: 700, color: '#2a4a8a', fontSize: 16 }}>{fmt(stats.verified_7d)}</span>
-              <span style={{ color: '#2a4a8a', marginLeft: 6 }}>{"v\u00E9rifi\u00E9s (7j)"}</span>
-            </div>
-            <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-              <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_24h)}</span>
-              <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9s (24h)"}</span>
-            </div>
-            <div style={{ background: '#fde0dc', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-              <span style={{ fontWeight: 700, color: '#c0392b', fontSize: 16 }}>{fmt(stats.expired_7d)}</span>
-              <span style={{ color: '#c0392b', marginLeft: 6 }}>{"expir\u00E9s (7j)"}</span>
-            </div>
-            <div style={{ background: '#f0ede8', borderRadius: 8, padding: '8px 14px', fontSize: 12 }}>
-              <span style={{ fontWeight: 700, color: '#1a1210', fontSize: 16 }}>{fmt(stats.expiree)}</span>
-              <span style={{ color: '#7a6a60', marginLeft: 6 }}>{"expir\u00E9s total"}</span>
-            </div>
-          </div>
-          <div className="src-row">
-            <label style={{ fontSize: 13, color: '#7a6a60', display: 'flex', alignItems: 'center', gap: 6 }}>
-              Depuis
-              <input type="date" className="src-input" value={statutSince} onChange={e => setStatutSince(e.target.value)} disabled={statutRunning} />
-            </label>
-            {!statutRunning ? (
-              <button className="src-btn src-btn-red" onClick={startStatut}>{'\u25B6'} {"V\u00E9rifier maintenant"}</button>
-            ) : (
-              <button className="src-btn src-btn-stop" disabled><PulsingDot /><Spinner /> {"V\u00E9rification..."}</button>
-            )}
-            {statutStats.last_check && <span className="src-muted">{"Derni\u00E8re v\u00E9rification : "}{statutStats.last_check}</span>}
-          </div>
-          {statutStats.checked > 0 && (
-            <div className="src-stats-row" style={{ marginTop: 8 }}>
-              <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(statutStats.checked)}</strong> {"v\u00E9rifi\u00E9s"}</Pill>
-              <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(statutStats.expired)}</strong> {"expir\u00E9s"}</Pill>
-            </div>
-          )}
-          {statutHistory.length > 0 && (
-            <div style={{ marginTop: 12, background: '#fff', border: '1.5px solid #ede8e0', borderRadius: 10, padding: '12px 16px', fontSize: 11 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10 }}>{"Historique des v\u00E9rifications"}</span>
-                <button onClick={() => { setStatutHistory([]); try { localStorage.removeItem('mdb_statut_history') } catch {} }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#c0b8ae' }}>Effacer</button>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1.5px solid #ede8e0' }}>
-                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"D\u00E9but"}</th>
-                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Fin</th>
-                    <th style={{ textAlign: 'left', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"P\u00E9riode"}</th>
-                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"V\u00E9rifi\u00E9s"}</th>
-                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>{"Expir\u00E9s"}</th>
-                    <th style={{ textAlign: 'right', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Err.</th>
-                    <th style={{ textAlign: 'center', padding: '4px 6px', color: '#7a6a60', fontSize: 10, fontWeight: 600 }}>Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statutHistory.map((h, i) => (
-                    <tr key={i} style={{ borderBottom: i < statutHistory.length - 1 ? '1px solid #f0ede8' : 'none' }}>
-                      <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.startDate}</td>
-                      <td style={{ padding: '5px 6px', color: '#7a6a60', whiteSpace: 'nowrap' }}>{h.endDate}</td>
-                      <td style={{ padding: '5px 6px', color: '#1a1210', fontSize: 10 }}>{h.period}</td>
-                      <td style={{ padding: '5px 6px', textAlign: 'right', color: '#2a4a8a', fontWeight: 600 }}>{fmt(h.checked)}</td>
-                      <td style={{ padding: '5px 6px', textAlign: 'right', color: '#c0392b', fontWeight: 700 }}>{fmt(h.expired)}</td>
-                      <td style={{ padding: '5px 6px', textAlign: 'right', color: h.errors > 0 ? '#c0392b' : '#7a6a60' }}>{h.errors}</td>
-                      <td style={{ padding: '5px 6px', textAlign: 'center' }}>
-                        {h.status === 'ok' && <span style={{ color: '#1a7a40', fontWeight: 700, background: '#d4f5e0', padding: '2px 8px', borderRadius: 6 }}>{'\u2713'} OK</span>}
-                        {h.status === 'erreur' && <span style={{ color: '#c0392b', fontWeight: 700, background: '#fde0dc', padding: '2px 8px', borderRadius: 6 }}>{'\u2717'} Erreur</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* ==================== GROUPE: VALIDATION REGEX ==================== */}
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#f0a830', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {'\uD83D\uDD0D'} Validation (Regex)
-        </div>
-
-        {/* ===== Regex Validation ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#f0a830' }}>
-          <div className="src-section-header">
-            <StepNumber num={2} color="#f0a830" />
-            <div className="src-section-title">Validation regex</div>
-          </div>
-          <div className="src-section-desc">
-            Filtre les faux positifs en analysant titre + description avec des regex par strat{'\u00e9'}gie. Les biens non valides sont marqu{'\u00e9'}s {'"'}Faux positif{'"'}.
-          </div>
-          <div className="src-row">
-            <select className="src-select" value={regexStrategy} onChange={e => setRegexStrategy(e.target.value)} disabled={regexRunning}>
-              {STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-            {!regexRunning ? (
-              <button className="src-btn src-btn-red" onClick={startRegex}>{'\u25B6'} Lancer la validation</button>
-            ) : (
-              <button className="src-btn src-btn-stop" onClick={() => { regexStopRef.current = true }}>{'\u25A0'} Stop</button>
-            )}
-            {regexStats.last_run && <span className="src-muted">Dernier run : {regexStats.last_run}</span>}
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <button className="src-btn src-btn-outline" style={{ fontSize: 11, padding: '5px 12px' }} onClick={() => setRegexShowKeywords(!regexShowKeywords)}>
-              {regexShowKeywords ? 'Masquer' : 'Voir'} les mots-cl{'\u00e9'}s par strat{'\u00e9'}gie
-            </button>
-          </div>
-          {regexShowKeywords && (
-            <div style={{ marginTop: 12, background: '#faf8f5', borderRadius: 10, padding: '16px 20px', fontSize: 12, lineHeight: 1.8, border: '1px solid #e8e2d8' }}>
-              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Locataire en place</strong> <span style={{ color: '#7a6a60' }}>(valid{'\u00e9'} + exclu)</span><br/>
-                <span style={{ color: '#1a7a40' }}>{'\u2713'}</span> locataire en place, vendu lou{'\u00e9'}, bail en cours, loyer en place, occup{'\u00e9'} par locataire, lou{'\u00e9'} et occup{'\u00e9'}, vente occup{'\u00e9'}e, revenus locatifs, rendement locatif/brut/net, investissement locatif...<br/>
-                <span style={{ color: '#c0392b' }}>{'\u2717'}</span> pas/sans locataire, libre de toute occupation, non lou{'\u00e9'}, r{'\u00e9'}sidence g{'\u00e9'}r{'\u00e9'}e/services/senior
-              </div>
-              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Travaux lourds</strong><br/>
-                <span style={{ color: '#1a7a40' }}>{'\u2713'}</span> {'\u00e0'} r{'\u00e9'}nover, r{'\u00e9'}novation compl{'\u00e8'}te/totale, gros travaux, tout {'\u00e0'} refaire, {'\u00e0'} r{'\u00e9'}habiliter, travaux importants, vendu en l{'\u2019'}{'\u00e9'}tat, toiture {'\u00e0'} refaire, mise aux normes, inhabitable, {'\u00e0'} restaurer...<br/>
-                <span style={{ color: '#c0392b' }}>{'\u2717'}</span> pas/sans travaux, travaux r{'\u00e9'}alis{'\u00e9'}s/termin{'\u00e9'}s, enti{'\u00e8'}rement r{'\u00e9'}nov{'\u00e9'}, r{'\u00e9'}cemment r{'\u00e9'}nov{'\u00e9'}, refait {'\u00e0'} neuf
-              </div>
-              <div style={{ marginBottom: 10 }}><strong style={{ color: '#2a4a8a' }}>Division</strong><br/>
-                <span style={{ color: '#1a7a40' }}>{'\u2713'}</span> divisible, division possible, cr{'\u00e9'}er des lots, cr{'\u00e9'}er plusieurs logements<br/>
-                <span style={{ color: '#c0392b' }}>{'\u2717'}</span> non divisible, issu d{"'"}une division, chambre/pi{'\u00e8'}ce/salon/jardin divisible
-              </div>
-              <div><strong style={{ color: '#2a4a8a' }}>Immeuble de rapport</strong><br/>
-                <span style={{ color: '#1a7a40' }}>{'\u2713'}</span> immeuble de rapport, monopropri{'\u00e9'}t{'\u00e9'}, copropri{'\u00e9'}t{'\u00e9'} {'\u00e0'} cr{'\u00e9'}er, vente en bloc, plusieurs appartements/logements/lots
-              </div>
-            </div>
-          )}
-          {(regexRunning || regexStats.processed > 0) && (
-            <div className="progress-wrap">
-              {regexRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Validation en cours...</div>}
-              {regexStats.total > 0 && <ProgressBar value={regexStats.processed} max={regexStats.total} color="#f0a830" />}
-              <div className="src-stats-row">
-                <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(regexStats.processed)}</strong> analys{'\u00e9'}s</Pill>
-                <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(regexStats.faux_positifs)}</strong> faux positifs</Pill>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ==================== GROUPE: IA (CLAUDE HAIKU) ==================== */}
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#1a7a40', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {'\uD83E\uDDE0'} IA (Claude Haiku)
-        </div>
-
-        {/* ===== Extraction données locatives ===== */}
-        {/* ===== STEP 3bis: Extraction IDR ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
-          <div className="src-section-header">
-            <StepNumber num={3.5} color="#2a4a8a" />
-            <div className="src-section-title">Extraction Immeuble de rapport (Haiku)</div>
-          </div>
-          <div className="src-section-desc">
-            {"Strat\u00E9gie : "}<strong>Immeuble de rapport</strong>{" uniquement. Extrait le d\u00E9tail des lots (type, surface, loyer, \u00E9tat locatif, DPE)."}
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-            {['Nb lots', 'Type/surface par lot', 'Loyer par lot', 'Etat locatif', 'Loyer total', 'Taxe fonci\u00E8re', 'Monopropri\u00E9t\u00E9'].map(f => (
-              <span key={f} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#d4ddf5', color: '#2a4a8a' }}>{f}</span>
-            ))}
-          </div>
-          {(stats.idr_pending || 0) > 0 && !idrRunning && (
-            <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#1a1210' }}>
-                <strong>{fmt(stats.idr_pending)}</strong> biens {'\u00e0'} traiter
-              </span>
-              <span style={{ fontSize: 13, color: '#a06010', fontWeight: 600 }}>
-                {"Co\u00fbt estim\u00e9 : ~"}{((stats.idr_pending || 0) * 0.002) < 1 ? ((stats.idr_pending || 0) * 0.002).toFixed(2) : Math.round((stats.idr_pending || 0) * 0.002)} {'\u20ac'} (Haiku)
-              </span>
-            </div>
-          )}
-          <div className="src-row">
-            {!idrRunning ? (
-              <button className="src-btn src-btn-red" onClick={startExtractionIDR}>{'\u25B6'} Lancer</button>
-            ) : (
-              <button className="src-btn src-btn-stop" onClick={() => { idrStopRef.current = true }}>{'\u25A0'} Stop</button>
-            )}
-          </div>
-          {(idrRunning || idrStats.processed > 0) && (
-            <div className="progress-wrap">
-              {idrRunning && <div className="running-indicator"><PulsingDot /><Spinner /> Extraction IDR en cours...</div>}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1210', minWidth: 100, fontFamily: "'Fraunces', serif" }}>
-                  {fmt(idrStats.processed)} / {fmt(idrStats.total || idrStats.processed)}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <ProgressBar value={idrStats.processed} max={idrStats.total || idrStats.processed || 1} color="#2a4a8a" />
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>File d{"'"}attente</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{exQueue.lep ?? 0}</strong> LEP restants</Pill>
+                  <Pill color="#1a7a40" bg="#d4f5e0"><strong>{exQueue.idr ?? 0}</strong> IDR restants</Pill>
+                  <Pill color="#a06010" bg="#fff8f0"><strong>{exQueue.travaux ?? 0}</strong> Travaux restants</Pill>
                 </div>
-              </div>
-              <div className="src-stats-row">
-                <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{fmt(idrStats.lots_found)}</strong> lots extraits</Pill>
-                {idrStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(idrStats.errors)}</strong> erreurs</Pill>}
-              </div>
-            </div>
-          )}
-        </div>
+              </MonitorCard>
 
-        {/* ===== STEP 4: Estimation DVF ===== */}
-        <div className="src-section" style={{ borderLeftColor: '#2a4a8a' }}>
-          <div className="src-section-header">
-            <StepNumber num={4} color="#2a4a8a" />
-            <div className="src-section-title">Estimation DVF (batch)</div>
-          </div>
-          <div className="src-section-desc">
-            Estime le prix de revente de chaque bien via les donn{'\u00e9'}es DVF (transactions notariales). Biens sans estimation ou estimation {"> "}30 jours.
-          </div>
-          <div style={{ background: '#faf8f5', border: '1px solid #e8e2d8', borderRadius: 10, padding: '12px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <span style={{ fontSize: 13, color: '#1a1210' }}>
-              <strong>{fmt(stats.estimation_pending || 0)}</strong> biens sans estimation
-            </span>
-            <span style={{ fontSize: 13, color: '#2a4a8a', fontWeight: 600 }}>
-              <strong>{fmt(stats.estimation_done || 0)}</strong> estim{'\u00e9'}s
-            </span>
-          </div>
-          <div className="src-row">
-            {!estimRunning ? (
-              <button className="src-btn src-btn-red" onClick={startEstimation}>{'\u25B6'} Lancer le batch estimation</button>
-            ) : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Spinner />
-                <span style={{ fontSize: 13, color: '#1a1210' }}>Estimation en cours... (peut prendre plusieurs minutes)</span>
-              </span>
-            )}
-          </div>
-          {estimStats.total > 0 && (
-            <div className="progress-wrap">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1210', minWidth: 100, fontFamily: "'Fraunces', serif" }}>
-                  {fmt(estimStats.done)} / {fmt(estimStats.total)}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <ProgressBar value={estimStats.done} max={estimStats.total} color="#2a4a8a" />
+              {/* Encheres */}
+              <MonitorCard title="Scrapping Enchères" icon="🏛" color="#c0392b" lastRun={enc?.last_run ?? null} status={enc?.status ?? 'error'}>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Phase 1 — Scraping</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <tbody>
+                      {encSources.map(src => {
+                        const d = encP1[src] || {}
+                        const total = (d.nouveaux || 0) + (d.deja_en_base || 0)
+                        return (
+                          <tr key={src} style={{ borderBottom: '1px solid #f0ede8' }}>
+                            <td style={{ padding: '4px 8px', fontWeight: 600, color: '#1a1210', width: 90 }}>{encSourceLabels[src]}</td>
+                            <td style={{ padding: '4px 8px', color: '#7a6a60' }}>{total > 0 ? `${total} vus` : '—'}</td>
+                            <td style={{ padding: '4px 8px', color: '#1a7a40', fontWeight: 700 }}>{d.nouveaux > 0 ? `+${d.nouveaux} nouveau${d.nouveaux > 1 ? 'x' : ''}` : '0 nouveau'}</td>
+                            <td style={{ padding: '4px 8px', color: '#7a6a60' }}>{(d.deja_en_base || 0) > 0 ? `${d.deja_en_base} déjà en base` : ''}</td>
+                          </tr>
+                        )
+                      })}
+                      <tr style={{ borderTop: '1.5px solid #e8e2d8', fontWeight: 700 }}>
+                        <td style={{ padding: '4px 8px', color: '#1a1210' }}>Total</td>
+                        <td colSpan={3} style={{ padding: '4px 8px', color: '#1a1210' }}>
+                          <span style={{ color: '#1a7a40' }}>{encP1.total_nouveaux ?? 0} nouveaux</span>
+                          {encP1.total_deja_en_base > 0 && <span style={{ color: '#7a6a60', marginLeft: 8 }}>({encP1.total_deja_en_base} déjà en base)</span>}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-              <div className="src-stats-row">
-                <Pill color="#1a7a40" bg="#d4f5e0"><strong>{fmt(estimStats.done)}</strong> estim{'\u00e9'}s</Pill>
-                {estimStats.skipped > 0 && <Pill color="#7a6a60" bg="#f0ede8"><strong>{fmt(estimStats.skipped)}</strong> ignor{'\u00e9'}s</Pill>}
-                {estimStats.errors > 0 && <Pill color="#c0392b" bg="#fde0dc"><strong>{fmt(estimStats.errors)}</strong> erreurs</Pill>}
-              </div>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, marginBottom: 12 }}>
+                  <div>
+                    <span style={{ fontWeight: 600, color: '#7a6a60', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phase 2 — Extraction Opus</span>
+                    <div style={{ marginTop: 4 }}>
+                      <Pill color="#1a7a40" bg="#d4f5e0"><strong>{encP2.extracted ?? 0}</strong> extraites</Pill>
+                      {(encP2.errors ?? 0) > 0 && <> <Pill color="#c0392b" bg="#fde0dc"><strong>{encP2.errors}</strong> erreurs</Pill></>}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 600, color: '#7a6a60', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phase 3 — Dédup</span>
+                    <div style={{ marginTop: 4 }}>
+                      <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{encP3.fusions ?? 0}</strong> fusions</Pill>
+                      {(encP3.supprimes ?? 0) > 0 && <> <Pill color="#7a6a60" bg="#f0ede8"><strong>{encP3.supprimes}</strong> supprimés</Pill></>}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 600, color: '#7a6a60', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phase 4 — Statuts</span>
+                    <div style={{ marginTop: 4 }}>
+                      <Pill color="#7a6a60" bg="#f0ede8"><strong>{encP4.updated ?? 0}</strong> mis à jour</Pill>
+                    </div>
+                  </div>
+                </div>
+                {enc?.a_venir != null && (
+                  <div style={{ fontSize: 11, color: '#7a6a60', borderTop: '1px solid #f0ede8', paddingTop: 8, marginTop: 4 }}>
+                    Stock actuel : <strong style={{ color: '#c0392b' }}>{enc.a_venir}</strong> enchères à venir
+                  </div>
+                )}
+              </MonitorCard>
             </div>
-          )}
-        </div>
+          )
+        })()}
 
-        {/* ===== STEP 5: Configuration Cron ===== */}
+
+        {/* ===== Configuration Cron ===== */}
         <div className="src-section" style={{ borderLeftColor: '#c0392b' }}>
           <div className="src-section-header">
-            <StepNumber num={5} color="#c0392b" />
             <div className="src-section-title">{"Planification automatique"}</div>
           </div>
           <div className="src-section-desc">
-            Crons externes (cron-job.org) {'\u2014'} activez/d{'\u00e9'}sactivez chaque t{'\u00e2'}che depuis la base.
+            {"Crons actifs \u2014 les process VPS sont en lecture seule (modifiables uniquement sur le serveur)."}
           </div>
           {cronConfigs.length === 0 ? (
             <p className="src-muted">Chargement de la config...</p>
           ) : (() => {
             const groups = [
-              { title: 'Moteur Immo', icon: '\uD83C\uDFE0', color: '#2a4a8a', ids: ['ingest', 'statut'] },
-              { title: 'Validation (Regex)', icon: '\uD83D\uDD0D', color: '#f0a830', ids: ['regex'] },
-              { title: 'IA (Claude Haiku)', icon: '\uD83E\uDDE0', color: '#1a7a40', ids: ['extraction', 'score_travaux', 'extraction_idr'] },
-              { title: 'Estimation DVF', icon: '\uD83D\uDCCA', color: '#2a4a8a', ids: ['estimation'] },
-              { title: 'Alertes email', icon: '\uD83D\uDD14', color: '#c0392b', ids: ['alertes'] },
+              { title: 'Process VPS (lecture seule)', icon: '\uD83D\uDDA5', color: '#2a4a8a', ids: ['poll_se', 'encheres_pipeline', 'extraction_nuit'], readOnly: true },
+              { title: 'Traitement IA', icon: '\uD83E\uDDE0', color: '#1a7a40', ids: ['extraction_idr', 'statut'] },
+              { title: 'Maintenance', icon: '\u2699', color: '#7a6a60', ids: ['alertes', 'estimation', 'estimation_batch'] },
             ]
 
             const progressMap: Record<string, { done: number; total: number }> = {
@@ -1174,7 +779,7 @@ export default function AdminSourcingPage() {
               statut: { done: stats.disponible || 0, total: (stats.disponible || 0) + (stats.expiree || 0) },
             }
 
-            function CronRow({ cron }: { cron: any }) {
+            function CronRow({ cron, readOnly }: { cron: any; readOnly?: boolean }) {
               const pctDone = (() => { const p = progressMap[cron.id]; return p && p.total > 0 ? Math.round((p.done / p.total) * 100) : null })()
               return (
                 <>
@@ -1187,11 +792,15 @@ export default function AdminSourcingPage() {
                         </span>
                       )}
                     </div>
-                    <label className="src-toggle" style={{ fontSize: 11 }}>
-                      <input type="checkbox" checked={cron.enabled} onChange={() => updateCron(cron.id, { enabled: !cron.enabled })} disabled={cronSaving === cron.id} />
-                      <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
-                      <span style={{ fontWeight: 600, color: cron.enabled ? '#1a7a40' : '#c0392b', fontSize: 11 }}>{cron.enabled ? 'Actif' : 'Off'}</span>
-                    </label>
+                    {readOnly ? (
+                      <span style={{ fontSize: 11, color: '#c0b8ae', fontStyle: 'italic' }}>VPS</span>
+                    ) : (
+                      <label className="src-toggle" style={{ fontSize: 11 }}>
+                        <input type="checkbox" checked={cron.enabled} onChange={() => updateCron(cron.id, { enabled: !cron.enabled })} disabled={cronSaving === cron.id} />
+                        <span className="src-toggle-track"><span className="src-toggle-knob" /></span>
+                        <span style={{ fontWeight: 600, color: cron.enabled ? '#1a7a40' : '#c0392b', fontSize: 11 }}>{cron.enabled ? 'Actif' : 'Off'}</span>
+                      </label>
+                    )}
                   </div>
                   <div style={{ fontSize: 11, color: '#7a6a60' }}>
                     {cronScheduleToFrench(cron.schedule)}
@@ -1227,7 +836,7 @@ export default function AdminSourcingPage() {
                           return (
                             <div key={cron.id} style={{ display: 'flex', gap: 10, alignItems: 'stretch', flexWrap: 'wrap' }}>
                               <div className="cron-card" style={{ borderLeftColor: cron.enabled ? cronColor : '#e8e2d8', padding: '12px 16px', flex: '1 1 220px', minWidth: 200 }}>
-                                <CronRow cron={cron} />
+                                <CronRow cron={cron} readOnly={group.readOnly} />
                               </div>
                               <div style={{
                                 flex: '0 0 280px', minWidth: 240, background: '#fff', border: '1.5px solid #ede8e0',
