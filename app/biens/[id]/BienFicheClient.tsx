@@ -2340,11 +2340,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
 
         /* Sticky nav */
-        .sticky-nav { position: sticky; top: 68px; z-index: 50; background: rgba(250,248,245,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 12px; padding: 4px; display: inline-flex; gap: 2px; margin-bottom: 24px; border: 1px solid #e8e2d8; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .sticky-nav-wrap { position: sticky; top: 68px; z-index: 50; display: flex; justify-content: center; margin-bottom: 24px; }
-        .sticky-nav-item { padding: 9px 20px; font-size: 13px; font-weight: 600; color: #7a6a60; white-space: nowrap; cursor: pointer; background: none; border: none; border-radius: 9px; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
-        .sticky-nav-item:hover { color: #1a1210; background: rgba(0,0,0,0.04); }
-        .sticky-nav-item.active { color: #c0392b; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .sticky-nav-wrap { position: sticky; top: 68px; z-index: 50; display: flex; justify-content: center; margin-bottom: 28px; }
+        .sticky-nav { background: var(--surface, #fff); border-radius: var(--radius-md, 14px); padding: 6px; display: inline-flex; gap: 4px; box-shadow: var(--shadow-sm, 0 1px 3px rgba(31,27,22,.06)); border: 1px solid var(--line, #e6dccb); }
+        .sticky-nav-item { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; font-size: 13px; font-weight: 500; color: var(--ink-soft, #6b6358); white-space: nowrap; cursor: pointer; background: transparent; border: none; border-radius: 10px; font-family: "Inter", sans-serif; transition: all var(--dur-hover, 150ms) var(--ease); }
+        .sticky-nav-item:hover { color: var(--ink, #1f1b16); background: var(--paper, #f5ede2); }
+        .sticky-nav-item.active { background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); }
 
         /* Modal panel */
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(26,18,16,0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -2590,10 +2590,22 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         {/* Sticky navigation */}
         <div className="sticky-nav-wrap">
           <nav className="sticky-nav">
-            <button className={`sticky-nav-item ${activeNav === 'donnees' ? 'active' : ''}`} onClick={() => scrollToNav('donnees')}>{"Donn\u00E9es"}</button>
-            <button className={`sticky-nav-item ${activeNav === 'estimation' ? 'active' : ''}`} onClick={() => scrollToNav('estimation')}>Estimation</button>
-            <button className={`sticky-nav-item ${activeNav === 'financement' ? 'active' : ''}`} onClick={() => scrollToNav('financement')}>Financement</button>
-            <button className={`sticky-nav-item ${activeNav === 'fiscalite' ? 'active' : ''}`} onClick={() => scrollToNav('fiscalite')}>{"Fiscalit\u00E9"}</button>
+            <button className={`sticky-nav-item ${activeNav === 'donnees' ? 'active' : ''}`} onClick={() => scrollToNav('donnees')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              {"Donn\u00E9es"}
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'estimation' ? 'active' : ''}`} onClick={() => scrollToNav('estimation')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+              Estimation
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'financement' ? 'active' : ''}`} onClick={() => scrollToNav('financement')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Financement
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'fiscalite' ? 'active' : ''}`} onClick={() => scrollToNav('fiscalite')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              {"Fiscalit\u00E9"}
+            </button>
           </nav>
         </div>
 
