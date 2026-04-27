@@ -43,9 +43,9 @@ function PhotoCarousel({ bien, overlay }: { bien: any, overlay?: React.ReactNode
         if (e.key === 'ArrowRight') { e.preventDefault(); next() }
       }}
       aria-label={`Photo ${idx + 1} sur ${photos.length}`}
-      style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}
+      className="gallery-wrap"
     >
-      <Image src={photos[idx]} alt="" width={800} height={450} className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in', width: '100%', height: 'auto', maxHeight: '320px', objectFit: 'cover' }} />
+      <Image src={photos[idx]} alt="" width={800} height={450} className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in' }} />
       {overlay}
       {/* Fullscreen overlay */}
       {fullscreen && (
@@ -60,21 +60,31 @@ function PhotoCarousel({ bien, overlay }: { bien: any, overlay?: React.ReactNode
           <button onClick={e => { e.stopPropagation(); setFullscreen(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: '24px', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'\u00D7'}</button>
           {photos.length > 1 && (
             <>
-              <button onClick={e => { e.stopPropagation(); prev() }} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: '24px', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>{'<'}</button>
-              <button onClick={e => { e.stopPropagation(); next() }} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: '24px', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>{'>'}</button>
+              <button onClick={e => { e.stopPropagation(); prev() }} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: '22px', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&#8249;</button>
+              <button onClick={e => { e.stopPropagation(); next() }} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: '22px', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&#8250;</button>
             </>
           )}
         </div>
       )}
+      {/* Boutons nav */}
       {photos.length > 1 && (
         <>
-          <button onClick={prev} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'<'}</button>
-          <button onClick={next} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{'>'}</button>
-          <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: '12px', padding: '4px 12px', fontSize: '12px', fontWeight: 600 }}>
-            {idx + 1} / {photos.length}
-          </div>
+          <button onClick={prev} className="gallery-nav" style={{ left: '12px' }} aria-label="Photo précédente">&#8249;</button>
+          <button onClick={next} className="gallery-nav" style={{ right: '12px' }} aria-label="Photo suivante">&#8250;</button>
         </>
       )}
+
+      {/* Dots (≤ 8 photos) */}
+      {photos.length > 1 && photos.length <= 8 && (
+        <div className="gallery-dots">
+          {photos.map((_, i) => (
+            <span key={i} className={`dot${i === idx ? ' active' : ''}`} onClick={() => setIdx(i)} />
+          ))}
+        </div>
+      )}
+
+      {/* Compteur */}
+      <div className="gallery-count">{idx + 1} / {photos.length}</div>
     </div>
   )
 }
@@ -2205,8 +2215,16 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
-        .fiche-photo { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 16px; max-height: 320px; }
-        .fiche-photo-empty { width: 100%; aspect-ratio: 16/9; border-radius: 16px; background: #ede8e0; display: flex; align-items: center; justify-content: center; color: #b0a898; max-height: 320px; }
+        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); aspect-ratio: 4/3; max-height: 380px; }
+        .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
+        .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
+        .fiche-photo-empty { width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); max-height: 380px; }
+        .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--ink, #1f1b16); box-shadow: 0 1px 4px rgba(0,0,0,.12); transition: all .2s; }
+        .gallery-nav:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
+        .gallery-dots { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; background: rgba(31,27,22,0.5); backdrop-filter: blur(8px); border-radius: 999px; }
+        .gallery-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: all .2s; display: inline-block; }
+        .gallery-dots .dot.active { background: #fff; width: 18px; border-radius: 999px; }
+        .gallery-count { position: absolute; bottom: 14px; right: 14px; padding: 4px 10px; background: rgba(31,27,22,0.55); backdrop-filter: blur(8px); border-radius: 6px; color: #fff; font-size: 11px; font-weight: 500; }
         .fiche-info { display: flex; flex-direction: column; gap: 14px; }
         .fiche-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 800; color: #1a1210; }
         .fiche-sub { font-size: 14px; color: #7a6a60; margin-top: -8px; }
