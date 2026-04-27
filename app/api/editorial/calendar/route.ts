@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
+export const maxDuration = 300
+
 // GET - Recuperer le calendrier
 export async function GET() {
   const { data, error } = await supabaseAdmin

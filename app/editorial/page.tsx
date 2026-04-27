@@ -97,6 +97,7 @@ export default function EditorialPage() {
   const [currentArticle, setCurrentArticle] = useState<any>(null)
   const [generating, setGenerating] = useState(false)
   const [genStep, setGenStep] = useState('')
+  const [genError, setGenError] = useState('')
 
   // Form state
   const [fTitle, setFTitle] = useState('')
@@ -115,6 +116,7 @@ export default function EditorialPage() {
   async function handleGenerate() {
     if (!fTitle.trim()) return
     setGenerating(true)
+    setGenError('')
     setGenStep('Analyse du sujet...')
 
     const steps = ['Structuration du plan...', 'R\u00e9daction en cours...', 'Mise en forme finale...']
@@ -140,10 +142,13 @@ export default function EditorialPage() {
         setCurrentArticle(data.article)
         setTab('articles')
         setFTitle(''); setFCategory(''); setFKeyword(''); setFAngle('')
+      } else if (data.error) {
+        setGenError(data.error)
       }
-    } catch {
+    } catch (err: any) {
       clearInterval(interval)
       setGenerating(false)
+      setGenError(err?.message || 'Erreur r\u00e9seau \u2014 v\u00e9rifier les logs Vercel')
     }
   }
 
@@ -537,6 +542,11 @@ export default function EditorialPage() {
                 <button className="ed-btn-primary" onClick={handleGenerate} disabled={generating}>G{'\u00e9'}n{'\u00e9'}rer l'article</button>
                 <button className="ed-btn-secondary" onClick={() => setTab('backlog')}>Choisir depuis le backlog</button>
               </div>
+              {genError && (
+                <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fff0ee', border: '1px solid #f5c6c0', borderRadius: '4px', fontSize: '12px', color: '#c0392b' }}>
+                  {genError}
+                </div>
+              )}
             </div>
           )}
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
+export const maxDuration = 300
+
 // GET - Liste des articles
 export async function GET() {
   const { data, error } = await supabaseAdmin
@@ -260,7 +262,7 @@ Redige l'article complet en HTML (h1, h2, h3, p, ul, li, strong, blockquote, div
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-20250514',
+      model: 'claude-opus-4-7',
       max_tokens: effectiveLength === 'pilier' ? 16384 : 12288,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
@@ -375,7 +377,7 @@ IMPORTANT : retourne UNIQUEMENT le HTML corrige, sans commentaire, sans explicat
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 16384,
         system: reviewPrompt,
         messages: [{ role: 'user', content: `Voici l'article a relire et corriger :\n\n${html}` }],
