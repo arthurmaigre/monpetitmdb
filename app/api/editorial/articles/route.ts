@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
+export const maxDuration = 300
+
 // GET - Liste des articles
 export async function GET() {
   const { data, error } = await supabaseAdmin
@@ -249,80 +251,52 @@ ${params.angle ? `\nInstructions specifiques / angle :\n${params.angle}` : ''}
 
 Redige l'article complet en HTML (h1, h2, h3, p, ul, li, strong, blockquote, div, a). Insere 1-2 [PHOTO:...] aux endroits pertinents. Commence directement par le <h1> sans preambule.`
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY non definie')
+  const vpsUrl = process.env.VPS_GENERATION_URL
+  if (!vpsUrl) throw new Error('VPS_GENERATION_URL non definie')
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-opus-4-20250514',
-      max_tokens: effectiveLength === 'pilier' ? 16384 : 12288,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
+  let html = await callVpsArticle({
+    title: params.title,
+    category: params.category || '',
+    systemPrompt,
+    userPrompt,
+    googleSearchKey: process.env.GOOGLE_SEARCH_KEY || '',
+    googleSearchCx: process.env.GOOGLE_SEARCH_CX || '',
+    reviewBasePrompt: buildReviewBasePrompt(),
   })
 
-  const data = await res.json()
-  let html = data.content?.[0]?.text || '<p>Erreur lors de la generation.</p>'
-
-  // Etape 2 : relecture IA (verification des faits + corrections)
-  html = await reviewAndCorrect(html, apiKey!)
-
-  // Etape 3 : remplacer les [PHOTO:...] par des images Unsplash
   html = await replacePhotosWithUnsplash(html)
-
   return html
 }
 
-async function reviewAndCorrect(html: string, apiKey: string): Promise<string> {
-  // Etape 1 : extraire les affirmations factuelles a verifier
-  const extractRes = await fetch('https://api.anthropic.com/v1/messages', {
+async function callVpsArticle(payload: {
+  title: string, category: string,
+  systemPrompt: string, userPrompt: string,
+  googleSearchKey: string, googleSearchCx: string,
+  reviewBasePrompt: string,
+}): Promise<string> {
+  const res = await fetch(`${process.env.VPS_GENERATION_URL}/generate/article`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'x-generation-secret': process.env.GENERATION_SECRET || '',
     },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      messages: [{ role: 'user', content: `Extrais les 3-5 affirmations factuelles les plus importantes a verifier dans cet article (taux, seuils, lois, dates, regles). Reponds en JSON : {"queries": ["taux prelevements sociaux immobilier 2026", "seuil micro foncier 2026", ...]}\n\n${html.substring(0, 3000)}` }],
-    }),
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(270_000),
   })
+  if (!res.ok) {
+    const err = await res.text().catch(() => '')
+    throw new Error(`VPS error ${res.status}: ${err}`)
+  }
+  const data = await res.json()
+  return data.html || '<p>Erreur : reponse VPS vide.</p>'
+}
 
-  let webContext = ''
-  try {
-    const extractData = await extractRes.json()
-    let raw = extractData.content?.[0]?.text || '{}'
-    raw = raw.replace(/```json|```/g, '').trim()
-    const { queries } = JSON.parse(raw)
-
-    // Etape 2 : rechercher chaque affirmation sur le web
-    if (queries && queries.length > 0) {
-      for (const query of queries.slice(0, 4)) {
-        try {
-          const searchRes = await fetch(`https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_SEARCH_KEY || ''}&cx=${process.env.GOOGLE_SEARCH_CX || ''}&q=${encodeURIComponent(query + ' france 2026')}&num=2`)
-          if (searchRes.ok) {
-            const searchData = await searchRes.json()
-            const snippets = (searchData.items || []).map((item: any) => `[${item.title}] ${item.snippet}`).join('\n')
-            if (snippets) webContext += `\nRecherche "${query}" :\n${snippets}\n`
-          }
-        } catch {}
-      }
-    }
-  } catch {}
-
-  // Etape 3 : relecture avec le contexte web
+function buildReviewBasePrompt(): string {
   const now = new Date()
   const monthNames = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre']
   const currentDateStr = `${monthNames[now.getMonth()]} ${now.getFullYear()}`
 
-  const reviewPrompt = `Tu es un relecteur expert en droit immobilier et fiscalite francaise. Ton role est de verifier et corriger un article de blog en t'assurant que TOUTES les informations sont exactes et a jour en ${currentDateStr}.
+  return `Tu es un relecteur expert en droit immobilier et fiscalite francaise. Ton role est de verifier et corriger un article de blog en t'assurant que TOUTES les informations sont exactes et a jour en ${currentDateStr}.
 
 ## REFERENCE FISCALE VERIFIEE (${currentDateStr})
 
@@ -344,52 +318,39 @@ Ces chiffres sont CERTAINS — utilise-les comme reference :
 - TVA sur marge MdB : marge x 20/120 (TVA "en dedans")
 - MaPrimeRenov : montant variable selon revenus et type de travaux. Ne pas inventer de pourcentage.
 - Taux de credit immobilier : ne pas inventer de fourchette, dire "selon les conditions de marche" si pas de source.
-${webContext ? `\nINFORMATIONS WEB RECENTES :\n${webContext}` : ''}
+
+## REGLE ABSOLUE — DONNEES DE MARCHE
+
+Tu n'as PAS le droit d'inventer :
+- Un prix au m2 ou un loyer absent des INFORMATIONS WEB RECENTES ci-dessous
+- Un rendement locatif chiffre non source
+- Un volume de transactions immobilieres
+- Un taux de credit absent des INFORMATIONS WEB RECENTES ci-dessous
+
+Si la donnee n'est pas dans INFORMATIONS WEB RECENTES ou dans REFERENCE FISCALE :
+formulation qualitative obligatoire : "parmi les plus eleves", "en hausse", jamais de chiffre invente
 
 ## REGLES DE VERIFICATION
 
 1. **Chiffres certains** : si le chiffre est dans la reference ci-dessus, verifie qu'il correspond exactement. Corrige si different.
 
 2. **Chiffres incertains** (taux de credit, prix moyens, montants d'aides, pourcentages de marche) :
-   - Si la recherche web a fourni un chiffre recent → utilise-le avec la source
+   - Si INFORMATIONS WEB RECENTES a fourni un chiffre recent → utilise-le avec la source
    - Si tu es SUR du chiffre par tes connaissances → garde-le tel quel
-   - Si tu as un DOUTE → reformule de facon qualitative (ex: "une part significative" au lieu de "90%")
-   - NE JAMAIS remplacer un chiffre par "Variable" ou "N/A" — c'est pire que le chiffre original. Soit tu corriges avec le bon chiffre, soit tu gardes l'original, soit tu reformules en texte.
+   - Si tu as un DOUTE → reformule de facon qualitative
+   - NE JAMAIS remplacer un chiffre par "Variable" ou "N/A" — soit tu corriges, soit tu gardes, soit tu reformules en texte.
 
-3. **Affirmations juridiques** : verifie que les conditions, seuils et regles sont exacts. En cas de doute, ajouter "sous certaines conditions" ou "selon la situation".
+3. **Affirmations juridiques** : verifie que les conditions, seuils et regles sont exacts. En cas de doute, ajouter "sous certaines conditions".
 
-4. **Cards HTML (div style="display:flex")** : ces blocs presentent des chiffres-cles visuels. Ne JAMAIS remplacer leur contenu par "Variable". Si un chiffre est incertain, remplace par un chiffre raisonnable ou supprime la card entierement.
+4. **Cards HTML (div style="display:flex")** : Ne JAMAIS remplacer leur contenu par "Variable". Si un chiffre est incertain, remplace par un chiffre raisonnable ou supprime la card.
 
-4. **Exemples chiffres** : les exemples de simulation (loyer, prix, charges) sont illustratifs — ne pas les modifier sauf si les TAUX ou REGLES appliques sont faux.
+5. **Donnees de marche** : tout chiffre de prix/m2, loyer, rendement ou taux absent des INFORMATIONS WEB RECENTES → remplacer par qualitatif. Si present dans INFORMATIONS WEB → verifier qu'il est source dans l'article.
 
-5. **Sources en fin d'article** : verifier que les URLs pointent vers des domaines reels et reconnus. Supprimer toute URL qui semble inventee.
+6. **Exemples chiffres** : les exemples de simulation (loyer, prix, charges) sont illustratifs — ne pas les modifier sauf si les TAUX ou REGLES appliques sont faux.
+
+7. **Sources en fin d'article** : verifier que les URLs pointent vers des domaines reels. Supprimer toute URL inventee.
 
 IMPORTANT : retourne UNIQUEMENT le HTML corrige, sans commentaire, sans explication, sans backticks. Commence directement par la premiere balise HTML.`
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 16384,
-        system: reviewPrompt,
-        messages: [{ role: 'user', content: `Voici l'article a relire et corriger :\n\n${html}` }],
-      }),
-    })
-
-    const data = await res.json()
-    const corrected = data.content?.[0]?.text
-    if (corrected && corrected.includes('<')) {
-      return corrected
-    }
-  } catch {}
-
-  return html
 }
 
 async function replacePhotosWithUnsplash(html: string): Promise<string> {
