@@ -165,7 +165,7 @@ async function handleGenerateCalendar(body) {
     model: model || 'claude-opus-4-7',
     systemPrompt,
     prompt: userPrompt,
-    timeout: 120_000,
+    timeout: 110_000,  // 110s → laisse 20s de marge réseau pour le timeout Vercel (130s)
   })
 
   return { text }
