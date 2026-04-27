@@ -2025,6 +2025,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     }
   }
 
+
+
   async function handleScorePerso(score: number) {
     if (!userToken) return
     const newScore = score === scorePerso ? null : score
@@ -2379,24 +2381,43 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         <div className="hero-grid">
           <div style={{ height: '100%' }}>
-            <PhotoCarousel bien={bien} overlay={isEnchere && bien.date_audience ? (() => {
-              const days = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000)
-              let label = '', bg = '#6c757d'
-              if (days > 0) {
-                label = days === 0 ? "Aujourd'hui" : `J-${days}`
-                bg = days <= 7 ? '#c0392b' : days <= 14 ? '#e67e22' : '#6c757d'
-              } else {
-                const deadline = bien.date_surenchere
-                  ? new Date(bien.date_surenchere)
-                  : new Date(new Date(bien.date_audience).getTime() + 10 * 86400000)
-                const remaining = Math.ceil((deadline.getTime() - Date.now()) / 86400000)
-                if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e67e22' }
-                else { label = 'Adjugé'; bg = '#2a4a8a' }
-              }
-              return label ? (
-                <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
-              ) : null
-            })() : undefined} />
+            <PhotoCarousel bien={bien} overlay={<>
+              {/* Badge stratégie — top-left du carousel */}
+              {!isEnchere && bien.strategie_mdb && (() => {
+                const stratColors: Record<string, { bg: string; color: string }> = {
+                  'Locataire en place': { bg: '#b4442e', color: '#fff' },
+                  'Travaux lourds': { bg: '#c77f1f', color: '#fff' },
+                  'Immeuble de rapport': { bg: '#3a5f7d', color: '#fff' },
+                  'Division': { bg: '#2f7d5b', color: '#fff' },
+                  'Enchères': { bg: '#6a2d2d', color: '#fff' },
+                }
+                const sc = stratColors[bien.strategie_mdb] || { bg: 'rgba(31,27,22,0.6)', color: '#fff' }
+                return (
+                  <span style={{ position: 'absolute', top: '12px', left: '12px', background: sc.bg, color: sc.color, fontSize: '11px', fontWeight: 600, padding: '5px 11px', borderRadius: '8px', zIndex: 2, letterSpacing: '0.02em' }}>
+                    {bien.strategie_mdb}
+                  </span>
+                )
+              })()}
+              {/* Badge countdown enchères — top-right */}
+              {isEnchere && bien.date_audience && (() => {
+                const days = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000)
+                let label = '', bg = '#6c757d'
+                if (days > 0) {
+                  label = days === 0 ? "Aujourd'hui" : `J-${days}`
+                  bg = days <= 7 ? '#c0392b' : days <= 14 ? '#e67e22' : '#6c757d'
+                } else {
+                  const deadline = bien.date_surenchere
+                    ? new Date(bien.date_surenchere)
+                    : new Date(new Date(bien.date_audience).getTime() + 10 * 86400000)
+                  const remaining = Math.ceil((deadline.getTime() - Date.now()) / 86400000)
+                  if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e67e22' }
+                  else { label = 'Adjugé'; bg = '#2a4a8a' }
+                }
+                return label ? (
+                  <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
+                ) : null
+              })()}
+            </>} />
           </div>
 
           <div className="deal-card">
@@ -2438,12 +2459,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       </span>
                     )}
                   </>
-                ) : (
-                  <>
-                    {bien.strategie_mdb && <span className="tag tag-strat">{bien.strategie_mdb}</span>}
-                    {bien.statut && <span className="tag tag-statut">{bien.statut}</span>}
-                  </>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -2451,9 +2467,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             <div className="price-grid">
               <div className="price-block">
                 <div className="label">{isEnchere ? (bien.prix_adjuge && bien.prix_adjuge > 0 ? 'PRIX ADJUG\u00c9' : 'MISE \u00c0 PRIX') : 'PRIX FAI'}</div>
-                <div className="value">{fmt(isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.prix_fai)} \u20ac</div>
+                <div className="value">{fmt(isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.prix_fai)} {'€'}</div>
                 {isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 && (
-                  <div className="sub">Mise \u00e0 prix : {fmt(bien.prix_fai)} \u20ac</div>
+                  <div className="sub">Mise \u00e0 prix : {fmt(bien.prix_fai)} {'€'}</div>
                 )}
                 {!isEnchere && ecartPct && (
                   <div className="sub">{ecartNegatif ? 'Prix demand\u00e9 vendeur' : 'Prix affich\u00e9 \u00b7 sous-\u00e9valu\u00e9'}</div>
@@ -2480,7 +2496,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     return enchMax ? (
                       <>
                         <div className="label">{`ENCH\u00c8RE MAX (OBJ. ${objectifPV || 20}% PV)`}</div>
-                        <div className="value enchere-max">{fmt(enchMax)} \u20ac</div>
+                        <div className="value enchere-max">{fmt(enchMax)} {'€'}</div>
                       </>
                     ) : (
                       <>
@@ -2521,7 +2537,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   <>
                     <div className="label">REVENTE ESTIM\u00c9E</div>
                     <div className="value" style={{ color: estimationData?.prix_total ? 'var(--success)' : 'var(--ink-mute)' }}>
-                      {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} \u20ac` : 'NC'}
+                      {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} €` : 'NC'}
                     </div>
                   </>
                 )}
