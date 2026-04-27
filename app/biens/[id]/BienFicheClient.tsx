@@ -45,7 +45,7 @@ function PhotoCarousel({ bien, overlay }: { bien: any, overlay?: React.ReactNode
       aria-label={`Photo ${idx + 1} sur ${photos.length}`}
       className="gallery-wrap"
     >
-      <Image src={photos[idx]} alt="" width={800} height={450} className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in' }} />
+      <Image src={photos[idx]} alt="" width={800} height={450} className="fiche-photo" onClick={() => setFullscreen(true)} style={{ cursor: 'zoom-in', width: '100%', height: '100%', objectFit: 'cover' }} />
       {overlay}
       {/* Fullscreen overlay */}
       {fullscreen && (
