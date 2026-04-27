@@ -120,6 +120,31 @@ Voir `OPENCLAW.md` pour la configuration complète (à charger avec `@OPENCLAW.m
 
 **Prochain chantier :** article pilier `/blog/encheres-judiciaires-immobilieres-guide-complet` (priorité P0)
 
+## Calendrier éditorial (interface `/editorial`)
+
+**Route API :** `app/api/editorial/calendar/route.ts` · `app/api/editorial/articles/route.ts`  
+**Interface :** `/editorial` — onglets Rédiger / Backlog / Articles / Calendrier  
+**Stockage :** tables Supabase `editorial_calendar` + `articles`
+
+**Workflow :**
+1. Onglet Calendrier → "Générer le planning" → insère 52 semaines (S1-S12 hardcodées + S13-S52 via Claude Opus)
+2. Sur une ligne du calendrier → "Rédiger" → prérempli le formulaire → "Générer l'article" → Claude Opus rédige + Sonnet relit + Unsplash pour les photos
+3. Statuts article : `draft` → `review` → `approved` → `published` (ping sitemap Google à la publication)
+
+**S1-S12 hardcodées (audit 2026-04-21) — NE PAS modifier sans mettre à jour cet index :**
+- S1 : Enchères judiciaires immobilières guide complet (P0, pilier, 3000 mots)
+- S2 : TVA sur marge immobilier — marchands de biens (satellite S1, 1500 mots)
+- S3 : Investir comme un marchand de biens : la méthode complète (P0, pilier, 2500 mots)
+- S4 : Mise à prix vs prix adjugé : calculer sa décote aux enchères (satellite S1, 1200 mots)
+- S5 : Immeuble de rapport guide complet (P1, pilier, 2500 mots)
+- S6 : Locataire en place : opportunité ou piège ? (satellite P3, 1500 mots)
+- S7 : Pages villes — Lyon, Marseille, Bordeaux, Lille, Nantes comparatif (3000 mots)
+- S8 : Fiscalité immobilière 7 régimes comparés (P1, pilier, 2500 mots)
+- S9 : Division immobilière méthode MdB (P2, pilier, 2000 mots)
+- S10 : Pages villes — Toulouse, Rennes, Strasbourg, Montpellier, Grenoble, Rouen, Nice (3000 mots)
+- S11 : Achat-revente immobilier fiscalité et stratégie (satellite P2, 1500 mots)
+- S12 : Pages villes — 9 dernières villes + bilan stratégie 2026 (3000 mots)
+
 ## Contexte supplémentaire (chargé à la demande)
 
 - `scrapper/CLAUDE.md` — pipeline Python enchères, VPS, crons
