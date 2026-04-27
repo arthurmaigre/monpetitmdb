@@ -19,8 +19,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const startDate = body.startDate || new Date().toISOString().slice(0, 10)
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY non definie' }, { status: 500 })
+  const vpsUrl = process.env.VPS_GENERATION_URL
+  if (!vpsUrl) return NextResponse.json({ error: 'VPS_GENERATION_URL non definie' }, { status: 500 })
 
   const systemPrompt = `Tu es le directeur editorial de "Mon Petit MDB", une plateforme francaise d'investissement immobilier pour investisseurs amateurs appliquant la methode marchand de biens (MDB).
 
@@ -110,23 +110,27 @@ Reponds UNIQUEMENT en JSON valide, sans backticks, sans explication. Format exac
 40 objets dans le tableau, semaines 13 a 52. tone parmi : pedagogique, expert, cas-pratique, alerte. Categories parmi : Strategies, Fiscalite, Travaux, Financement, Marche.`
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const vpsRes = await fetch(`${vpsUrl}/generate/calendar`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'x-generation-secret': process.env.GENERATION_SECRET || '',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-20250514',
-        max_tokens: 8192,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: 'Genere le planning editorial des semaines 13 a 52 pour Mon Petit MDB. Les semaines 1-12 sont deja fixees et seront ajoutees automatiquement. Genere EXACTEMENT 40 articles (semaines 13 a 52). Couvre TOUS les satellites obligatoires listes. Reponds uniquement en JSON : {"articles":[{"week":13,...},{"week":14,...},...,{"week":52,...}]}' }],
+        systemPrompt,
+        userPrompt: 'Genere le planning editorial des semaines 13 a 52 pour Mon Petit MDB. Les semaines 1-12 sont deja fixees et seront ajoutees automatiquement. Genere EXACTEMENT 40 articles (semaines 13 a 52). Couvre TOUS les satellites obligatoires listes. Reponds uniquement en JSON : {"articles":[{"week":13,...},{"week":14,...},...,{"week":52,...}]}',
+        model: 'claude-opus-4-7',
       }),
+      signal: AbortSignal.timeout(120_000),
     })
 
-    const data = await res.json()
-    let raw = data.content?.[0]?.text || '{}'
+    if (!vpsRes.ok) {
+      const errText = await vpsRes.text().catch(() => '')
+      return NextResponse.json({ error: `VPS error ${vpsRes.status}: ${errText}` }, { status: 500 })
+    }
+
+    const vpsData = await vpsRes.json()
+    let raw = vpsData.text || '{}'
     raw = raw.replace(/```json|```/g, '').trim()
 
     let parsed
