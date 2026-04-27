@@ -2241,15 +2241,17 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .ecart-pos { background: #fde8e8; color: #a33; }
         .lbc-btn { display: inline-block; padding: 9px 18px; border: 2px solid #e8e2d8; border-radius: 10px; font-size: 13px; font-weight: 600; color: #1a1210; text-decoration: none; transition: all 0.15s; }
         .lbc-btn:hover { border-color: #c0392b; color: #c0392b; }
-        .section { background: #fff; border-radius: 16px; padding: 24px 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 16px; }
-        .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a1210; }
-        .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .section { background: var(--surface, #fff); border-radius: var(--radius-md, 14px); padding: 24px 26px; box-shadow: var(--shadow-sm); border: 1px solid var(--line, #e6dccb); margin-bottom: 16px; }
+        .section-title { font-family: "Fraunces", serif; font-size: 18px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 18px; color: var(--ink, #1f1b16); display: flex; align-items: center; justify-content: space-between; }
+        .section-subtitle { font-size: 12px; color: var(--ink-soft, #6b6358); margin-bottom: 18px; }
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--line-soft, #efe7d7); border-radius: var(--radius-sm, 8px); overflow: hidden; }
         .estimation-price-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; }
-        .data-subtitle { grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 8px; border-top: 1px solid #e8e2d8; margin-top: 4px; }
-        .data-item { display: flex; flex-direction: column; gap: 4px; }
-        .data-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
-        .data-value { font-size: 14px; font-weight: 600; color: #1a1210; }
-        .data-value.nc { color: #7a6a60; font-style: italic; font-weight: 400; }
+        .data-subtitle { grid-column: 1 / -1; font-size: 10px; font-weight: 600; color: var(--ink-mute, #a39a8c); text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 16px 6px; background: var(--surface, #fff); }
+        .data-item { display: grid; grid-template-columns: 1fr 160px; align-items: center; column-gap: 12px; padding: 14px 16px; background: var(--surface, #fff); transition: background var(--dur-hover, 150ms); }
+        .data-item:hover { background: var(--paper, #f5ede2); }
+        .data-label { font-size: 11px; color: var(--ink-mute, #a39a8c); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+        .data-value { font-size: 14px; font-weight: 500; color: var(--ink, #1f1b16); text-align: right; justify-self: end; }
+        .data-value.nc { color: var(--ink-mute, #a39a8c); font-style: italic; font-weight: 400; }
         .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
         .two-cols { display: flex; gap: 24px; align-items: flex-start; }
         .two-cols > .col { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
