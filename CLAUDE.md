@@ -126,9 +126,15 @@ Voir `OPENCLAW.md` pour la configuration complète (à charger avec `@OPENCLAW.m
 **Interface :** `/editorial` — onglets Rédiger / Backlog / Articles / Calendrier  
 **Stockage :** tables Supabase `editorial_calendar` + `articles`
 
+**Pipeline génération (VPS Hetzner — zéro API Anthropic) :**  
+Vercel construit les prompts → POST `http://178.104.58.122:3099` (article-server.js, PM2, user openclaw) → CLI Claude OAuth Max.  
+- `/generate/calendar` : Opus planifie S13-S52 (timeout VPS 110s / Vercel 130s)  
+- `/generate/article` : Haiku extrait claims → Google Custom Search (webContext) → Opus rédige → Sonnet relit avec règle zéro-invention données de marché  
+Auth : header `x-generation-secret` (env `GENERATION_SECRET`). Env Vercel : `VPS_GENERATION_URL=http://178.104.58.122:3099`.
+
 **Workflow :**
-1. Onglet Calendrier → "Générer le planning" → insère 52 semaines (S1-S12 hardcodées + S13-S52 via Claude Opus)
-2. Sur une ligne du calendrier → "Rédiger" → prérempli le formulaire → "Générer l'article" → Claude Opus rédige + Sonnet relit + Unsplash pour les photos
+1. Onglet Calendrier → "Générer le planning" → insère 52 semaines (S1-S12 hardcodées + S13-S52 via VPS Opus)
+2. Sur une ligne du calendrier → "Rédiger" → prérempli le formulaire → "Générer l'article" → pipeline VPS + Unsplash pour les photos
 3. Statuts article : `draft` → `review` → `approved` → `published` (ping sitemap Google à la publication)
 
 **S1-S12 hardcodées (audit 2026-04-21) — NE PAS modifier sans mettre à jour cet index :**
