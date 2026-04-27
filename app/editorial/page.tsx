@@ -146,9 +146,9 @@ export default function EditorialPage() {
       return
     }
 
-    // 2. Poll toutes les 4s jusqu'\u00e0 ce que le statut change (max 5 min)
+    // 2. Poll toutes les 4s jusqu'\u00e0 ce que le statut change (max 10 min)
     const steps = ['Extraction des points cl\u00e9s...', 'Recherche des donn\u00e9es...', 'R\u00e9daction en cours...', 'Relecture finale...']
-    for (let i = 0; i < 75; i++) {
+    for (let i = 0; i < 150; i++) {
       await new Promise(r => setTimeout(r, 4000))
       setGenStep(steps[Math.floor(i / 6) % steps.length])
       try {
@@ -168,7 +168,7 @@ export default function EditorialPage() {
       } catch {}
     }
     setGenerating(false)
-    setGenError('Timeout \u2014 g\u00e9n\u00e9ration trop longue (> 5 min)')
+    setGenError('Timeout \u2014 g\u00e9n\u00e9ration trop longue (> 10 min)')
   }
 
   async function deleteArticle(id: string) {
