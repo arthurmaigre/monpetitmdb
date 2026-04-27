@@ -1,9 +1,10 @@
 'use strict'
 const http = require('http')
+const https = require('https')
 const { spawn } = require('child_process')
 const crypto = require('crypto')
-const https = require('https')
 const fs = require('fs')
+const { URL } = require('url')
 
 // Charger les secrets depuis le fichier env au démarrage
 try {
@@ -21,7 +22,6 @@ const CLAUDE_BIN = process.env.CLAUDE_BIN || '/usr/bin/claude'
 function checkAuth(req) {
   const provided = req.headers['x-generation-secret'] || ''
   if (!GENERATION_SECRET || !provided) return false
-  // Buffers de 128 octets pour timingSafeEqual (longueur fixe)
   const a = Buffer.alloc(128, 0)
   const b = Buffer.alloc(128, 0)
   Buffer.from(provided, 'utf8').copy(a, 0, 0, 128)
@@ -52,7 +52,7 @@ function spawnClaude({ model, systemPrompt, prompt, timeout }) {
 
     const child = spawn(CLAUDE_BIN, args, {
       env,
-      stdio: ['ignore', 'pipe', 'pipe'],  // ignore stdin — prompt passé via -p
+      stdio: ['ignore', 'pipe', 'pipe'],
     })
 
     let stdout = ''
@@ -85,10 +85,38 @@ function httpsGet(url) {
   })
 }
 
+function httpsPost(urlStr, body, secret) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body)
+    let parsed
+    try { parsed = new URL(urlStr) } catch (e) { return reject(e) }
+    const isHttps = parsed.protocol === 'https:'
+    const lib = isHttps ? https : require('http')
+    const options = {
+      hostname: parsed.hostname,
+      port: parsed.port || (isHttps ? 443 : 80),
+      path: parsed.pathname + parsed.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        'x-generation-secret': secret || '',
+      },
+    }
+    const req = lib.request(options, res => {
+      res.resume()
+      res.on('end', resolve)
+    })
+    req.on('error', reject)
+    req.setTimeout(15000, () => { req.destroy(new Error('httpsPost timeout')) })
+    req.write(payload)
+    req.end()
+  })
+}
+
 async function buildWebContext(title, category, googleSearchKey, googleSearchCx) {
   if (!googleSearchKey || !googleSearchCx) return ''
 
-  // Haiku extrait les claims à vérifier
   let queries = []
   try {
     const claimsRaw = await spawnClaude({
@@ -104,7 +132,6 @@ Reponds UNIQUEMENT en JSON valide : {"queries":["taux IS 2026","seuil micro-fonc
     return ''
   }
 
-  // Google Custom Search sur whitelist de sites fiables
   let webContext = ''
   for (const q of queries) {
     try {
@@ -118,7 +145,7 @@ Reponds UNIQUEMENT en JSON valide : {"queries":["taux IS 2026","seuil micro-fonc
   return webContext
 }
 
-async function handleGenerateArticle(body) {
+async function generateArticlePipeline(body) {
   const { systemPrompt, userPrompt, reviewBasePrompt, googleSearchKey, googleSearchCx, title, category } = body
   if (!systemPrompt || !userPrompt) throw new Error('systemPrompt et userPrompt requis')
 
@@ -146,14 +173,45 @@ async function handleGenerateArticle(body) {
         prompt: `Voici l'article a relire et corriger :\n\n${articleHtml}`,
         timeout: 75_000,
       })
-      // Vérifier que la réponse contient du HTML valide
       if (corrected.includes('<')) reviewedHtml = corrected
     } catch (err) {
       console.error('[article-server] Sonnet review failed, using raw Opus output:', err.message)
     }
   }
 
-  return { html: reviewedHtml }
+  return reviewedHtml
+}
+
+async function handleGenerateArticle(body, res) {
+  const { article_id, callback_url, ...pipelineBody } = body
+
+  if (article_id && callback_url) {
+    // Mode async : répondre immédiatement, générer en arrière-plan
+    res.writeHead(200)
+    res.end(JSON.stringify({ queued: true, article_id }))
+
+    ;(async () => {
+      let html, genError
+      try {
+        html = await generateArticlePipeline(pipelineBody)
+      } catch (err) {
+        genError = err.message
+        console.error('[article-server] async generation failed:', err.message)
+      }
+      try {
+        await httpsPost(callback_url, { article_id, html, error: genError }, GENERATION_SECRET)
+        console.log(`[article-server] callback sent → ${callback_url} (article_id: ${article_id})`)
+      } catch (err) {
+        console.error('[article-server] callback failed:', err.message)
+      }
+    })()
+    return
+  }
+
+  // Mode sync (backward compat)
+  const html = await generateArticlePipeline(body)
+  res.writeHead(200)
+  res.end(JSON.stringify({ html }))
 }
 
 async function handleGenerateCalendar(body) {
@@ -200,22 +258,22 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
-    let result
     if (req.url === '/generate/article') {
-      result = await handleGenerateArticle(body)
+      await handleGenerateArticle(body, res)
     } else if (req.url === '/generate/calendar') {
-      result = await handleGenerateCalendar(body)
+      const result = await handleGenerateCalendar(body)
+      res.writeHead(200)
+      res.end(JSON.stringify(result))
     } else {
       res.writeHead(404)
       res.end(JSON.stringify({ error: 'Not found' }))
-      return
     }
-    res.writeHead(200)
-    res.end(JSON.stringify(result))
   } catch (err) {
     console.error(`[article-server] Error on ${req.url}:`, err.message)
-    res.writeHead(500)
-    res.end(JSON.stringify({ error: err.message }))
+    if (!res.headersSent) {
+      res.writeHead(500)
+      res.end(JSON.stringify({ error: err.message }))
+    }
   }
 })
 

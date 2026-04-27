@@ -117,12 +117,10 @@ export default function EditorialPage() {
     if (!fTitle.trim()) return
     setGenerating(true)
     setGenError('')
-    setGenStep('Analyse du sujet...')
+    setGenStep('Lancement de la g\u00e9n\u00e9ration...')
 
-    const steps = ['Structuration du plan...', 'R\u00e9daction en cours...', 'Mise en forme finale...']
-    let si = 0
-    const interval = setInterval(() => { si = (si + 1) % steps.length; setGenStep(steps[si]) }, 2000)
-
+    // 1. POST \u2014 retourne imm\u00e9diatement avec le stub (status='generating')
+    let articleId: string
     try {
       const res = await fetch('/api/editorial/articles', {
         method: 'POST',
@@ -134,22 +132,43 @@ export default function EditorialPage() {
         }),
       })
       const data = await res.json()
-      clearInterval(interval)
-      setGenerating(false)
-
-      if (data.article) {
-        setArticles(prev => [data.article, ...prev])
-        setCurrentArticle(data.article)
-        setTab('articles')
-        setFTitle(''); setFCategory(''); setFKeyword(''); setFAngle('')
-      } else if (data.error) {
-        setGenError(data.error)
+      if (!data.article?.id) {
+        setGenError(data.error || 'Erreur au lancement')
+        setGenerating(false)
+        return
       }
+      articleId = data.article.id
+      setArticles(prev => [data.article, ...prev])
+      setFTitle(''); setFCategory(''); setFKeyword(''); setFAngle('')
     } catch (err: any) {
-      clearInterval(interval)
+      setGenError(err?.message || 'Erreur r\u00e9seau')
       setGenerating(false)
-      setGenError(err?.message || 'Erreur r\u00e9seau \u2014 v\u00e9rifier les logs Vercel')
+      return
     }
+
+    // 2. Poll toutes les 4s jusqu'\u00e0 ce que le statut change (max 5 min)
+    const steps = ['Extraction des points cl\u00e9s...', 'Recherche des donn\u00e9es...', 'R\u00e9daction en cours...', 'Relecture finale...']
+    for (let i = 0; i < 75; i++) {
+      await new Promise(r => setTimeout(r, 4000))
+      setGenStep(steps[Math.floor(i / 6) % steps.length])
+      try {
+        const res = await fetch(`/api/editorial/articles?id=${articleId}`)
+        const data = await res.json()
+        const article = data.article
+        if (!article || article.status === 'generating') continue
+        setGenerating(false)
+        setArticles(prev => prev.map((a: any) => a.id === article.id ? article : a))
+        if (article.status === 'failed') {
+          setGenError(article.gen_error || 'G\u00e9n\u00e9ration \u00e9chou\u00e9e')
+          return
+        }
+        setCurrentArticle(article)
+        setTab('articles')
+        return
+      } catch {}
+    }
+    setGenerating(false)
+    setGenError('Timeout \u2014 g\u00e9n\u00e9ration trop longue (> 5 min)')
   }
 
   async function deleteArticle(id: string) {
