@@ -1862,6 +1862,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [showContact, setShowContact] = useState(false)
   const [showAvocatModal, setShowAvocatModal] = useState(false)
   const [showFraisModal, setShowFraisModal] = useState(false)
+  const [showSourceModal, setShowSourceModal] = useState(false)
   const [showReventeLots, setShowReventeLots] = useState(false)
   const [coutGeometreParLot, setCoutGeometreParLot] = useState(1500)
   const [coutReglementCoproParLot, setCoutReglementCoproParLot] = useState(2500)
@@ -2218,7 +2219,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .hero-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-bottom: 24px; align-items: stretch; }
-        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 400px; }
+        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); height: 100%; min-height: 420px; }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
         .fiche-photo-empty { width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); max-height: 380px; }
@@ -2342,6 +2343,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .deal-btn-watchlist:hover { border-color: var(--accent, #b4442e); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
+        .deal-btn-source { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-source:hover { opacity: 0.85; }
         .deal-btn-completer { font-size: 12px; font-weight: 600; color: var(--accent, #b4442e); padding: 9px 14px; border: 1.5px solid var(--line, #e6dccb); border-radius: var(--radius-sm, 8px); background: #fff; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
 
@@ -2375,7 +2378,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         </nav>
 
         <div className="hero-grid">
-          <div>
+          <div style={{ height: '100%' }}>
             <PhotoCarousel bien={bien} overlay={isEnchere && bien.date_audience ? (() => {
               const days = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000)
               let label = '', bg = '#6c757d'
@@ -2587,7 +2590,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <svg width="13" height="13" viewBox="0 0 24 24" fill={inWatchlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 Watchlist
               </button>
-              <PlatformLinks bien={bien} />
+              <button onClick={() => setShowSourceModal(true)} className="deal-btn-source">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Source annonce
+              </button>
               {!isEnchere && (
                 <button onClick={() => setShowContact(true)} className="deal-btn-completer">
                   Compl\u00e9ter les donn\u00e9es \u2192
@@ -3612,6 +3618,48 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </div>
           </div>
         )}
+
+        {/* Modal Source annonce */}
+        <ModalPanel open={showSourceModal} onClose={() => setShowSourceModal(false)} title="Source annonce">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {(() => {
+              const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
+              const links: { origin: string; url: string }[] = []
+              if (bien.sources) {
+                const sources = typeof bien.sources === 'string' ? JSON.parse(bien.sources) : bien.sources
+                if (Array.isArray(sources)) for (const s of sources) { if (s.url) links.push({ origin: s.source, url: s.url }) }
+              }
+              if (links.length === 0 && bien.url) links.push({ origin: mi?.origin || getPlatformFromUrl(bien.url), url: bien.url })
+              if (mi?.duplicates) for (const d of mi.duplicates) { if (d.url && !links.some((l: any) => l.url === d.url)) links.push({ origin: d.origin || getPlatformFromUrl(d.url), url: d.url }) }
+              const byOrigin = new Map<string, { origin: string; url: string }>()
+              for (const l of links) byOrigin.set(l.origin, l)
+              const uniqueLinks = Array.from(byOrigin.values())
+              if (uniqueLinks.length === 0) return <p style={{ color: 'var(--ink-mute)', fontSize: '13px' }}>Aucune source disponible.</p>
+              return uniqueLinks.map((l, i) => {
+                const platform = PLATFORM_LOGOS[l.origin]
+                const name = platform?.name || l.origin
+                const color = platform?.color || '#7a6a60'
+                const abbrev = platform?.abbrev || l.origin.slice(0, 3).toUpperCase()
+                return (
+                  <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    padding: '14px 18px', borderRadius: '12px',
+                    border: '1.5px solid var(--line)', background: 'var(--paper)',
+                    textDecoration: 'none', color: 'var(--ink)',
+                    transition: 'border-color .15s',
+                  }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, flexShrink: 0 }}>{abbrev}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600 }}>{name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--ink-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--ink-mute)', flexShrink: 0 }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                )
+              })
+            })()}
+          </div>
+        </ModalPanel>
 
         {/* Modal avocat enchère */}
         <ModalPanel open={showAvocatModal} onClose={() => setShowAvocatModal(false)} title="Avocat poursuivant">
