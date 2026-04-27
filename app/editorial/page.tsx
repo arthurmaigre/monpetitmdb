@@ -460,8 +460,13 @@ export default function EditorialPage() {
         @media (max-width: 768px) {
           .ed-wrap { flex-direction: column; height: auto; }
           .ed-sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid #e2d9d0; }
-          .ed-aside { width: 100%; border-left: none; border-top: 1px solid #e2d9d0; }
           .ed-main { min-height: 60vh; }
+          .ed-content { padding: 20px 16px; }
+          .ed-editor-body { flex-direction: column; overflow: visible; }
+          .ed-article-content { padding: 20px 16px; overflow-y: visible; }
+          .ed-aside { width: 100%; border-left: none; border-top: 1px solid #e2d9d0; }
+          .ed-editor-toolbar { flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+          .ed-form-grid { grid-template-columns: 1fr; }
           .ed-overlay-box { padding: 24px 20px; }
           .ed-cal-table { font-size: 11px; }
           .ed-cal-table th, .ed-cal-table td { padding: 8px 10px; }
