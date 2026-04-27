@@ -121,7 +121,7 @@ Reponds UNIQUEMENT en JSON valide, sans backticks, sans explication. Format exac
         userPrompt: 'Genere le planning editorial des semaines 13 a 52 pour Mon Petit MDB. Les semaines 1-12 sont deja fixees et seront ajoutees automatiquement. Genere EXACTEMENT 40 articles (semaines 13 a 52). Couvre TOUS les satellites obligatoires listes. Reponds uniquement en JSON : {"articles":[{"week":13,...},{"week":14,...},...,{"week":52,...}]}',
         model: 'claude-opus-4-7',
       }),
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(130_000),  // 130s > 110s timeout Opus VPS + marge réseau
     })
 
     if (!vpsRes.ok) {
