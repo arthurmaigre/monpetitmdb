@@ -190,8 +190,10 @@ function PlatformLinks({ bien }: { bien: any }) {
   const uniqueLinks = Array.from(byOrigin.values())
 
   return (
-    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px', alignItems: 'center' }}>
-      <span style={{ fontSize: '11px', color: '#7a6a60', marginRight: '4px' }}>Voir sur :</span>
+    <div style={{ display: 'contents' }}>
+    <span style={{ fontSize: '11px', color: '#7a6a60', alignSelf: 'center' }}>Sources&nbsp;:</span>
+    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* platform chips below */}
       {uniqueLinks.map((l, i) => {
         const platform = PLATFORM_LOGOS[l.origin]
         const name = platform?.name || l.origin
@@ -220,6 +222,7 @@ function PlatformLinks({ bien }: { bien: any }) {
           </a>
         )
       })}
+    </div>
     </div>
   )
 }
@@ -2214,7 +2217,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 24px; align-items: stretch; }
+        .hero-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-bottom: 24px; align-items: stretch; }
         .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 400px; }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
@@ -2338,6 +2341,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .deal-btn-watchlist { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: 1.5px solid var(--line, #e6dccb); background: #fff; color: var(--ink-soft, #6b6358); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; }
         .deal-btn-watchlist:hover { border-color: var(--accent, #b4442e); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
+        .deal-btn-watchlist.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
         .deal-btn-completer { font-size: 12px; font-weight: 600; color: var(--accent, #b4442e); padding: 9px 14px; border: 1.5px solid var(--line, #e6dccb); border-radius: var(--radius-sm, 8px); background: #fff; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
 
@@ -2448,6 +2452,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 {isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 && (
                   <div className="sub">Mise \u00e0 prix : {fmt(bien.prix_fai)} \u20ac</div>
                 )}
+                {!isEnchere && ecartPct && (
+                  <div className="sub">{ecartNegatif ? 'Prix demand\u00e9 vendeur' : 'Prix affich\u00e9 \u00b7 sous-\u00e9valu\u00e9'}</div>
+                )}
               </div>
               <div className="price-block">
                 {isEnchere ? (
@@ -2498,9 +2505,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       const prixAffiche = modeCible === 'cashflow' && prixCibleCashflow ? prixCibleCashflow : (prixCiblePV || prixCibleCashflow || 0)
                       const cibleSuperieur = prixAffiche >= bien.prix_fai
                       return (
-                        <div className={`value target${cibleSuperieur ? ' positive' : ''} ${isFreeBlocked ? 'val-blur' : ''}`}>
-                          {fmt(prixAffiche)} \u20ac
-                        </div>
+                        <>
+                          <div className={`value target${cibleSuperieur ? ' positive' : ''} ${isFreeBlocked ? 'val-blur' : ''}`}>
+                            {fmt(prixAffiche)} \u20ac
+                          </div>
+                          <div className="sub">{ecartNegatif ? "Prix d\u2019achat MDB" : 'Plafond \u00e0 ne pas d\u00e9passer'}</div>
+                        </>
                       )
                     })()}
                   </>
@@ -2573,12 +2583,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
             {/* Deal actions */}
             <div className="deal-actions">
-              {userToken && (
-                <button onClick={toggleWatchlist} className={`deal-btn-watchlist${inWatchlist ? ' active' : ''}`}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill={inWatchlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                  Watchlist
-                </button>
-              )}
+              <button onClick={toggleWatchlist} className={`deal-btn-watchlist${inWatchlist ? ' active' : ''}${!userToken ? ' disabled' : ''}`} title={!userToken ? 'Connectez-vous pour ajouter à la watchlist' : ''}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill={inWatchlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                Watchlist
+              </button>
               <PlatformLinks bien={bien} />
               {!isEnchere && (
                 <button onClick={() => setShowContact(true)} className="deal-btn-completer">
