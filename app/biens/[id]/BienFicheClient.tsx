@@ -2214,8 +2214,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
-        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); aspect-ratio: 4/3; max-height: 380px; }
+        .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 24px; align-items: stretch; }
+        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 400px; }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
         .fiche-photo-empty { width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); max-height: 380px; }
