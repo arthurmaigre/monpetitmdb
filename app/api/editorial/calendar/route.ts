@@ -26,76 +26,74 @@ Tu dois planifier une ligne editoriale coherente sur 52 semaines, avec exactemen
 
 ## STRATEGIE SEO — 5 CLUSTERS PILIER + SATELLITES
 
-L'architecture de contenu est basee sur 5 piliers avec des articles satellites qui pointent vers le pilier. Les articles sont publies sous /guide/[slug].
+L'architecture de contenu est basee sur 5 piliers avec des articles satellites qui pointent vers le pilier. Les articles sont publies sous /blog/[slug].
 
 ### Semaines 1-12 DEJA PLANIFIEES (ne pas modifier) :
-S1: [PILIER 1] Investissement locatif : le guide complet 2026 (keyword: investissement locatif)
-S2: [SATELLITE P1] Calcul rendement locatif (keyword: calcul rendement locatif)
-S3: [SATELLITE P1] Cashflow immobilier (keyword: cashflow immobilier)
-S4: [SATELLITE P1] Dans quelle ville investir en 2026 (keyword: meilleure ville investissement locatif)
-S5: [PILIER 2] Fiscalite immobiliere : les 7 regimes compares (keyword: fiscalite immobiliere)
-S6: [SATELLITE P2] LMNP guide complet (keyword: LMNP)
-S7: [PILIER 3] Marchand de biens : la methode pour particuliers (keyword: marchand de biens)
-S8: [SATELLITE P2] Deficit foncier (keyword: deficit foncier)
-S9: [PILIER 4] Immeuble de rapport : guide complet (keyword: immeuble de rapport)
-S10: [SATELLITE P4] Locataire en place (keyword: locataire en place achat)
-S11: [SATELLITE P2] SCI a l'IS (keyword: SCI IS)
-S12: [SATELLITE P4] Budget travaux renovation au m2 (keyword: budget travaux renovation m2)
+S1: [PILIER P0] Encheres judiciaires immobilieres : guide complet 2026 (keyword: encheres judiciaires immobilieres)
+S2: [SATELLITE S1] TVA sur marge immobilier : guide complet pour marchands de biens (keyword: TVA marge marchand de biens)
+S3: [PILIER P0] Investir comme un marchand de biens : la methode complete (keyword: marchand de biens)
+S4: [SATELLITE S1] Mise a prix vs prix adjuge : comment calculer sa decote aux encheres (keyword: vente judiciaire immobilier)
+S5: [PILIER P1] Immeuble de rapport : guide complet (keyword: immeuble de rapport)
+S6: [SATELLITE P3] Locataire en place : opportunite ou piege ? (keyword: locataire en place achat)
+S7: [PAGES VILLES] Lyon, Marseille, Bordeaux, Lille, Nantes — comparatif 2026 (keyword: meilleure ville investissement locatif)
+S8: [PILIER P1] Fiscalite immobiliere : les 7 regimes compares (keyword: fiscalite marchand de biens)
+S9: [PILIER P2] Division immobiliere : creer de la valeur avec la methode MdB (keyword: division immobiliere)
+S10: [PAGES VILLES] Toulouse, Rennes, Strasbourg, Montpellier, Grenoble, Rouen, Nantes, Nice (keyword: investir immobilier metropoles)
+S11: [SATELLITE P2] Achat-revente immobilier : fiscalite et strategie (keyword: achat revente immobilier)
+S12: [PAGES VILLES] 9 dernieres villes + bilan strategie 2026 (keyword: investir immobilier France)
 
 ### Semaines 13-52 : A PLANIFIER selon les priorites ci-dessous.
 
 **SATELLITES OBLIGATOIRES A PLACER EN PRIORITE (semaines 13-30) :**
-Ces articles sont definis dans l'audit SEO et DOIVENT apparaitre. Reprends les titres et keywords exacts :
+Ces articles decoulent des piliers etablis en S1-S12. Reprends les titres et keywords exacts :
 
-Pilier 1 — Investissement locatif (satellites restants) :
-- Investissement locatif sans apport : comment demarrer (keyword: investissement locatif sans apport, 2000-4000/mois)
-- Devenir rentier immobilier : plan d'action realiste (keyword: devenir rentier immobilier, 2000-4000/mois)
-- DPE et investissement locatif : impact sur la rentabilite (keyword: DPE investissement locatif, 2000-3000/mois)
-- Investissement locatif etudiant : le guide pratique (keyword: investissement locatif etudiant, 1000-2000/mois)
+Cluster Encheres judiciaires (satellites restants) :
+- Comment acheter aux encheres judiciaires sans avocat ? (keyword: acheter encheres judiciaires, 150-300/mois) — spoiler impossible mais expliquer pourquoi
+- Investir aux encheres judiciaires : risques et opportunites (keyword: investir encheres judiciaires, 150-300/mois)
+- Frais encheres judiciaires : le vrai cout total (keyword: frais vente judiciaire, 100-200/mois)
 
-Pilier 2 — Fiscalite (satellites restants) :
-- LMP vs LMNP : comparaison complete des statuts (keyword: LMP vs LMNP, 1500-2500/mois)
-- Plus-value immobiliere : calcul, abattements et optimisation (keyword: plus value immobiliere, 4000-6000/mois)
-- Micro-foncier vs reel : quel regime choisir ? (keyword: micro foncier reel, 1500-2500/mois)
-- Amortissement LMNP : composants et durees (keyword: amortissement LMNP composants, 800-1200/mois)
-- Loi de finances 2025 : ce qui change pour le LMNP (keyword: loi finances LMNP 2025, 2000-3000/mois)
-
-Pilier 3 — Marchand de biens (satellites restants) :
-- Achat revente immobilier : la strategie MdB detaillee (keyword: achat revente immobilier, 2000-3000/mois)
-- TVA sur marge marchand de biens : calcul et exemples (keyword: TVA marge marchand de biens, 1000-2000/mois)
+Cluster Marchand de biens (satellites restants) :
+- Comment devenir marchand de biens : conditions et demarches (keyword: comment devenir marchand de biens, 200-400/mois)
 - Revente a la decoupe : strategie et fiscalite (keyword: revente a la decoupe, 1000-2000/mois)
-- Division immobiliere : creer de la valeur (keyword: division immobiliere, 1500-2500/mois)
 - Frais de notaire marchand de biens : le vrai cout (keyword: frais notaire marchand de biens, 800-1500/mois)
+- BIC vs IS pour marchand de biens : quel regime choisir ? (keyword: fiscalite marchand de biens, 150-300/mois)
 
-Pilier 4 — Immeuble de rapport (satellites restants) :
+Cluster Immeuble de rapport (satellites restants) :
 - Immeuble de rapport : rentabilite et risques (keyword: immeuble de rapport rentabilite, 1500-2500/mois)
 - Financer un immeuble de rapport (keyword: financer immeuble de rapport, 800-1500/mois)
 - Score travaux : evaluer l'etat d'un bien immobilier (keyword: score travaux immobilier, 500-1000/mois)
 
-Pilier 5 — Estimation + Villes :
-- [PILIER 5] Estimation immobiliere : comment estimer un bien avec les donnees DVF (keyword: estimation prix immobilier, 1500-2500/mois)
-- Prix au m2 par ville : les donnees DVF decryptees (keyword: prix m2 par ville, 2000-3000/mois)
-- Donnees de valeurs foncieres (DVF) : comprendre et utiliser (keyword: donnees valeurs foncieres, 1000-2000/mois)
+Cluster Fiscalite (satellites S13-30) :
+- LMNP : guide complet micro vs reel (LFI 2025) (keyword: LMNP, 30000-40000/mois) — cible recherches directes
+- Deficit foncier : reduire ses impots avec l'immobilier (keyword: deficit foncier, 6000-10000/mois)
+- SCI a l'IS : avantages, inconvenients et simulation (keyword: SCI IS, 3000-5000/mois)
+- Plus-value immobiliere : calcul, abattements et optimisation (keyword: plus value immobiliere, 4000-6000/mois)
+- LMP vs LMNP : comparaison complete (keyword: LMP vs LMNP, 1500-2500/mois)
 
-**PAGES VILLES METROPOLES (semaines 31-42, 2 par semaine regroupees en 1 article comparatif ou 1 ville par semaine) :**
-Creer des guides par ville ciblant "investir a [ville]". Les 12 villes prioritaires :
-Lyon, Lille, Bordeaux, Nantes, Marseille, Toulouse, Rennes, Strasbourg, Montpellier, Grenoble, Rouen, Saint-Etienne
-Chaque article : prix moyen DVF, rendement, tension locative, strategies pertinentes, biens disponibles sur MDB.
+Cluster Estimation / DVF :
+- Estimation immobiliere avec les donnees DVF : guide complet (keyword: estimation prix immobilier, 1500-2500/mois)
+- Prix au m2 par ville : les donnees DVF decryptees (keyword: prix m2 par ville, 2000-3000/mois)
+- Score DPE et impact sur la valeur d'un bien immobilier (keyword: DPE impact prix immobilier, 500-1000/mois)
+
+**SEMAINES 31-42 : PAGES VILLES INDIVIDUELLES**
+Creer des guides par ville ciblant "investir a [ville]" pour les villes non encore couvertes en S7/S10/S12.
+Structure : prix moyen DVF, rendement, tension locative, strategies pertinentes, biens et encheres disponibles sur MDB.
 
 **SEMAINES 43-52 : CONTENU AVANCE ET SAISONNIER**
-- Sujets avances : simulation complete operation MdB, BIC vs IS pour MdB, comment trouver les bonnes affaires, financement MdB
-- Contenu data-driven : barometre trimestriel des prix, bilan annuel du marche
+- Sujets avances : simulation complete operation MdB de A a Z, financement MdB sans apport, comment sourcer les bonnes affaires
+- Contenu data-driven : barometre trimestriel encheres judiciaires, evolution prix DVF par ville
 - Thematiques saisonnieres : fiscalite fin d'annee, declarations revenus fonciers, marche immobilier printemps
 
-## MOTS-CLES PRIORITAIRES A VOLUME ELEVE (a repartir dans les articles)
-simulateur investissement locatif (8000-12000/mois), rentabilite locative (5000-8000/mois), frais de notaire immobilier (5000-8000/mois), fiscalite LMNP (3000-5000/mois), rendement locatif (15000-25000/mois), travaux immobilier deduction fiscale (1500-2500/mois), score DPE impact prix (500-1000/mois)
+## MOTS-CLES PRIORITAIRES (positionnement unique MdB — a integrer naturellement)
+"encheres judiciaires immobilieres" (400-700/mois, ⭐⭐⭐⭐⭐), "immeuble de rapport" (600-1200/mois, ⭐⭐⭐⭐), "division immobiliere" (200-400/mois, ⭐⭐⭐⭐), "locataire en place achat" (200-400/mois, ⭐⭐⭐⭐), "achat revente immobilier" (500-900/mois, ⭐⭐⭐), "marchand de biens" (300-500/mois, ⭐⭐⭐)
+NE PAS sur-cibler "investissement locatif" — terrain d'Horiz.io et LyBox. L'angle differenciateur MdB est la methode pro pour particuliers.
 
 ## CONTRAINTES
 - Categories : Strategies, Fiscalite, Travaux, Financement, Marche (utiliser exactement ces noms)
 - Pas deux sujets similaires consecutifs
 - Alterner les tons : pedagogique, expert, cas-pratique, alerte
-- Progression : S1-12 bases, S13-30 intermediaire, S31-42 villes, S43-52 avance
-- Chaque article satellite doit mentionner dans l'angle le lien vers son article pilier parent (ex: "Lien vers article pilier Investissement locatif")
+- Progression : S13-30 satellites et piliers secondaires, S31-42 villes individuelles, S43-52 avance
+- Chaque article satellite doit mentionner dans l'angle le lien vers son article pilier parent
 - Le champ "angle" doit contenir : type (PILIER/SATELLITE Px/VILLE), longueur cible en mots, instructions specifiques
 - Le champ "audience" doit contenir 1-2 valeurs parmi : "Débutant complet", "Investisseur amateur", "Profil MDB actif", "Professionnel"
   * Articles pedagogiques → ["Débutant complet", "Investisseur amateur"]
@@ -134,20 +132,20 @@ Reponds UNIQUEMENT en JSON valide, sans backticks, sans explication. Format exac
 
     const generatedArticles = parsed.articles || []
 
-    // Semaines 1-12 hardcodees (audit SEO) — categories, keywords, tons, longueurs, audiences alignes
+    // Semaines 1-12 hardcodees — audit SEO 2026-04-21
     const FIXED_WEEKS = [
-      { week: 1, category: 'Stratégies', title: 'Investissement locatif : le guide complet 2026', keyword: 'investissement locatif', tone: 'expert', angle: 'Article PILIER. Guide exhaustif couvrant toutes les stratégies MDB, les 7 régimes fiscaux, le rendement, le cashflow. Exemples chiffrés. 3000 mots min. Liens vers /biens, /strategies, les articles satellites. Public : débutants et amateurs.' },
-      { week: 2, category: 'Stratégies', title: 'Calcul rendement locatif : méthode complète + simulateur', keyword: 'calcul rendement locatif', tone: 'pedagogique', angle: 'SATELLITE P1. Rendement brut vs net vs net-net. Formules détaillées avec exemples. Mentionner le simulateur Mon Petit MDB. 1500 mots. Lien vers article pilier "Investissement locatif".' },
-      { week: 3, category: 'Stratégies', title: 'Cashflow immobilier : définition, calcul et optimisation', keyword: 'cashflow immobilier', tone: 'cas-pratique', angle: 'SATELLITE P1. Cashflow brut et net. Détailler chaque composant (loyer, charges, crédit, fiscalité). Exemple chiffré complet sur un T2 à 150k€. 1500 mots. Lien vers article pilier "Investissement locatif".' },
-      { week: 4, category: 'Marché', title: 'Dans quelle ville investir en 2026 ? Top métropoles rentables', keyword: 'meilleure ville investissement locatif', tone: 'expert', angle: 'SATELLITE P1. Classement des 22 métropoles par rendement moyen DVF. Comparer prix/m², loyers, tension locative. 2000 mots. Liens vers biens par ville sur MDB.' },
-      { week: 5, category: 'Fiscalité', title: 'Fiscalité immobilière : les 7 régimes comparés (guide 2026)', keyword: 'fiscalite immobiliere', tone: 'expert', angle: 'Article PILIER fiscal. Comparer les 7 régimes avec tableau récapitulatif des charges déductibles, taux, abattements. Inclure les changements 2025-2026 (PS 18.6%, réintégration amortissements LMNP). 3000 mots. Lien vers simulateur MDB.' },
-      { week: 6, category: 'Fiscalité', title: 'LMNP : le guide complet du statut (micro vs réel, LFI 2025)', keyword: 'LMNP', tone: 'expert', angle: 'SATELLITE P2. Conditions, micro vs réel, amortissement composants, réintégration LFI 2025. Impact concret chiffré. 2000 mots. Lien vers article pilier "Fiscalité immobilière".' },
-      { week: 7, category: 'Stratégies', title: 'Marchand de biens : la méthode accessible aux particuliers', keyword: 'marchand de biens', tone: 'cas-pratique', angle: 'Article PILIER MdB. TVA sur marge 20/120, frais notaire 2.5%, IS. Comment Mon Petit MDB permet d\'analyser comme un MdB. Simulation complète d\'une opération. Positionnement unique. 2500 mots.' },
-      { week: 8, category: 'Fiscalité', title: 'Déficit foncier : comment réduire ses impôts avec l\'immobilier', keyword: 'deficit foncier', tone: 'pedagogique', angle: 'SATELLITE P2. Mécanisme, plafond 10 700€, conditions. Travaux déductibles vs non. Stratégie optimisation. 1500 mots. Lien vers article pilier "Fiscalité immobilière".' },
-      { week: 9, category: 'Stratégies', title: 'Immeuble de rapport : guide complet pour investir dans un immeuble entier', keyword: 'immeuble de rapport', tone: 'expert', angle: 'Article PILIER IDR. Monopropriété, création copro, coûts. Rentabilité locative vs revente découpe. 2500 mots. Données Mon Petit MDB.' },
-      { week: 10, category: 'Stratégies', title: 'Locataire en place : opportunité ou piège pour l\'investisseur ?', keyword: 'locataire en place achat', tone: 'alerte', angle: 'SATELLITE P4. Avantages (cashflow immédiat, décote prix) ET risques (bail pré-89, profil locataire, loyer sous-marché). Checklist de vérification. 1500 mots. Lien vers article pilier "Immeuble de rapport" et /biens.' },
-      { week: 11, category: 'Fiscalité', title: 'SCI à l\'IS : avantages, inconvénients et simulation complète', keyword: 'SCI IS', tone: 'cas-pratique', angle: 'SATELLITE P2. IS 15/25%, amortissement, double imposition IS + PFU 30%. Simulation chiffrée : quand SCI IS bat LMNP et inversement. 1500 mots. Lien vers article pilier "Fiscalité immobilière".' },
-      { week: 12, category: 'Travaux', title: 'Budget travaux rénovation au m² : combien prévoir en 2026 ?', keyword: 'budget travaux renovation m2', tone: 'pedagogique', angle: 'SATELLITE P4. Grille de prix par poste (plomberie, élec, sols, cuisine, SDB). Score travaux 1-5. Comment Mon Petit MDB estime le budget. 1500 mots. Liens vers biens travaux lourds.' },
+      { week: 1, category: 'Stratégies', title: 'Enchères judiciaires immobilières : guide complet 2026', keyword: 'enchères judiciaires immobilières', tone: 'expert', angle: 'Article PILIER P0 — PRIORITÉ ABSOLUE. Seul outil qui agrège Licitor + Vench + Avoventes et calcule le prix cible. Sections : qu\'est-ce qu\'une enchère judiciaire / comment participer / frais réels (provision 10% + émoluments avocat) / TVA sur marge / comment MdB calcule le prix max à ne pas dépasser. Inclure statistiques des 3 plateformes issues du scraping MdB. 3000 mots. CTA : "Voir toutes les enchères disponibles" → /encheres.' },
+      { week: 2, category: 'Fiscalité', title: 'TVA sur marge immobilier : guide complet pour marchands de biens', keyword: 'TVA marge marchand de biens', tone: 'expert', angle: 'SATELLITE S1 (enchères judiciaires). TVA sur marge 20/120 : mécanisme, conditions, calcul détaillé avec exemples. Cas concret enchères judiciaires : TVA = (prix adjugé + frais - prix achat HT) × 20/120. 3 pièges fréquents. 1500 mots. Lien vers article pilier "Enchères judiciaires immobilières".' },
+      { week: 3, category: 'Stratégies', title: 'Investir comme un marchand de biens : la méthode complète', keyword: 'marchand de biens', tone: 'expert', angle: 'Article PILIER P0. NE PAS utiliser "investissement locatif" dans le H1. Angle : la méthode pro accessible — analyse DVF, 7 régimes fiscaux, sourcing multi-plateformes (LBC, SeLoger, enchères judiciaires). Comment Mon Petit MDB démocratise la méthode MdB pour les particuliers. Simulation complète d\'une opération achat-travaux-revente. 2500 mots.' },
+      { week: 4, category: 'Stratégies', title: 'Mise à prix vs prix adjugé : comment calculer sa décote aux enchères', keyword: 'vente judiciaire immobilier', tone: 'pedagogique', angle: 'SATELLITE S1 (enchères judiciaires). Différence mise à prix / estimation notaire / prix adjugé. Comment calculer le prix maximum à ne pas dépasser. Décote moyenne constatée sur les données MdB. Checklist des frais avant d\'enchérir. 1200 mots. Lien vers article pilier "Enchères judiciaires immobilières".' },
+      { week: 5, category: 'Stratégies', title: 'Immeuble de rapport : guide complet pour investir dans un immeuble entier', keyword: 'immeuble de rapport', tone: 'expert', angle: 'Article PILIER P1. Analyse financière complète + stratégie division + calculs MdB. Monopropriété vs création copropriété, coûts, rentabilité locative vs revente à la découpe. Simuler avec Mon Petit MDB. 2500 mots.' },
+      { week: 6, category: 'Stratégies', title: 'Locataire en place : opportunité ou piège pour l\'investisseur ?', keyword: 'locataire en place achat', tone: 'alerte', angle: 'SATELLITE P3 (immeuble de rapport). Avantages (cashflow immédiat, décote prix) ET risques (bail pré-89, profil locataire, loyer sous-marché). Checklist de vérification avant achat. 1500 mots. Lien vers article pilier "Immeuble de rapport" et /biens.' },
+      { week: 7, category: 'Marché', title: 'Investir à Lyon, Marseille, Bordeaux, Lille, Nantes : comparatif 2026', keyword: 'meilleure ville investissement locatif', tone: 'expert', angle: 'PAGES VILLES — 5 premières métropoles prioritaires. Pour chaque ville : prix moyen DVF au m², rendement locatif moyen constaté, tension locative, stratégies adaptées (IDR, enchères, travaux), biens disponibles sur MdB. Article comparatif de synthèse avec sections individuelles par ville. 3000 mots. Liens vers /biens filtré par ville.' },
+      { week: 8, category: 'Fiscalité', title: 'Fiscalité immobilière : les 7 régimes comparés (guide 2026)', keyword: 'fiscalité marchand de biens', tone: 'expert', angle: 'Article PILIER P1. Comparaison des 7 régimes simulés par MdB (unique : interface interactive). Tableau récapitulatif charges déductibles, taux, abattements. Inclure changements 2025-2026 (PS 18.6%, réintégration amortissements LMNP LFI 2025). Focus marchand de biens IS vs LMNP. 2500 mots. Lien vers simulateur MdB.' },
+      { week: 9, category: 'Stratégies', title: 'Division immobilière : créer de la valeur avec la méthode marchand de biens', keyword: 'division immobilière', tone: 'expert', angle: 'Article PILIER P2. TVA sur marge + calculs + cas pratiques. Réglementation (PC valant division, déclaration préalable), coûts, exemple chiffré avant/après division. Comment Mon Petit MDB intègre le calcul division dans l\'analyse de rentabilité. 2000 mots.' },
+      { week: 10, category: 'Marché', title: 'Investir à Toulouse, Rennes, Strasbourg, Montpellier, Grenoble, Rouen, Nantes, Nice : guide 2026', keyword: 'investir immobilier métropoles françaises', tone: 'expert', angle: 'PAGES VILLES — 8 métropoles secondaires prioritaires. Même structure que S7 : prix DVF, rendement, tension locative, biens MdB disponibles, stratégies adaptées à chaque marché. 3000 mots. Liens croisés vers article S7 et /biens filtré par ville.' },
+      { week: 11, category: 'Fiscalité', title: 'Achat-revente immobilier : fiscalité et stratégie pour investisseurs', keyword: 'achat revente immobilier', tone: 'cas-pratique', angle: 'SATELLITE P2 (marchand de biens). Fiscalité achat-revente : MdB IS vs particulier (PV immobilière 19% IR + 17.2% PS). Simulation chiffrée : achat 200k€ + travaux 40k€, revente 290k€ — quel régime optimal. 1500 mots. Lien vers article pilier "Investir comme un marchand de biens".' },
+      { week: 12, category: 'Marché', title: 'Guide investissement : les 22 meilleures villes françaises + bilan stratégie 2026', keyword: 'investir immobilier France', tone: 'expert', angle: 'PAGES VILLES — 9 dernières villes (Saint-Étienne, Metz, Clermont-Ferrand, Brest, Dijon, Amiens, Tours, Caen, Perpignan) + article de synthèse final. Tableau comparatif des 22 villes par rendement DVF. Bilan des 2 premiers mois. 3000 mots. Hub de liens vers toutes les pages villes et /biens.' },
     ]
 
     const articles = [...FIXED_WEEKS, ...generatedArticles]
