@@ -158,7 +158,7 @@ async function generateArticlePipeline(body) {
     model: 'claude-opus-4-7',
     systemPrompt,
     prompt: userPrompt,
-    timeout: 160_000,
+    timeout: 260_000,
   })
 
   // Étape 4 : Sonnet relit et corrige
