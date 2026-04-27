@@ -2220,7 +2220,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-bottom: 24px; align-items: stretch; }
+        .hero-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-bottom: 24px; align-items: start; }
         .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); height: 100%; min-height: 420px; }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
@@ -3636,45 +3636,55 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         )}
 
         {/* Modal Source annonce */}
-        <ModalPanel open={showSourceModal} onClose={() => setShowSourceModal(false)} title="Source annonce">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {(() => {
-              const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
-              const links: { origin: string; url: string }[] = []
-              if (bien.sources) {
-                const sources = typeof bien.sources === 'string' ? JSON.parse(bien.sources) : bien.sources
-                if (Array.isArray(sources)) for (const s of sources) { if (s.url) links.push({ origin: s.source, url: s.url }) }
-              }
-              if (links.length === 0 && bien.url) links.push({ origin: mi?.origin || getPlatformFromUrl(bien.url), url: bien.url })
-              if (mi?.duplicates) for (const d of mi.duplicates) { if (d.url && !links.some((l: any) => l.url === d.url)) links.push({ origin: d.origin || getPlatformFromUrl(d.url), url: d.url }) }
-              const byOrigin = new Map<string, { origin: string; url: string }>()
-              for (const l of links) byOrigin.set(l.origin, l)
-              const uniqueLinks = Array.from(byOrigin.values())
-              if (uniqueLinks.length === 0) return <p style={{ color: 'var(--ink-mute)', fontSize: '13px' }}>Aucune source disponible.</p>
-              return uniqueLinks.map((l, i) => {
-                const platform = PLATFORM_LOGOS[l.origin]
-                const name = platform?.name || l.origin
-                const color = platform?.color || '#7a6a60'
-                const abbrev = platform?.abbrev || l.origin.slice(0, 3).toUpperCase()
-                return (
-                  <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{
-                    display: 'flex', alignItems: 'center', gap: '14px',
-                    padding: '14px 18px', borderRadius: '12px',
-                    border: '1.5px solid var(--line)', background: 'var(--paper)',
-                    textDecoration: 'none', color: 'var(--ink)',
-                    transition: 'border-color .15s',
-                  }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, flexShrink: 0 }}>{abbrev}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600 }}>{name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--ink-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>
-                    </div>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--ink-mute)', flexShrink: 0 }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  </a>
-                )
-              })
-            })()}
-          </div>
+        <ModalPanel open={showSourceModal} onClose={() => setShowSourceModal(false)} title="Annonce source">
+          {(() => {
+            const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
+            const links: { origin: string; url: string }[] = []
+            if (bien.sources) {
+              const sources = typeof bien.sources === 'string' ? JSON.parse(bien.sources) : bien.sources
+              if (Array.isArray(sources)) for (const s of sources) { if (s.url) links.push({ origin: s.source, url: s.url }) }
+            }
+            if (links.length === 0 && bien.url) links.push({ origin: mi?.origin || getPlatformFromUrl(bien.url), url: bien.url })
+            if (mi?.duplicates) for (const d of mi.duplicates) { if (d.url && !links.some((l: any) => l.url === d.url)) links.push({ origin: d.origin || getPlatformFromUrl(d.url), url: d.url }) }
+            const byOrigin = new Map<string, { origin: string; url: string }>()
+            for (const l of links) byOrigin.set(l.origin, l)
+            const uniqueLinks = Array.from(byOrigin.values())
+            if (uniqueLinks.length === 0) return <p style={{ color: 'var(--ink-mute)', fontSize: '13px', margin: 0 }}>Aucune source disponible.</p>
+            return (
+              <>
+                <p style={{ fontSize: '13px', color: 'var(--ink-soft)', margin: '0 0 16px' }}>
+                  {uniqueLinks.length === 1 ? 'Cette annonce est publiée sur 1 plateforme.' : `Cette annonce est publiée sur ${uniqueLinks.length} plateformes.`} Cliquez pour accéder à la version originale.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {uniqueLinks.map((l, i) => {
+                    const platform = PLATFORM_LOGOS[l.origin]
+                    const name = platform?.name || l.origin
+                    const color = platform?.color || '#7a6a60'
+                    const abbrev = platform?.abbrev || l.origin.slice(0, 3).toUpperCase()
+                    const textColor = color === '#ffcc00' ? '#1f1b16' : '#fff'
+                    return (
+                      <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{
+                        padding: '16px', background: 'var(--paper, #f5ede2)', borderRadius: '12px',
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        textDecoration: 'none', border: '1px solid transparent',
+                        transition: 'all .2s',
+                      }}
+                      onMouseEnter={e => { const t = e.currentTarget; t.style.borderColor = 'var(--line)'; t.style.background = '#fff'; t.style.transform = 'translateY(-1px)'; t.style.boxShadow = 'var(--shadow-sm)' }}
+                      onMouseLeave={e => { const t = e.currentTarget; t.style.borderColor = 'transparent'; t.style.background = 'var(--paper, #f5ede2)'; t.style.transform = ''; t.style.boxShadow = '' }}
+                      >
+                        <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: color, color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '"Fraunces", serif', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>{abbrev}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '2px' }}>{name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--ink-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.origin}</div>
+                        </div>
+                        <span style={{ color: 'var(--ink-mute)', fontSize: '16px', transition: 'transform .2s' }}>↗</span>
+                      </a>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()}
         </ModalPanel>
 
         {/* Modal avocat enchère */}
