@@ -127,15 +127,19 @@ Voir `OPENCLAW.md` pour la configuration complète (à charger avec `@OPENCLAW.m
 **Stockage :** tables Supabase `editorial_calendar` + `articles`
 
 **Pipeline génération (VPS Hetzner — zéro API Anthropic) :**  
-Vercel construit les prompts → POST `http://178.104.58.122:3099` (article-server.js, PM2, user openclaw) → CLI Claude OAuth Max.  
-- `/generate/calendar` : Opus planifie S13-S52 (timeout VPS 110s / Vercel 130s)  
-- `/generate/article` : Haiku extrait claims → Google Custom Search (webContext) → Opus rédige → Sonnet relit avec règle zéro-invention données de marché  
-Auth : header `x-generation-secret` (env `GENERATION_SECRET`). Env Vercel : `VPS_GENERATION_URL=http://178.104.58.122:3099`.
+Architecture **async polling** — Vercel Hobby est limité à 60s mais le pipeline prend 135-250s.  
+POST Vercel répond en < 1s (stub `status='generating'`) → VPS génère en background → callback `/api/editorial/articles/complete` → Vercel fait Unsplash + Supabase update → frontend poll GET `?id=` toutes les 4s.
+
+- `/generate/calendar` : Opus planifie S13-S52 (timeout VPS 110s / Vercel 130s) — synchrone
+- `/generate/article` : mode async — Haiku claims → Google Custom Search → Opus → Sonnet (règle zéro-invention marché) → callback Vercel
+- Fichiers clés : `app/api/editorial/articles/route.ts`, `app/api/editorial/articles/complete/route.ts`, `lib/editorial.ts`, `scrapper/article-server.js`
+- Auth : header `x-generation-secret`. Env Vercel : `VPS_GENERATION_URL`, `GENERATION_SECRET`.
+- Supabase : table `articles` avec colonne `gen_error TEXT` (ajoutée 2026-04-27)
 
 **Workflow :**
 1. Onglet Calendrier → "Générer le planning" → insère 52 semaines (S1-S12 hardcodées + S13-S52 via VPS Opus)
-2. Sur une ligne du calendrier → "Rédiger" → prérempli le formulaire → "Générer l'article" → pipeline VPS + Unsplash pour les photos
-3. Statuts article : `draft` → `review` → `approved` → `published` (ping sitemap Google à la publication)
+2. Sur une ligne du calendrier → "Rédiger" → prérempli le formulaire → "Générer l'article" → pipeline async VPS + Unsplash
+3. Statuts article : `generating` → `review` → `approved` → `published` (ping sitemap Google à la publication). `failed` si erreur VPS.
 
 **S1-S12 hardcodées (audit 2026-04-21) — NE PAS modifier sans mettre à jour cet index :**
 - S1 : Enchères judiciaires immobilières guide complet (P0, pilier, 3000 mots)
