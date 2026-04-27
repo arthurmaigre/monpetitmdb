@@ -2301,10 +2301,43 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #7a6a60; }
         .legende-dot { width: 10px; height: 10px; border-radius: 50%; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #7a6a60; margin-bottom: 20px; }
-        .breadcrumb a { color: #7a6a60; text-decoration: none; }
-        .breadcrumb a:hover { color: #1a1210; }
-        .breadcrumb .sep { color: #d0c8be; }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-mute, #a39a8c); margin-bottom: 20px; font-weight: 500; letter-spacing: 0.02em; }
+        .breadcrumb a { color: var(--ink-soft, #6b6358); text-decoration: none; transition: color .2s; }
+        .breadcrumb a:hover { color: var(--accent, #b4442e); }
+        .breadcrumb .sep { opacity: .4; }
+        .breadcrumb .current { color: var(--ink, #1f1b16); }
+
+        /* Deal card */
+        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 28px 30px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; }
+        .deal-card-glow { position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; background: radial-gradient(circle, var(--accent-soft, #f2d9d1) 0%, transparent 70%); opacity: 0.5; pointer-events: none; }
+        .deal-header h1 { font-family: "Fraunces", Georgia, serif; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink, #1f1b16); margin: 0 0 6px; }
+        .deal-header .location { font-size: 13px; color: var(--ink-soft, #6b6358); display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
+        .price-grid { display: grid; grid-template-columns: 1fr 1fr; padding: 16px 18px; background: var(--paper, #f5ede2); border-radius: var(--radius-md, 14px); }
+        .price-block { min-width: 0; }
+        .price-block + .price-block { padding-left: 16px; border-left: 1px solid var(--line, #e6dccb); }
+        .price-block .label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute, #a39a8c); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .price-block .value { font-family: "Fraunces", Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink, #1f1b16); white-space: nowrap; }
+        .price-block .value.target { color: var(--accent, #b4442e); }
+        .price-block .value.target.positive { color: var(--success, #2f7d5b); }
+        .price-block .value.enchere-max { color: var(--success, #2f7d5b); }
+        .price-block .sub { margin-top: 5px; font-size: 11px; color: var(--ink-soft, #6b6358); }
+        .decote-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, var(--accent, #b4442e) 0%, #8f3522 100%); border-radius: var(--radius-md, 14px); color: #fff; }
+        .decote-banner.positive { background: linear-gradient(135deg, var(--success, #2f7d5b) 0%, #1f5a40 100%); }
+        .decote-banner .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+        .decote-banner .pct { font-family: "Fraunces", Georgia, serif; font-size: 30px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 2px; }
+        .decote-banner .arrow { font-size: 24px; opacity: 0.6; }
+        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line, #e6dccb); padding-top: 16px; }
+        .kpi { text-align: center; padding: 0 8px; border-right: 1px solid var(--line-soft, #efe7d7); }
+        .kpi:last-child { border-right: none; }
+        .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 17px; font-weight: 500; color: var(--ink, #1f1b16); }
+        .kpi .num.mute { color: var(--ink-mute, #a39a8c); font-weight: 400; }
+        .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+        .deal-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .deal-btn-watchlist { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: 1.5px solid var(--line, #e6dccb); background: #fff; color: var(--ink-soft, #6b6358); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; }
+        .deal-btn-watchlist:hover { border-color: var(--accent, #b4442e); color: var(--accent, #b4442e); }
+        .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
+        .deal-btn-completer { font-size: 12px; font-weight: 600; color: var(--accent, #b4442e); padding: 9px 14px; border: 1.5px solid var(--line, #e6dccb); border-radius: var(--radius-sm, 8px); background: #fff; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
+        .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
 
         /* Sticky nav */
         .sticky-nav { position: sticky; top: 68px; z-index: 50; background: rgba(250,248,245,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 12px; padding: 4px; display: inline-flex; gap: 2px; margin-bottom: 24px; border: 1px solid #e8e2d8; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
@@ -2355,60 +2388,68 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
               ) : null
             })() : undefined} />
-            {isEnchere && (
-              <div style={{ marginTop: '8px' }}>
-                <PlatformLinks bien={bien} />
-              </div>
-            )}
           </div>
 
-          <div className="fiche-info">
-            <h1 className="fiche-title">{bien.type_bien || 'Bien'} {bien.nb_pieces ? (String(bien.nb_pieces).startsWith('T') ? bien.nb_pieces : `T${bien.nb_pieces}`) : ''}{bien.surface ? ` - ${Math.round(bien.surface)} m\u00B2` : ''}</h1>
-            <p className="fiche-sub">{bien.quartier ? `${bien.quartier} - ` : ''}{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}{!isEnchere && bien.adresse ? ` — ${bien.adresse}` : ''}</p>
-            <div className="fiche-tags">
-              {isEnchere ? (
-                <>
-                  {(() => {
-                    const statutMap: Record<string, { label: string; bg: string; color: string }> = {
-                      a_venir: { label: 'À venir', bg: '#d4f5e0', color: '#1a7a40' },
-                      surenchere: { label: 'En surenchère', bg: '#ffecd2', color: '#8a5a00' },
-                      adjuge: { label: 'Adjugé', bg: '#d4ddf5', color: '#2a4a8a' },
-                      vendu: { label: 'Vendu', bg: '#6c757d', color: '#fff' },
-                      retire: { label: 'Retiré', bg: '#f5d4d4', color: '#8a2a2a' },
-                      expire: { label: 'Expiré', bg: '#e9ecef', color: '#6c757d' },
-                    }
-                    // Ne pas afficher le badge statut si le countdown le couvre déjà
-                    if (['a_venir', 'surenchere', 'adjuge'].includes(bien.statut)) return null
-                    const s = statutMap[bien.statut] || statutMap.a_venir
-                    return <span className="tag" style={{ background: s.bg, color: s.color, fontWeight: 700 }}>{s.label}</span>
-                  })()}
-                  {bien.occupation && bien.occupation !== 'NC' && (
-                    <span className="tag" style={{
-                      background: bien.occupation === 'libre' ? '#d4f5e0' : bien.occupation === 'loue' ? '#d4ddf5' : '#ffecd2',
-                      color: bien.occupation === 'libre' ? '#1a7a40' : bien.occupation === 'loue' ? '#2a4a8a' : '#8a5a00',
-                      fontWeight: 700,
-                    }}>{bien.occupation === 'libre' ? 'Bien Libre' : bien.occupation === 'loue' ? 'Bien Loué' : 'Bien Occupé'}</span>
-                  )}
-                  {isVenteDelocalisee(bien.departement, bien.tribunal) && (
-                    <span className="tag" style={{ background: '#fff3e0', color: '#e65100', fontWeight: 700 }} title="La vente se déroule dans un tribunal d'un autre département">
-                      📍 Délocalisée
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  {bien.strategie_mdb && <span className="tag tag-strat">{bien.strategie_mdb}</span>}
-                  {bien.statut && <span className="tag tag-statut">{bien.statut}</span>}
-                  {bien.prix_m2 && <span className="tag">{fmt(bien.prix_m2)} {'\u20AC'}/m{'\u00B2'}</span>}
-                </>
-              )}
+          <div className="deal-card">
+            <div className="deal-card-glow" />
+
+            {/* Header */}
+            <div className="deal-header">
+              <h1>{bien.type_bien || 'Bien'} {bien.nb_pieces ? (String(bien.nb_pieces).startsWith('T') ? bien.nb_pieces : `T${bien.nb_pieces}`) : ''}{bien.surface ? ` · ${Math.round(bien.surface)} m²` : ''}</h1>
+              <div className="location">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {bien.quartier ? `${bien.quartier} · ` : ''}{bien.ville}{bien.code_postal ? ` · ${bien.code_postal}` : ''}{bien.prix_m2 ? ` · ${fmt(bien.prix_m2)} €/m²` : ''}
+              </div>
+              <div className="fiche-tags">
+                {isEnchere ? (
+                  <>
+                    {(() => {
+                      const statutMap: Record<string, { label: string; bg: string; color: string }> = {
+                        a_venir: { label: '\u00c0 venir', bg: '#d4f5e0', color: '#1a7a40' },
+                        surenchere: { label: 'En surench\u00e8re', bg: '#ffecd2', color: '#8a5a00' },
+                        adjuge: { label: 'Adjug\u00e9', bg: '#d4ddf5', color: '#2a4a8a' },
+                        vendu: { label: 'Vendu', bg: '#6c757d', color: '#fff' },
+                        retire: { label: 'Retir\u00e9', bg: '#f5d4d4', color: '#8a2a2a' },
+                        expire: { label: 'Expir\u00e9', bg: '#e9ecef', color: '#6c757d' },
+                      }
+                      if (['a_venir', 'surenchere', 'adjuge'].includes(bien.statut)) return null
+                      const s = statutMap[bien.statut] || statutMap.a_venir
+                      return <span className="tag" style={{ background: s.bg, color: s.color, fontWeight: 700 }}>{s.label}</span>
+                    })()}
+                    {bien.occupation && bien.occupation !== 'NC' && (
+                      <span className="tag" style={{
+                        background: bien.occupation === 'libre' ? '#d4f5e0' : bien.occupation === 'loue' ? '#d4ddf5' : '#ffecd2',
+                        color: bien.occupation === 'libre' ? '#1a7a40' : bien.occupation === 'loue' ? '#2a4a8a' : '#8a5a00',
+                        fontWeight: 700,
+                      }}>{bien.occupation === 'libre' ? 'Bien Libre' : bien.occupation === 'loue' ? 'Bien Lou\u00e9' : 'Bien Occup\u00e9'}</span>
+                    )}
+                    {isVenteDelocalisee(bien.departement, bien.tribunal) && (
+                      <span className="tag" style={{ background: '#fff3e0', color: '#e65100', fontWeight: 700 }} title="La vente se d\u00e9roule dans un tribunal d'un autre d\u00e9partement">
+                        Delocalise
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {bien.strategie_mdb && <span className="tag tag-strat">{bien.strategie_mdb}</span>}
+                    {bien.statut && <span className="tag tag-statut">{bien.statut}</span>}
+                  </>
+                )}
+              </div>
             </div>
-            <div className="prix-bloc">
-              {isEnchere ? (
-                <>
-                  {/* Ligne prix : labels au-dessus, montants alignés */}
-                  {(() => {
-                    const hasAdjuge = bien.prix_adjuge && bien.prix_adjuge > 0
+
+            {/* Price grid */}
+            <div className="price-grid">
+              <div className="price-block">
+                <div className="label">{isEnchere ? (bien.prix_adjuge && bien.prix_adjuge > 0 ? 'PRIX ADJUG\u00c9' : 'MISE \u00c0 PRIX') : 'PRIX FAI'}</div>
+                <div className="value">{fmt(isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.prix_fai)} \u20ac</div>
+                {isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 && (
+                  <div className="sub">Mise \u00e0 prix : {fmt(bien.prix_fai)} \u20ac</div>
+                )}
+              </div>
+              <div className="price-block">
+                {isEnchere ? (
+                  (() => {
                     const dvf = estimationData?.prix_total || 0
                     const travaux = dvf && (bien.score_travaux || scorePerso) && bien.surface
                       ? (budgetTravauxM2[String(bien.score_travaux || scorePerso)] || 0) * bien.surface : 0
@@ -2417,9 +2458,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       const obj = (objectifPV || 20) / 100
                       const isMDB = regime === 'marchand_de_biens'
                       const fp = bien.frais_preemption || 0
-                      // Itération point fixe : p = K - fraisEnchere(p), K = DVF/(1+obj) - travaux
                       const K = dvf / (1 + obj) - travaux
-                      let p = K / 1.1 // estimation initiale (frais ≈ 10%)
+                      let p = K / 1.1
                       for (let i = 0; i < 5; i++) {
                         p = K - calculerFraisEnchere(Math.max(1, p), fp, { isMDB }).total
                       }
@@ -2427,143 +2467,124 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     })()
                     return enchMax ? (
                       <>
-                        <div style={{ display: 'flex', gap: '40px' }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>{hasAdjuge ? 'Prix Adjugé' : 'Mise à prix'}</div>
-                            <span className="prix-fai">{fmt(hasAdjuge ? bien.prix_adjuge : bien.prix_fai)} {'\u20AC'}</span>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>Enchère Max (Objectif {objectifPV || 20}% PV)</div>
-                            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '30px', fontWeight: 800, color: '#1a7a40', lineHeight: 1, display: 'block' }}>
-                              {fmt(enchMax)} {'\u20AC'}
-                            </span>
-                          </div>
-                        </div>
-                        {hasAdjuge && (
-                          <div style={{ marginTop: '4px', fontSize: '13px', color: '#7a6a60' }}>Mise à prix : {fmt(bien.prix_fai)} {'\u20AC'}</div>
-                        )}
+                        <div className="label">{`ENCH\u00c8RE MAX (OBJ. ${objectifPV || 20}% PV)`}</div>
+                        <div className="value enchere-max">{fmt(enchMax)} \u20ac</div>
                       </>
                     ) : (
                       <>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginBottom: 0, lineHeight: 1.2 }}>{hasAdjuge ? 'Prix Adjugé' : 'Mise à prix'}</div>
-                        <span className="prix-fai">{fmt(hasAdjuge ? bien.prix_adjuge : bien.prix_fai)} {'\u20AC'}</span>
-                        {hasAdjuge && (
-                          <div style={{ marginTop: '4px', fontSize: '13px', color: '#7a6a60' }}>Mise à prix : {fmt(bien.prix_fai)} {'\u20AC'}</div>
-                        )}
+                        <div className="label">REVENTE ESTIM\u00c9E</div>
+                        <div className="value" style={{ color: 'var(--ink-mute)' }}>NC</div>
                       </>
                     )
-                  })()}
-                  {/* Surenchère */}
-                  {(bien.date_surenchere || bien.mise_a_prix_surenchere) && (
-                    <div style={{ marginTop: '10px', padding: '8px 12px', background: '#fffaf0', borderRadius: '8px', border: '1.5px solid #f0d090', fontSize: '13px', color: '#6a4a00', alignSelf: 'flex-start' }}>
-                      <div><strong style={{ color: '#8a5a00' }}>Surenchère possible</strong>{bien.date_surenchere ? <> jusqu{"'"}au {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
-                      {bien.mise_a_prix_surenchere && (
-                        <div style={{ marginTop: '3px' }}>Nouvelle mise à prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
-                      )}
-                      {bien.consignation && (
-                        <div style={{ marginTop: '3px', color: '#9a7a50' }}>Consignation : <strong style={{ color: '#6a4a00' }}>{bien.consignation.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>
+                  })()
+                ) : (prixCibleCashflow || prixCiblePV) ? (
+                  <>
+                    <div className="label">
+                      {!isTravauxLourds && prixCibleCashflow && prixCiblePV ? (
+                        <select value={modeCible} onChange={e => setModeCible(e.target.value as 'cashflow' | 'pv')}
+                          style={{ fontSize: '10px', fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                          <option value="cashflow">{`PRIX CIBLE (CF ${objectifCashflow}%)`}</option>
+                          <option value="pv">{`PRIX CIBLE (PV ${objectifPV}%)`}</option>
+                        </select>
+                      ) : (
+                        prixCiblePV && (isTravauxLourds || !prixCibleCashflow)
+                          ? `PRIX CIBLE (OBJ. ${objectifPV}% PV)`
+                          : `PRIX CIBLE (OBJ. ${objectifCashflow}% CF)`
                       )}
                     </div>
-                  )}
-                  {/* Watchlist */}
-                  {userToken && (
-                    <div style={{ marginTop: '10px' }}>
-                      <button onClick={toggleWatchlist} style={{
-                        display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
-                        borderRadius: '10px', border: inWatchlist ? '2px solid #c0392b' : '2px solid #e8e2d8',
-                        background: inWatchlist ? '#fde8e8' : '#fff', color: inWatchlist ? '#c0392b' : '#7a6a60',
-                        fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                        transition: 'all 0.15s',
-                      }}>
-                        <span style={{ fontSize: '16px' }}>{inWatchlist ? '\u2665' : '\u2661'}</span>
-                        Watchlist
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <span className="prix-label" style={{ marginBottom: '-2px' }}>Prix FAI</span>
-                  <span className="prix-fai">{fmt(bien.prix_fai)} {'\u20AC'}</span>
-                </>
-              )}
-              {/* Prix cible — masqué si enchère max présente (redondant) */}
-              {(prixCibleCashflow || prixCiblePV) && !(isEnchere && estimationData?.prix_total) && (
-                <>
-                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {!isTravauxLourds && prixCibleCashflow && prixCiblePV ? (
-                      <select
-                        value={modeCible}
-                        onChange={e => setModeCible(e.target.value as 'cashflow' | 'pv')}
-                        style={{ fontSize: '11px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px', padding: '2px 6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        <option value="cashflow">{`Prix cible (Objectif ${objectifCashflow}% Cash Flow Avant Imp\u00F4t)`}</option>
-                        <option value="pv">{`Prix cible (Objectif ${objectifPV}% PV Brute)`}</option>
-                      </select>
-                    ) : (
-                      <span className="prix-label" style={{ margin: 0 }}>
-                        {prixCiblePV && (isTravauxLourds || !prixCibleCashflow)
-                          ? `Prix cible (Objectif ${objectifPV}% PV Brute)`
-                          : `Prix cible (Objectif ${objectifCashflow}% Cash Flow Avant Imp\u00F4t)`}
-                      </span>
-                    )}
-                  </div>
-                  {(() => {
-                    const prixAffiche = modeCible === 'cashflow' && prixCibleCashflow ? prixCibleCashflow : (prixCiblePV || prixCibleCashflow || 0)
-                    const cibleSuperieur = prixAffiche >= bien.prix_fai
-                    const isCashflowMode = modeCible === 'cashflow' && prixCibleCashflow
-
-                    if (cibleSuperieur) {
-                      // Prix cible > prix FAI : objectif déjà atteint, afficher le gain
-                      if (isCashflowMode) {
-                        return (
-                          <div style={{ marginTop: '4px', background: '#d4f5e0', borderRadius: '8px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a7a40' }}>Cash flow positif</span>
-                            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a7a40' }} className={isFreeBlocked ? 'val-blur' : ''}>+{fmt(cashflowBrut)} {'\u20AC'}/mois</span>
-                          </div>
-                        )
-                      }
-                      // Mode PV : afficher la PV brute estimée
-                      const pvBruteEstimee = (estimationData?.prix_total || 0) - bien.prix_fai - Math.round(bien.prix_fai * fraisNotaire / 100) - budgetTravCalc
+                    {(() => {
+                      const prixAffiche = modeCible === 'cashflow' && prixCibleCashflow ? prixCibleCashflow : (prixCiblePV || prixCibleCashflow || 0)
+                      const cibleSuperieur = prixAffiche >= bien.prix_fai
                       return (
-                        <div style={{ marginTop: '4px', background: '#d4f5e0', borderRadius: '8px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a7a40' }}>PV brute</span>
-                          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 700, color: '#1a7a40' }} className={isFreeBlocked ? 'val-blur' : ''}>{pvBruteEstimee >= 0 ? '+' : ''}{fmt(pvBruteEstimee)} {'\u20AC'}</span>
+                        <div className={`value target${cibleSuperieur ? ' positive' : ''} ${isFreeBlocked ? 'val-blur' : ''}`}>
+                          {fmt(prixAffiche)} \u20ac
                         </div>
                       )
-                    }
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    <div className="label">REVENTE ESTIM\u00c9E</div>
+                    <div className="value" style={{ color: estimationData?.prix_total ? 'var(--success)' : 'var(--ink-mute)' }}>
+                      {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} \u20ac` : 'NC'}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
 
-                    const ecart = bien.prix_fai ? ((prixAffiche - bien.prix_fai) / bien.prix_fai * 100).toFixed(1) : '0'
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className={`prix-cible-val ${isFreeBlocked ? 'val-blur' : ''}`}>{fmt(prixAffiche)} {'\u20AC'}</span>
-                        <span className={`ecart-badge ${Number(ecart) <= 0 ? 'ecart-neg' : 'ecart-pos'} ${isFreeBlocked ? 'val-blur' : ''}`}>{Number(ecart) > 0 ? '+' : ''}{ecart} %</span>
+            {/* D\u00e9cote banner */}
+            {!isEnchere && ecartPct && (
+              <div className={`decote-banner${ecartNegatif ? '' : ' positive'}`}>
+                <div>
+                  <div className="label">{ecartNegatif ? 'D\u00e9cote \u00e0 n\u00e9gocier' : 'D\u00e9j\u00e0 sous-\u00e9valu\u00e9'}</div>
+                  <div className="pct">{ecartNegatif ? '' : '+'}{ecartPct} %</div>
+                </div>
+                <div className="arrow">{ecartNegatif ? '\u2193' : '\u2191'}</div>
+              </div>
+            )}
+
+            {/* Surench\u00e8re (ench\u00e8res) */}
+            {isEnchere && (bien.date_surenchere || bien.mise_a_prix_surenchere) && (
+              <div style={{ padding: '12px 14px', background: '#fffaf0', borderRadius: 'var(--radius-sm)', border: '1.5px solid #f0d090', fontSize: '13px', color: '#6a4a00' }}>
+                <div><strong style={{ color: '#8a5a00' }}>Surench\u00e8re possible</strong>{bien.date_surenchere ? <> jusqu'au {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
+                {bien.mise_a_prix_surenchere && (
+                  <div style={{ marginTop: '3px' }}>Nouvelle mise \u00e0 prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} \u20ac</strong></div>
+                )}
+                {bien.consignation && (
+                  <div style={{ marginTop: '3px', color: '#9a7a50' }}>Consignation : <strong style={{ color: '#6a4a00' }}>{bien.consignation.toLocaleString('fr-FR')} \u20ac</strong></div>
+                )}
+              </div>
+            )}
+
+            {/* KPI row */}
+            <div className="kpi-row">
+              <div className="kpi">
+                <div className={`num${!resultatFAI?.rendement_brut ? ' mute' : ''}`}>
+                  {resultatFAI?.rendement_brut ? `${Number(resultatFAI.rendement_brut).toFixed(1)} %` : 'NC'}
+                </div>
+                <div className="lbl">Rdt brut</div>
+              </div>
+              <div className="kpi">
+                <div className={`num${!estimationData?.prix_total ? ' mute' : ''}`}>
+                  {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} \u20ac` : 'NC'}
+                </div>
+                <div className="lbl">Revente est.</div>
+              </div>
+              <div className="kpi">
+                {(() => {
+                  if (!estimationData?.prix_total || !prixCibleCombine) return (
+                    <><div className="num mute">NC</div><div className="lbl">PV nette est.</div></>
+                  )
+                  const pv = Math.round(estimationData.prix_total - bien.prix_fai * (1 + fraisNotaire / 100) - budgetTravCalc)
+                  return (
+                    <>
+                      <div className={`num${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: pv >= 0 ? 'var(--success)' : 'var(--accent)' }}>
+                        {pv >= 0 ? '+' : ''}{fmt(pv)} \u20ac
                       </div>
-                    )
-                  })()}
-                </>
+                      <div className="lbl">PV nette est.</div>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* Deal actions */}
+            <div className="deal-actions">
+              {userToken && (
+                <button onClick={toggleWatchlist} className={`deal-btn-watchlist${inWatchlist ? ' active' : ''}`}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill={inWatchlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  Watchlist
+                </button>
+              )}
+              <PlatformLinks bien={bien} />
+              {!isEnchere && (
+                <button onClick={() => setShowContact(true)} className="deal-btn-completer">
+                  Compl\u00e9ter les donn\u00e9es \u2192
+                </button>
               )}
             </div>
-            {!isEnchere && userToken && (
-              <button onClick={toggleWatchlist} style={{
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
-                borderRadius: '10px', border: inWatchlist ? '2px solid #c0392b' : '2px solid #e8e2d8',
-                background: inWatchlist ? '#fde8e8' : '#fff', color: inWatchlist ? '#c0392b' : '#7a6a60',
-                fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                transition: 'all 0.15s', alignSelf: 'flex-start', marginTop: '4px'
-              }}>
-                <span style={{ fontSize: '16px' }}>{inWatchlist ? '\u2665' : '\u2661'}</span>
-                Watchlist
-              </button>
-            )}
           </div>
-        </div>
-
-        <div style={{ marginTop: '-16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          {!isEnchere && <PlatformLinks bien={bien} />}
-          {!isEnchere && (
-            <button onClick={() => setShowContact(true)} style={{ fontSize: '12px', fontWeight: 600, color: '#c0392b', padding: '6px 14px', border: '1px solid #e8e2d8', borderRadius: '8px', background: '#fff', transition: 'all 150ms ease', whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"Compl\u00E9ter les donn\u00E9es manquantes \u2192"}</button>
-          )}
         </div>
 
         {/* Sticky navigation */}
