@@ -162,7 +162,7 @@ def run_sync(
     from_date: str,
     from_expired_at: str = None,
     to_expired_at: str = None,
-    limit_per_strat: int = None,
+    limit_total: int = None,
 ):
     client = get_client()
     if not client:
@@ -175,6 +175,9 @@ def run_sync(
     strat_stats: dict = {}
 
     for strat_key in strategies:
+        if limit_total and total_se_fetched >= limit_total:
+            break
+
         strat          = STRATEGIES[strat_key]
         strategie_mdb  = strat["strategie_mdb"]
         keywords       = strat["keywords"]
@@ -192,12 +195,12 @@ def run_sync(
         log.info(f"{'='*60}")
 
         for kw in keywords:
-            if limit_per_strat and strat_fetched >= limit_per_strat:
+            if limit_total and total_se_fetched >= limit_total:
                 break
 
             page = 1
             while True:
-                if limit_per_strat and strat_fetched >= limit_per_strat:
+                if limit_total and total_se_fetched >= limit_total:
                     break
 
                 try:
@@ -221,6 +224,7 @@ def run_sync(
                         new_members.append(prop)
 
                 strat_fetched += len(new_members)
+                total_se_fetched += len(new_members)
                 log.info(f"  [{kw}] page {page} → {len(members)} SE, {len(new_members)} nouveaux | total SE: {total_items}")
 
                 if not new_members:
@@ -241,25 +245,33 @@ def run_sync(
                     log.error(f"  DB select erreur: {e}")
                     matched = []
 
-                # Filtrer ceux déjà marqués expirés
-                a_mettre_a_jour = [b for b in matched if b.get("statut") != "Annonce expirée"]
+                # Filtrer ceux déjà marqués expirés + construire map uuid → expiredAt
+                uuid_to_expired_at = {
+                    p["uuid"]: (
+                        p.get("expiredAt")
+                        or (p.get("adverts") or [{}])[0].get("expiredAt")
+                    )
+                    for p in new_members if p.get("uuid")
+                }
+                # Ignorer les properties sans expiredAt (annonces brièvement indispo puis republiées)
+                a_mettre_a_jour = [
+                    b for b in matched
+                    if b.get("statut") != "Annonce expirée"
+                    and uuid_to_expired_at.get(str(b["stream_estate_id"])) is not None
+                ]
+                skipped_no_date = len(matched) - len(a_mettre_a_jour) - len([b for b in matched if b.get("statut") == "Annonce expirée"])
+                if skipped_no_date > 0:
+                    log.info(f"    → {skipped_no_date} ignorés (expiredAt=null, possiblement republiés)")
                 strat_in_db += len(matched)
 
                 log.info(f"    → {len(matched)} en base dont {len(a_mettre_a_jour)} à mettre à jour")
 
                 if dry_run:
                     for b in a_mettre_a_jour:
-                        # Trouver le expiredAt correspondant
-                        prop = next((p for p in new_members if p.get("uuid") == str(b["stream_estate_id"])), None)
-                        expired_at = prop.get("expiredAt") if prop else None
+                        expired_at = uuid_to_expired_at.get(str(b["stream_estate_id"]))
                         log.info(f"    [DRY] id={b['id']} statut={b['statut']} → Annonce expirée (expiredAt={expired_at})")
+                        strat_updated += 1
                 else:
-                    # Construire map uuid → expiredAt
-                    uuid_to_expired_at = {
-                        p["uuid"]: p.get("expiredAt")
-                        for p in new_members if p.get("uuid")
-                    }
-
                     for bien in a_mettre_a_jour:
                         se_id = str(bien["stream_estate_id"])
                         expired_at = uuid_to_expired_at.get(se_id)
@@ -280,7 +292,6 @@ def run_sync(
 
         label = "seraient mis à jour" if dry_run else "mis à jour"
         log.info(f"  {strategie_mdb} : {strat_fetched} crédits SE | {strat_in_db} en base | {strat_updated} {label}")
-        total_se_fetched += strat_fetched
         total_in_db      += strat_in_db
         total_updated    += strat_updated
         strat_stats[strat_key] = {
@@ -332,7 +343,7 @@ def main():
     parser.add_argument("--to-expired-at",
                         help="Fin fenêtre expiration (ex: 2026-04-27). Défaut: aucun")
     parser.add_argument("--limit", type=int, default=None,
-                        help="Max crédits SE par stratégie (ex: 50 pour test)")
+                        help="Max crédits SE au total, toutes stratégies confondues (ex: 50 pour test)")
     args = parser.parse_args()
 
     # Par défaut : hier (pour cron quotidien)
@@ -348,7 +359,7 @@ def main():
         from_date=args.from_date,
         from_expired_at=args.from_expired_at,
         to_expired_at=args.to_expired_at,
-        limit_per_strat=args.limit,
+        limit_total=args.limit,
     )
 
 
