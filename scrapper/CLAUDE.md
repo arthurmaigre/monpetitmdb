@@ -40,7 +40,7 @@ git pull origin main
 **Chaque script VPS écrit ses résultats dans `cron_config` (upsert sur `id`) à la fin du run.** Format `last_result` :
 - `poll_se` : `{ new, fp, credits, by_strategie: { lep, travaux, division, idr: { inserted, fp, credits } }, status }`
 - `extraction_nuit` : `{ lep: { processed, loyers, profils, errors }, idr: { processed, avec_lots, errors }, travaux: { processed, errors }, status }`
-- `encheres_pipeline` : `{ phase1: { licitor, avoventes, vench, total_nouveaux, total_deja_en_base }, phase2: { extracted, errors }, phase3: { fusions, supprimes }, phase4: { updated }, status }`
+- `encheres_pipeline` : `{ phase1: { licitor, avoventes, vench, total_nouveaux, total_deja_en_base }, phase2: { extracted, errors }, phase3: { fusions, doublons }, phase4: { updated }, status }`
 
 ```bash
 # Voir les crons
