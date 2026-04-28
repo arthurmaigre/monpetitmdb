@@ -40,8 +40,8 @@ API_KEY  = os.getenv("STREAM_ESTATE_API_KEY", "646dbf20852d6524745430b553e70802"
 API_BASE = "https://api.stream.estate/documents/properties"
 
 # Date de création SE à partir de laquelle on cherche les expirés
-# (couvre notre stock actuel + futur backfill mars)
-FROM_DATE_DEFAULT = "2026-03-01T00:00:00Z"
+# (couvre notre stock depuis le backfill janvier 2026)
+FROM_DATE_DEFAULT = "2026-01-01T00:00:00Z"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Stratégies — identiques à ingest_stream_estate.py
