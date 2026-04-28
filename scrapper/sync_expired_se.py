@@ -125,6 +125,7 @@ def fetch_expired_group(
         "lon": 2.2,
         "radius": 600,
         "withCoherentPrice": "true",
+        "order[expiredAt]": "asc",
     }
     if from_expired_at:
         params["fromExpiredAt"] = from_expired_at if 'T' in from_expired_at else from_expired_at + 'T00:00:00Z'
@@ -346,7 +347,7 @@ def main():
                         help="Max crédits SE au total, toutes stratégies confondues (ex: 50 pour test)")
     args = parser.parse_args()
 
-    # Par défaut : hier (pour cron quotidien)
+    # Par défaut : hier (cron quotidien)
     if not args.from_expired_at:
         hier = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
         args.from_expired_at = hier
