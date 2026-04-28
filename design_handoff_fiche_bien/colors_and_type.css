@@ -1,0 +1,189 @@
+/* ============================================================
+   Mon Petit MDB — Design Tokens
+   Drop this file into any prototype: <link rel="stylesheet" href="colors_and_type.css">
+   It also loads Fraunces + Inter from Google Fonts.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ---------- COLOR — Surfaces ---------- */
+  --paper:        #f5ede2;  /* page background — warm cream beige, never pure white */
+  --paper-alt:    #ede3d4;  /* alternating section background */
+  --surface:      #ffffff;  /* card background */
+
+  /* ---------- COLOR — Ink (text) ---------- */
+  --ink:          #1f1b16;  /* primary text — warm brown-black, never pure black */
+  --ink-soft:     #6b6358;  /* secondary text */
+  --ink-mute:     #a39a8c;  /* tertiary text, uppercase labels */
+
+  /* ---------- COLOR — Lines ---------- */
+  --line:         #e6dccb;  /* default border */
+  --line-soft:    #efe7d7;  /* nested/secondary border */
+
+  /* ---------- COLOR — Accent (brand bordeaux) ---------- */
+  --accent:       #b4442e;  /* target prices, decote, CTAs, paywall highlights */
+  --accent-soft:  #f2d9d1;
+  --accent-ink:   #ffffff;  /* text on accent */
+
+  /* ---------- COLOR — Semantic ---------- */
+  --success:      #2f7d5b;  /* gains, validated data */
+  --success-soft: #d4e7dc;
+
+  --warning:      #c77f1f;  /* DPE badges, travaux strategy, partial states */
+  --warning-soft: #f4e2c5;
+
+  --info:         #3a5f7d;  /* locataire strategy, info status */
+  --info-soft:    #d3deea;
+
+  /* ---------- COLOR — Strategy coding ----------
+     Every strategy owns ONE accent used in: page title italic word,
+     filter strategy dropdown, hero target-price, analysis emphasis,
+     and any "strategy X" pill. Soft variant is used as pill bg. */
+  --strat-locataire:      #b4442e;  /* bordeaux — "decote via occupation" */
+  --strat-locataire-soft: #f2d9d1;
+  --strat-travaux:        #c77f1f;  /* amber — "works risk / opportunity" */
+  --strat-travaux-soft:   #f4e2c5;
+  --strat-immeuble:       #3a5f7d;  /* deep blue — "yield scale" */
+  --strat-immeuble-soft:  #d3deea;
+  --strat-division:       #2f7d5b;  /* green — "value creation" */
+  --strat-division-soft:  #d4e7dc;
+  --strat-encheres:       #6a2d2d;  /* dark bordeaux — "judicial / legal" */
+  --strat-encheres-soft:  #e8d9d5;
+
+  /* ---------- COLOR — Source brand chips (aggregators) ---------- */
+  --src-avoventes: #6e4cd1;  /* AVO — purple */
+  --src-vench:     #2f8a5a;  /* VEN — green */
+  --src-licitor:   #2d5fb8;  /* LIC — blue */
+
+  /* ---------- TYPE — Families ---------- */
+  --font-serif: "Fraunces", "Iowan Old Style", "Apple Garamond", Georgia, "Times New Roman", serif;
+  --font-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---------- TYPE — Scale ---------- */
+  --fs-h1:     32px;
+  --fs-h2:     26px;
+  --fs-card:   18px;
+  --fs-price:  26px;
+  --fs-price-row: 22px;
+  --fs-body:   14px;
+  --fs-btn:    13px;
+  --fs-hint:   12px;
+  --fs-meta:   11px;
+  --fs-label:  10px;
+
+  /* ---------- RADII ---------- */
+  --radius-sm: 8px;   /* chips, inputs */
+  --radius-md: 14px;  /* cards, blocks */
+  --radius-lg: 20px;  /* hero containers */
+
+  /* ---------- SHADOWS ---------- */
+  --shadow-sm:  0 1px 2px rgba(31,27,22,.04), 0 1px 3px rgba(31,27,22,.03);
+  --shadow-md:  0 2px 6px rgba(31,27,22,.04), 0 8px 24px rgba(31,27,22,.06);
+  --shadow-lg:  0 4px 12px rgba(31,27,22,.06), 0 20px 48px rgba(31,27,22,.10);
+
+  /* ---------- SPACING ---------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  28px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ---------- MOTION ---------- */
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur-hover: 150ms;
+  --dur-reveal: 200ms;
+  --dur-tab: 280ms;
+}
+
+/* ============================================================
+   Semantic element defaults
+   ============================================================ */
+
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+h1 { font-size: var(--fs-h1); line-height: 1.15; }
+h2 { font-size: var(--fs-h2); line-height: 1.2; }
+h3 { font-size: var(--fs-card); line-height: 1.3; }
+
+p { margin: 0; color: var(--ink); }
+
+small { font-size: var(--fs-hint); color: var(--ink-soft); }
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity var(--dur-hover) var(--ease);
+}
+a:hover { opacity: 0.75; }
+
+button { font-family: var(--font-sans); cursor: pointer; }
+
+hr {
+  border: none;
+  border-top: 1px solid var(--line-soft);
+  margin: 0;
+}
+
+/* Numeric / price formatting — use on any element containing figures */
+.num,
+.price,
+.figure {
+  font-family: var(--font-serif);
+  font-variant-numeric: oldstyle-nums;
+  font-feature-settings: "onum" 1;
+}
+
+/* Uppercase data-field label */
+.label-upper {
+  font-family: var(--font-sans);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Meta text */
+.meta {
+  font-size: var(--fs-meta);
+  color: var(--ink-mute);
+}
+
+/* Card primitive */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+}
+
+/* Focus ring — used on all interactive elements */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
