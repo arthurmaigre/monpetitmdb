@@ -180,6 +180,7 @@ def fetch_group(
         "itemsPerPage": 30,
         "page": page,
         "transactionType": 0,
+        "isExpired": "false",
         "order[createdAt]": "desc",
         "lat": 46.6,
         "lon": 2.2,
