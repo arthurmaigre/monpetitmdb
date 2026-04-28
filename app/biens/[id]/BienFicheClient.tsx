@@ -2221,10 +2221,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
         .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; margin-bottom: 36px; align-items: stretch; }
-        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 100%; height: 100%; max-height: 560px; }
+        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 100%; height: 100%; }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
-        .fiche-photo-empty { width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); max-height: 380px; }
+        .fiche-photo-empty { width: 100%; height: 100%; min-height: 240px; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); }
         .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--ink, #1f1b16); box-shadow: 0 1px 4px rgba(0,0,0,.12); transition: all .2s; }
         .gallery-nav:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
         .gallery-dots { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; background: rgba(31,27,22,0.5); backdrop-filter: blur(8px); border-radius: 999px; }
@@ -2340,12 +2340,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 17px; font-weight: 500; color: var(--ink, #1f1b16); }
         .kpi .num.mute { color: var(--ink-mute, #a39a8c); font-weight: 400; }
         .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; white-space: nowrap; }
-        .deal-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        .deal-btn-watchlist { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: 1.5px solid var(--line, #e6dccb); background: #fff; color: var(--ink-soft, #6b6358); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; }
+        .deal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .deal-btn-watchlist { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: 1.5px solid var(--line, #e6dccb); background: #fff; color: var(--ink-soft, #6b6358); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
         .deal-btn-watchlist:hover { border-color: var(--accent, #b4442e); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
-        .deal-btn-source { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-source { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; font-family: inherit; white-space: nowrap; }
         .deal-btn-source:hover { opacity: 0.85; }
         .deal-btn-completer { font-size: 12px; font-weight: 600; color: var(--accent, #b4442e); padding: 9px 14px; border: 1.5px solid var(--line, #e6dccb); border-radius: var(--radius-sm, 8px); background: #fff; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
