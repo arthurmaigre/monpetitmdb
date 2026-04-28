@@ -2220,8 +2220,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-bottom: 24px; align-items: start; }
-        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); height: 100%; min-height: 420px; }
+        .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 28px; margin-bottom: 36px; align-items: stretch; }
+        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 100%; height: 100%; max-height: 560px; }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
         .fiche-photo-empty { width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); max-height: 380px; }
@@ -2380,7 +2380,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         </nav>
 
         <div className="hero-grid">
-          <div style={{ height: '100%' }}>
+          <div>
             <PhotoCarousel bien={bien} overlay={<>
               {/* Badge stratégie — top-left du carousel */}
               {!isEnchere && bien.strategie_mdb && (() => {
@@ -2612,7 +2612,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               </button>
               {!isEnchere && (
                 <button onClick={() => setShowContact(true)} className="deal-btn-completer">
-                  Compl\u00e9ter les donn\u00e9es \u2192
+                  Compléter les données →
                 </button>
               )}
             </div>
