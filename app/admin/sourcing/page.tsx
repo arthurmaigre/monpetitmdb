@@ -734,7 +734,7 @@ export default function AdminSourcingPage() {
                     <span style={{ fontWeight: 600, color: '#7a6a60', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phase 3 — Dédup</span>
                     <div style={{ marginTop: 4 }}>
                       <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{encP3.fusions ?? 0}</strong> fusions</Pill>
-                      {(encP3.supprimes ?? 0) > 0 && <> <Pill color="#7a6a60" bg="#f0ede8"><strong>{encP3.supprimes}</strong> supprimés</Pill></>}
+                      {(encP3.doublons ?? 0) > 0 && <> <Pill color="#7a6a60" bg="#f0ede8"><strong>{encP3.doublons}</strong> doublons</Pill></>}
                     </div>
                   </div>
                   <div>
