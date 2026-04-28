@@ -2217,10 +2217,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .pnl-tooltip-wrap .pnl-tooltip-text { display: none; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1a1210; color: #fff; font-size: 11px; font-weight: 400; padding: 8px 12px; border-radius: 8px; white-space: pre-line; width: max-content; max-width: 280px; z-index: 10; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,.15); pointer-events: none; text-transform: none; letter-spacing: normal; }
         .pnl-tooltip-wrap .pnl-tooltip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1a1210; }
         .pnl-tooltip-wrap:hover .pnl-tooltip-text { display: block; }
-        .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
+        .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 32px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 28px; margin-bottom: 36px; align-items: stretch; }
+        .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; margin-bottom: 36px; align-items: stretch; }
         .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 100%; height: 100%; max-height: 560px; }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
@@ -2316,7 +2316,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .breadcrumb .current { color: var(--ink, #1f1b16); }
 
         /* Deal card */
-        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 28px 30px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; }
+        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 24px 24px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; }
         .deal-card-glow { position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; background: radial-gradient(circle, var(--accent-soft, #f2d9d1) 0%, transparent 70%); opacity: 0.5; pointer-events: none; }
         .deal-header h1 { font-family: "Fraunces", Georgia, serif; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink, #1f1b16); margin: 0 0 6px; }
         .deal-header .location { font-size: 13px; color: var(--ink-soft, #6b6358); display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
@@ -2339,7 +2339,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .kpi:last-child { border-right: none; }
         .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 17px; font-weight: 500; color: var(--ink, #1f1b16); }
         .kpi .num.mute { color: var(--ink-mute, #a39a8c); font-weight: 400; }
-        .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+        .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; white-space: nowrap; }
         .deal-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         .deal-btn-watchlist { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: 1.5px solid var(--line, #e6dccb); background: #fff; color: var(--ink-soft, #6b6358); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; }
         .deal-btn-watchlist:hover { border-color: var(--accent, #b4442e); color: var(--accent, #b4442e); }
@@ -2610,11 +2610,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 Source annonce
               </button>
-              {!isEnchere && (
-                <button onClick={() => setShowContact(true)} className="deal-btn-completer">
-                  Compléter les données →
-                </button>
-              )}
             </div>
           </div>
         </div>
