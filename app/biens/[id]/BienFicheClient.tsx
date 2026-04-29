@@ -1994,37 +1994,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     load()
   }, [id])
 
-  // Sticky nav — IntersectionObserver to highlight active section
-  useEffect(() => {
-    const sections = ['apercu', 'estimation', 'travaux', 'financement', 'fiscalite']
-    const observers: IntersectionObserver[] = []
-    const visibleSet = new Set<string>()
-    for (const sectionId of sections) {
-      const el = document.getElementById(`nav-${sectionId}`)
-      if (!el) continue
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) visibleSet.add(sectionId)
-          else visibleSet.delete(sectionId)
-          // Pick the first visible section in order
-          for (const s of sections) {
-            if (visibleSet.has(s)) { setActiveNav(s); break }
-          }
-        },
-        { rootMargin: '-120px 0px -60% 0px', threshold: 0 }
-      )
-      obs.observe(el)
-      observers.push(obs)
-    }
-    return () => observers.forEach(o => o.disconnect())
-  }, [bien])
-
   function scrollToNav(sectionId: string) {
-    const el = document.getElementById(`nav-${sectionId}`)
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 130
-      window.scrollTo({ top: y, behavior: 'smooth' })
-    }
+    setActiveNav(sectionId)
+    const nav = document.querySelector('.sticky-nav-wrap')
+    if (nav) window.scrollTo({ top: (nav as HTMLElement).getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' })
   }
 
 
@@ -2436,6 +2409,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
 
         /* Sticky nav */
+        .tab-panel { animation: fadeInTab .3s ease; }
+        @keyframes fadeInTab { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .sticky-nav-wrap { position: sticky; top: 68px; z-index: 50; display: flex; justify-content: center; margin-bottom: 28px; }
         .sticky-nav { background: var(--surface, #fff); border-radius: var(--radius-md, 14px); padding: 6px; display: inline-flex; gap: 4px; box-shadow: var(--shadow-sm, 0 1px 3px rgba(31,27,22,.06)); border: 1px solid var(--line, #e6dccb); }
         .sticky-nav-item { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; font-size: 13px; font-weight: 500; color: var(--ink-soft, #6b6358); white-space: nowrap; cursor: pointer; background: transparent; border: none; border-radius: 10px; font-family: "Inter", sans-serif; transition: all var(--dur-hover, 150ms) var(--ease); }
@@ -2760,6 +2735,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </nav>
         </div>
 
+        {activeNav === 'apercu' && (<div className="tab-panel">
         <div id="nav-apercu" className="section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
             <h2 className="section-title" style={{ margin: 0 }}>{"Caract\u00E9ristiques du Bien"}</h2>
@@ -3120,9 +3096,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             )}
           </div>
         )}
+        </div>)}
 
+        {(activeNav === 'estimation' || activeNav === 'travaux' || activeNav === 'financement') && (<div className="tab-panel">
         <div id="nav-estimation" className="two-cols">
-        <div className="col">
+        <div className="col" style={{ display: activeNav === 'estimation' ? '' : 'none' }}>
         {(() => {
           const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
           return (
@@ -3276,9 +3254,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         )}
         </div>{/* fin col gauche */}
 
-        <div className="col">
+        <div className="col" style={{ display: (activeNav === 'travaux' || activeNav === 'financement') ? '' : 'none' }}>
         {/* Estimation travaux (toutes strategies) */}
-        <div id="nav-travaux" className="section">
+        <div id="nav-travaux" className="section" style={{ display: activeNav === 'travaux' ? '' : 'none' }}>
           <h2 className="section-title">{bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic Travaux' : 'Estimation Travaux'}</h2>
           {isFreeBlocked && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
@@ -3529,7 +3507,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           )
         })()}
 
-        {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
+        {activeNav === 'financement' && (peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
           <>
             <div id="nav-financement" className="section">
               <h2 className="section-title">Simulateur de Financement</h2>
@@ -3612,8 +3590,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         )}
         </div>{/* fin col droite */}
         </div>{/* fin two-cols nav-estimation */}
+        </div>)}
 
-        {bien.prix_fai && (
+        {activeNav === 'fiscalite' && bien.prix_fai && (<div className="tab-panel">
           <div id="nav-fiscalite">
           <div className="section">
             <h2 className="section-title">Analyse Fiscale</h2>
@@ -3688,7 +3667,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             </div>
           </div>
           </div>
-        )}
+        </div>)}
 
         {/* Modal Source annonce */}
         <ModalPanel open={showSourceModal} onClose={() => setShowSourceModal(false)} title="Annonce source">
