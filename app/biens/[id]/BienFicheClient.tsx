@@ -2495,17 +2495,17 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .tva-block { display: flex; align-items: flex-start; gap: 16px; padding: 14px 18px; background: var(--info-soft, #d3deea); border-radius: 10px; margin-top: 16px; }
         .tva-block .txt { font-size: 12px; color: var(--info, #3a5f7d); line-height: 1.5; }
         .tva-block .txt strong { color: var(--info, #3a5f7d); display: block; margin-bottom: 2px; }
-        .fiscal-controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; padding: 20px 24px; background: var(--surface, #fff); border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); }
-        .fiscal-ctrls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; align-items: center; }
-        .fiscal-ctrls-row2 { padding-top: 14px; border-top: 1px solid #efe7d7; }
-        .ctrl-grp { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
-        .ctrl-lbl { font-size: 12px; color: #7a6a60; font-weight: 500; flex-shrink: 0; }
-        .fiscal-chip-group { display: flex; gap: 4px; background: var(--paper, #f5ede2); padding: 4px; border-radius: 999px; flex-wrap: wrap; }
-        .fiscal-chip { padding: 6px 12px; border: none; background: transparent; border-radius: 999px; font-size: 12px; font-weight: 500; color: #7a6a60; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; white-space: nowrap; }
-        .fiscal-chip:hover { color: #1a1210; }
-        .fiscal-chip.active { background: var(--accent, #b4442e); color: #fff; }
-        .fiscal-sel { padding: 6px 12px; background: #faf8f5; border: 1px solid #e8e2d8; border-radius: 8px; font-family: inherit; font-size: 13px; color: #1a1210; cursor: pointer; outline: none; }
-        .fiscal-num-in { width: 64px; padding: 6px 8px; text-align: right; background: var(--paper, #f5ede2); border: 1px solid #e8e2d8; border-radius: 8px; font-size: 13px; font-family: inherit; color: #1a1210; outline: none; }
+        .fiscal-controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; padding: 20px 24px; background: var(--surface, #fff); border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); box-shadow: var(--shadow-sm); }
+        .fiscal-controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; align-items: center; }
+        .fiscal-controls-grid.fiscal-row-2 { padding-top: 14px; border-top: 1px solid #efe7d7; }
+        .control-group { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
+        .control-group .lbl { font-size: 12px; color: #7a6a60; font-weight: 500; flex-shrink: 0; }
+        .chip-group { display: flex; gap: 4px; background: var(--paper, #f5ede2); padding: 4px; border-radius: 999px; flex-wrap: wrap; }
+        .chip-btn { padding: 6px 12px; border: none; background: transparent; border-radius: 999px; font-size: 12px; font-weight: 500; color: #7a6a60; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; white-space: nowrap; }
+        .chip-btn:hover { color: #1a1210; }
+        .chip-btn.active { background: var(--accent, #b4442e); color: #fff; }
+        .select-custom { padding: 6px 12px; background: #faf8f5; border: 1px solid #e8e2d8; border-radius: 8px; font-family: inherit; font-size: 13px; color: #1a1210; cursor: pointer; outline: none; }
+        .select-custom.select-inline-num { width: 64px; padding: 6px 8px; text-align: center; background: var(--paper, #f5ede2); }
         .fiscal-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .fiscal-card { background: #fff; border-radius: 14px; padding: 24px 26px; border: 1px solid #e6dccb; position: relative; display: flex; flex-direction: column; }
         .fiscal-card.your { background: linear-gradient(180deg, #fff 0%, #faf8f5 100%); border: 2px solid #f0d090; }
@@ -2970,95 +2970,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </div>
 
           <div className="data-grid">
-            {/* Infos enchère dans les caractéristiques */}
-            {isEnchere && (
-              <>
-                <div className="data-subtitle">Enchère</div>
-                {bien.tribunal && <div className="data-item"><span className="data-label">Tribunal</span><span className="data-value">{bien.tribunal}{isVenteDelocalisee(bien.departement, bien.tribunal) && <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">📍 Délocalisée</span>}</span></div>}
-                {bien.date_audience && <div className="data-item"><span className="data-label">Audience</span><span className="data-value">{new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (passée)' })()}</span></div>}
-                {bien.date_visite && <div className="data-item"><span className="data-label">Visite</span><span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div>}
-                {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
-                {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
-                {/* Frais préalables + Honoraires avocat + Frais de mutation + Avocat — même ligne */}
-                <div className="data-grid" style={{ gridColumn: '1 / -1' }}>
-                  <div className="data-item">
-                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Frais préalables
-                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais de procédure (commissaire de justice, annonces légales, diagnostics). Communiqués par le tribunal env. 1 semaine avant l{"'"}audience. Variables, à renseigner si connus.</span>
-                      </span>
-                    </span>
-                    <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-                  </div>
-                  {/* Honoraires d'avocat — libres */}
-                  <div className="data-item">
-                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Honoraires d{"'"}avocat
-                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Honoraires libres — fixés par l{"'"}avocat mandaté pour vous représenter à l{"'"}audience. Généralement entre 1{'\u00A0'}000 et 3{'\u00A0'}000{'\u00A0'}{'\u20AC'}. 1{'\u00A0'}500{'\u00A0'}{'\u20AC'} par défaut.</span>
-                      </span>
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <input
-                        type="number"
-                        value={honorairesAvocat}
-                        onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
-                        onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
-                        placeholder="1500"
-                        style={{
-                          width: '80px', padding: '4px 8px', borderRadius: '6px',
-                          border: '1.5px solid #e8e2d8', fontSize: '13px', fontWeight: 600,
-                          fontFamily: "'DM Sans', sans-serif", textAlign: 'right',
-                          background: '#fff', color: '#1a1210',
-                        }}
-                      />
-                      <span style={{ fontSize: '13px', color: '#7a6a60' }}>{'\u20AC'}</span>
-                    </div>
-                  </div>
-                  {/* Frais de mutation */}
-                  {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
-                    const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
-                    const isMDB = regime === 'marchand_de_biens'
-                    const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
-                    return (
-                      <div className="data-item">
-                        <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          Frais de mutation
-                          <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais d{"'"}acquisition calculés : émoluments avocat + droits de mutation + CSI. Hors frais préalables et honoraires (à renseigner séparément).</span>
-                          </span>
-                        </span>
-                        <button onClick={() => setShowFraisModal(true)} style={{
-                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                          fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600,
-                          color: '#2a4a8a', textDecoration: 'underline dotted', textUnderlineOffset: '2px',
-                          textAlign: 'left',
-                        }}>
-                          {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'} (~{Math.round(frais.pct_sans_prealables)}%)
-                        </button>
-                      </div>
-                    )
-                  })()}
-                  {/* Avocat poursuivant */}
-                  {bien.avocat_nom && (
-                    <div className="data-item">
-                      <span className="data-label">Avocat poursuivant</span>
-                      <button onClick={() => setShowAvocatModal(true)} style={{
-                        background: '#faf8f5', border: '1.5px solid #e8e2d8', borderRadius: '10px',
-                        padding: '8px 12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                        display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left',
-                      }}>
-                        <span style={{ fontSize: '16px' }}>{'\u2696'}</span>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>{bien.avocat_nom}</div>
-                          {bien.avocat_cabinet && <div style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.avocat_cabinet}</div>}
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
             {/* Année construction — show only if non-null */}
             {bien.annee_construction != null && (
               <div className="data-item">
@@ -3248,8 +3159,147 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           )}
         </div>
 
-        {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli */}
-        {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && !isEnchere && (
+        {/* Informations Enchères — bloc dédié, stratégie enchère uniquement */}
+        {isEnchere && (
+          <div className="section">
+            <h2 className="section-title">
+              {"Informations Ench\u00E8res"}
+              {bien.tribunal && <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{bien.tribunal}</span>}
+            </h2>
+            <div className="data-grid">
+              {bien.tribunal && (
+                <div className="data-item">
+                  <span className="data-label">Tribunal</span>
+                  <span className="data-value">
+                    {bien.tribunal}
+                    {isVenteDelocalisee(bien.departement, bien.tribunal) && (
+                      <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">
+                        {"📍 D\u00E9localis\u00E9e"}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+              {bien.date_audience && (
+                <div className="data-item">
+                  <span className="data-label">Audience</span>
+                  <span className="data-value">
+                    {new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    {(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (pass\u00E9e)' })()}
+                  </span>
+                </div>
+              )}
+              {bien.date_visite && (
+                <div className="data-item">
+                  <span className="data-label">Visite</span>
+                  <span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+              )}
+              {bien.prix_adjuge && bien.prix_adjuge > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Prix adjug\u00E9"}</span>
+                  <span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {bien.statut && bien.statut !== 'a_venir' && (
+                <div className="data-item">
+                  <span className="data-label">Statut</span>
+                  <span className="data-value">{({ surenchere: 'En surench\u00E8re', adjuge: 'Adjug\u00E9', vendu: 'Vendu', retire: 'Retir\u00E9', expire: 'Expir\u00E9' } as Record<string, string>)[bien.statut] || bien.statut}</span>
+                </div>
+              )}
+              <div className="data-item">
+                <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {"Frais pr\u00E9alables"}
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais de proc\u00E9dure (commissaire de justice, annonces l\u00E9gales, diagnostics). Communiqu\u00E9s par le tribunal env. 1 semaine avant l\u2019audience. Variables, \u00E0 renseigner si connus."}</span>
+                  </span>
+                </span>
+                <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+              <div className="data-item">
+                <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {"Honoraires d\u2019avocat"}
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Honoraires libres \u2014 fix\u00E9s par l\u2019avocat mandat\u00E9 pour vous repr\u00E9senter \u00E0 l\u2019audience. G\u00E9n\u00E9ralement entre 1\u00A0000 et 3\u00A0000\u00A0\u20AC. 1\u00A0500\u00A0\u20AC par d\u00E9faut."}</span>
+                  </span>
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input
+                    type="number"
+                    value={honorairesAvocat}
+                    onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
+                    onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
+                    placeholder="1500"
+                    style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textAlign: 'right', background: '#fff', color: '#1a1210' }}
+                  />
+                  <span style={{ fontSize: '13px', color: '#7a6a60' }}>{'\u20AC'}</span>
+                </div>
+              </div>
+              {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
+                const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
+                const isMDB = regime === 'marchand_de_biens'
+                const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
+                return (
+                  <div className="data-item">
+                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {"Frais de mutation"}
+                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais d\u2019acquisition calcul\u00E9s : \u00E9moluments avocat + droits de mutation + CSI. Hors frais pr\u00E9alables et honoraires (\u00E0 renseigner s\u00E9par\u00E9ment)."}</span>
+                      </span>
+                    </span>
+                    <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#2a4a8a', textDecoration: 'underline dotted', textUnderlineOffset: '2px', textAlign: 'left' }}>
+                      {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'} (~{Math.round(frais.pct_sans_prealables)}%)
+                    </button>
+                  </div>
+                )
+              })()}
+              {bien.avocat_nom && (
+                <div className="data-item">
+                  <span className="data-label">Avocat poursuivant</span>
+                  <button onClick={() => setShowAvocatModal(true)} style={{ background: '#faf8f5', border: '1.5px solid #e8e2d8', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left' }}>
+                    <span style={{ fontSize: '16px' }}>{'\u2696'}</span>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>{bien.avocat_nom}</div>
+                      {bien.avocat_cabinet && <div style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.avocat_cabinet}</div>}
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Surenchère alert */}
+            {(bien.date_surenchere || bien.mise_a_prix_surenchere) && (
+              <div style={{ marginTop: '16px', padding: '12px 14px', background: '#efe0d1', borderRadius: 'var(--radius-sm)', fontSize: '13px', color: '#5d3d24' }}>
+                <div><strong style={{ color: '#8a5a3c' }}>{"Surench\u00E8re possible pendant 10 jours apr\u00E8s l\u2019adjudication"}</strong>{bien.date_surenchere ? <> {"jusqu\u2019au"} {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
+                {bien.mise_a_prix_surenchere && <div style={{ marginTop: '3px' }}>{"Nouvelle mise \u00E0 prix :"} <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>}
+                {bien.consignation && <div style={{ marginTop: '3px' }}>{"Consignation :"} <strong>{bien.consignation.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>}
+                <div style={{ marginTop: '4px', fontSize: '12px', color: '#7a5a3a' }}>{"Un tiers peut surench\u00E9rir de 10\u00A0% minimum dans les 10 jours suivant la vente. L\u2019adjudicataire final est celui de la seconde audience."}</div>
+              </div>
+            )}
+            {/* Documents juridiques */}
+            {bien.documents && (() => {
+              const docs = typeof bien.documents === 'string' ? JSON.parse(bien.documents) : bien.documents
+              if (!docs || docs.length === 0) return null
+              const icons: Record<string, string> = { ccv: '\uD83D\uDCCB', pv: '\uD83D\uDCDD', diag: '\uD83C\uDFE5', affiche: '\uD83D\uDCE2', autre: '\uD83D\uDCC4' }
+              return (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>{"Documents Juridiques"}</div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {docs.map((doc: any, i: number) => (
+                      <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#faf8f5', borderRadius: '8px', border: '1px solid #e8e2d8', textDecoration: 'none', color: '#1a1210', fontSize: '12px', fontWeight: 500 }}>
+                        <span style={{ fontSize: '14px' }}>{icons[doc.type] || icons.autre}</span>
+                        {doc.label || doc.type}
+                        <span style={{ color: '#7a6a60', marginLeft: '4px' }}>{"↗"}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli (enchères incluses) */}
+        {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && (
           <div className="section">
             <h2 className="section-title">
               {"Donn\u00E9es Locatives"}
@@ -3754,32 +3804,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           )}
         </div>
 
-        {/* Documents PDF enchères — colonne droite, après travaux */}
-        {isEnchere && bien.documents && (() => {
-          const docs = typeof bien.documents === 'string' ? JSON.parse(bien.documents) : bien.documents
-          if (!docs || docs.length === 0) return null
-          const icons: Record<string, string> = { ccv: '\uD83D\uDCCB', pv: '\uD83D\uDCDD', diag: '\uD83C\uDFE5', affiche: '\uD83D\uDCE2', autre: '\uD83D\uDCC4' }
-          return (
-            <div className="section">
-              <h2 className="section-title">Documents Juridiques</h2>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {docs.map((doc: any, i: number) => (
-                  <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '5px',
-                    padding: '6px 12px', background: '#faf8f5', borderRadius: '8px',
-                    border: '1px solid #e8e2d8', textDecoration: 'none',
-                    color: '#1a1210', fontSize: '12px', fontWeight: 500,
-                  }}>
-                    <span style={{ fontSize: '14px' }}>{icons[doc.type] || icons.autre}</span>
-                    {doc.label || doc.type}
-                    <span style={{ color: '#7a6a60', marginLeft: '4px' }}>↗</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )
-        })()}
-
         {activeNav === 'financement' && (peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
           <div id="nav-financement" className="fin-grid">
             {/* Colonne gauche : paramètres */}
@@ -3970,54 +3994,50 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         {activeNav === 'fiscalite' && bien.prix_fai && (<div className="tab-panel">
           <div id="nav-fiscalite">
-          <div className="section">
-            <h2 className="section-title">Analyse Fiscale</h2>
             <div className="fiscal-controls">
-              <div className="fiscal-ctrls-grid">
-                <div className="ctrl-grp">
-                  <span className="ctrl-lbl">Comparer avec :</span>
+              {/* Row 1 : Détention | Base de calcul */}
+              <div className="fiscal-controls-grid">
+                <div className="control-group">
+                  <span className="lbl">{"D\u00E9tention"}</span>
+                  <div className="chip-group">
+                    {[1, 2, 3, 4, 5, 10, 15, 20].map(d => (
+                      <button key={d} className={`chip-btn${dureeRevente === d ? ' active' : ''}`} onClick={() => setDureeRevente(d)}>
+                        {d} an{d > 1 ? 's' : ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="control-group">
+                  <span className="lbl">Base de calcul</span>
+                  <div className="chip-group">
+                    <button className={`chip-btn${baseCalc === 'fai' ? ' active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
+                    <button className={`chip-btn${prixCibleCombine ? (baseCalc === 'cible' ? ' active' : '') : ' active'}`} onClick={() => prixCibleCombine && setBaseCalc('cible')} style={!prixCibleCombine ? { opacity: 0.4, cursor: 'default' } : {}}>Prix cible</button>
+                  </div>
+                </div>
+              </div>
+              {/* Row 2 : Frais agence | Comparer avec */}
+              <div className="fiscal-controls-grid fiscal-row-2">
+                {!isEnchere && (
+                  <div className="control-group">
+                    <span className="lbl">{"Frais agence \u00E0 l\u2019achat"}</span>
+                    <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
+                      onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
+                      className="select-custom select-inline-num" />
+                    <span className="lbl">%</span>
+                  </div>
+                )}
+                <div className="control-group">
+                  <span className="lbl">Comparer avec</span>
                   {userPlan === 'expert' ? (
-                    <select className="fiscal-sel" value={regime2} onChange={e => setRegime2(e.target.value)}>
+                    <select className="select-custom" value={regime2} onChange={e => setRegime2(e.target.value)}>
                       {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                     </select>
                   ) : (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <span className="fiscal-sel" style={{ background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
+                      <span className="select-custom" style={{ background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
                       <a href="/#pricing" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Tous les r\u00E9gimes \u2192 Expert"}</a>
                     </span>
-                  )}
-                </div>
-                {!isEnchere && (
-                  <div className="ctrl-grp">
-                    <span className="ctrl-lbl">{"Frais d\u2019agence \u00E0 l\u2019achat :"}</span>
-                    <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
-                      onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
-                      onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
-                      className="fiscal-num-in" />
-                    <span className="ctrl-lbl">%</span>
-                  </div>
-                )}
-              </div>
-              <div className="fiscal-ctrls-row2">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                  <div className="ctrl-grp">
-                    <span className="ctrl-lbl">{"D\u00E9tention :"}</span>
-                    <div className="fiscal-chip-group">
-                      {[1, 2, 3, 4, 5, 10, 15, 20].map(d => (
-                        <button key={d} className={`fiscal-chip${dureeRevente === d ? ' active' : ''}`} onClick={() => setDureeRevente(d)}>
-                          {d} an{d > 1 ? 's' : ''}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {prixCibleCombine && (
-                    <div className="ctrl-grp">
-                      <span className="ctrl-lbl">Base de calcul :</span>
-                      <div className="toggle-row" style={{ minWidth: '180px' }}>
-                        <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                        <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
-                      </div>
-                    </div>
                   )}
                 </div>
               </div>
@@ -4042,7 +4062,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
               </div>
             </div>
-          </div>
           </div>
         </div>)}
 
