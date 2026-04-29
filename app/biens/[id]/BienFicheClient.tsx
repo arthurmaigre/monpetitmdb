@@ -124,11 +124,11 @@ const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: stri
   gensdeconfiance: { name: 'Gens de Confiance', color: '#2E7D32', abbrev: 'GC' },
 }
 
-function ModalPanel({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+function ModalPanel({ open, onClose, title, children, size }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; size?: 'large' }) {
   if (!open) return null
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel" onClick={e => e.stopPropagation()}>
+      <div className={`modal-panel${size === 'large' ? ' modal-panel-large' : ''}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{title}</h3>
           <button className="modal-close" onClick={onClose}>{'\u00D7'}</button>
@@ -1240,7 +1240,7 @@ function LotsEditor({ lots, nbLotsEffectif, prixFai, userToken, onSave, onCancel
   const rdtBrut = prixFai && totalLoyer > 0 ? ((totalLoyer * 12) / prixFai * 100).toFixed(1) : null
 
   const DPE_COLORS: Record<string, string> = { A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0a830', E: '#eb6a2a', F: '#e42a1e', G: '#a00000' }
-  const GRID = '60px 1fr 100px 110px 60px 65px 100px 28px'
+  const GRID = '44px 90px 90px 100px 56px 60px 100px 28px'
 
   const inputU: React.CSSProperties = { border: 'none', padding: '5px 2px', minWidth: 0, background: 'transparent', fontFamily: 'inherit', fontSize: '12px', outline: 'none' }
   const sel: React.CSSProperties = { padding: '5px 6px', border: '1px solid #e6dccb', borderRadius: '4px', fontFamily: 'inherit', fontSize: '12px', color: '#1f1b16', background: '#fff', cursor: 'pointer', width: '100%', outline: 'none' }
@@ -2617,6 +2617,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         /* Modal panel */
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(26,18,16,0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 24px; }
         .modal-panel { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: modalIn 0.2s ease; display: flex; flex-direction: column; }
+        .modal-panel.modal-panel-large { max-width: 880px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 12px; flex-shrink: 0; }
         .modal-header h3 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #1a1210; margin: 0; }
         .modal-close { background: none; border: none; cursor: pointer; color: #7a6a60; font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.15s; }
@@ -3185,7 +3186,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   {showLotsDetail ? "Masquer le d\u00E9tail des lots" : "Voir le d\u00E9tail des lots"}
                 </button>
               </div>
-              <ModalPanel open={showLotsDetail} onClose={() => setShowLotsDetail(false)} title={"D\u00E9tail des lots"}>
+              <ModalPanel open={showLotsDetail} onClose={() => setShowLotsDetail(false)} title={"D\u00E9tail des lots"} size="large">
                 <LotsEditor lots={lots} nbLotsEffectif={nbLotsEffectif} prixFai={bien.prix_fai} userToken={userToken} onSave={async (newLots) => { await handleUpdate('lots_data', { lots: newLots }); }} onCancel={() => setShowLotsDetail(false)} />
               </ModalPanel>
             </>
