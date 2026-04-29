@@ -128,7 +128,7 @@ function ModalPanel({ open, onClose, title, children, size }: { open: boolean; o
   if (!open) return null
   return (
     <div className="modal-overlay" onClick={onClose} style={size === 'large' ? { padding: '8px' } : undefined}>
-      <div className="modal-panel" onClick={e => e.stopPropagation()} style={size === 'large' ? { maxWidth: '880px' } : undefined}>
+      <div className="modal-panel" onClick={e => e.stopPropagation()} style={size === 'large' ? { maxWidth: '700px' } : undefined}>
         <div className="modal-header">
           <h3>{title}</h3>
           <button className="modal-close" onClick={onClose}>{'\u00D7'}</button>
@@ -1240,7 +1240,7 @@ function LotsEditor({ lots, nbLotsEffectif, prixFai, userToken, onSave, onCancel
   const rdtBrut = prixFai && totalLoyer > 0 ? ((totalLoyer * 12) / prixFai * 100).toFixed(1) : null
 
   const DPE_COLORS: Record<string, string> = { A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0a830', E: '#eb6a2a', F: '#e42a1e', G: '#a00000' }
-  const GRID = '44px 90px 90px 100px 56px 60px 1fr 28px'
+  const GRID = '44px 90px 90px 100px 56px 60px 100px 28px'
 
   const inputU: React.CSSProperties = { border: 'none', padding: '5px 2px', minWidth: 0, background: 'transparent', fontFamily: 'inherit', fontSize: '12px', outline: 'none' }
   const sel: React.CSSProperties = { padding: '5px 6px', border: '1px solid #e6dccb', borderRadius: '4px', fontFamily: 'inherit', fontSize: '12px', color: '#1f1b16', background: '#fff', cursor: 'pointer', width: '100%', outline: 'none' }
