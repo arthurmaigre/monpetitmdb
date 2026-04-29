@@ -2914,7 +2914,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         {activeNav === 'apercu' && (<div className="tab-panel">
         <div id="nav-apercu" className="section">
           <h2 className="section-title">
-            {"Caract\u00E9ristiques du Bien"}
+            {isIDR ? "Caract\u00E9ristiques de l\u2019immeuble" : "Caract\u00E9ristiques du Bien"}
             {(() => {
               const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
               const creationDate = mi?.creationDate
@@ -2923,7 +2923,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               return <span className="section-title-meta" style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"En ligne depuis le "}{formatted}</span>
             })()}
           </h2>
-          <p className="section-subtitle">{"Renseignez les données du bien et son adresse dès que vous les avez récupérées du vendeur"}</p>
+          <p className="section-subtitle">{isIDR ? "Donn\u00E9es \u00E0 l\u2019\u00E9chelle de l\u2019immeuble entier" : "Renseignez les donn\u00E9es du bien et son adresse d\u00E8s que vous les avez r\u00E9cup\u00E9r\u00E9es du vendeur"}</p>
 
           {/* Address-row — interactive, en dehors de la grille */}
           <div
@@ -2934,7 +2934,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             </div>
             <div className="address-main">
-              <span className="address-lbl">Adresse</span>
+              <span className="address-lbl">{isIDR ? "Adresse de l\u2019immeuble" : "Adresse"}</span>
               <span className="address-val">
                 {adresseRowEditing ? (
                   <input
@@ -2981,7 +2981,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {/* DPE — show only if non-null */}
             {bien.dpe && (
               <div className="data-item">
-                <span className="data-label">DPE</span>
+                <span className="data-label">{isIDR ? "DPE moyen" : "DPE"}</span>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60' }}>{bien.dpe}</span>
                 </div>
@@ -3006,8 +3006,15 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {/* Surface */}
             {bien.surface != null && (
               <div className="data-item">
-                <span className="data-label">Surface</span>
+                <span className="data-label">{isIDR ? "Surface totale habitable" : "Surface"}</span>
                 <span className="data-value">{bien.surface} m²</span>
+              </div>
+            )}
+            {/* Prix au m² — IDR uniquement */}
+            {isIDR && bien.prix_fai && bien.surface && (
+              <div className="data-item">
+                <span className="data-label">Prix au m²</span>
+                <span className="data-value">{Math.round(bien.prix_fai / bien.surface).toLocaleString('fr-FR')} {'\u20AC'}</span>
               </div>
             )}
             {/* Surface terrain — maison uniquement */}
@@ -3042,6 +3049,13 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {!isIDR && !(bien.type_bien || '').toLowerCase().includes('maison') && bien.etage && (
               <div className="data-item">
                 <span className="data-label">{"Étage"}</span>
+                <span className="data-value">{bien.etage}</span>
+              </div>
+            )}
+            {/* Nb étages — IDR uniquement */}
+            {isIDR && bien.etage && (
+              <div className="data-item">
+                <span className="data-label">Nb {"\u00E9tages"}</span>
                 <span className="data-value">{bien.etage}</span>
               </div>
             )}
@@ -3094,17 +3108,17 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <span className="data-value">{bien.en_copropriete ? 'Oui' : 'Non'}</span>
               </div>
             )}
-            {/* IDR — champs immeuble, affichés seulement si non-null */}
-            {isIDR && (bien.nb_lots != null || bien.monopropriete != null || bien.compteurs_individuels != null) && (
+            {/* IDR — champs immeuble, toujours affichés */}
+            {isIDR && (
               <div className="data-subtitle" style={{ gridColumn: '1 / -1', marginTop: '4px' }}>Immeuble</div>
             )}
-            {isIDR && bien.nb_lots != null && (
+            {isIDR && (
               <div className="data-item">
                 <span className="data-label">Nb lots</span>
                 <CellEditable bien={bien} champ="nb_lots" suffix=" lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
             )}
-            {isIDR && bien.monopropriete != null && (
+            {isIDR && (
               <div className="data-item">
                 <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
                 {userToken ? (
@@ -3116,7 +3130,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 )}
               </div>
             )}
-            {isIDR && bien.compteurs_individuels != null && (
+            {isIDR && (
               <div className="data-item">
                 <span className="data-label">Compteurs individuels</span>
                 {userToken ? (
@@ -3357,29 +3371,35 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && (
           <div className="section">
             <h2 className="section-title">
-              {"Donn\u00E9es Locatives"}
-              <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"Soumises par la communaut\u00E9"}</span>
+              {isIDR ? "Donn\u00E9es locatives \u00B7 agr\u00E9g\u00E9es" : "Donn\u00E9es Locatives"}
+              {isIDR && bien.nb_lots ? (
+                <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"Totaux des "}{bien.nb_lots}{" lots"}</span>
+              ) : (
+                <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"Soumises par la communaut\u00E9"}</span>
+              )}
             </h2>
-            <p className="section-subtitle">{"Cliquez sur une valeur pour la saisir ou la modifier"}</p>
+            <p className="section-subtitle">{isIDR ? "Somme des loyers et charges \u00E0 l\u2019\u00E9chelle de l\u2019immeuble" : "Cliquez sur une valeur pour la saisir ou la modifier"}</p>
             <div className="data-grid">
               <div className="data-item">
-                <span className="data-label">Loyer <span className="k-unit">/mois</span></span>
+                <span className="data-label">{isIDR ? "Loyer total" : <>"Loyer "<span className="k-unit">/mois</span></>}</span>
                 <CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
+              {!isIDR && (
+                <div className="data-item">
+                  <span className="data-label">Type loyer</span>
+                  <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                </div>
+              )}
               <div className="data-item">
-                <span className="data-label">Type loyer</span>
-                <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">{"Charges r\u00E9cup."} <span className="k-unit">/mois</span></span>
+                <span className="data-label">{isIDR ? "Charges r\u00E9cup. totales" : <>"Charges r\u00E9cup." <span className="k-unit">/mois</span></>}</span>
                 <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
-                <span className="data-label">Charges copro <span className="k-unit">/mois</span></span>
+                <span className="data-label">{isIDR ? "Charges copro totales" : <>"Charges copro " <span className="k-unit">/mois</span></>}</span>
                 <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
-                <span className="data-label">{"Taxe fonci\u00E8re"} <span className="k-unit">/an</span></span>
+                <span className="data-label">{isIDR ? "Taxe fonci\u00E8re globale" : <>"Taxe fonci\u00E8re" <span className="k-unit">/an</span></>}</span>
                 <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               {!isIDR && (
