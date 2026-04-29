@@ -3212,7 +3212,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               {bien.date_audience && (
                 <div className="data-item">
                   <span className="data-label">{"Date d\u2019audience"}</span>
-                  <span className="data-value">
+                  <span className="data-value" style={{ whiteSpace: 'nowrap' }}>
                     {new Date(bien.date_audience).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     {(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (pass\u00E9e)' })()}
                   </span>
