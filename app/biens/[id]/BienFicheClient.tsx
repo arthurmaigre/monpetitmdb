@@ -314,40 +314,45 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
   // Texte formaté pour lecture seule
   const readText = suffix ? `${displayVal != null ? displayVal.toLocaleString('fr-FR') : ''}${suffix.replace(/ /g, '\u00A0')}` : displayFormatted
 
+  const vStyle: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'right', fontSize: '13px', fontWeight: 600 }
+  const bStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }
+
   // --- Pas connecté : lecture seule ---
   if (!userToken) {
-    if (displayVal == null) return <span style={{ color: '#c0392b', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{readText}</span>
+    if (displayVal == null) return <><span style={{ ...vStyle, color: '#c0392b', fontStyle: 'italic', fontWeight: 400 }}>NC</span><span /></>
+    return <><span style={{ ...vStyle, color: '#1a1210' }}>{readText}</span><span /></>
   }
 
-  // --- Donnée source (IA/scraper) et pas en mode édition : lecture seule + crayon ---
+  // --- Donnée source (IA/scraper) : lecture seule + crayon ---
   if (hasSourceData && !dirty) {
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-        <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{readText}</span>
-        <PencilBtn />
-      </div>
+      <>
+        <span style={{ ...vStyle, color: '#1a1210' }}>{readText}</span>
+        <div style={bStyle}><PencilBtn /></div>
+      </>
     )
   }
 
-  // --- Donnée validée (vert) et pas en mode édition ---
+  // --- Donnée validée (vert) ---
   if (isVert && !dirty) {
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontWeight: 600, color: '#1a7a40', fontSize: '13px' }}>{readText}</span>
-        <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '12px', color: '#1a7a40' }}>{'\u2713'}</span>
-        <PencilBtn />
-      </div>
+      <>
+        <span style={{ ...vStyle, color: '#1a7a40' }}>{readText}</span>
+        <div style={bStyle}>
+          <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '10px', color: '#1a7a40' }}>{'\u2713'}</span>
+          <PencilBtn />
+        </div>
+      </>
     )
   }
 
-  // --- Donnée jaune (1 user) et pas en mode édition ---
+  // --- Donnée jaune (1 user) ---
   if (isJaune && !dirty) {
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontWeight: 600, color: '#a06010', fontSize: '13px' }}>{readText}</span>
-        <PencilBtn />
-      </div>
+      <>
+        <span style={{ ...vStyle, color: '#a06010' }}>{readText}</span>
+        <div style={bStyle}><PencilBtn /></div>
+      </>
     )
   }
 
@@ -357,40 +362,47 @@ function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpd
   const bgColor = dirty ? '#f0f4ff' : isEmpty ? '#fde8e8' : '#faf8f5'
 
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+    <>
       <input
         type="number"
         value={localVal}
         placeholder="NC"
         style={{
-          width: '80px', padding: '4px 8px', borderRadius: '6px',
+          width: '100%', boxSizing: 'border-box', padding: '4px 8px', borderRadius: '6px',
           border: `1.5px solid ${borderColor}`,
           fontFamily: "'DM Sans', sans-serif", fontSize: '13px',
-          background: bgColor,
+          background: bgColor, textAlign: 'right',
           outline: 'none', color: isEmpty ? '#c0392b' : '#1a1210',
         }}
         onChange={e => handleChange(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
       />
-      {dirty && localVal && (
+      <div style={bStyle}>
         <button
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || !localVal}
           title={"Soumettre \u00E0 la communaut\u00E9"}
           style={{
-            width: '24px', height: '24px', borderRadius: '6px', border: 'none',
-            background: '#1a7a40', color: '#fff', fontSize: '14px', fontWeight: 700,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, transition: 'opacity 0.15s', opacity: submitting ? 0.5 : 1,
+            width: '22px', height: '22px', borderRadius: '6px', border: 'none',
+            background: '#1a7a40', color: '#fff', fontSize: '12px', fontWeight: 700,
+            cursor: dirty && localVal ? 'pointer' : 'default',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+            visibility: dirty && localVal ? 'visible' : 'hidden',
+            pointerEvents: dirty && localVal ? 'auto' : 'none',
           }}
         >{'\u2713'}</button>
-      )}
-      {dirty && (
         <button onClick={handleCancel} title={"Annuler"}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: '#c0392b', fontSize: '14px' }}
+          style={{
+            background: 'none', border: 'none', cursor: dirty ? 'pointer' : 'default',
+            padding: '1px', display: 'flex', alignItems: 'center', color: '#c0392b', fontSize: '14px',
+            visibility: dirty ? 'visible' : 'hidden',
+            pointerEvents: dirty ? 'auto' : 'none',
+            flexShrink: 0,
+          }}
         >{'\u00D7'}</button>
-      )}
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -399,28 +411,31 @@ function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
   const statut = champsStatut['type_loyer']
   const hasSourceData = valeur && !statut
   const isVert = statut?.statut === 'vert'
+  const vStyle: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'right', fontSize: '13px', fontWeight: 600 }
 
   if (!userToken || hasSourceData) {
-    if (!valeur) return <span style={{ color: '#c0392b', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{valeur}</span>
+    if (!valeur) return <><span style={{ ...vStyle, color: '#c0392b', fontStyle: 'italic', fontWeight: 400 }}>NC</span><span /></>
+    return <><span style={{ ...vStyle, color: '#1a1210' }}>{valeur}</span><span /></>
   }
 
   const borderColor = !valeur ? '#c0392b' : isVert ? '#1a7a40' : '#e8e2d8'
   const bgColor = !valeur ? '#fde8e8' : isVert ? '#eafaf1' : '#faf8f5'
 
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+    <>
       <select
         value={valeur || ''}
         onChange={e => { if (e.target.value) onUpdate('type_loyer', e.target.value) }}
-        style={{ padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${borderColor}`, fontFamily: "'DM Sans', sans-serif", fontSize: '13px', background: bgColor, outline: 'none' }}
+        style={{ width: '100%', boxSizing: 'border-box', padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${borderColor}`, fontFamily: "'DM Sans', sans-serif", fontSize: '13px', background: bgColor, outline: 'none' }}
       >
         <option value="">NC</option>
         <option value="HC">HC</option>
         <option value="CC">CC</option>
       </select>
-      {isVert && <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '12px', color: '#1a7a40' }}>{'\u2713'}</span>}
-    </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {isVert && <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '10px', color: '#1a7a40' }}>{'\u2713'}</span>}
+      </div>
+    </>
   )
 }
 
@@ -1920,6 +1935,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [dureeRevente, setDureeRevente] = useState<number>(1)
   const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number | ''>(5) // 5% par defaut = frais agence inclus dans le FAI
   const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(1500)
+  const [adresseRowEditing, setAdresseRowEditing] = useState(false)
+  const [adresseRowDraft, setAdresseRowDraft] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -2287,11 +2304,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .section-subtitle { font-size: 12px; color: var(--ink-soft, #6b6358); margin-bottom: 18px; }
         .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--line-soft, #efe7d7); border-radius: var(--radius-sm, 8px); overflow: hidden; }
         .estimation-price-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; }
-        .data-subtitle { grid-column: 1 / -1; font-size: 10px; font-weight: 600; color: var(--ink-mute, #a39a8c); text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 16px 6px; background: var(--surface, #fff); }
-        .data-item { display: grid; grid-template-columns: 1fr 160px; align-items: center; column-gap: 12px; padding: 14px 16px; background: var(--surface, #fff); transition: background var(--dur-hover, 150ms); }
+        .data-subtitle { grid-column: 1 / -1; font-size: 10px; font-weight: 600; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 16px 6px; background: var(--surface, #fff); }
+        .data-item { display: grid; grid-template-columns: 1fr 110px 44px; align-items: center; column-gap: 0; padding: 14px 16px; background: var(--surface, #fff); transition: background var(--dur-hover, 150ms); }
         .data-item:hover { background: var(--paper, #f5ede2); }
         .data-label { font-size: 11px; color: var(--ink-mute, #a39a8c); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
-        .data-value { font-size: 14px; font-weight: 500; color: var(--ink, #1f1b16); text-align: right; justify-self: end; }
+        .data-value { font-size: 14px; font-weight: 500; color: var(--ink, #1f1b16); text-align: right; display: block; width: 100%; }
         .data-value.nc { color: var(--ink-mute, #a39a8c); font-style: italic; font-weight: 400; }
         .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
         .two-cols { display: flex; gap: 24px; align-items: flex-start; }
@@ -2379,9 +2396,28 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .pnl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
         .nc-warning { background: #fff8f0; border: 1.5px solid #f0d090; border-radius: 12px; padding: 16px 20px; color: #a06010; font-size: 13px; }
         .profil-bar { background: #f7f4f0; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #7a6a60; margin-top: 16px; }
-        .legende { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
-        .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #7a6a60; }
-        .legende-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .legende { display: flex; gap: 14px; flex-wrap: wrap; padding: 12px 16px; background: var(--paper, #f5ede2); border-radius: 10px; margin-top: 16px; }
+        .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft, #6b6358); }
+        .legende-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .k-unit { text-transform: none; letter-spacing: 0; color: var(--ink-mute, #a39a8c); opacity: 0.7; margin-left: 2px; font-weight: 400; }
+        .address-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 14px; background: var(--paper, #f5ede2); border: 1px solid var(--line-soft, #efe7d7); border-radius: var(--radius-sm, 8px); transition: border-color .15s, background .15s; cursor: default; }
+        .address-row:hover { border-color: var(--line, #e6dccb); }
+        .address-row.editing { border-color: var(--info, #3a5f7d); background: var(--surface, #fff); box-shadow: 0 0 0 3px var(--info-soft, #d3deea); }
+        .address-icon { flex-shrink: 0; width: 22px; height: 22px; color: var(--accent, #b4442e); display: flex; align-items: center; justify-content: center; }
+        .address-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+        .address-lbl { font-size: 12px; color: var(--ink-soft, #6b6358); font-weight: 500; white-space: nowrap; }
+        .address-val { font-size: 13px; color: var(--ink, #1f1b16); flex: 1 1 auto; min-width: 120px; }
+        .address-val.placeholder { color: var(--accent, #b4442e); font-style: italic; cursor: pointer; }
+        .address-val.placeholder:hover { text-decoration: underline; }
+        .address-input { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 13px; color: var(--ink, #1f1b16); outline: none; }
+        .address-hint { flex-shrink: 0; font-size: 11px; color: var(--ink-mute, #a39a8c); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .address-edit-btn { flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; background: transparent; border: none; color: var(--ink-soft, #6b6358); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+        .address-edit-btn:hover { background: var(--surface, #fff); color: var(--accent, #b4442e); }
+        .add-feature-row { margin-top: 14px; padding: 14px 16px; background: var(--paper, #f5ede2); border-radius: var(--radius-sm, 8px); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .add-feature-lbl { font-size: 12px; color: var(--ink-soft, #6b6358); }
+        .add-feature-lbl strong { color: var(--ink, #1f1b16); font-weight: 600; }
+        .btn-add { padding: 8px 14px; background: var(--accent, #b4442e); color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: all .2s; white-space: nowrap; }
+        .btn-add:hover { background: #9a3626; transform: translateY(-1px); }
         @keyframes spin { to { transform: rotate(360deg); } }
         .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-mute, #a39a8c); margin-bottom: 20px; font-weight: 500; letter-spacing: 0.02em; }
         .breadcrumb a { color: var(--ink-soft, #6b6358); text-decoration: none; transition: color .2s; }
@@ -2755,16 +2791,63 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         {activeNav === 'apercu' && (<div className="tab-panel">
         <div id="nav-apercu" className="section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-            <h2 className="section-title" style={{ margin: 0 }}>{"Caract\u00E9ristiques du Bien"}</h2>
+          <h2 className="section-title">
+            {"Caract\u00E9ristiques du Bien"}
             {(() => {
               const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
               const creationDate = mi?.creationDate
               if (!creationDate) return null
               const formatted = new Date(creationDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-              return <span style={{ fontSize: '12px', color: '#7a6a60' }}>{"En ligne depuis le "}{formatted}</span>
+              return <span className="section-title-meta" style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"En ligne depuis le "}{formatted}</span>
             })()}
+          </h2>
+          <p className="section-subtitle">{"Renseignez les données du bien et son adresse dès que vous les avez récupérées du vendeur"}</p>
+
+          {/* Address-row — interactive, en dehors de la grille */}
+          <div
+            className={`address-row${adresseRowEditing ? ' editing' : ''}`}
+            onClick={() => { if (!adresseRowEditing && userToken) { setAdresseRowEditing(true); setAdresseRowDraft(bien.adresse || '') } }}
+          >
+            <div className="address-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div className="address-main">
+              <span className="address-lbl">Adresse</span>
+              <span className="address-val">
+                {adresseRowEditing ? (
+                  <input
+                    className="address-input"
+                    autoFocus
+                    value={adresseRowDraft}
+                    onChange={e => setAdresseRowDraft(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { handleUpdate('adresse', adresseRowDraft); setAdresseRowEditing(false) }
+                      if (e.key === 'Escape') { setAdresseRowEditing(false) }
+                    }}
+                    onBlur={() => { if (adresseRowDraft) handleUpdate('adresse', adresseRowDraft); setAdresseRowEditing(false) }}
+                    placeholder="Ex : 12 rue de Rivoli, 75001 Paris"
+                  />
+                ) : (
+                  <span className={bien.adresse ? '' : 'placeholder'} onClick={() => { if (userToken) { setAdresseRowEditing(true); setAdresseRowDraft(bien.adresse || '') } }}>
+                    {bien.adresse ? `${bien.adresse}${bien.code_postal ? `, ${bien.code_postal}` : ''} ${bien.ville || ''}`.trim() : "Renseigner l'adresse"}
+                  </span>
+                )}
+              </span>
+            </div>
+            {!adresseRowEditing && <span className="address-hint">{"Améliore la précision de l'estimation"}</span>}
+            {!adresseRowEditing && userToken && (
+              <button
+                type="button"
+                className="address-edit-btn"
+                onClick={e => { e.stopPropagation(); setAdresseRowEditing(true); setAdresseRowDraft(bien.adresse || '') }}
+                title="Modifier"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            )}
           </div>
+
           <div className="data-grid">
             {/* Infos enchère dans les caractéristiques */}
             {isEnchere && (
@@ -2855,14 +2938,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 </div>
               </>
             )}
-            <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>
-            {/* Adresse */}
-            {bien.adresse && (
-              <div className="data-item" style={{ gridColumn: '1 / -1' }}>
-                <span className="data-label">Adresse</span>
-                <span className="data-value">{bien.adresse}{bien.code_postal ? `, ${bien.code_postal}` : ''} {bien.ville || ''}</span>
-              </div>
-            )}
             {/* Année construction — show only if non-null */}
             {bien.annee_construction != null && (
               <div className="data-item">
@@ -2874,14 +2949,18 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {bien.dpe && (
               <div className="data-item">
                 <span className="data-label">DPE</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60' }}>{bien.dpe}</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60' }}>{bien.dpe}</span>
+                </div>
               </div>
             )}
             {/* GES — show only if non-null */}
             {bien.ges && (
               <div className="data-item">
                 <span className="data-label">GES</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.ges] || '#7a6a60' }}>{bien.ges}</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.ges] || '#7a6a60' }}>{bien.ges}</span>
+                </div>
               </div>
             )}
             {/* Budget énergie — show only if non-null */}
@@ -3017,6 +3096,22 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               </div>
             )}
           </div>
+
+          {/* Add-feature-row — dans la section, sous la grille */}
+          {completableManquants.length > 0 && (
+            <div className="add-feature-row">
+              <div className="add-feature-lbl">
+                <strong>{completableManquants.length} {completableManquants.length === 1 ? 'caracteristique manquante' : 'caract\u00E9ristiques manquantes'}</strong>
+                <br />
+                <span style={{ color: 'var(--ink-mute, #a39a8c)', fontSize: '11px' }}>{completableManquants.slice(0, 3).map(f => f.label).join(', ')}{completableManquants.length > 3 ? '\u2026' : ''}</span>
+              </div>
+              <button className="btn-add" onClick={() => setShowCompleterModal(true)}>
+                <span style={{ fontSize: '16px', lineHeight: 0 }}>+</span>
+                Ajouter une info
+              </button>
+            </div>
+          )}
+
           {/* IDR : tableau lots dépliable */}
           {isIDR && (
             <>
@@ -3035,32 +3130,62 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli */}
         {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && !isEnchere && (
           <div className="section">
-            <h2 className="section-title">{"Donn\u00E9es Locatives"}</h2>
+            <h2 className="section-title">
+              {"Donn\u00E9es Locatives"}
+              <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"Soumises par la communaut\u00E9"}</span>
+            </h2>
+            <p className="section-subtitle">{"Cliquez sur une valeur pour la saisir ou la modifier"}</p>
             <div className="data-grid">
               <div className="data-item">
-                <span className="data-label">Loyer</span>
-                <CellEditable bien={bien} champ="loyer" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <span className="data-label">Loyer <span className="k-unit">/mois</span></span>
+                <CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
                 <span className="data-label">Type loyer</span>
                 <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
-                <span className="data-label">{"Charges récup."}</span>
-                <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <span className="data-label">{"Charges r\u00E9cup."} <span className="k-unit">/mois</span></span>
+                <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
-                <span className="data-label">Charges copro</span>
-                <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <span className="data-label">Charges copro <span className="k-unit">/mois</span></span>
+                <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
-                <span className="data-label">{"Taxe foncière"}</span>
-                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <span className="data-label">{"Taxe fonci\u00E8re"} <span className="k-unit">/an</span></span>
+                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               {!isIDR && (
                 <div className="data-item">
                   <span className="data-label">Profil locataire</span>
-                  <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'Non communiqu\u00E9'}</span>
+                  {userToken ? (
+                    <select
+                      value={bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : ''}
+                      onChange={async e => {
+                        const val = e.target.value || null
+                        setBien((prev: any) => ({ ...prev, profil_locataire: val }))
+                        if (val) await handleUpdate('profil_locataire', val)
+                      }}
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '4px 6px', borderRadius: '6px',
+                        border: `1.5px solid ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? '#c0392b' : '#e8e2d8'}`,
+                        fontSize: '12px', fontFamily: "'DM Sans', sans-serif",
+                        background: !bien.profil_locataire || bien.profil_locataire === 'NC' ? '#fde8e8' : '#faf8f5',
+                        color: !bien.profil_locataire || bien.profil_locataire === 'NC' ? '#c0392b' : '#1a1210',
+                        cursor: 'pointer', outline: 'none',
+                      }}
+                    >
+                      <option value="">NC</option>
+                      {['Actif CDI', 'Actif CDD / int\u00E9rim', 'Ind\u00E9pendant', 'Retrait\u00E9', '\u00C9tudiant', 'Inconnu'].map(o => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>
+                      {bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'NC'}
+                    </span>
+                  )}
                 </div>
               )}
               {!isIDR && (
@@ -3079,7 +3204,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       })
                       setBien((prev: any) => ({ ...prev, fin_bail: val }))
                     }}
-                    style={{ padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none', width: '120px' }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none' }}
                   />
                 </div>
               )}
@@ -3092,10 +3217,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               </div>
             </div>
             <div className="legende">
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#c0392b' }}></div>{"Donn\u00E9e manquante \u2014 \u00E9ditable"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#2a4a8a' }}></div>{"Simulation \u2014 \u2713 pour soumettre, \u00D7 pour annuler"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Soumis par 1 utilisateur"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"\u2713 Valid\u00E9 par 2+ utilisateurs"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: 'var(--accent, #b4442e)' }}></div>Manquant</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: 'var(--info, #3a5f7d)' }}></div>Simulation</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#e8b843' }}></div>{"1 utilisateur"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: 'var(--success, #2f7d5b)' }}></div>{"Valid\u00E9 2+"}</div>
             </div>
             {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
             {/* IDR : taux occupation + loyers par lot dépliable */}
