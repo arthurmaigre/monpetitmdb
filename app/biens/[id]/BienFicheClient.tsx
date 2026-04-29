@@ -3189,6 +3189,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               {"Informations Ench\u00E8res"}
               {bien.tribunal && <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{bien.tribunal}</span>}
             </h2>
+            {bien.date_audience && (
+              <p className="section-subtitle">
+                {"Audience du "}{new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {bien.salle_criees ? <>{" \u00B7 "}{bien.salle_criees}</> : null}
+              </p>
+            )}
             <div className="data-grid">
               {bien.tribunal && (
                 <div className="data-item">
@@ -3205,17 +3211,32 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               )}
               {bien.date_audience && (
                 <div className="data-item">
-                  <span className="data-label">Audience</span>
+                  <span className="data-label">{"Date d\u2019audience"}</span>
                   <span className="data-value">
-                    {new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    {new Date(bien.date_audience).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     {(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (pass\u00E9e)' })()}
                   </span>
+                </div>
+              )}
+              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Mise \u00E0 prix"}</span>
+                  <span className="data-value" style={{ fontWeight: 700 }}>{bien.mise_a_prix.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
+                <div className="data-item">
+                  <span className="data-label">
+                    {"Consignation "}
+                    <span style={{ color: '#a39a8c', fontWeight: 500 }}>(10 %)</span>
+                  </span>
+                  <span className="data-value">{Math.round((bien.consignation || bien.mise_a_prix * 0.1)).toLocaleString('fr-FR')} {'\u20AC'}</span>
                 </div>
               )}
               {bien.date_visite && (
                 <div className="data-item">
                   <span className="data-label">Visite</span>
-                  <span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  <span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
               )}
               {bien.prix_adjuge && bien.prix_adjuge > 0 && (
@@ -3266,12 +3287,14 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   <div className="data-item">
                     <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {"Frais de mutation"}
+                      <span style={{ padding: '1px 7px', background: 'var(--success-soft, #d4f5e0)', color: 'var(--success, #1a7a40)', borderRadius: '999px', fontSize: '10px', fontWeight: 600 }}>{`\u2212${Math.round(frais.pct_sans_prealables)}\u00A0%`}</span>
                       <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais d\u2019acquisition calcul\u00E9s : \u00E9moluments avocat + droits de mutation + CSI. Hors frais pr\u00E9alables et honoraires (\u00E0 renseigner s\u00E9par\u00E9ment)."}</span>
                       </span>
                     </span>
-                    <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#2a4a8a', textDecoration: 'underline dotted', textUnderlineOffset: '2px', textAlign: 'left' }}>
-                      {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'} (~{Math.round(frais.pct_sans_prealables)}%)
+                    <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', textAlign: 'right', display: 'inline-flex', alignItems: 'baseline', gap: '4px' }}>
+                      {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'}
+                      <span style={{ color: '#a39a8c', fontSize: '11px' }}>›</span>
                     </button>
                   </div>
                 )
@@ -3279,12 +3302,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               {bien.avocat_nom && (
                 <div className="data-item">
                   <span className="data-label">Avocat poursuivant</span>
-                  <button onClick={() => setShowAvocatModal(true)} style={{ background: '#faf8f5', border: '1.5px solid #e8e2d8', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left' }}>
-                    <span style={{ fontSize: '16px' }}>{'\u2696'}</span>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>{bien.avocat_nom}</div>
-                      {bien.avocat_cabinet && <div style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.avocat_cabinet}</div>}
-                    </div>
+                  <button onClick={() => setShowAvocatModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', textAlign: 'right', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--info-soft, #d3deea)', color: 'var(--info, #3a5f7d)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, flexShrink: 0 }}>
+                      {bien.avocat_nom.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                    </span>
+                    {bien.avocat_nom}
+                    <span style={{ color: '#a39a8c', fontSize: '11px' }}>›</span>
                   </button>
                 </div>
               )}
