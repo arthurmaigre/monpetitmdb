@@ -34,6 +34,22 @@ const SUIVI_OPTIONS = [
   { value: 'archive',          label: 'Archiv\u00E9',           color: '#95a5a6', bg: '#f0f0f0' },
 ]
 
+const SUIVI_OPTIONS_ENCHERE = [
+  { value: 'a_analyser',          label: '\u00C0 analyser',            color: '#7a6a60', bg: '#f0ede8' },
+  { value: 'info_demandee',       label: 'Info demand\u00E9e',         color: '#3498db', bg: '#ebf5fb' },
+  { value: 'visite_programmee',   label: 'Visite programm\u00E9e',     color: '#8e44ad', bg: '#f4ecf7' },
+  { value: 'visite_effectuee',    label: 'Visite effectu\u00E9e',      color: '#6c3483', bg: '#e8daef' },
+  { value: 'enchere_programmee',  label: 'Ench\u00E8re programm\u00E9e', color: '#e67e22', bg: '#fdebd0' },
+  { value: 'enchere_effectuee',   label: 'Ench\u00E8re effectu\u00E9e', color: '#d35400', bg: '#fae5d3' },
+  { value: 'enchere_gagnee',      label: 'Ench\u00E8re gagn\u00E9e',   color: '#1e8449', bg: '#d5f5e3' },
+  { value: 'enchere_perdue',      label: 'Ench\u00E8re perdue',        color: '#e74c3c', bg: '#fdedec' },
+  { value: 'archive',             label: 'Archiv\u00E9',               color: '#95a5a6', bg: '#f0f0f0' },
+]
+
+function getSuiviOptions(strategie?: string) {
+  return strategie === 'Ench\u00E8res' ? SUIVI_OPTIONS_ENCHERE : SUIVI_OPTIONS
+}
+
 export default function MesBiensPage() {
   const [biens, setBiens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -263,11 +279,12 @@ export default function MesBiensPage() {
     )
   }
 
-  function SuiviSelect({ bienId }: { bienId: string }) {
-    const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bienId] || 'a_analyser')) || SUIVI_OPTIONS[0]
+  function SuiviSelect({ bienId, strategie }: { bienId: string, strategie?: string }) {
+    const opts = getSuiviOptions(strategie)
+    const opt = opts.find(o => o.value === (suiviMap[bienId] || 'a_analyser')) || opts[0]
     return (
       <select className="suivi-select" value={suiviMap[bienId] || 'a_analyser'} onChange={e => handleSuiviChange(bienId, e.target.value)} style={{ color: opt.color, background: opt.bg }}>
-        {SUIVI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     )
   }
@@ -802,7 +819,7 @@ export default function MesBiensPage() {
             {effectiveView === 'grid' ? (
               <div className="grid">
                 {filteredBiens.map(bien => {
-                  const opt = SUIVI_OPTIONS.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || SUIVI_OPTIONS[0]
+                  const opts = getSuiviOptions(bien.strategie_mdb); const opt = opts.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || opts[0]
                   if (activeTab === 'Enchères') {
                     return showArchived ? (
                       <div key={bien.id} style={{ position: 'relative', opacity: 0.7 }}>
@@ -847,7 +864,7 @@ export default function MesBiensPage() {
                         onWatchlistChange={(bienId, added) => { if (!added) handleRemove(bienId) }}
                         extraTitleRight={
                           <select className="suivi-select" value={suiviMap[bien.id] || 'a_analyser'} onChange={e => handleSuiviChange(bien.id, e.target.value)} style={{ color: opt.color, background: opt.bg, flexShrink: 0 }}>
-                            {SUIVI_OPTIONS.map(o => o.value !== 'archive' && <option key={o.value} value={o.value}>{o.label}</option>)}
+                            {opts.map(o => o.value !== 'archive' && <option key={o.value} value={o.value}>{o.label}</option>)}
                           </select>
                         }
                       />
@@ -932,7 +949,7 @@ export default function MesBiensPage() {
                           )}
                         </td>
                         <td className="sticky-col" style={{ left: '40px', width: '130px', minWidth: '130px' }}>
-                          <SuiviSelect bienId={bien.id} />
+                          <SuiviSelect bienId={bien.id} strategie={bien.strategie_mdb} />
                         </td>
                         <td className="sticky-col" style={{ left: '170px', width: '80px', minWidth: '80px' }}>
                           <div style={{ position: 'relative', display: 'inline-block' }}>
