@@ -898,7 +898,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                           <th>Statut<span></span></th>
                           <th>Mise à prix<span></span></th>
                           <th>Occupation<span></span></th>
-                          <th>Date surenchère<span></span></th>
                           <th>Prix adjugé<span></span></th>
                           <th>Avocat<span></span></th>
                         </>
@@ -1036,7 +1035,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
                             <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#8a5a00' }}>{e.date_surenchere ? new Date(e.date_surenchere).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {e.avocat_nom ? (
