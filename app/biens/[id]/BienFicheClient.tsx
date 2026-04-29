@@ -1949,6 +1949,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [regime, setRegime] = useState('nu_micro_foncier')
   const [objectifCashflow, setObjectifCashflow] = useState(0)
   const [objectifPV, setObjectifPV] = useState(20)
+  const [enchereManuelMax, setEnchereManuelMax] = useState<number | null>(null)
+  const [enchereBaseCalc, setEnchereBaseCalc] = useState<'calcule' | 'libre'>('calcule')
   const [regime2, setRegime2] = useState('nu_reel_foncier')
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [estimationData, setEstimationData] = useState<any>(null)
@@ -2251,7 +2253,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const tauxNum = taux || 0
   const tauxAssuranceNum = tauxAssurance || 0
   const fraisAgenceNum = fraisAgenceRevente || 0
-  const prixBase = baseCalc === 'fai' ? bien.prix_fai : (prixCibleCombine || bien.prix_fai)
+  const prixBase = isEnchere
+    ? (enchereBaseCalc === 'libre' && enchereManuelMax ? enchereManuelMax : bien.prix_fai)
+    : (baseCalc === 'fai' ? bien.prix_fai : (prixCibleCombine || bien.prix_fai))
   const montantProjet = prixBase * (1 + fraisNotaire / 100) + budgetTravCalc
   const montantEmprunte = Math.max(0, montantProjet - apportNum)
   const apportPct = montantProjet > 0 ? Math.round(apportNum / montantProjet * 1000) / 10 : 0
@@ -3856,7 +3860,31 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             <div className="section">
               <h2 className="section-title">Simulateur de financement</h2>
               <p className="section-subtitle">{"Ajustez les param\u00E8tres pour calculer vos mensualit\u00E9s"}</p>
-              {prixCibleCombine && (
+              {isEnchere && (
+                <div className="fin-block">
+                  <div className="fin-label">Prix d{'\''}enchère utilisé</div>
+                  <div className="fin-chip-group">
+                    <button className={`fin-chip ${enchereBaseCalc === 'calcule' ? 'active' : ''}`} onClick={() => setEnchereBaseCalc('calcule')}>Enchère max obj.</button>
+                    <button className={`fin-chip ${enchereBaseCalc === 'libre' ? 'active' : ''}`} onClick={() => setEnchereBaseCalc('libre')}>Prix libre</button>
+                  </div>
+                  {enchereBaseCalc === 'libre' && (
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '8px' }}>
+                      <input
+                        type="number"
+                        placeholder="Mon prix max…"
+                        value={enchereManuelMax || ''}
+                        onChange={ev => setEnchereManuelMax(ev.target.value ? Number(ev.target.value) : null)}
+                        className="fin-field"
+                        style={{ flex: 1 }}
+                      />
+                      {enchereManuelMax && (
+                        <button onClick={() => setEnchereManuelMax(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '18px', padding: '4px', lineHeight: 1 }}>{'×'}</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {prixCibleCombine && !isEnchere && (
                 <div className="fin-block">
                   <div className="fin-label">Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce (frais d\u2019agence inclus). Utile pour simuler l\u2019achat au prix demand\u00E9.\n\n\u2022 Prix cible : le prix id\u00E9al calcul\u00E9 selon votre objectif de cashflow ou de plus-value. Utile pour pr\u00E9parer une offre."}</span></span></div>
                   <div className="fin-chip-group">
@@ -3868,7 +3896,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               <div className="fin-block">
                 <div className="fin-label">Montant du projet (frais notaire inclus)</div>
                 <div className="fin-calc-field">{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
-                <div className="fin-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</div>
+                <div className="fin-hint">{isEnchere ? `Prix enchère : ${fmt(prixBase)} €${enchereManuelMax ? ' (libre)' : ''}` : `Base : ${fmt(prixBase)} € + ${fraisNotaire}% notaire`}{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} € travaux` : ''}</div>
               </div>
               <div className="fin-block">
                 <div className="fin-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</div>
@@ -4053,6 +4081,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ))}
                   </div>
                 </div>
+                {!isEnchere && (
                 <div className="control-group">
                   <span className="lbl">Base de calcul</span>
                   <div className="chip-group">
@@ -4060,6 +4089,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     <button className={`chip-btn${prixCibleCombine ? (baseCalc === 'cible' ? ' active' : '') : ' active'}`} onClick={() => prixCibleCombine && setBaseCalc('cible')} style={!prixCibleCombine ? { opacity: 0.4, cursor: 'default' } : {}}>Prix cible</button>
                   </div>
                 </div>
+                )}
               </div>
               {/* Row 2 : Frais agence | Comparer avec */}
               <div className="fiscal-controls-grid fiscal-row-2">
