@@ -2399,7 +2399,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .breadcrumb .current { color: var(--ink, #1f1b16); }
 
         /* Deal card */
-        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 28px 30px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 22px; position: relative; overflow: hidden; }
+        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 28px 30px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 22px; position: relative; overflow: hidden; align-self: start; }
         .deal-card-glow { position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; background: radial-gradient(circle, var(--accent-soft, #f2d9d1) 0%, transparent 70%); opacity: 0.5; pointer-events: none; }
         .deal-header h1 { font-family: "Fraunces", Georgia, serif; font-size: 32px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink, #1f1b16); margin: 0 0 8px; }
         .deal-header .location { font-size: 13px; color: var(--ink-soft, #6b6358); display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
