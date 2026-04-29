@@ -2243,6 +2243,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     : calculerMensualite(montantEmprunte, tauxNum, duree)
   const mensualiteAss = montantEmprunte * (tauxAssuranceNum / 100) / 12
   const mensualiteTotale = mensualiteCredit + mensualiteAss
+  const totalInterets = typeCredit === 'in_fine'
+    ? mensualiteCredit * duree * 12
+    : Math.max(0, mensualiteCredit * duree * 12 - montantEmprunte)
+  const totalAssurance = mensualiteAss * duree * 12
+  const totalCredit = totalInterets + totalAssurance
+  const totalRembourser = montantEmprunte + totalCredit
 
   const chargesRec = bien.charges_rec || 0
   const chargesCoproMens = bien.charges_copro || 0 // deja mensuel en base
@@ -2366,6 +2372,25 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .toggle-row { display: flex; gap: 8px; }
         .toggle-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; background: #faf8f5; color: #7a6a60; transition: all 0.15s; }
         .toggle-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
+        .fin-block { margin-top: 18px; padding-top: 18px; border-top: 1px solid #efe7d7; }
+        .fin-block:first-of-type { margin-top: 4px; padding-top: 0; border-top: none; }
+        .fin-label { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; margin-bottom: 10px; }
+        .fin-calc-field { padding: 12px 16px; background: var(--paper, #f5ede2); border-radius: 8px; font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; color: #1f1b16; letter-spacing: -0.01em; }
+        .fin-field { width: 100%; padding: 10px 14px; background: var(--paper, #f5ede2); border: 1.5px solid #e8e2d8; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1f1b16; outline: none; box-sizing: border-box; transition: border-color .15s; }
+        .fin-field:focus { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192,57,43,.08); }
+        .fin-hint { margin-top: 6px; font-size: 11px; color: #6b6358; }
+        .fin-slider { width: 100%; height: 6px; appearance: none; background: linear-gradient(to right, #c0392b calc(var(--val, 0) * 1%), #e8e2d8 calc(var(--val, 0) * 1%)); border-radius: 999px; outline: none; cursor: pointer; margin: 4px 0 8px; }
+        .fin-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; }
+        .fin-slider::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; background: #c0392b; border: 3px solid #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px #e8e2d8, 0 1px 3px rgba(0,0,0,.12); transition: transform .15s; margin-top: -6px; }
+        .fin-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .fin-slider::-moz-range-track { height: 6px; border-radius: 999px; background: #e8e2d8; }
+        .fin-slider::-moz-range-progress { height: 6px; border-radius: 999px; background: #c0392b; }
+        .fin-slider::-moz-range-thumb { width: 18px; height: 18px; background: #c0392b; border: 3px solid #fff; border-radius: 50%; cursor: pointer; }
+        .fin-slider-labels { display: flex; justify-content: space-between; font-size: 10px; color: #a39a8c; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 8px; }
+        .fin-chip-group { display: flex; gap: 4px; background: var(--paper, #f5ede2); padding: 4px; border-radius: 999px; }
+        .fin-chip { flex: 1; padding: 7px 12px; border: none; background: transparent; border-radius: 999px; font-size: 13px; font-weight: 500; color: #7a6a60; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
+        .fin-chip:hover { color: #1a1210; }
+        .fin-chip.active { background: #c0392b; color: #fff; }
         .slider-wrap { padding: 4px 0; }
         .slider { width: 100%; accent-color: #c0392b; cursor: pointer; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #b0a898; margin-top: 2px; }
@@ -2394,6 +2419,36 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .results-total td { font-weight: 700; background: #f7f4f0; }
         .cashflow-row td:not(:first-child) { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; }
         .pnl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+        .fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+        .fin-right-col { display: flex; flex-direction: column; gap: 20px; }
+        .fin-cashflow-card { flex: 1; display: flex; flex-direction: column; }
+        .fin-result-stack { display: flex; flex-direction: column; margin-top: 20px; }
+        .fin-result-line { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; border-bottom: 1px dashed #e8e2d8; font-size: 13px; color: #7a6a60; }
+        .fin-result-line:last-child { border-bottom: none; }
+        .fin-result-line .fin-v { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; color: #1a1210; font-variant-numeric: tabular-nums; }
+        .fin-highlight { margin-top: 8px !important; padding: 16px 18px !important; background: linear-gradient(135deg, #fde8e8 0%, #f7e4dc 100%) !important; border: none !important; border-bottom: none !important; border-radius: 10px; }
+        .fin-highlight .fin-v { font-size: 24px !important; font-weight: 600 !important; color: #c0392b !important; letter-spacing: -0.02em; }
+        .fin-unit { font-size: 12px; color: #c0392b; opacity: 0.7; margin-left: 2px; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+        .fin-sub-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e8e2d8; }
+        .fin-sub-stat { padding: 12px 14px; background: #f7f4f0; border-radius: 8px; }
+        .fin-sub-highlight { background: #1a1210 !important; }
+        .fin-sub-lbl { font-size: 10px; color: #a39a8c; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 4px; }
+        .fin-sub-highlight .fin-sub-lbl { color: #f0d090; }
+        .fin-sub-val { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; color: #1a1210; font-variant-numeric: tabular-nums; }
+        .fin-sub-highlight .fin-sub-val { color: #fff; font-size: 18px; }
+        .cf-grid { display: flex; flex-direction: column; margin-top: 16px; }
+        .cf-grid-header { display: grid; grid-template-columns: 1fr 110px 44px 24px 110px 44px; padding: 0 0 10px; border-bottom: 1px solid #e8e2d8; }
+        .cf-grid-header > span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #a39a8c; font-weight: 600; text-align: right; }
+        .cf-grid-header > span:first-child { text-align: left; }
+        .cf-grid-row { display: grid; grid-template-columns: 1fr 110px 44px 24px 110px 44px; align-items: center; padding: 2px 0; border-bottom: 1px dashed #e8e2d8; min-height: 44px; }
+        .cf-grid-row:last-of-type { border-bottom: none; }
+        .cf-grid-lbl { font-size: 13px; color: #6b6358; }
+        .cf-grid-static { text-align: right; font-size: 13px; font-weight: 500; }
+        .cf-total-box { margin-top: 18px; padding: 16px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .cf-total-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #6b6358; }
+        .cf-total-vals { display: flex; align-items: baseline; gap: 14px; }
+        .cf-total-main { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; }
+        .cf-total-ann { font-size: 12px; color: #6b6358; font-variant-numeric: tabular-nums; }
         .nc-warning { background: #fff8f0; border: 1.5px solid #f0d090; border-radius: 12px; padding: 16px 20px; color: #a06010; font-size: 13px; }
         .profil-bar { background: #f7f4f0; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #7a6a60; margin-top: 16px; }
         .legende { display: flex; gap: 14px; flex-wrap: wrap; padding: 12px 16px; background: var(--paper, #f5ede2); border-radius: 10px; margin-top: 16px; }
@@ -2418,6 +2473,32 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .add-feature-lbl strong { color: var(--ink, #1f1b16); font-weight: 600; }
         .btn-add { padding: 8px 14px; background: var(--accent, #b4442e); color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: all .2s; white-space: nowrap; }
         .btn-add:hover { background: #9a3626; transform: translateY(-1px); }
+        .btn-ghost { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 14px; padding: 10px; background: transparent; border: 1px solid #e8e2d8; border-radius: 8px; font-size: 13px; font-weight: 600; color: #6b6358; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .15s; }
+        .btn-ghost:hover { border-color: #1a1210; background: #faf8f5; }
+        .section-meta { font-size: 11px; color: #a39a8c; font-weight: 400; font-family: 'DM Sans', sans-serif; letter-spacing: 0; }
+        .section-subtitle { font-size: 13px; color: #7a6a60; margin-top: -10px; margin-bottom: 20px; }
+        .travaux-score { display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; margin-top: 16px; }
+        .score-circle { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--warning, #c77f1f) 0%, var(--accent, #b4442e) 100%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Fraunces', serif; line-height: 1; flex-shrink: 0; }
+        .score-circle .sc-big { font-size: 28px; font-weight: 500; }
+        .score-circle .sc-small { font-size: 10px; opacity: 0.85; letter-spacing: 0.08em; margin-top: 2px; }
+        .travaux-score.is-manual .score-circle { background: linear-gradient(135deg, #4a4240 0%, #7a6a60 100%); }
+        .score-info .si-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; font-weight: 600; margin-bottom: 4px; }
+        .score-info .si-h4 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; color: #1a1210; margin-bottom: 4px; }
+        .score-info .si-p { font-size: 12px; color: #6b6358; line-height: 1.5; margin: 0; }
+        .score-budget { text-align: right; }
+        .score-budget .sb-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; font-weight: 600; margin-bottom: 4px; }
+        .score-budget .sb-amount { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; color: var(--warning, #c77f1f); letter-spacing: -0.02em; line-height: 1; }
+        .score-budget .sb-calc { font-size: 11px; color: #6b6358; margin-top: 4px; }
+        .score-stepper { display: inline-flex; align-items: center; margin-top: 14px; background: #faf8f5; border: 1px solid #e8e2d8; border-radius: 999px; padding: 3px; }
+        .score-stepper .ss-step { width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: 999px; font-family: 'Fraunces', serif; font-size: 13px; font-weight: 500; color: #a39a8c; cursor: pointer; transition: all .15s ease; padding: 0; }
+        .score-stepper .ss-step:hover { color: #1a1210; background: #f0ede8; }
+        .score-stepper .ss-step.is-active { background: #1a1210; color: #fff; }
+        .score-stepper .ss-step.is-ia { background: var(--warning, #c77f1f); color: #fff; }
+        .score-stepper .ss-reset { margin-left: 6px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; font-family: 'DM Sans', sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; color: #a39a8c; cursor: pointer; text-transform: uppercase; border-radius: 999px; transition: color .15s ease; }
+        .score-stepper .ss-reset:hover { color: var(--accent, #b4442e); }
+        .tva-block { display: flex; align-items: flex-start; gap: 16px; padding: 14px 18px; background: var(--info-soft, #d3deea); border-radius: 10px; margin-top: 16px; }
+        .tva-block .txt { font-size: 12px; color: var(--info, #3a5f7d); line-height: 1.5; }
+        .tva-block .txt strong { color: var(--info, #3a5f7d); display: block; margin-bottom: 2px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-mute, #a39a8c); margin-bottom: 20px; font-weight: 500; letter-spacing: 0.02em; }
         .breadcrumb a { color: var(--ink-soft, #6b6358); text-decoration: none; transition: color .2s; }
@@ -3397,115 +3478,121 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         <div className="col" style={{ display: (activeNav === 'travaux' || activeNav === 'financement') ? '' : 'none' }}>
         {/* Estimation travaux (toutes strategies) */}
-        <div id="nav-travaux" className="section" style={{ display: activeNav === 'travaux' ? '' : 'none' }}>
-          <h2 className="section-title">{bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic Travaux' : 'Estimation Travaux'}</h2>
+        <div id="nav-travaux" className="section" style={{ display: activeNav === 'travaux' ? '' : 'none', borderTop: '3px solid var(--warning, #c77f1f)' }}>
+          <h2 className="section-title">
+            {bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic travaux' : 'Estimation travaux'}
+            <span className="section-meta">Score IA · Analyse photos + description</span>
+          </h2>
+          <p className="section-subtitle">{"Évaluation automatique du budget rénovation selon la grille Mon Petit MDB"}</p>
+
           {isFreeBlocked && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
-              <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
-                {"D\u00E9bloquez le diagnostic travaux"}
-              </span>
-              <a href="/mon-profil" style={{
-                display: 'inline-block', padding: '7px 18px', borderRadius: 8,
-                background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
-                textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
-              }}>
+              <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>{"D\u00E9bloquez le diagnostic travaux"}</span>
+              <a href="/mon-profil" style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 8, background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
                 {"D\u00E9bloquer \u2192"}
               </a>
             </div>
           )}
-          <div style={{ marginBottom: '20px' }}>
-            {bien.score_travaux ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span className="data-label" style={{ margin: 0, minWidth: '110px' }}>Score IA</span>
-                <div style={{ display: 'flex', gap: '4px' }} className={isFreeBlocked ? 'val-blur' : ''}>
-                  {[1, 2, 3, 4, 5].map(i => {
-                    const color = i <= 2 ? '#1a7a40' : i <= 3 ? '#f0a830' : '#c0392b'
-                    return (
-                      <div key={i} style={{
-                        width: '28px', height: '10px', borderRadius: '4px',
-                        background: i <= (bien.score_travaux || 0) ? color : '#e8e2d8'
-                      }} />
-                    )
-                  })}
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>{bien.score_travaux}/5</span>
-                <ScoreLabel score={bien.score_travaux} />
-              </div>
-            ) : (
-              <div style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '8px' }}>Aucun score IA disponible</div>
-            )}
-            {bien.score_commentaire && (
-              <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#555', lineHeight: '1.5', fontStyle: 'italic', marginBottom: '12px' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
-                {bien.score_commentaire}
-              </div>
-            )}
-            {userToken && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                <span className="data-label" style={{ margin: 0, minWidth: '110px' }}>Mon estimation</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {[1, 2, 3, 4, 5].map(i => {
-                    const scoreAffiche = scorePerso || bien.score_travaux || 0
-                    const active = i <= scoreAffiche
-                    const color = i <= 2 ? '#1a7a40' : i <= 3 ? '#f0a830' : '#c0392b'
-                    return (
-                      <div key={i} onClick={() => handleScorePerso(i)} style={{
-                        width: '28px', height: '11px', borderRadius: '4px',
-                        cursor: 'pointer',
-                        background: active ? color : '#e8e2d8',
-                        transition: 'transform 0.15s'
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scaleY(1.3)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = '' }}
-                      />
-                    )
-                  })}
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{(scorePerso || bien.score_travaux) ? `${scorePerso || bien.score_travaux}/5` : 'NC'}</span>
-                <ScoreLabel score={scorePerso || bien.score_travaux} />
-                {scorePerso && scorePerso !== bien.score_travaux && <span style={{ fontSize: '11px', color: '#b0a898', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleScorePerso(scorePerso)}>{"Réinitialiser au score IA"}</span>}
-              </div>
-            )}
-          </div>
+
           {(() => {
             const scoreUtilise = scorePerso || bien.score_travaux
-            if (!scoreUtilise || !bien.surface) return null
-            const budgetM2 = budgetTravauxM2[String(scoreUtilise)] || 0
-            const totalScore = Math.round(budgetM2 * bien.surface)
+            const scoreAffiche = scoreUtilise || 0
+            const isManual = !!scorePerso && scorePerso !== bien.score_travaux
+            const budgetM2 = scoreUtilise ? (budgetTravauxM2[String(scoreUtilise)] || 0) : 0
+            const totalScore = scoreUtilise && bien.surface ? Math.round(budgetM2 * bien.surface) : 0
             const totalAffiche = hasDetail ? budgetDetailTotal : totalScore
+            const scoreData = SCORE_LABELS[scoreAffiche]
+            const tvaRecup = totalAffiche > 0 ? Math.round(totalAffiche * 0.20) : 0
+
             return (
               <>
-                <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '12px', padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                        {hasDetail ? "Budget travaux (par poste)" : "Estimation budget travaux"}
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#7a6a60' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
-                        {hasDetail
-                          ? `${Math.round(totalAffiche / bien.surface)} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`
-                          : `${budgetM2} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2 (${scorePerso ? 'mon estimation' : 'score IA'} ${scoreUtilise}/5)`}
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
-                      {totalAffiche.toLocaleString('fr-FR')} {'\u20AC'}
-                    </div>
+                <div className={`travaux-score${isManual ? ' is-manual' : ''}`}>
+                  {/* Cercle score */}
+                  <div className={`score-circle${isFreeBlocked ? ' val-blur' : ''}`}>
+                    <span className="sc-big">{scoreAffiche || '?'}</span>
+                    <span className="sc-small">/ 5</span>
                   </div>
-                </div>
-                {/* Bouton pour detailler */}
-                <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                  <button onClick={() => setShowDetailTravaux(!showDetailTravaux)} style={{
-                    background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px',
-                    padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60',
-                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-                  }}>
-                    {showDetailTravaux ? 'Masquer le d\u00E9tail' : 'Affiner le budget travaux'}
-                  </button>
-                  {hasDetail && !showDetailTravaux && (
-                    <span onClick={() => { setDetailTravaux({}); }} style={{ marginLeft: '10px', fontSize: '11px', color: '#c0392b', cursor: 'pointer', textDecoration: 'underline' }}>
-                      {"R\u00E9initialiser au score"}
-                    </span>
+
+                  {/* Info */}
+                  <div className="score-info">
+                    <div className="si-label">{isManual ? 'Mon estimation' : 'Score travaux · IA'}</div>
+                    <div className={`si-h4${isFreeBlocked ? ' val-blur' : ''}`}>
+                      {scoreData ? scoreData.label : 'Aucun score disponible'}
+                    </div>
+                    {bien.score_commentaire && (
+                      <p className={`si-p${isFreeBlocked ? ' val-blur' : ''}`}>{bien.score_commentaire}</p>
+                    )}
+                    {userToken && (
+                      <div className="score-stepper">
+                        {[1, 2, 3, 4, 5].map(i => {
+                          const isActive = scoreAffiche === i
+                          const isIa = isActive && bien.score_travaux === i && !isManual
+                          return (
+                            <button
+                              key={i}
+                              className={`ss-step${isActive ? (isIa ? ' is-active is-ia' : ' is-active') : ''}`}
+                              title={SCORE_LABELS[i]?.label}
+                              onClick={() => handleScorePerso(i)}
+                            >
+                              <span>{i}</span>
+                            </button>
+                          )
+                        })}
+                        {isManual && (
+                          <button className="ss-reset" onClick={() => handleScorePerso(scorePerso)}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            IA
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Budget */}
+                  {totalAffiche > 0 && (
+                    <div className="score-budget">
+                      <div className="sb-lbl">{hasDetail ? 'Budget (par poste)' : 'Budget estim\u00E9'}</div>
+                      <div className={`sb-amount${isFreeBlocked ? ' val-blur' : ''}`}>
+                        {totalAffiche.toLocaleString('fr-FR')} {'\u20AC'}
+                      </div>
+                      {bien.surface && (
+                        <div className={`sb-calc${isFreeBlocked ? ' val-blur' : ''}`}>
+                          {hasDetail
+                            ? `${Math.round(totalAffiche / bien.surface)} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`
+                            : `${budgetM2} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
+
+                {/* Bouton Affiner */}
+                {scoreUtilise && bien.surface && (
+                  <>
+                    <button className="btn-ghost" onClick={() => setShowDetailTravaux(!showDetailTravaux)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                      {showDetailTravaux ? 'Masquer le d\u00E9tail' : 'Affiner le budget travaux'}
+                    </button>
+                    {hasDetail && !showDetailTravaux && (
+                      <div style={{ textAlign: 'center', marginTop: '6px' }}>
+                        <span onClick={() => setDetailTravaux({})} style={{ fontSize: '11px', color: '#c0392b', cursor: 'pointer', textDecoration: 'underline' }}>
+                          {"R\u00E9initialiser au score"}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* TVA sur marge */}
+                {tvaRecup > 0 && (
+                  <div className="tva-block">
+                    <div className="txt">
+                      <strong>TVA sur marge activable en r\u00E9gime MdB</strong>
+                      {`Sur ce budget travaux, la TVA r\u00E9cup\u00E9rable est d\u2019environ ${tvaRecup.toLocaleString('fr-FR')}\u00A0\u20AC (20\u00A0%). Int\u00E9gr\u00E9 dans l\u2019analyse fiscale.`}
+                    </div>
+                  </div>
+                )}
+
                 {/* Detail par poste — modal */}
                 <ModalPanel open={showDetailTravaux} onClose={() => setShowDetailTravaux(false)} title="Affiner le budget travaux">
                   <div style={{ marginTop: '16px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
@@ -3649,142 +3736,188 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         })()}
 
         {activeNav === 'financement' && (peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
-          <>
-            <div id="nav-financement" className="section">
-              <h2 className="section-title">Simulateur de Financement</h2>
-                <div>
-                  {prixCibleCombine && (
-                    <div className="param-group">
-                      <label className="param-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce (frais d\u2019agence inclus). Utile pour simuler l\u2019achat au prix demand\u00E9.\n\n\u2022 Prix cible : le prix id\u00E9al calcul\u00E9 selon votre objectif de cashflow ou de plus-value. Utile pour pr\u00E9parer une offre."}</span></span></label>
-                      <div className="toggle-row">
-                        <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                        <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
-                      </div>
-                    </div>
-                  )}
-                  <div className="param-group">
-                    <label className="param-label">Montant du projet (frais notaire inclus)</label>
-                    <div className="param-input" style={{ background: '#f0ede8', color: '#1a1210', fontWeight: 700, fontSize: '16px' }}>{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
-                    <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</label>
-                    <div className="slider-wrap">
-                      <input type="range" className="slider" min={0} max={100} step={0.5} value={apportPct}
-                        onChange={e => { const pct = Number(e.target.value); setApport(Math.round(montantProjet * pct / 100)) }} />
-                      <div className="slider-labels"><span>0 %</span><span>100 %</span></div>
-                    </div>
-                    <input className="param-input" type="number" value={apport} onChange={e => setApport(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setApport(profil?.apport ?? 0) }} placeholder={"Montant en \u20AC"} />
-                    <span className="param-hint">{"Montant emprunt\u00E9"} : {fmt(montantEmprunte)} {'\u20AC'}</span>
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Type de cr{'\u00E9'}dit <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Choisissez le type de cr\u00E9dit pour votre simulation.\n\n\u2022 Amortissable : vous remboursez le capital + les int\u00E9r\u00EAts chaque mois. Mensualit\u00E9 plus \u00E9lev\u00E9e mais le capital emprunt\u00E9 diminue au fil du temps. Dur\u00E9e : 5 \u00E0 30\u00A0ans.\n\n\u2022 In fine : vous ne payez que les int\u00E9r\u00EAts chaque mois. Le capital est rembours\u00E9 en une seule fois \u00E0 la revente du bien. Mensualit\u00E9 plus faible, utilis\u00E9 par les marchands de biens. Dur\u00E9e : 1 \u00E0 5\u00A0ans."}</span></span></label>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button type="button" onClick={() => setTypeCredit('amortissable')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: typeCredit === 'amortissable' ? '#1a1210' : '#fff', color: typeCredit === 'amortissable' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Amortissable</button>
-                      <button type="button" onClick={() => setTypeCredit('in_fine')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: typeCredit === 'in_fine' ? '#1a1210' : '#fff', color: typeCredit === 'in_fine' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>In fine</button>
-                    </div>
-                    {typeCredit === 'in_fine' && <span className="param-hint">{"Int\u00E9r\u00EAts seuls chaque mois, capital rembours\u00E9 \u00E0 la revente"}</span>}
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label">{"Taux cr\u00E9dit (%)"}</label>
-                    <input className="param-input" type="number" step="0.01" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTaux(profil?.taux_credit ?? 3.5) }} />
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label">Taux assurance (%)</label>
-                    <input className="param-input" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTauxAssurance(profil?.taux_assurance ?? 0.3) }} />
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label">{"Dur\u00E9e"} — {duree} an{duree > 1 ? 's' : ''}</label>
-                    <div className="slider-wrap">
-                      {typeCredit === 'in_fine' ? (
-                        <>
-                          <input type="range" className="slider" min={1} max={5} step={1} value={Math.min(duree, 5)} onChange={e => setDuree(Number(e.target.value))} />
-                          <div className="slider-labels"><span>1 an</span><span>5 ans</span></div>
-                        </>
-                      ) : (
-                        <>
-                          <input type="range" className="slider" min={5} max={30} step={1} value={duree} onChange={e => setDuree(Number(e.target.value))} />
-                          <div className="slider-labels"><span>5 ans</span><span>30 ans</span></div>
-                        </>
-                      )}
-                    </div>
+          <div id="nav-financement" className="fin-grid">
+            {/* Colonne gauche : paramètres */}
+            <div className="section">
+              <h2 className="section-title">Simulateur de financement</h2>
+              <p className="section-subtitle">{"Ajustez les param\u00E8tres pour calculer vos mensualit\u00E9s"}</p>
+              {prixCibleCombine && (
+                <div className="fin-block">
+                  <div className="fin-label">Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce (frais d\u2019agence inclus). Utile pour simuler l\u2019achat au prix demand\u00E9.\n\n\u2022 Prix cible : le prix id\u00E9al calcul\u00E9 selon votre objectif de cashflow ou de plus-value. Utile pour pr\u00E9parer une offre."}</span></span></div>
+                  <div className="fin-chip-group">
+                    <button className={`fin-chip ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
+                    <button className={`fin-chip ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
                   </div>
                 </div>
-                {/* Mensualités */}
-                <div style={{ background: '#f7f4f0', borderRadius: '10px', padding: '16px 18px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>
-                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{typeCredit === 'in_fine' ? "Int\u00E9r\u00EAts mensuels (in fine)" : "Mensualit\u00E9 cr\u00E9dit"}</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{fmt(mensualiteCredit)} {'\u20AC'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>
-                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>Assurance emprunteur</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{fmt(mensualiteAss)} {'\u20AC'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a1210' }}>{"Mensualité totale"}</span>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: '#c0392b' }}>{fmt(mensualiteTotale)} {'\u20AC'}<span style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginLeft: '4px' }}>/mois</span></span>
-                  </div>
+              )}
+              <div className="fin-block">
+                <div className="fin-label">Montant du projet (frais notaire inclus)</div>
+                <div className="fin-calc-field">{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
+                <div className="fin-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</div>
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</div>
+                <input type="range" className="fin-slider" min={0} max={100} step={0.5} value={apportPct}
+                  style={{ '--val': apportPct } as React.CSSProperties}
+                  onChange={e => { const pct = Number(e.target.value); setApport(Math.round(montantProjet * pct / 100)) }} />
+                <div className="fin-slider-labels"><span>0 %</span><span>100 %</span></div>
+                <input className="fin-field" type="number" value={apport} onChange={e => setApport(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setApport(profil?.apport ?? 0) }} placeholder={"Montant en \u20AC"} />
+                <div className="fin-hint">{"Montant emprunt\u00E9"} : <strong style={{ color: '#1f1b16' }}>{fmt(montantEmprunte)} {'\u20AC'}</strong></div>
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">Type de cr{'\u00E9'}dit <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Choisissez le type de cr\u00E9dit pour votre simulation.\n\n\u2022 Amortissable : vous remboursez le capital + les int\u00E9r\u00EAts chaque mois. Mensualit\u00E9 plus \u00E9lev\u00E9e mais le capital emprunt\u00E9 diminue au fil du temps. Dur\u00E9e : 5 \u00E0 30\u00A0ans.\n\n\u2022 In fine : vous ne payez que les int\u00E9r\u00EAts chaque mois. Le capital est rembours\u00E9 en une seule fois \u00E0 la revente du bien. Mensualit\u00E9 plus faible, utilis\u00E9 par les marchands de biens. Dur\u00E9e : 1 \u00E0 5\u00A0ans."}</span></span></div>
+                <div className="fin-chip-group">
+                  <button type="button" className={`fin-chip ${typeCredit === 'amortissable' ? 'active' : ''}`} onClick={() => setTypeCredit('amortissable')}>Amortissable</button>
+                  <button type="button" className={`fin-chip ${typeCredit === 'in_fine' ? 'active' : ''}`} onClick={() => setTypeCredit('in_fine')}>In fine</button>
                 </div>
-                {profil && <div className="profil-bar">{"Paramètres pré-remplis depuis votre profil — modifiables dans Mon profil"}</div>}
+                {typeCredit === 'in_fine' && <div className="fin-hint">{"Int\u00E9r\u00EAts seuls chaque mois, capital rembours\u00E9 \u00E0 la revente"}</div>}
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">{"Taux cr\u00E9dit (%)"}</div>
+                <input className="fin-field" type="number" step="0.01" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTaux(profil?.taux_credit ?? 3.5) }} />
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">Taux assurance (%)</div>
+                <input className="fin-field" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTauxAssurance(profil?.taux_assurance ?? 0.3) }} />
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">{"Dur\u00E9e"} — {duree} an{duree > 1 ? 's' : ''}</div>
+                {typeCredit === 'in_fine' ? (
+                  <>
+                    <input type="range" className="fin-slider" min={1} max={5} step={1} value={Math.min(duree, 5)}
+                      style={{ '--val': ((Math.min(duree, 5) - 1) / 4) * 100 } as React.CSSProperties}
+                      onChange={e => setDuree(Number(e.target.value))} />
+                    <div className="fin-slider-labels"><span>1 an</span><span>5 ans</span></div>
+                  </>
+                ) : (
+                  <>
+                    <input type="range" className="fin-slider" min={5} max={30} step={1} value={duree}
+                      style={{ '--val': ((duree - 5) / 25) * 100 } as React.CSSProperties}
+                      onChange={e => setDuree(Number(e.target.value))} />
+                    <div className="fin-slider-labels"><span>5 ans</span><span>30 ans</span></div>
+                  </>
+                )}
+              </div>
+              {profil && <div className="profil-bar">{"Param\u00E8tres pr\u00E9-remplis depuis votre profil \u2014 modifiables dans Mon profil"}</div>}
             </div>
-            {peutCalculer && !isTravauxLourds && bien.loyer && (
+
+            {/* Colonne droite */}
+            <div className="fin-right-col">
+              {/* Résultats du crédit */}
               <div className="section">
-                <h2 className="section-title">{"Cash Flow Avant Imp\u00F4t"}</h2>
-                <table className="results-table">
-                  <thead>
-                    <tr>
-                      <th></th>
-                      <th>Mensuel</th>
-                      <th>Annuel</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{"Loyer"} <span style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></td>
-                      <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                      <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                    </tr>
-                    <tr>
-                      <td>{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (incluses CC)" : "Charges r\u00E9cup."}</td>
-                      <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                      <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                    </tr>
-                    <tr>
-                      <td>{"Charges copro"}</td>
-                      <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                      <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                    </tr>
-                    <tr>
-                      <td>{"Taxe fonci\u00E8re"}</td>
-                      <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1/12} /></td>
-                      <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                    </tr>
-                    <tr>
-                      <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
-                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit)} {'\u20AC'}</td>
-                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
-                    </tr>
-                    <tr>
-                      <td>Assurance emprunteur</td>
-                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss)} {'\u20AC'}</td>
-                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div style={{ marginTop: '16px', background: cashflowBrut >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
-                  <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Avant Imp\u00F4t"}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
-                      {cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}/mois
-                    </span>
-                    <span style={{ fontSize: '13px', color: (cashflowBrut * 12) >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
-                      {(cashflowBrut * 12) >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}/an
-                    </span>
+                <h2 className="section-title">{"R\u00E9sultats du cr\u00E9dit"}</h2>
+                <p className="section-subtitle">Calcul en temps r{'\u00E9'}el selon vos param{'\u00E8'}tres</p>
+                <div className="fin-result-stack">
+                  <div className="fin-result-line">
+                    <span>{typeCredit === 'in_fine' ? "Int\u00E9r\u00EAts mensuels (in fine)" : "Mensualit\u00E9 cr\u00E9dit"}</span>
+                    <span className="fin-v">{fmt(mensualiteCredit)} {'\u20AC'}</span>
+                  </div>
+                  <div className="fin-result-line">
+                    <span>Assurance emprunteur</span>
+                    <span className="fin-v">{fmt(mensualiteAss)} {'\u20AC'}</span>
+                  </div>
+                  <div style={{ marginTop: '8px', background: '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+                    <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Mensualit\u00E9 totale"}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {fmt(mensualiteTotale)} {'\u20AC'}<span style={{ fontSize: '13px', fontWeight: 600, color: '#c0392b', opacity: 0.7, marginLeft: '3px' }}>/mois</span>
+                      </span>
+                      <span style={{ fontSize: '13px', color: '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {fmt(mensualiteTotale * 12)} {'\u20AC'}/an
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="fin-sub-stats">
+                  <div className="fin-sub-stat">
+                    <div className="fin-sub-lbl">{"Co\u00FBt total int\u00E9r\u00EAts"}</div>
+                    <div className="fin-sub-val" style={{ color: '#c0392b' }}>{fmt(totalInterets)} {'\u20AC'}</div>
+                  </div>
+                  <div className="fin-sub-stat">
+                    <div className="fin-sub-lbl">{"Co\u00FBt total assurance"}</div>
+                    <div className="fin-sub-val" style={{ color: '#c0392b' }}>{fmt(totalAssurance)} {'\u20AC'}</div>
+                  </div>
+                  <div className="fin-sub-stat">
+                    <div className="fin-sub-lbl">{"Co\u00FBt total cr\u00E9dit"}</div>
+                    <div className="fin-sub-val">{fmt(totalCredit)} {'\u20AC'}</div>
+                  </div>
+                  <div className="fin-sub-stat fin-sub-highlight">
+                    <div className="fin-sub-lbl">Total {'\u00E0'} rembourser</div>
+                    <div className="fin-sub-val">{fmt(totalRembourser)} {'\u20AC'}</div>
                   </div>
                 </div>
               </div>
-            )}
-          </>
+
+              {/* Cash Flow Avant Impôt */}
+              {peutCalculer && !isTravauxLourds && bien.loyer && (
+                <div className="section fin-cashflow-card">
+                  <h2 className="section-title">{"Revenus locatifs \u00B7 Cash flow avant imp\u00F4t"}</h2>
+                  <p className="section-subtitle">{"Votre tr\u00E9sorerie op\u00E9rationnelle, avant optimisation fiscale"}</p>
+                  <div className="cf-grid">
+                    <div className="cf-grid-header">
+                      <span></span>
+                      <span>Mensuel</span>
+                      <span></span>
+                      <span></span>
+                      <span>Annuel</span>
+                      <span></span>
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Loyer"} <span style={{ fontSize: '11px', color: '#a39a8c' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></span>
+                      <CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                      <span></span>
+                      <CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (CC)" : "Charges r\u00E9cup."}</span>
+                      <CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                      <span></span>
+                      <CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Charges copro"}</span>
+                      <CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                      <span></span>
+                      <CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Taxe fonci\u00E8re"}</span>
+                      <CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1/12} />
+                      <span></span>
+                      <CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Mensualit\u00E9 cr\u00E9dit"}</span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit)} {'\u20AC'}</span>
+                      <span></span>
+                      <span></span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</span>
+                      <span></span>
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">Assurance emprunteur</span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteAss)} {'\u20AC'}</span>
+                      <span></span>
+                      <span></span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</span>
+                      <span></span>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '16px', background: cashflowBrut >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+                    <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Avant Imp\u00F4t"}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}/mois
+                      </span>
+                      <span style={{ fontSize: '13px', color: (cashflowBrut * 12) >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {(cashflowBrut * 12) >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}/an
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
         </div>{/* fin col droite */}
         </div>{/* fin two-cols nav-estimation */}
