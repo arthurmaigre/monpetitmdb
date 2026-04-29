@@ -2780,7 +2780,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                             // Valeur confirmée — affichage figé
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                               <div className="value enchere-max" style={{ flex: 1, margin: 0 }}>{fmt(enchereManuelMax)} {'€'}</div>
-                              <button onClick={() => setEnchereManuelDraft(String(enchereManuelMax))} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px', cursor: 'pointer', color: '#7a6a60', fontSize: '11px', fontWeight: 600, padding: '3px 7px', flexShrink: 0 }}>Modifier</button>
+                              <button onClick={() => setEnchereManuelDraft(String(enchereManuelMax))} title="Modifier" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s', flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                              </button>
                               <button onClick={() => { setEnchereManuelMax(null); setEnchereManuelDraft(''); setEnchereFinMode('calcule') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
                             </div>
                           ) : (
