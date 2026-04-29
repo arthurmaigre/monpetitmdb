@@ -792,12 +792,12 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
 
   function Row({ label, value, rouge = false, bold = false, tiret = false, info = '', vert = false }: any) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
-        <span style={{ fontSize: '13px', color: '#555', fontWeight: bold ? 600 : 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div className={`fiscal-line${bold ? ' fl-bold' : ''}`}>
+        <span className="fl-k" style={{ fontWeight: bold ? 600 : 400 }}>
           {label}
           {info && !isFree && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{info}</span></span>}
         </span>
-        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : vert ? '#1a7a40' : '#1a1210' }} className={isFree && !tiret ? 'val-blur' : ''}>
+        <span className={`fl-v${tiret ? ' muted' : rouge ? ' neg' : vert ? ' pos' : ''}${isFree && !tiret ? ' val-blur' : ''}`}>
           {tiret ? '-' : value}
         </span>
       </div>
@@ -805,23 +805,23 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   }
 
   function SectionLabel({ label }: { label: string }) {
-    return <div style={{ fontSize: '11px', fontWeight: 700, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '20px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #f0ede8' }}>{label}</div>
+    return <div className="fiscal-sl">{label}</div>
   }
 
   return (
-    <div style={{ background: highlight ? '#fff8f0' : '#fff', border: highlight ? '2px solid #f0d090' : '1.5px solid #ede8e0', borderRadius: '14px', padding: '20px 24px', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: '15px', fontWeight: 700, marginBottom: colFraisNotairePct !== (fraisNotaire || 7.5) ? '8px' : '16px', color: '#1a1210' }}>{titre}</div>
+    <div className={`fiscal-card${highlight ? ' your' : ''}`}>
+      <div className="fcard-title">{titre}</div>
       {(() => {
         const thisHasNote = colFraisNotairePct !== (fraisNotaire || 7.5)
         const otherNotairePct = otherRegime === 'marchand_de_biens' ? 2.5 : (fraisNotaireBase || 7.5)
         const otherHasNote = otherNotairePct !== (fraisNotaire || 7.5)
         if (thisHasNote) return (
-          <div style={{ fontSize: '11px', color: '#7a6a60', background: '#faf8f5', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, fontStyle: 'italic', minHeight: '44px' }}>
+          <div className="fiscal-note">
             {`Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s avec ${colFraisNotairePct}\u00A0% de frais de notaire${isMarchand ? ' (MdB)' : ''}, soit un emprunt de ${fmt(colMontantEmprunte)}\u00A0\u20AC.`}
           </div>
         )
         if (otherHasNote) return (
-          <div style={{ fontSize: '11px', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, visibility: 'hidden', minHeight: '44px' }} aria-hidden="true">
+          <div className="fiscal-note" style={{ visibility: 'hidden' }} aria-hidden="true">
             {"Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s avec 0,0\u00A0% de frais de notaire (MdB), soit un emprunt de 000\u00A0000\u00A0\u20AC."}
           </div>
         )
@@ -962,13 +962,13 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
         </>
       )}
       {hasLoyer && !isTravauxLourds && (
-        <div style={{ paddingTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px', marginTop: '12px' }}>
-          <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Net d\u2019Imp\u00F4t"}</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowNetMensuel >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>
+        <div className={`fiscal-cf${cashflowNetMensuel >= 0 ? ' pos' : ' neg'}`}>
+          <div className="cf-lbl">{"Cash Flow Net d\u2019Imp\u00F4t"}</div>
+          <div className="cf-row">
+            <span className={`cf-main${isFree ? ' val-blur' : ''}`}>
               {cashflowNetMensuel >= 0 ? '+' : ''}{fmt(cashflowNetMensuel)} {'\u20AC'}/mois
             </span>
-            <span style={{ fontSize: '13px', color: cashflowNetAnnuel >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFree ? 'val-blur' : ''}>
+            <span className={`cf-ann${isFree ? ' val-blur' : ''}`}>
               {cashflowNetAnnuel >= 0 ? '+' : ''}{fmt(cashflowNetAnnuel)} {'\u20AC'}/an
             </span>
           </div>
@@ -1136,13 +1136,11 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                   : "Plus-value nette apr\u00E8s tous les imp\u00F4ts (IR 19% + PS 17,2% avec abattements dur\u00E9e). C\u2019est le gain r\u00E9el sur la revente du bien."} />
 
           {/* BILAN FINAL */}
-          <div style={{ marginTop: '16px', paddingTop: '16px', background: profitNet >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '16px' }}>
-            <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}
-            </div>
+          <div className={`fiscal-bilan${profitNet >= 0 ? ' pos' : ' neg'}`}>
+            <div className="fb-lbl">{`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}</div>
             {!isTravauxLourds && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px', alignItems: 'center' }}>
-                <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help', color: '#555' }}>
+              <div className="fb-row">
+                <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>
                   {"Cashflow locatif net cumul\u00E9"}
                   <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>
                   <span className="pnl-tooltip-text">{`Somme des loyers nets encaiss\u00E9s apr\u00E8s d\u00E9duction des mensualit\u00E9s de cr\u00E9dit et de l\u2019imp\u00F4t, sur ${dur}\u00A0an${dur > 1 ? 's' : ''} de d\u00E9tention.\n\n${fmt(cashflowNetMensuel)}\u00A0\u20AC/mois \u00D7 ${dur * 12}\u00A0mois${fraisBancaires > 0 ? `\n- Frais bancaires : ${fmt(fraisBancaires)}\u00A0\u20AC` : ''}\n= ${fmt(cashflowCumule)}\u00A0\u20AC`}</span>
@@ -1150,8 +1148,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                 <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px', alignItems: 'center' }}>
-              <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help', color: '#555' }}>
+            <div className="fb-row">
+              <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>
                 {"Cashflow achat-revente net"}
                 <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>
                 <span className="pnl-tooltip-text">{`R\u00E9sultat net de l\u2019op\u00E9ration d\u2019achat-revente apr\u00E8s remboursement du cr\u00E9dit et fiscalit\u00E9.\n\n+ Emprunt re\u00E7u : ${fmt(colMontantEmprunte)}\u00A0\u20AC\n+ PV nette d\u2019imp\u00F4t : ${fmt(pvNette)}\u00A0\u20AC\n- Remboursement CRD : ${fmt(Math.round(crd))}\u00A0\u20AC${interetsCumules > 0 ? `\n- Int\u00E9r\u00EAts cumul\u00E9s : ${fmt(interetsCumules)}\u00A0\u20AC` : ''}\n= ${fmt(cashflowAchatRevente)}\u00A0\u20AC\n\n${colTypeCredit === 'in_fine' ? `Cr\u00E9dit in fine : le capital (${fmt(colMontantEmprunte)}\u00A0\u20AC) est int\u00E9gralement rembours\u00E9 \u00E0 la revente.` : `Cr\u00E9dit amortissable : ${fmt(Math.round(colMontantEmprunte - crd))}\u00A0\u20AC de capital d\u00E9j\u00E0 rembours\u00E9 via les mensualit\u00E9s.`}`}</span>
@@ -1160,22 +1158,20 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                 {cashflowAchatRevente >= 0 ? '+' : ''}{fmt(cashflowAchatRevente)} {'\u20AC'}
               </span>
             </div>
-            <div style={{ borderTop: '2px solid rgba(0,0,0,0.1)', paddingTop: '8px' }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: profitNet >= 0 ? '#1a7a40' : '#c0392b', marginBottom: '4px' }} className={isFree ? 'val-blur' : ''}>
-                {profitNet >= 0 ? '+' : ''}{fmt(profitNet)} {'\u20AC'}
+            <div className={`fb-total${isFree ? ' val-blur' : ''}`} style={{ color: profitNet >= 0 ? '#1a7a40' : '#c0392b' }}>
+              {profitNet >= 0 ? '+' : ''}{fmt(profitNet)} {'\u20AC'}
+            </div>
+            <div className="fb-metrics">
+              <div className="fb-metric">
+                <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROI <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Investment (retour sur investissement). C\u2019est votre gain total (cashflow + plus-value) divis\u00E9 par le co\u00FBt total de l\u2019op\u00E9ration (achat + notaire + travaux). Un ROI de 20% signifie que vous avez gagn\u00E9 20\u00A0\u20AC pour 100\u00A0\u20AC investis. Le ROI annualis\u00E9 permet de comparer des op\u00E9rations de dur\u00E9es diff\u00E9rentes."}</span></span>
+                <span style={{ fontWeight: 600, color: roiTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roiTotal > 0 ? '+' : ''}{roiTotal}% ({roiAnnualise > 0 ? '+' : ''}{roiAnnualise}%/an)</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', marginTop: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROI <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Investment (retour sur investissement). C\u2019est votre gain total (cashflow + plus-value) divis\u00E9 par le co\u00FBt total de l\u2019op\u00E9ration (achat + notaire + travaux). Un ROI de 20% signifie que vous avez gagn\u00E9 20\u00A0\u20AC pour 100\u00A0\u20AC investis. Le ROI annualis\u00E9 permet de comparer des op\u00E9rations de dur\u00E9es diff\u00E9rentes."}</span></span>
-                  <span style={{ fontWeight: 600, color: roiTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roiTotal > 0 ? '+' : ''}{roiTotal}% ({roiAnnualise > 0 ? '+' : ''}{roiAnnualise}%/an)</span>
+              {fondsInvestis > 0 && (
+                <div className="fb-metric">
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROE <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Equity (retour sur fonds propres). C\u2019est votre gain total divis\u00E9 par l\u2019argent que VOUS avez mis de votre poche (apport + frais de notaire). Gr\u00E2ce \u00E0 l\u2019effet de levier du cr\u00E9dit, le ROE est souvent bien sup\u00E9rieur au ROI. Un ROE de 50% signifie que vous avez gagn\u00E9 50\u00A0\u20AC pour 100\u00A0\u20AC sortis de votre poche."}</span></span>
+                  <span style={{ fontWeight: 600, color: roeTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roeTotal > 0 ? '+' : ''}{roeTotal}% ({roeAnnualise > 0 ? '+' : ''}{roeAnnualise}%/an)</span>
                 </div>
-                {fondsInvestis > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                    <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROE <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Equity (retour sur fonds propres). C\u2019est votre gain total divis\u00E9 par l\u2019argent que VOUS avez mis de votre poche (apport + frais de notaire). Gr\u00E2ce \u00E0 l\u2019effet de levier du cr\u00E9dit, le ROE est souvent bien sup\u00E9rieur au ROI. Un ROE de 50% signifie que vous avez gagn\u00E9 50\u00A0\u20AC pour 100\u00A0\u20AC sortis de votre poche."}</span></span>
-                    <span style={{ fontWeight: 600, color: roeTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roeTotal > 0 ? '+' : ''}{roeTotal}% ({roeAnnualise > 0 ? '+' : ''}{roeAnnualise}%/an)</span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </>
@@ -2499,6 +2495,50 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .tva-block { display: flex; align-items: flex-start; gap: 16px; padding: 14px 18px; background: var(--info-soft, #d3deea); border-radius: 10px; margin-top: 16px; }
         .tva-block .txt { font-size: 12px; color: var(--info, #3a5f7d); line-height: 1.5; }
         .tva-block .txt strong { color: var(--info, #3a5f7d); display: block; margin-bottom: 2px; }
+        .fiscal-controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; padding: 20px 24px; background: var(--surface, #fff); border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); }
+        .fiscal-ctrls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; align-items: center; }
+        .fiscal-ctrls-row2 { padding-top: 14px; border-top: 1px solid #efe7d7; }
+        .ctrl-grp { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
+        .ctrl-lbl { font-size: 12px; color: #7a6a60; font-weight: 500; flex-shrink: 0; }
+        .fiscal-chip-group { display: flex; gap: 4px; background: var(--paper, #f5ede2); padding: 4px; border-radius: 999px; flex-wrap: wrap; }
+        .fiscal-chip { padding: 6px 12px; border: none; background: transparent; border-radius: 999px; font-size: 12px; font-weight: 500; color: #7a6a60; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; white-space: nowrap; }
+        .fiscal-chip:hover { color: #1a1210; }
+        .fiscal-chip.active { background: var(--accent, #b4442e); color: #fff; }
+        .fiscal-sel { padding: 6px 12px; background: #faf8f5; border: 1px solid #e8e2d8; border-radius: 8px; font-family: inherit; font-size: 13px; color: #1a1210; cursor: pointer; outline: none; }
+        .fiscal-num-in { width: 64px; padding: 6px 8px; text-align: right; background: var(--paper, #f5ede2); border: 1px solid #e8e2d8; border-radius: 8px; font-size: 13px; font-family: inherit; color: #1a1210; outline: none; }
+        .fiscal-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .fiscal-card { background: #fff; border-radius: 14px; padding: 24px 26px; border: 1px solid #e6dccb; position: relative; display: flex; flex-direction: column; }
+        .fiscal-card.your { background: linear-gradient(180deg, #fff 0%, #faf8f5 100%); border: 2px solid #f0d090; }
+        .fiscal-card.your::before { content: 'Votre régime'; position: absolute; top: -10px; left: 20px; padding: 3px 10px; background: #1a1210; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 999px; }
+        .fcard-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; color: #1a1210; margin-bottom: 16px; }
+        .fiscal-note { font-size: 11px; color: #7a6a60; font-style: italic; margin-bottom: 16px; line-height: 1.5; background: #faf8f5; border-radius: 8px; padding: 8px 12px; min-height: 44px; }
+        .fiscal-line { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; font-size: 13px; border-bottom: 1px dashed #efe7d7; min-height: 38px; }
+        .fiscal-line .fl-k { color: #6b6358; display: flex; align-items: center; gap: 6px; }
+        .fiscal-line .fl-v { font-weight: 500; color: #1a1210; font-variant-numeric: tabular-nums; }
+        .fiscal-line .fl-v.neg { color: #b4442e; }
+        .fiscal-line .fl-v.pos { color: #2e7c5d; }
+        .fiscal-line .fl-v.muted { color: #a39a8c; }
+        .fiscal-line.fl-bold { padding: 12px 0; border-top: 1px solid #e8e2d8 !important; border-bottom: 1px solid #e8e2d8 !important; margin: 6px 0; }
+        .fiscal-line.fl-bold .fl-k { color: #1a1210; font-weight: 600; }
+        .fiscal-line.fl-bold .fl-v { font-family: 'Fraunces', serif; font-size: 15px; }
+        .fiscal-sl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; font-weight: 600; margin: 16px 0 8px; padding-top: 14px; border-top: 1px solid #efe7d7; }
+        .fiscal-cf { margin: 14px 0 4px; padding: 14px 16px; border-radius: 10px; background: #f7f4f0; }
+        .fiscal-cf.neg { background: #f2d9d1; }
+        .fiscal-cf.pos { background: #d4e7dc; }
+        .fiscal-cf .cf-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b6358; font-weight: 600; margin-bottom: 4px; }
+        .fiscal-cf .cf-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+        .fiscal-cf .cf-main { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+        .fiscal-cf.neg .cf-main { color: #b4442e; }
+        .fiscal-cf.pos .cf-main { color: #2e7c5d; }
+        .fiscal-cf .cf-ann { font-size: 12px; color: #6b6358; font-variant-numeric: tabular-nums; }
+        .fiscal-bilan { margin-top: 16px; padding: 16px; border-radius: 10px; }
+        .fiscal-bilan.neg { background: #f2d9d1; }
+        .fiscal-bilan.pos { background: #d4e7dc; }
+        .fiscal-bilan .fb-lbl { font-size: 10px; color: #6b6358; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .fiscal-bilan .fb-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; align-items: center; color: #555; }
+        .fiscal-bilan .fb-total { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 800; margin-bottom: 4px; padding-top: 8px; border-top: 2px solid rgba(0,0,0,0.1); }
+        .fiscal-bilan .fb-metrics { display: flex; flex-direction: column; gap: 4px; font-size: 12px; margin-top: 4px; }
+        .fiscal-bilan .fb-metric { display: flex; justify-content: space-between; align-items: center; color: #555; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-mute, #a39a8c); margin-bottom: 20px; font-weight: 500; letter-spacing: 0.02em; }
         .breadcrumb a { color: var(--ink-soft, #6b6358); text-decoration: none; transition: color .2s; }
@@ -3566,30 +3606,35 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   )}
                 </div>
 
+                {/* TVA sur marge */}
+                {tvaRecup > 0 && (
+                  <div className="tva-block">
+                    <div className="txt">
+                      <strong>TVA sur marge activable en régime MdB</strong>
+                      {`Sur ce budget travaux, la TVA r\u00E9cup\u00E9rable est d\u2019environ ${tvaRecup.toLocaleString('fr-FR')}\u00A0\u20AC (20\u00A0%). Int\u00E9gr\u00E9 dans l\u2019analyse fiscale.`}
+                    </div>
+                  </div>
+                )}
+
                 {/* Bouton Affiner */}
                 {scoreUtilise && bien.surface && (
-                  <>
-                    <button className="btn-ghost" onClick={() => setShowDetailTravaux(!showDetailTravaux)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  <div style={{ textAlign: 'center', marginTop: '14px' }}>
+                    <button onClick={() => setShowDetailTravaux(!showDetailTravaux)} style={{
+                      background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px',
+                      padding: '7px 20px', fontSize: '12px', fontWeight: 600, color: '#7a6a60',
+                      cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                      display: 'inline-flex', alignItems: 'center', gap: '6px', transition: 'all .15s'
+                    }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                       {showDetailTravaux ? 'Masquer le d\u00E9tail' : 'Affiner le budget travaux'}
                     </button>
                     {hasDetail && !showDetailTravaux && (
-                      <div style={{ textAlign: 'center', marginTop: '6px' }}>
+                      <div style={{ marginTop: '6px' }}>
                         <span onClick={() => setDetailTravaux({})} style={{ fontSize: '11px', color: '#c0392b', cursor: 'pointer', textDecoration: 'underline' }}>
                           {"R\u00E9initialiser au score"}
                         </span>
                       </div>
                     )}
-                  </>
-                )}
-
-                {/* TVA sur marge */}
-                {tvaRecup > 0 && (
-                  <div className="tva-block">
-                    <div className="txt">
-                      <strong>TVA sur marge activable en r\u00E9gime MdB</strong>
-                      {`Sur ce budget travaux, la TVA r\u00E9cup\u00E9rable est d\u2019environ ${tvaRecup.toLocaleString('fr-FR')}\u00A0\u20AC (20\u00A0%). Int\u00E9gr\u00E9 dans l\u2019analyse fiscale.`}
-                    </div>
                   </div>
                 )}
 
@@ -3927,54 +3972,55 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           <div id="nav-fiscalite">
           <div className="section">
             <h2 className="section-title">Analyse Fiscale</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#7a6a60' }}>Comparer avec :</span>
-                {userPlan === 'expert' ? (
-                  <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
-                    {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
-                ) : (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <span className="param-input" style={{ width: 'auto', background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
-                    <a href="/#pricing" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Tous les r\u00E9gimes \u2192 Expert"}</a>
-                  </span>
+            <div className="fiscal-controls">
+              <div className="fiscal-ctrls-grid">
+                <div className="ctrl-grp">
+                  <span className="ctrl-lbl">Comparer avec :</span>
+                  {userPlan === 'expert' ? (
+                    <select className="fiscal-sel" value={regime2} onChange={e => setRegime2(e.target.value)}>
+                      {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    </select>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="fiscal-sel" style={{ background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
+                      <a href="/#pricing" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Tous les r\u00E9gimes \u2192 Expert"}</a>
+                    </span>
+                  )}
+                </div>
+                {!isEnchere && (
+                  <div className="ctrl-grp">
+                    <span className="ctrl-lbl">{"Frais d\u2019agence \u00E0 l\u2019achat :"}</span>
+                    <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
+                      onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
+                      className="fiscal-num-in" />
+                    <span className="ctrl-lbl">%</span>
+                  </div>
                 )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"D\u00E9tention :"}</span>
-                {[1, 2, 3, 4, 5, 10, 15, 20].map(d => (
-                  <button key={d} onClick={() => setDureeRevente(d)} style={{
-                    padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                    border: dureeRevente === d ? '2px solid #c0392b' : '1.5px solid #e8e2d8',
-                    background: dureeRevente === d ? '#fde8e8' : '#faf8f5',
-                    color: dureeRevente === d ? '#c0392b' : '#7a6a60',
-                  }}>
-                    {d} an{d > 1 ? 's' : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              {prixCibleCombine && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#7a6a60', whiteSpace: 'nowrap' }}>Base de calcul :</span>
-                  <div className="toggle-row" style={{ minWidth: '220px' }}>
-                    <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                    <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
+              <div className="fiscal-ctrls-row2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <div className="ctrl-grp">
+                    <span className="ctrl-lbl">{"D\u00E9tention :"}</span>
+                    <div className="fiscal-chip-group">
+                      {[1, 2, 3, 4, 5, 10, 15, 20].map(d => (
+                        <button key={d} className={`fiscal-chip${dureeRevente === d ? ' active' : ''}`} onClick={() => setDureeRevente(d)}>
+                          {d} an{d > 1 ? 's' : ''}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  {prixCibleCombine && (
+                    <div className="ctrl-grp">
+                      <span className="ctrl-lbl">Base de calcul :</span>
+                      <div className="toggle-row" style={{ minWidth: '180px' }}>
+                        <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
+                        <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-              {!isEnchere && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"Frais d\u2019agence \u00E0 l\u2019achat :"}</span>
-                  <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
-                    onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
-                    onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
-                    className="param-input" style={{ width: '60px', textAlign: 'right' }} />
-                  <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
-                </div>
-              )}
+              </div>
             </div>
             <div>
               {isFreeBlocked && (
@@ -3991,7 +4037,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   </a>
                 </div>
               )}
-              <div className="pnl-grid">
+              <div className="fiscal-compare">
                 <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
                 <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
               </div>
