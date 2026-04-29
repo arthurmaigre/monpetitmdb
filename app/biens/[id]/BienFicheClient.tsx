@@ -3159,29 +3159,37 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               {!isIDR && (
                 <div className="data-item">
                   <span className="data-label">Profil locataire</span>
-                  {userToken ? (
-                    <select
-                      value={bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : ''}
-                      onChange={async e => {
-                        const val = e.target.value || null
-                        setBien((prev: any) => ({ ...prev, profil_locataire: val }))
-                        if (val) await handleUpdate('profil_locataire', val)
-                      }}
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '4px 6px', borderRadius: '6px',
-                        border: `1.5px solid ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? '#c0392b' : '#e8e2d8'}`,
-                        fontSize: '12px', fontFamily: "'DM Sans', sans-serif",
-                        background: !bien.profil_locataire || bien.profil_locataire === 'NC' ? '#fde8e8' : '#faf8f5',
-                        color: !bien.profil_locataire || bien.profil_locataire === 'NC' ? '#c0392b' : '#1a1210',
-                        cursor: 'pointer', outline: 'none',
-                      }}
-                    >
-                      <option value="">NC</option>
-                      {['Actif CDI', 'Actif CDD / int\u00E9rim', 'Ind\u00E9pendant', 'Retrait\u00E9', '\u00C9tudiant', 'Inconnu'].map(o => (
-                        <option key={o} value={o}>{o}</option>
-                      ))}
-                    </select>
-                  ) : (
+                  {userToken ? (() => {
+                    const isEmpty = !bien.profil_locataire || bien.profil_locataire === 'NC'
+                    return (
+                      <div style={{ position: 'relative', width: '100%' }}>
+                        <select
+                          value={bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : ''}
+                          onChange={async e => {
+                            const val = e.target.value || null
+                            setBien((prev: any) => ({ ...prev, profil_locataire: val }))
+                            if (val) await handleUpdate('profil_locataire', val)
+                          }}
+                          style={{
+                            width: '100%', boxSizing: 'border-box', padding: '4px 22px 4px 8px', borderRadius: '6px',
+                            border: '1.5px solid #e8e2d8',
+                            fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+                            background: '#faf8f5',
+                            color: isEmpty ? '#a39a8c' : '#1a1210',
+                            cursor: 'pointer', outline: 'none',
+                            appearance: 'none', WebkitAppearance: 'none',
+                            textAlign: 'right',
+                          } as React.CSSProperties}
+                        >
+                          <option value="">NC</option>
+                          {['Actif CDI', 'Actif CDD / int\u00E9rim', 'Ind\u00E9pendant', 'Retrait\u00E9', '\u00C9tudiant', 'Inconnu'].map(o => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+                        <span style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#7a6a60', pointerEvents: 'none' }}>{'▾'}</span>
+                      </div>
+                    )
+                  })() : (
                     <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>
                       {bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'NC'}
                     </span>
