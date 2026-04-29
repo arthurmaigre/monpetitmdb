@@ -888,8 +888,7 @@ export default function MesBiensPage() {
                     <tr>
                       <th className="sticky-col-head" style={{ left: 0, width: '40px', minWidth: '40px' }}><span></span></th>
                       <th className="sticky-col-head" style={{ left: '40px', width: '130px', minWidth: '130px' }}>Suivi<span></span></th>
-                      <th className="sticky-col-head" style={{ left: '170px', width: '80px', minWidth: '80px' }}><span></span></th>
-                      <th className="sticky-col-head" style={{ left: '250px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
+                      <th className="sticky-col-head" style={{ left: '170px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
                       <th>Commune<span></span></th>
                       {activeTab === 'Enchères' ? (
                         <>
@@ -951,13 +950,7 @@ export default function MesBiensPage() {
                         <td className="sticky-col" style={{ left: '40px', width: '130px', minWidth: '130px' }}>
                           <SuiviSelect bienId={bien.id} strategie={bien.strategie_mdb} />
                         </td>
-                        <td className="sticky-col" style={{ left: '170px', width: '80px', minWidth: '80px' }}>
-                          <div style={{ position: 'relative', display: 'inline-block' }}>
-                            {bien.photo_url ? <Image src={bien.photo_url} alt="" width={80} height={60} className="list-thumb" style={{ objectFit: 'cover' }} /> : <div className="list-thumb-empty"><TypeBienIllustration type={bien.type_bien} size={36} /></div>}
-                            {bien.url?.startsWith('manual://') && <span style={{ position: 'absolute', bottom: '2px', left: '2px', fontSize: '7px', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.55)', padding: '1px 4px', borderRadius: '3px', lineHeight: 1.3 }}>MON BIEN</span>}
-                          </div>
-                        </td>
-                        <td className="sticky-col" style={{ left: '250px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
+                        <td className="sticky-col" style={{ left: '170px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
                           <span className="td-bien-title">
                             {bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}
                           </span>
