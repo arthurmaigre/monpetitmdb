@@ -2785,13 +2785,17 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                                 value={enchereManuelDraft !== '' ? enchereManuelDraft : (enchereManuelMax ? enchereManuelMax.toLocaleString('fr-FR') : '')}
                                 onChange={ev => setEnchereManuelDraft(ev.target.value.replace(/\s/g, ''))}
                                 onFocus={() => { if (enchereManuelMax && enchereManuelDraft === '') setEnchereManuelDraft(String(enchereManuelMax)) }}
-                                onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(enchereManuelDraft.replace(/\s/g, '')); setEnchereManuelMax(v || null); setEnchereManuelDraft('') } }}
+                                onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(enchereManuelDraft.replace(/\s/g, '')); if (v) { setEnchereManuelMax(v); setEnchereFinMode('libre') } setEnchereManuelDraft('') } }}
                                 style={{ flex: 1, fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#1a1210', background: 'transparent', border: 'none', minWidth: 0, width: '100%' }}
                               />
                               <span style={{ fontSize: '14px', fontWeight: 600, color: '#7a6a60', flexShrink: 0 }}>{'€'}</span>
                             </div>
                             <button
-                              onClick={() => { const v = Number(enchereManuelDraft.replace(/\s/g, '')); setEnchereManuelMax(v || enchereManuelMax); setEnchereManuelDraft('') }}
+                              onClick={() => {
+                                const v = enchereManuelDraft ? Number(enchereManuelDraft.replace(/\s/g, '')) : enchereManuelMax
+                                if (v) { setEnchereManuelMax(v); setEnchereFinMode('libre') }
+                                setEnchereManuelDraft('')
+                              }}
                               style={{ background: '#2f7d5b', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 8px', lineHeight: 1, flexShrink: 0 }}
                             >{'✓'}</button>
                             {enchereManuelMax && !enchereManuelDraft && (
