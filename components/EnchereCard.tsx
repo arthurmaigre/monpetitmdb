@@ -230,21 +230,57 @@ export default function EnchereCard({ enchere, compact = false, inWatchlist: ini
           </span>
         </div>
 
-        {/* Prix — même style que BienCard + label */}
+        {/* Prix — adapté selon statut */}
         <div style={{ margin: `${theme.spacing[3]} 0 ${theme.spacing[2]}` }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: theme.colors.muted, marginBottom: '-2px' }}>
-            {enchere.prix_adjuge && enchere.prix_adjuge > 0 ? 'Prix adjugé' : 'Mise à prix'}
-          </div>
-          <div style={{
-            fontSize: theme.fontSizes.xl, fontWeight: 700,
-            letterSpacing: '-0.02em',
-          }}>
-            {formatPrix(enchere.prix_adjuge && enchere.prix_adjuge > 0 ? enchere.prix_adjuge : enchere.mise_a_prix)}
-          </div>
-          {enchere.prix_adjuge && enchere.prix_adjuge > 0 && (
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.muted }}>
-              Mise à prix : {formatPrix(enchere.mise_a_prix)}
-            </div>
+          {enchere.statut === 'a_venir' ? (
+            <>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: theme.colors.muted, marginBottom: '-2px' }}>Mise à prix</div>
+              <div style={{ fontSize: theme.fontSizes.xl, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {enchere.mise_a_prix ? formatPrix(enchere.mise_a_prix) : '—'}
+              </div>
+              {enchere.date_audience && (
+                <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.muted, marginTop: '2px' }}>
+                  {"Audience : "}{new Date(enchere.date_audience).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
+              )}
+            </>
+          ) : enchere.statut === 'adjuge' ? (
+            <>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: theme.colors.muted, marginBottom: '-2px' }}>Prix adjugé</div>
+              <div style={{ fontSize: theme.fontSizes.xl, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {enchere.prix_adjuge && enchere.prix_adjuge > 0 ? formatPrix(enchere.prix_adjuge) : '—'}
+              </div>
+              <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.muted, marginTop: '2px' }}>
+                {"Mise à prix : "}{enchere.mise_a_prix ? formatPrix(enchere.mise_a_prix) : '—'}
+                {enchere.date_audience && <>{" · Audience : "}{new Date(enchere.date_audience).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</>}
+              </div>
+            </>
+          ) : enchere.statut === 'surenchere' ? (
+            <>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: theme.colors.muted, marginBottom: '-2px' }}>Prix adjugé</div>
+              <div style={{ fontSize: theme.fontSizes.xl, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {enchere.prix_adjuge && enchere.prix_adjuge > 0 ? formatPrix(enchere.prix_adjuge) : enchere.mise_a_prix ? formatPrix(enchere.mise_a_prix) : '—'}
+              </div>
+              {enchere.date_surenchere && (
+                <div style={{ fontSize: theme.fontSizes.sm, color: '#8a5a00', fontWeight: 600, marginTop: '2px' }}>
+                  {"Surenchère jusqu'au "}{new Date(enchere.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: theme.colors.muted, marginBottom: '-2px' }}>
+                {enchere.prix_adjuge && enchere.prix_adjuge > 0 ? 'Prix adjugé' : 'Mise à prix'}
+              </div>
+              <div style={{ fontSize: theme.fontSizes.xl, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {formatPrix(enchere.prix_adjuge && enchere.prix_adjuge > 0 ? enchere.prix_adjuge : enchere.mise_a_prix)}
+              </div>
+              {enchere.prix_adjuge && enchere.prix_adjuge > 0 && (
+                <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.muted }}>
+                  Mise à prix : {formatPrix(enchere.mise_a_prix)}
+                </div>
+              )}
+            </>
           )}
         </div>
 
