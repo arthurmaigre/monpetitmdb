@@ -1895,6 +1895,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [showCompleterModal, setShowCompleterModal] = useState(false)
   const [modalFieldVals, setModalFieldVals] = useState<Record<string, any>>({})
   const [showAvocatModal, setShowAvocatModal] = useState(false)
+  const [avocatEmailInput, setAvocatEmailInput] = useState('')
+  const [avocatEmailSaving, setAvocatEmailSaving] = useState(false)
+  const [avocatEmailSaved, setAvocatEmailSaved] = useState<string | null>(null)
   const [showFraisModal, setShowFraisModal] = useState(false)
   const [showSourceModal, setShowSourceModal] = useState(false)
   const [showReventeLots, setShowReventeLots] = useState(false)
@@ -4184,15 +4187,42 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 {bien.avocat_tel}
               </a>
             )}
-            {bien.avocat_email && (
-              <a href={`mailto:${bien.avocat_email}`} style={{
+            {(bien.avocat_email || avocatEmailSaved) ? (
+              <a href={`mailto:${avocatEmailSaved || bien.avocat_email}`} style={{
                 display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px',
                 background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8',
                 textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600,
               }}>
                 <span style={{ fontSize: '20px' }}>{'\u2709'}</span>
-                {bien.avocat_email}
+                {avocatEmailSaved || bien.avocat_email}
               </a>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="email"
+                  placeholder="Email de l'avocat"
+                  value={avocatEmailInput}
+                  onChange={e => setAvocatEmailInput(e.target.value)}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontSize: '14px', outline: 'none' }}
+                />
+                <button
+                  disabled={!avocatEmailInput || avocatEmailSaving}
+                  onClick={async () => {
+                    if (!avocatEmailInput) return
+                    setAvocatEmailSaving(true)
+                    const res = await fetch(`/api/encheres/${bien.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ avocat_email: avocatEmailInput }),
+                    })
+                    if (res.ok) setAvocatEmailSaved(avocatEmailInput)
+                    setAvocatEmailSaving(false)
+                  }}
+                  style={{ padding: '10px 16px', borderRadius: '8px', background: '#2a4a8a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', opacity: avocatEmailInput ? 1 : 0.5 }}
+                >
+                  {avocatEmailSaving ? '...' : 'Enregistrer'}
+                </button>
+              </div>
             )}
             {bien.tribunal && (
               <div style={{ fontSize: '13px', color: '#7a6a60', padding: '8px 0', borderTop: '1px solid #f0ede8' }}>

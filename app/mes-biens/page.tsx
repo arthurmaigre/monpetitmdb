@@ -73,7 +73,9 @@ export default function MesBiensPage() {
   const [hasLocatif, setHasLocatif] = useState(false)
   const [etageFocus, setEtageFocus] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
-  const [avocatModal, setAvocatModal] = useState<{ nom: string; cabinet?: string; tel?: string; email?: string; tribunal?: string } | null>(null)
+  const [avocatModal, setAvocatModal] = useState<{ id: string; nom: string; cabinet?: string; tel?: string; email?: string; tribunal?: string } | null>(null)
+  const [avocatEmailInput, setAvocatEmailInput] = useState('')
+  const [avocatEmailSaving, setAvocatEmailSaving] = useState(false)
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
   const [tableWidth, setTableWidth] = useState(0)
@@ -900,7 +902,6 @@ export default function MesBiensPage() {
                           <th>Statut<span></span></th>
                           <th>Mise à prix<span></span></th>
                           <th>Occupation<span></span></th>
-                          <th>Date surench.<span></span></th>
                           <th>Prix adjugé<span></span></th>
                           <th>Avocat<span></span></th>
                         </>
@@ -977,7 +978,6 @@ export default function MesBiensPage() {
                           const occ = occupationLabels[e.occupation] || { label: e.occupation || '-', color: '#7a6a60' }
                           const dateAudience = e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
                           const dateVisite = e.date_visite ? new Date(e.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
-                          const dateSurenchere = e.date_surenchere ? new Date(e.date_surenchere).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
                           const sourceLabels: Record<string, string> = { licitor: 'Licitor', avoventes: 'Avoventes', vench: 'Vench' }
                           const sourceBgColors: Record<string, string> = { licitor: '#e8f0fd', avoventes: '#fdf0e8', vench: '#f0fde8' }
                           const sourceTextColors: Record<string, string> = { licitor: '#1a4a9a', avoventes: '#9a4a1a', vench: '#1a7a40' }
@@ -992,11 +992,10 @@ export default function MesBiensPage() {
                             <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
                             <td className="td-prix">{e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</td>
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: e.date_surenchere ? undefined : '#c0b0a0' }}>{dateSurenchere}</td>
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td>
                               {e.avocat_nom ? (
-                                <button onClick={() => setAvocatModal({ nom: e.avocat_nom, cabinet: e.avocat_cabinet, tel: e.avocat_tel, email: e.avocat_email, tribunal: e.tribunal })} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px', color: '#2a4a8a', fontWeight: 600, fontFamily: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                                <button onClick={() => { setAvocatModal({ id: String(e.id), nom: e.avocat_nom, cabinet: e.avocat_cabinet, tel: e.avocat_tel, email: e.avocat_email, tribunal: e.tribunal }); setAvocatEmailInput('') }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px', color: '#2a4a8a', fontWeight: 600, fontFamily: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                                   {e.avocat_nom}
                                 </button>
                               ) : <span style={{ color: '#c0b0a0' }}>-</span>}
@@ -1135,10 +1134,39 @@ export default function MesBiensPage() {
                   <span style={{ fontSize: '20px' }}>{'\uD83D\uDCDE'}</span>{avocatModal.tel}
                 </a>
               )}
-              {avocatModal.email && (
+              {avocatModal.email ? (
                 <a href={`mailto:${avocatModal.email}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8', textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600 }}>
                   <span style={{ fontSize: '20px' }}>{'\u2709'}</span>{avocatModal.email}
                 </a>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="email"
+                    placeholder="Email de l'avocat"
+                    value={avocatEmailInput}
+                    onChange={e => setAvocatEmailInput(e.target.value)}
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontSize: '14px', outline: 'none' }}
+                  />
+                  <button
+                    disabled={!avocatEmailInput || avocatEmailSaving}
+                    onClick={async () => {
+                      if (!avocatEmailInput) return
+                      setAvocatEmailSaving(true)
+                      const res = await fetch(`/api/encheres/${avocatModal.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ avocat_email: avocatEmailInput }),
+                      })
+                      if (res.ok) {
+                        setAvocatModal(prev => prev ? { ...prev, email: avocatEmailInput } : null)
+                      }
+                      setAvocatEmailSaving(false)
+                    }}
+                    style={{ padding: '10px 16px', borderRadius: '8px', background: '#2a4a8a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', opacity: avocatEmailInput ? 1 : 0.5 }}
+                  >
+                    {avocatEmailSaving ? '...' : 'Enregistrer'}
+                  </button>
+                </div>
               )}
               {avocatModal.tribunal && (
                 <div style={{ fontSize: '13px', color: '#7a6a60', padding: '8px 0', borderTop: '1px solid #f0ede8' }}>{avocatModal.tribunal}</div>
