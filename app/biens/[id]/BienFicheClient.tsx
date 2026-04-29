@@ -1855,7 +1855,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [inWatchlist, setInWatchlist] = useState(false)
   const [showDetailTravaux, setShowDetailTravaux] = useState(false)
   // IDR states
-  const [activeNav, setActiveNav] = useState('donnees')
+  const [activeNav, setActiveNav] = useState('apercu')
   const [showLotsDetail, setShowLotsDetail] = useState(false)
   const [showLotsLocatif, setShowLotsLocatif] = useState(false)
   const [showCoutsCopro, setShowCoutsCopro] = useState(false)
@@ -1996,7 +1996,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
   // Sticky nav — IntersectionObserver to highlight active section
   useEffect(() => {
-    const sections = ['donnees', 'estimation', 'financement', 'fiscalite']
+    const sections = ['apercu', 'estimation', 'travaux', 'financement', 'fiscalite']
     const observers: IntersectionObserver[] = []
     const visibleSet = new Set<string>()
     for (const sectionId of sections) {
@@ -2701,28 +2701,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </div>
         </div>
 
-        {/* Sticky navigation */}
-        <div className="sticky-nav-wrap">
-          <nav className="sticky-nav">
-            <button className={`sticky-nav-item ${activeNav === 'donnees' ? 'active' : ''}`} onClick={() => scrollToNav('donnees')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              {"Donn\u00E9es"}
-            </button>
-            <button className={`sticky-nav-item ${activeNav === 'estimation' ? 'active' : ''}`} onClick={() => scrollToNav('estimation')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
-              Estimation
-            </button>
-            <button className={`sticky-nav-item ${activeNav === 'financement' ? 'active' : ''}`} onClick={() => scrollToNav('financement')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-              Financement
-            </button>
-            <button className={`sticky-nav-item ${activeNav === 'fiscalite' ? 'active' : ''}`} onClick={() => scrollToNav('fiscalite')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              {"Fiscalit\u00E9"}
-            </button>
-          </nav>
-        </div>
-
         {/* Bannière stratégie */}
         {(() => {
           type StratKey = 'locataire' | 'travaux' | 'immeuble' | 'division' | 'encheres'
@@ -2756,7 +2734,33 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </div>
         )}
 
-        <div id="nav-donnees" className="section">
+        {/* Sticky navigation */}
+        <div className="sticky-nav-wrap">
+          <nav className="sticky-nav">
+            <button className={`sticky-nav-item ${activeNav === 'apercu' ? 'active' : ''}`} onClick={() => scrollToNav('apercu')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              {"Aper\u00E7u"}
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'estimation' ? 'active' : ''}`} onClick={() => scrollToNav('estimation')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+              Estimation
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'travaux' ? 'active' : ''}`} onClick={() => scrollToNav('travaux')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              Diagnostic travaux
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'financement' ? 'active' : ''}`} onClick={() => scrollToNav('financement')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Financement
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'fiscalite' ? 'active' : ''}`} onClick={() => scrollToNav('fiscalite')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              {"Fiscalit\u00E9"}
+            </button>
+          </nav>
+        </div>
+
+        <div id="nav-apercu" className="section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
             <h2 className="section-title" style={{ margin: 0 }}>{"Caract\u00E9ristiques du Bien"}</h2>
             {(() => {
@@ -3274,7 +3278,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         <div className="col">
         {/* Estimation travaux (toutes strategies) */}
-        <div className="section">
+        <div id="nav-travaux" className="section">
           <h2 className="section-title">{bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic Travaux' : 'Estimation Travaux'}</h2>
           {isFreeBlocked && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
