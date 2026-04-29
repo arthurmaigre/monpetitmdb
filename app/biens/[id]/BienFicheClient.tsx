@@ -3131,9 +3131,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             )}
             {/* IDR — champs immeuble, toujours affichés */}
             {isIDR && (
-              <div className="data-subtitle" style={{ gridColumn: '1 / -1', marginTop: '4px' }}>Immeuble</div>
-            )}
-            {isIDR && (
               <div className="data-item">
                 <span className="data-label">Nb lots</span>
                 <CellEditable bien={bien} champ="nb_lots" suffix=" lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
