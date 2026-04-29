@@ -2777,17 +2777,22 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                         </div>
                         {enchereBaseCalc === 'libre' ? (
                           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px' }}>
-                            <input
-                              type="number"
-                              placeholder="Mon prix max…"
-                              value={enchereManuelDraft !== '' ? enchereManuelDraft : (enchereManuelMax || '')}
-                              onChange={ev => setEnchereManuelDraft(ev.target.value)}
-                              onKeyDown={ev => { if (ev.key === 'Enter') { setEnchereManuelMax(enchereManuelDraft ? Number(enchereManuelDraft) : null); setEnchereManuelDraft('') } }}
-                              style={{ flex: 1, padding: '4px 8px', borderRadius: '6px', border: '1.5px solid var(--success, #2f7d5b)', fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: 'var(--success, #2f7d5b)', background: '#f0faf5', width: '100%' }}
-                            />
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', border: '1.5px solid #e8e2d8', borderRadius: '6px', background: '#fff', padding: '4px 8px', gap: '4px' }}>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="400 000"
+                                value={enchereManuelDraft !== '' ? enchereManuelDraft : (enchereManuelMax ? enchereManuelMax.toLocaleString('fr-FR') : '')}
+                                onChange={ev => setEnchereManuelDraft(ev.target.value.replace(/\s/g, ''))}
+                                onFocus={() => { if (enchereManuelMax && enchereManuelDraft === '') setEnchereManuelDraft(String(enchereManuelMax)) }}
+                                onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(enchereManuelDraft.replace(/\s/g, '')); setEnchereManuelMax(v || null); setEnchereManuelDraft('') } }}
+                                style={{ flex: 1, fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#1a1210', background: 'transparent', border: 'none', minWidth: 0 }}
+                              />
+                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#7a6a60', flexShrink: 0 }}>{'€'}</span>
+                            </div>
                             <button
-                              onClick={() => { setEnchereManuelMax(enchereManuelDraft ? Number(enchereManuelDraft) : enchereManuelMax); setEnchereManuelDraft('') }}
-                              style={{ background: '#2f7d5b', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '4px 8px', lineHeight: 1, whiteSpace: 'nowrap' }}
+                              onClick={() => { const v = Number(enchereManuelDraft.replace(/\s/g, '')); setEnchereManuelMax(v || enchereManuelMax); setEnchereManuelDraft('') }}
+                              style={{ background: '#2a4a8a', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 8px', lineHeight: 1 }}
                             >{'✓'}</button>
                             {enchereManuelMax && !enchereManuelDraft && (
                               <button onClick={() => { setEnchereManuelMax(null); setEnchereManuelDraft('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
