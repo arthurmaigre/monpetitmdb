@@ -2329,24 +2329,25 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .price-block .value.target.positive { color: var(--success, #2f7d5b); }
         .price-block .value.enchere-max { color: var(--success, #2f7d5b); }
         .price-block .sub { margin-top: 6px; font-size: 11px; color: var(--ink-soft, #6b6358); }
-        .decote-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, var(--accent, #b4442e) 0%, #8f3522 100%); border-radius: var(--radius-md, 14px); color: #fff; }
+        .decote-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, var(--accent, #b4442e) 0%, #8f3522 100%); border-radius: var(--radius-md, 14px); color: #fff; position: relative; overflow: hidden; }
+        .decote-banner::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 85% 50%, rgba(255,255,255,0.15), transparent 50%); pointer-events: none; }
         .decote-banner.positive { background: linear-gradient(135deg, var(--success, #2f7d5b) 0%, #1f5a40 100%); }
-        .decote-banner .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
-        .decote-banner .pct { font-family: "Fraunces", Georgia, serif; font-size: 30px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 2px; }
-        .decote-banner .arrow { font-size: 24px; opacity: 0.6; }
-        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line, #e6dccb); padding-top: 16px; }
-        .kpi { text-align: center; padding: 0 8px; border-right: 1px solid var(--line-soft, #efe7d7); }
+        .decote-banner .label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+        .decote-banner .pct { font-family: "Fraunces", Georgia, serif; font-size: 34px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 2px; }
+        .decote-banner .arrow { font-size: 28px; opacity: 0.6; }
+        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line, #e6dccb); padding-top: 18px; }
+        .kpi { text-align: center; padding: 0 10px; border-right: 1px solid var(--line-soft, #efe7d7); }
         .kpi:last-child { border-right: none; }
-        .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 17px; font-weight: 500; color: var(--ink, #1f1b16); }
+        .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 18px; font-weight: 500; color: var(--ink, #1f1b16); }
         .kpi .num.mute { color: var(--ink-mute, #a39a8c); font-weight: 400; }
-        .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; white-space: nowrap; }
-        .deal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .deal-btn-watchlist { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: 1.5px solid var(--line, #e6dccb); background: #fff; color: var(--ink-soft, #6b6358); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
-        .deal-btn-watchlist:hover { border-color: var(--accent, #b4442e); color: var(--accent, #b4442e); }
+        .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; white-space: nowrap; }
+        .deal-actions { display: flex; gap: 10px; }
+        .deal-btn-watchlist { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 18px; border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); background: #fff; color: var(--ink, #1f1b16); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-watchlist:hover { background: var(--paper, #f5ede2); border-color: var(--ink, #1f1b16); }
         .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
-        .deal-btn-source { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; font-family: inherit; white-space: nowrap; }
-        .deal-btn-source:hover { opacity: 0.85; }
+        .deal-btn-source { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 18px; border-radius: var(--radius-md, 14px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-source:hover { background: #000; transform: translateY(-1px); }
         .deal-btn-completer { font-size: 12px; font-weight: 600; color: var(--accent, #b4442e); padding: 9px 14px; border: 1.5px solid var(--line, #e6dccb); border-radius: var(--radius-sm, 8px); background: #fff; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
 
@@ -2591,7 +2592,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   return (
                     <>
                       <div className={`num${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: pv >= 0 ? 'var(--success)' : 'var(--accent)' }}>
-                        {pv >= 0 ? '+' : ''}{fmt(pv)} \u20ac
+                        {pv >= 0 ? '+' : ''}{fmt(pv)} {'€'}
                       </div>
                       <div className="lbl">PV nette est.</div>
                     </>
