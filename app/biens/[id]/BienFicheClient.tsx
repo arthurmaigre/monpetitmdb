@@ -2336,6 +2336,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .decote-banner .pct { font-family: "Fraunces", Georgia, serif; font-size: 34px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 2px; }
         .decote-banner .arrow { font-size: 28px; opacity: 0.6; }
         .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line, #e6dccb); padding-top: 18px; }
+        .kpi-row[data-count="2"] { grid-template-columns: repeat(2, 1fr); max-width: 320px; margin-left: auto; margin-right: auto; }
         .kpi { text-align: center; padding: 0 10px; border-right: 1px solid var(--line-soft, #efe7d7); }
         .kpi:last-child { border-right: none; }
         .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 18px; font-weight: 500; color: var(--ink, #1f1b16); }
@@ -2570,23 +2571,25 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             )}
 
             {/* KPI row */}
-            <div className="kpi-row">
-              <div className="kpi">
-                <div className={`num${!resultatFAI?.rendement_brut ? ' mute' : ''}`}>
-                  {resultatFAI?.rendement_brut ? `${Number(resultatFAI.rendement_brut).toFixed(1)} %` : 'NC'}
+            <div className="kpi-row" data-count={isEnchere ? '2' : '3'}>
+              {!isEnchere && (
+                <div className="kpi">
+                  <div className={`num${!resultatFAI?.rendement_brut ? ' mute' : ''}`}>
+                    {resultatFAI?.rendement_brut ? `${Number(resultatFAI.rendement_brut).toFixed(1)} %` : 'NC'}
+                  </div>
+                  <div className="lbl">Rdt brut</div>
                 </div>
-                <div className="lbl">Rdt brut</div>
-              </div>
+              )}
               <div className="kpi">
                 <div className={`num${!estimationData?.prix_total ? ' mute' : ''}`}>
                   {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} \u20ac` : 'NC'}
                 </div>
-                <div className="lbl">Revente est.</div>
+                <div className="lbl">{isEnchere ? 'Revente est. DVF' : 'Revente est.'}</div>
               </div>
               <div className="kpi">
                 {(() => {
-                  if (!estimationData?.prix_total || !prixCibleCombine) return (
-                    <><div className="num mute">NC</div><div className="lbl">PV nette est.</div></>
+                  if (!estimationData?.prix_total) return (
+                    <><div className="num mute">NC</div><div className="lbl">{isEnchere ? 'PV brute' : 'PV nette est.'}</div></>
                   )
                   const pv = Math.round(estimationData.prix_total - bien.prix_fai * (1 + fraisNotaire / 100) - budgetTravCalc)
                   return (
@@ -2594,7 +2597,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       <div className={`num${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: pv >= 0 ? 'var(--success)' : 'var(--accent)' }}>
                         {pv >= 0 ? '+' : ''}{fmt(pv)} {'€'}
                       </div>
-                      <div className="lbl">PV nette est.</div>
+                      <div className="lbl">{isEnchere ? 'PV brute' : 'PV nette est.'}</div>
                     </>
                   )
                 })()}
