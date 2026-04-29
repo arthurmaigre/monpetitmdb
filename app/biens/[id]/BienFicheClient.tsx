@@ -2341,7 +2341,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 18px; font-weight: 500; color: var(--ink, #1f1b16); }
         .kpi .num.mute { color: var(--ink-mute, #a39a8c); font-weight: 400; }
         .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; white-space: nowrap; }
-        .deal-actions { display: flex; gap: 10px; }
+        .deal-actions { display: flex; gap: 10px; margin-top: auto; }
         .deal-btn-watchlist { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 22px; border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); background: #fff; color: var(--ink, #1f1b16); font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
         .deal-btn-watchlist:hover { background: var(--paper, #f5ede2); border-color: var(--ink, #1f1b16); }
         .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
@@ -2470,7 +2470,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <div className="label">{isEnchere ? (bien.prix_adjuge && bien.prix_adjuge > 0 ? 'PRIX ADJUG\u00c9' : 'MISE \u00c0 PRIX') : 'PRIX FAI'}</div>
                 <div className="value">{fmt(isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.prix_fai)} {'€'}</div>
                 {isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 && (
-                  <div className="sub">Mise \u00e0 prix : {fmt(bien.prix_fai)} {'€'}</div>
+                  <div className="sub">Mise à prix : {fmt(bien.prix_fai)} {'€'}</div>
                 )}
                 {!isEnchere && ecartPct && (
                   <div className="sub">{ecartNegatif ? 'Prix demand\u00e9 vendeur' : 'Prix affich\u00e9 \u00b7 sous-\u00e9valu\u00e9'}</div>
@@ -2559,12 +2559,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {/* Surench\u00e8re (ench\u00e8res) */}
             {isEnchere && (bien.date_surenchere || bien.mise_a_prix_surenchere) && (
               <div style={{ padding: '12px 14px', background: '#fffaf0', borderRadius: 'var(--radius-sm)', border: '1.5px solid #f0d090', fontSize: '13px', color: '#6a4a00' }}>
-                <div><strong style={{ color: '#8a5a00' }}>Surench\u00e8re possible</strong>{bien.date_surenchere ? <> jusqu'au {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
+                <div><strong style={{ color: '#8a5a00' }}>Surenchère possible</strong>{bien.date_surenchere ? <> jusqu'au {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
                 {bien.mise_a_prix_surenchere && (
-                  <div style={{ marginTop: '3px' }}>Nouvelle mise \u00e0 prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} \u20ac</strong></div>
+                  <div style={{ marginTop: '3px' }}>Nouvelle mise à prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'€'}</strong></div>
                 )}
                 {bien.consignation && (
-                  <div style={{ marginTop: '3px', color: '#9a7a50' }}>Consignation : <strong style={{ color: '#6a4a00' }}>{bien.consignation.toLocaleString('fr-FR')} \u20ac</strong></div>
+                  <div style={{ marginTop: '3px', color: '#9a7a50' }}>Consignation : <strong style={{ color: '#6a4a00' }}>{bien.consignation.toLocaleString('fr-FR')} {'€'}</strong></div>
                 )}
               </div>
             )}
