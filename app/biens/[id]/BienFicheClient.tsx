@@ -2220,17 +2220,17 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 32px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; margin-bottom: 36px; align-items: stretch; }
-        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 100%; height: 100%; }
+        .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 28px; margin-bottom: 36px; align-items: stretch; }
+        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); min-height: 100%; height: 100%; box-shadow: var(--shadow-md); }
         .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
         .fiche-photo-empty { width: 100%; height: 100%; min-height: 240px; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); }
-        .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--ink, #1f1b16); box-shadow: 0 1px 4px rgba(0,0,0,.12); transition: all .2s; }
+        .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--ink, #1f1b16); box-shadow: 0 1px 4px rgba(0,0,0,.12); transition: all .2s; }
         .gallery-nav:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
-        .gallery-dots { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; background: rgba(31,27,22,0.5); backdrop-filter: blur(8px); border-radius: 999px; }
+        .gallery-dots { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; background: rgba(31,27,22,0.5); backdrop-filter: blur(8px); border-radius: 999px; }
         .gallery-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: all .2s; display: inline-block; }
         .gallery-dots .dot.active { background: #fff; width: 18px; border-radius: 999px; }
-        .gallery-count { position: absolute; bottom: 14px; right: 14px; padding: 4px 10px; background: rgba(31,27,22,0.55); backdrop-filter: blur(8px); border-radius: 6px; color: #fff; font-size: 11px; font-weight: 500; }
+        .gallery-count { position: absolute; bottom: 16px; right: 16px; padding: 5px 10px; background: rgba(31,27,22,0.6); backdrop-filter: blur(8px); border-radius: 6px; color: #fff; font-size: 11px; font-weight: 500; }
         .fiche-info { display: flex; flex-direction: column; gap: 14px; }
         .fiche-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 800; color: #1a1210; }
         .fiche-sub { font-size: 14px; color: #7a6a60; margin-top: -8px; }
@@ -2316,19 +2316,19 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .breadcrumb .current { color: var(--ink, #1f1b16); }
 
         /* Deal card */
-        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 24px 24px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; }
+        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 28px 30px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 22px; position: relative; overflow: hidden; }
         .deal-card-glow { position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; background: radial-gradient(circle, var(--accent-soft, #f2d9d1) 0%, transparent 70%); opacity: 0.5; pointer-events: none; }
-        .deal-header h1 { font-family: "Fraunces", Georgia, serif; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink, #1f1b16); margin: 0 0 6px; }
+        .deal-header h1 { font-family: "Fraunces", Georgia, serif; font-size: 32px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink, #1f1b16); margin: 0 0 8px; }
         .deal-header .location { font-size: 13px; color: var(--ink-soft, #6b6358); display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
-        .price-grid { display: grid; grid-template-columns: 1fr 1fr; padding: 16px 18px; background: var(--paper, #f5ede2); border-radius: var(--radius-md, 14px); }
+        .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 18px; background: var(--paper, #f5ede2); border-radius: var(--radius-md, 14px); }
         .price-block { min-width: 0; }
         .price-block + .price-block { padding-left: 16px; border-left: 1px solid var(--line, #e6dccb); }
         .price-block .label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute, #a39a8c); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .price-block .value { font-family: "Fraunces", Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink, #1f1b16); white-space: nowrap; }
+        .price-block .value { font-family: "Fraunces", Georgia, serif; font-size: 24px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink, #1f1b16); white-space: nowrap; }
         .price-block .value.target { color: var(--accent, #b4442e); }
         .price-block .value.target.positive { color: var(--success, #2f7d5b); }
         .price-block .value.enchere-max { color: var(--success, #2f7d5b); }
-        .price-block .sub { margin-top: 5px; font-size: 11px; color: var(--ink-soft, #6b6358); }
+        .price-block .sub { margin-top: 6px; font-size: 11px; color: var(--ink-soft, #6b6358); }
         .decote-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, var(--accent, #b4442e) 0%, #8f3522 100%); border-radius: var(--radius-md, 14px); color: #fff; }
         .decote-banner.positive { background: linear-gradient(135deg, var(--success, #2f7d5b) 0%, #1f5a40 100%); }
         .decote-banner .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
@@ -2385,15 +2385,15 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               {/* Badge stratégie — top-left du carousel */}
               {!isEnchere && bien.strategie_mdb && (() => {
                 const stratColors: Record<string, { bg: string; color: string }> = {
-                  'Locataire en place': { bg: '#b4442e', color: '#fff' },
-                  'Travaux lourds': { bg: '#c77f1f', color: '#fff' },
-                  'Immeuble de rapport': { bg: '#3a5f7d', color: '#fff' },
-                  'Division': { bg: '#2f7d5b', color: '#fff' },
-                  'Enchères': { bg: '#6a2d2d', color: '#fff' },
+                  'Locataire en place': { bg: 'var(--strat-locataire-soft, #f2d9d1)', color: 'var(--strat-locataire, #b4442e)' },
+                  'Travaux lourds': { bg: 'var(--strat-travaux-soft, #f4e2c5)', color: 'var(--strat-travaux, #c77f1f)' },
+                  'Immeuble de rapport': { bg: 'var(--strat-immeuble-soft, #d3deea)', color: 'var(--strat-immeuble, #3a5f7d)' },
+                  'Division': { bg: 'var(--strat-division-soft, #d4e7dc)', color: 'var(--strat-division, #2f7d5b)' },
+                  'Enchères': { bg: 'var(--strat-encheres-soft, #e8d9d5)', color: 'var(--strat-encheres, #6a2d2d)' },
                 }
-                const sc = stratColors[bien.strategie_mdb] || { bg: 'rgba(31,27,22,0.6)', color: '#fff' }
+                const sc = stratColors[bien.strategie_mdb] || { bg: 'rgba(255,255,255,0.92)', color: 'var(--ink)' }
                 return (
-                  <span style={{ position: 'absolute', top: '12px', left: '12px', background: sc.bg, color: sc.color, fontSize: '11px', fontWeight: 600, padding: '5px 11px', borderRadius: '8px', zIndex: 2, letterSpacing: '0.02em' }}>
+                  <span style={{ position: 'absolute', top: '16px', left: '16px', background: sc.bg, backdropFilter: 'blur(8px)', color: sc.color, fontSize: '11px', fontWeight: 600, padding: '5px 12px', borderRadius: '999px', zIndex: 2, letterSpacing: '0.02em' }}>
                     {bien.strategie_mdb}
                   </span>
                 )
@@ -2410,11 +2410,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ? new Date(bien.date_surenchere)
                     : new Date(new Date(bien.date_audience).getTime() + 10 * 86400000)
                   const remaining = Math.ceil((deadline.getTime() - Date.now()) / 86400000)
-                  if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e67e22' }
-                  else { label = 'Adjugé'; bg = '#2a4a8a' }
+                  if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e8871a' }
+                  else { label = 'Adjugé'; bg = '#3a5f7d' }
                 }
                 return label ? (
-                  <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
+                  <span style={{ position: 'absolute', top: '16px', right: '16px', background: bg, color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px 14px', borderRadius: '6px', zIndex: 2, letterSpacing: '0.04em' }}>{label}</span>
                 ) : null
               })()}
             </>} />
