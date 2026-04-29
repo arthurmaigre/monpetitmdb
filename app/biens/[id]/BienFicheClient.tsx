@@ -1199,113 +1199,134 @@ function ScoreLabel({ score }: { score: number | null }) {
   )
 }
 
-function LotsEditor({ lots, nbLotsEffectif, userToken, onSave }: { lots: any[], nbLotsEffectif: number, userToken: string | null, onSave: (lots: any[]) => Promise<void> }) {
-  const [editLots, setEditLots] = useState(() => {
-    return Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => ({
+function LotsEditor({ lots, nbLotsEffectif, prixFai, userToken, onSave, onCancel }: { lots: any[], nbLotsEffectif: number, prixFai?: number, userToken: string | null, onSave: (lots: any[]) => Promise<void>, onCancel?: () => void }) {
+  const [editLots, setEditLots] = useState(() =>
+    Array.from({ length: Math.max(nbLotsEffectif, lots.length, 1) }).map((_, i) => ({
       type: lots[i]?.type || '',
-      surface: lots[i]?.surface || '',
-      loyer: lots[i]?.loyer || '',
+      surface: lots[i]?.surface != null ? String(lots[i].surface) : '',
+      loyer: lots[i]?.loyer != null ? String(lots[i].loyer) : '',
       etage: lots[i]?.etage || '',
       dpe: lots[i]?.dpe || '',
       etat: lots[i]?.etat || '',
     }))
-  })
+  )
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const VISIBLE = 5
 
   function updateLot(i: number, field: string, value: string) {
-    setEditLots(prev => {
-      const next = [...prev]
-      next[i] = { ...next[i], [field]: value }
-      return next
-    })
-    setSaved(false)
+    setEditLots(prev => { const n = [...prev]; n[i] = { ...n[i], [field]: value }; return n })
   }
-
-  function addLot() {
-    setEditLots(prev => [...prev, { type: '', surface: '', loyer: '', etage: '', dpe: '', etat: '' }])
-    setSaved(false)
-  }
+  function addLot() { setEditLots(prev => [...prev, { type: '', surface: '', loyer: '', etage: '', dpe: '', etat: '' }]) }
+  function deleteLot(i: number) { setEditLots(prev => prev.filter((_, idx) => idx !== i)) }
 
   async function handleSave() {
     setSaving(true)
-    const cleaned = editLots.map(l => ({
+    await onSave(editLots.map(l => ({
       type: l.type || undefined,
       surface: l.surface ? Number(l.surface) : undefined,
       loyer: l.loyer ? Number(l.loyer) : undefined,
       etage: l.etage || undefined,
       dpe: l.dpe || undefined,
       etat: l.etat || undefined,
-    }))
-    await onSave(cleaned)
+    })))
     setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    onCancel?.()
   }
 
-  const inputStyle: React.CSSProperties = { padding: '5px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', width: '100%', boxSizing: 'border-box' }
+  const totalSurface = editLots.reduce((s, l) => s + (Number(l.surface) || 0), 0)
+  const totalLoyer = editLots.reduce((s, l) => s + (Number(l.loyer) || 0), 0)
+  const loues = editLots.filter(l => l.etat === 'loue').length
+  const rdtBrut = prixFai && totalLoyer > 0 ? ((totalLoyer * 12) / prixFai * 100).toFixed(1) : null
+
+  const DPE_COLORS: Record<string, string> = { A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0a830', E: '#eb6a2a', F: '#e42a1e', G: '#a00000' }
+  const GRID = '60px 1fr 100px 110px 60px 65px 100px 28px'
+
+  const inputU: React.CSSProperties = { border: 'none', padding: '5px 2px', minWidth: 0, background: 'transparent', fontFamily: 'inherit', fontSize: '12px', outline: 'none' }
+  const sel: React.CSSProperties = { padding: '5px 6px', border: '1px solid #e6dccb', borderRadius: '4px', fontFamily: 'inherit', fontSize: '12px', color: '#1f1b16', background: '#fff', cursor: 'pointer', width: '100%', outline: 'none' }
+  const inp: React.CSSProperties = { padding: '5px 8px', border: '1px solid #e6dccb', borderRadius: '4px', fontFamily: 'inherit', fontSize: '12px', color: '#1f1b16', background: '#fff', outline: 'none', width: '100%', boxSizing: 'border-box' }
+
+  const visibleLots = expanded ? editLots : editLots.slice(0, VISIBLE)
+  const hiddenLots = editLots.slice(VISIBLE)
+
+  function LotRow({ lot, i }: { lot: any, i: number }) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: '8px', padding: '9px 12px', alignItems: 'center', borderTop: '1px solid #efe7d7', fontSize: '13px', background: '#fff' }}>
+        <span style={{ fontFamily: 'var(--serif, "Fraunces", serif)', fontWeight: 500, color: 'var(--accent, #b4442e)', fontSize: '15px' }}>{i + 1}</span>
+        <select value={lot.type} onChange={e => updateLot(i, 'type', e.target.value)} style={sel}>
+          <option value="">—</option>
+          {['T1','T2','T3','T4','T5','Studio','Commerce','Parking','Cave'].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e6dccb', borderRadius: '4px', padding: '0 6px', minWidth: 0 }}>
+          <input type="number" placeholder="—" value={lot.surface} onChange={e => updateLot(i, 'surface', e.target.value)} style={{ ...inputU, width: '45px' }} />
+          <span style={{ fontSize: '10px', color: '#a39a8c', whiteSpace: 'nowrap' }}>m²</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e6dccb', borderRadius: '4px', padding: '0 6px', minWidth: 0 }}>
+          <input type="number" placeholder="—" value={lot.loyer} onChange={e => updateLot(i, 'loyer', e.target.value)} style={{ ...inputU, width: '50px' }} />
+          <span style={{ fontSize: '10px', color: '#a39a8c', whiteSpace: 'nowrap' }}>{'\u20AC'}/mois</span>
+        </div>
+        <input type="text" placeholder="RDC" value={lot.etage} onChange={e => updateLot(i, 'etage', e.target.value)} style={inp} />
+        <select value={lot.dpe} onChange={e => updateLot(i, 'dpe', e.target.value)} style={{ ...sel, color: lot.dpe ? (DPE_COLORS[lot.dpe] || '#1f1b16') : '#a39a8c', fontWeight: lot.dpe ? 700 : 400 }}>
+          <option value="">—</option>
+          {['A','B','C','D','E','F','G'].map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={lot.etat} onChange={e => updateLot(i, 'etat', e.target.value)} style={{ ...sel, color: lot.etat === 'loue' ? '#1a7a40' : lot.etat === 'vacant' ? '#7a6a60' : '#1f1b16', background: lot.etat === 'loue' ? '#e8f5ef' : lot.etat === 'vacant' ? '#faf8f5' : '#fff' }}>
+          <option value="">—</option>
+          <option value="loue">{"Occup\u00E9"}</option>
+          <option value="vacant">Vacant</option>
+          <option value="travaux">Travaux</option>
+        </select>
+        <button onClick={() => deleteLot(i)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', color: '#a39a8c', fontSize: '16px', cursor: 'pointer', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>{'×'}</button>
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div style={{ overflowX: 'auto' }}>
-        <table className="lots-table" style={{ fontSize: '12px' }}>
-          <thead>
-            <tr>
-              <th style={{ width: '36px' }}>Lot</th>
-              <th style={{ width: '90px' }}>Type</th>
-              <th style={{ width: '70px' }}>Surface</th>
-              <th style={{ width: '70px' }}>Loyer</th>
-              <th style={{ width: '60px' }}>{"\u00C9tage"}</th>
-              <th style={{ width: '50px' }}>DPE</th>
-              <th style={{ width: '70px' }}>{"\u00C9tat"}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {editLots.map((lot, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight: 600, textAlign: 'center' }}>{i + 1}</td>
-                <td>
-                  <select value={lot.type} onChange={e => updateLot(i, 'type', e.target.value)} style={inputStyle}>
-                    <option value="">-</option>
-                    <option value="Appartement">Appartement</option>
-                    <option value="Studio">Studio</option>
-                    <option value="Local commercial">Local commercial</option>
-                    <option value="Parking">Parking</option>
-                    <option value="Cave">Cave</option>
-                    <option value="Autre">Autre</option>
-                  </select>
-                </td>
-                <td><input type="number" placeholder={"m\u00B2"} value={lot.surface} onChange={e => updateLot(i, 'surface', e.target.value)} style={inputStyle} /></td>
-                <td><input type="number" placeholder={"\u20AC/mois"} value={lot.loyer} onChange={e => updateLot(i, 'loyer', e.target.value)} style={inputStyle} /></td>
-                <td><input type="text" placeholder="RDC" value={lot.etage} onChange={e => updateLot(i, 'etage', e.target.value)} style={inputStyle} /></td>
-                <td>
-                  <select value={lot.dpe} onChange={e => updateLot(i, 'dpe', e.target.value)} style={inputStyle}>
-                    <option value="">-</option>
-                    {['A','B','C','D','E','F','G'].map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </td>
-                <td>
-                  <select value={lot.etat} onChange={e => updateLot(i, 'etat', e.target.value)} style={inputStyle}>
-                    <option value="">-</option>
-                    <option value="loue">{"Lou\u00E9"}</option>
-                    <option value="vacant">Vacant</option>
-                    <option value="travaux">Travaux</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={addLot} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid #e8e2d8', background: '#faf8f5', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-          + Ajouter un lot
-        </button>
-        {userToken && (
-          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: saved ? '#1a7a40' : '#1a1210', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Sauvegarde...' : saved ? '\u2713 Sauvegard\u00E9' : 'Sauvegarder'}
-          </button>
+      <p style={{ fontSize: '12px', color: '#7a6a60', marginBottom: '12px' }}>{"Ajoutez ou modifiez les informations de chaque lot de l\u2019immeuble. Les totaux sont mis \u00E0 jour automatiquement."}</p>
+      <div style={{ border: '1px solid #efe7d7', borderRadius: '8px', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: '8px', padding: '10px 12px', background: '#f5ede2', fontSize: '10px', color: '#a39a8c', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, alignItems: 'center' }}>
+          <span>Lot</span><span>Type</span><span>Surface</span><span>Loyer</span><span>{"Étage"}</span><span>DPE</span><span>{"État"}</span><span></span>
+        </div>
+        {/* Rows */}
+        {visibleLots.map((lot, i) => <LotRow key={i} lot={lot} i={i} />)}
+        {/* Collapsed summary row */}
+        {!expanded && hiddenLots.length > 0 && (
+          <div onClick={() => setExpanded(true)} style={{ display: 'grid', gridTemplateColumns: GRID, gap: '8px', padding: '9px 12px', alignItems: 'center', borderTop: '1px solid #efe7d7', background: '#f5ede2', cursor: 'pointer', opacity: 0.85 }}>
+            <span style={{ fontFamily: 'var(--serif, "Fraunces", serif)', fontWeight: 500, color: 'var(--accent, #b4442e)', fontSize: '13px' }}>{VISIBLE + 1}–{editLots.length}</span>
+            <span style={{ color: '#7a6a60', fontSize: '12px' }}>{hiddenLots.length} lots supplémentaires</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>{hiddenLots.reduce((s, l) => s + (Number(l.surface) || 0), 0) > 0 ? `${hiddenLots.reduce((s, l) => s + (Number(l.surface) || 0), 0)} m²` : '—'}</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>{hiddenLots.reduce((s, l) => s + (Number(l.loyer) || 0), 0) > 0 ? `${hiddenLots.reduce((s, l) => s + (Number(l.loyer) || 0), 0).toLocaleString('fr-FR')} €/mois` : '—'}</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>{[...new Set(hiddenLots.map((l: any) => l.etage).filter(Boolean))].slice(0, 2).join('/') || '—'}</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>—</span>
+            <span style={{ color: '#7a6a60', fontSize: '11px' }}>{hiddenLots.filter((l: any) => l.etat === 'loue').length} occ. / {hiddenLots.filter((l: any) => l.etat === 'vacant').length} vac.</span>
+            <span style={{ color: '#a39a8c', fontSize: '11px' }}>{'›'}</span>
+          </div>
         )}
+      </div>
+      {/* Totals */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', marginTop: '14px', border: '1px solid #e6dccb', borderRadius: '8px', background: '#f5ede2', padding: '12px 0' }}>
+        {[
+          { lbl: 'Total surface', val: totalSurface > 0 ? `${totalSurface} m²` : '—' },
+          { lbl: 'Total loyer', val: totalLoyer > 0 ? `${totalLoyer.toLocaleString('fr-FR')} €/mois` : '—' },
+          { lbl: 'Occupation', val: `${loues}/${editLots.length}` },
+          { lbl: 'Rdt brut', val: rdtBrut ? `${rdtBrut} %` : '—' },
+        ].map(({ lbl, val }, k) => (
+          <div key={k} style={{ textAlign: 'center', borderRight: k < 3 ? '1px solid #efe7d7' : 'none', padding: '0 10px' }}>
+            <span style={{ display: 'block', fontSize: '10px', color: '#a39a8c', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '4px' }}>{lbl}</span>
+            <span style={{ fontFamily: 'var(--serif, "Fraunces", serif)', fontSize: '17px', fontWeight: 500, color: '#1f1b16' }}>{val}</span>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ display: 'flex', gap: '8px', marginTop: '16px', alignItems: 'center' }}>
+        <button onClick={addLot} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e6dccb', background: 'transparent', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <span style={{ fontSize: '14px', marginRight: '2px' }}>+</span> Ajouter un lot
+        </button>
+        <div style={{ flex: 1 }} />
+        {onCancel && <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e6dccb', background: 'transparent', fontSize: '12px', fontWeight: 600, color: '#1f1b16', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>}
+        {userToken && <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: '#1a1210', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</button>}
       </div>
     </div>
   )
@@ -3168,7 +3189,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 </button>
               </div>
               <ModalPanel open={showLotsDetail} onClose={() => setShowLotsDetail(false)} title={"D\u00E9tail des lots"}>
-                <LotsEditor lots={lots} nbLotsEffectif={nbLotsEffectif} userToken={userToken} onSave={async (newLots) => { await handleUpdate('lots_data', { lots: newLots }); }} />
+                <LotsEditor lots={lots} nbLotsEffectif={nbLotsEffectif} prixFai={bien.prix_fai} userToken={userToken} onSave={async (newLots) => { await handleUpdate('lots_data', { lots: newLots }); }} onCancel={() => setShowLotsDetail(false)} />
               </ModalPanel>
             </>
           )}
@@ -3478,65 +3499,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             </div>
             {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
             {/* IDR : taux occupation + loyers par lot dépliable */}
-            {isIDR && lots.length > 0 && (
-              <>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', color: '#1a7a40', fontWeight: 600 }}>{lots.filter(l => l.etat === 'loue').length}/{nbLotsEffectif} lots {"lou\u00E9s"}</span>
-                  {bien.loyer && <span style={{ fontSize: '13px', color: '#7a6a60' }}>Loyer annuel : {(bien.loyer * 12).toLocaleString('fr-FR')} {'\u20AC'}</span>}
-                </div>
-                <div style={{ marginTop: '8px', textAlign: 'center' }}>
-                  <button onClick={() => setShowLotsLocatif(!showLotsLocatif)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                    {showLotsLocatif ? "Masquer" : "D\u00E9tail loyers par lot"}
-                  </button>
-                </div>
-                <ModalPanel open={showLotsLocatif} onClose={() => setShowLotsLocatif(false)} title={"D\u00E9tail loyers par lot"}>
-                  <div className="lots-table-wrap"><table className="lots-table">
-                    <thead><tr><th>Lot</th><th>Type</th><th>Loyer</th><th>{"\u00C9tat"}</th></tr></thead>
-                    <tbody>
-                      {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
-                        const lot = lots[i] || {}
-                        return (
-                          <tr key={i}>
-                            <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                            <td>
-                              {lot.type ? lot.type : (
-                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
-                                  <option value="">NC</option>
-                                  <option value="Studio">Studio</option>
-                                  <option value="T1">T1</option>
-                                  <option value="T2">T2</option>
-                                  <option value="T3">T3</option>
-                                  <option value="T4">T4</option>
-                                  <option value="T5">T5</option>
-                                  <option value="Local commercial">Local commercial</option>
-                                  <option value="Garage">Garage</option>
-                                </select>
-                              )}
-                            </td>
-                            <td>
-                              {lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : (
-                                <input type="number" placeholder="0" style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', width: '70px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', textAlign: 'right' }} />
-                              )}
-                            </td>
-                            <td>
-                              {lot.etat ? (
-                                <span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span>
-                              ) : (
-                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
-                                  <option value="">NC</option>
-                                  <option value="loue">{"Lou\u00E9"}</option>
-                                  <option value="vacant">Vacant</option>
-                                  <option value="a_renover">{"\u00C0 r\u00E9nover"}</option>
-                                </select>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table></div>
-                </ModalPanel>
-              </>
+            {isIDR && (
+              <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                <button onClick={() => setShowLotsDetail(true)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  {"Voir le d\u00E9tail des lots"}
+                </button>
+              </div>
             )}
           </div>
         )}
