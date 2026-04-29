@@ -1576,9 +1576,11 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra, estimationApiBase, labelPrix }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode, estimationApiBase?: string, labelPrix?: React.ReactNode }) {
-  const [estimation, setEstimation] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra, estimationApiBase, labelPrix, estimationInitiale, estimationDateInitiale }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode, estimationApiBase?: string, labelPrix?: React.ReactNode, estimationInitiale?: any, estimationDateInitiale?: string }) {
+  const isCacheValid = estimationInitiale && estimationDateInitiale && (Date.now() - new Date(estimationDateInitiale).getTime()) / 86400000 < 30
+  const [estimation, setEstimation] = useState<any>(isCacheValid ? estimationInitiale : null)
+  const [estimationDate, setEstimationDate] = useState<string | null>(isCacheValid ? estimationDateInitiale! : null)
+  const [loading, setLoading] = useState(!isCacheValid)
   const [error, setError] = useState('')
   const [adresse, setAdresse] = useState(adresseInitiale || '')
   const [adresseEdit, setAdresseEdit] = useState(false)
@@ -1594,6 +1596,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
       const data = await res.json()
       if (data.estimation) {
         setEstimation(data.estimation)
+        setEstimationDate(new Date().toISOString())
         onEstimationLoaded?.(data.estimation)
       }
       else if (data.error) setError(data.error)
@@ -1618,7 +1621,11 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   }
 
   useEffect(() => {
-    loadEstimation()
+    if (isCacheValid) {
+      onEstimationLoaded?.(estimationInitiale)
+    } else {
+      loadEstimation()
+    }
   }, [bienId])
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
@@ -1677,7 +1684,14 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 
   return (
     <div className="section">
-      <h2 className="section-title">{"Estimation Prix de Revente"}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <h2 className="section-title" style={{ margin: 0 }}>{"Estimation Prix de Revente"}</h2>
+        {estimationDate && (
+          <span style={{ fontSize: '11px', color: '#b0a898' }}>
+            {`Estimé le ${new Date(estimationDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
+          </span>
+        )}
+      </div>
       {isFree && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
           <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
@@ -3576,7 +3590,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/2 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
                 </div>
               )}
-              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined} labelPrix={isEnchere ? (bien.prix_adjuge > 0 ? <>{"Prix adjug\u00e9"}</> : <>{"Mise \u00e0 prix"}</>) : undefined}
+              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined} labelPrix={isEnchere ? (bien.prix_adjuge > 0 ? <>{"Prix adjug\u00e9"}</> : <>{"Mise \u00e0 prix"}</>) : undefined} estimationInitiale={bien.estimation_details} estimationDateInitiale={bien.estimation_date}
                 extra={isIDR && nbLotsEffectif > 0 ? (
                   <div style={{ marginTop: '4px', textAlign: 'center' }}>
                     <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
