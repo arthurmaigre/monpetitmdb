@@ -3267,16 +3267,18 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Honoraires libres \u2014 fix\u00E9s par l\u2019avocat mandat\u00E9 pour vous repr\u00E9senter \u00E0 l\u2019audience. G\u00E9n\u00E9ralement entre 1\u00A0000 et 3\u00A0000\u00A0\u20AC. 1\u00A0500\u00A0\u20AC par d\u00E9faut."}</span>
                   </span>
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                  <input
-                    type="number"
-                    value={honorairesAvocat}
-                    onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
-                    onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
-                    placeholder="1500"
-                    style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textAlign: 'right', background: '#fff', color: '#1a1210' }}
-                  />
-                  <span style={{ fontSize: '13px', color: '#7a6a60' }}>{'\u20AC'}</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '6px', padding: '4px 8px', gap: '4px' }}>
+                    <input
+                      type="number"
+                      value={honorairesAvocat}
+                      onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
+                      placeholder="1500"
+                      style={{ width: '60px', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textAlign: 'right', background: 'transparent', color: '#1a1210' }}
+                    />
+                    <span style={{ fontSize: '13px', color: '#7a6a60', flexShrink: 0 }}>{'\u20AC'}</span>
+                  </div>
                 </div>
               </div>
               {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
@@ -3292,7 +3294,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                         ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais d\u2019acquisition calcul\u00E9s : \u00E9moluments avocat + droits de mutation + CSI. Hors frais pr\u00E9alables et honoraires (\u00E0 renseigner s\u00E9par\u00E9ment)."}</span>
                       </span>
                     </span>
-                    <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', textAlign: 'right', display: 'inline-flex', alignItems: 'baseline', gap: '4px' }}>
+                    <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '4px', width: '100%', whiteSpace: 'nowrap' }}>
                       {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'}
                       <span style={{ color: '#a39a8c', fontSize: '11px' }}>›</span>
                     </button>
