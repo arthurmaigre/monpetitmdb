@@ -1860,6 +1860,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [showLotsLocatif, setShowLotsLocatif] = useState(false)
   const [showCoutsCopro, setShowCoutsCopro] = useState(false)
   const [showContact, setShowContact] = useState(false)
+  const [showCompleterModal, setShowCompleterModal] = useState(false)
+  const [modalFieldVals, setModalFieldVals] = useState<Record<string, any>>({})
   const [showAvocatModal, setShowAvocatModal] = useState(false)
   const [showFraisModal, setShowFraisModal] = useState(false)
   const [showSourceModal, setShowSourceModal] = useState(false)
@@ -2174,6 +2176,48 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const hasCibleContraignant = prixCibleCombine && prixCibleCombine < bien?.prix_fai
 
   const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
+
+  // Completion widget
+  const COMPLETABLE = [
+    { champ: 'adresse', label: 'adresse' },
+    { champ: 'annee_construction', label: 'année de construction' },
+    { champ: 'surface_terrain', label: 'surface terrain' },
+    { champ: 'nb_sdb', label: 'salles de bain' },
+    { champ: 'type_chauffage', label: 'type de chauffage' },
+    { champ: 'ges', label: 'GES' },
+    { champ: 'loyer', label: 'loyer' },
+    { champ: 'charges_copro', label: 'charges copro' },
+    { champ: 'taxe_fonc_ann', label: 'taxe foncière' },
+    { champ: 'fin_bail', label: 'fin de bail' },
+    { champ: 'profil_locataire', label: 'profil locataire' },
+  ]
+  const completableRemplis = COMPLETABLE.filter(f => { const v = (bien as any)[f.champ]; return v != null && v !== '' && v !== 'NC' && v !== 0 }).length
+  const pctComplete = Math.round(completableRemplis / COMPLETABLE.length * 100)
+  const completableManquants = COMPLETABLE.filter(f => { const v = (bien as any)[f.champ]; return !v || v === 'NC' })
+
+  function getModalVal(champ: string) {
+    return modalFieldVals[champ] !== undefined ? modalFieldVals[champ] : ((bien as any)[champ] ?? '')
+  }
+  function getModalFieldClass(champ: string): string {
+    if (modalFieldVals[champ] !== undefined && modalFieldVals[champ] !== '') return 'mf-draft'
+    const statut = champsStatut?.[champ]?.statut
+    if (statut === 'vert') return 'mf-vert'
+    if (statut === 'jaune') return 'mf-jaune'
+    const v = (bien as any)[champ]
+    if (v != null && v !== '' && v !== 0 && v !== 'NC') return 'mf-filled'
+    return 'mf-nc'
+  }
+  function setModalDraft(champ: string, val: any) {
+    setModalFieldVals(p => ({ ...p, [champ]: val }))
+    setBien((prev: any) => ({ ...prev, [champ]: val === '' ? null : val }))
+  }
+  function saveModalField(champ: string) {
+    const val = modalFieldVals[champ]
+    if (val === undefined || val === '' || val === null) return
+    handleUpdate(champ, val)
+    setModalFieldVals(prev => { const n = { ...prev }; delete n[champ]; return n })
+  }
+
   // Valeurs numeriques (coerce '' -> 0 pour les calculs)
   const apportNum = apport || 0
   const tauxNum = taux || 0
@@ -2262,10 +2306,49 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .two-cols { display: flex; gap: 24px; align-items: flex-start; }
         .two-cols > .col { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
         .simu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-        .strat-intro { background: #fff; border-radius: 12px; border: 1px solid #e8e2d8; padding: 18px 22px; margin-bottom: 20px; font-size: 13px; color: #7a6a60; line-height: 1.7; display: flex; flex-direction: column; gap: 10px; }
-        .strat-intro strong { color: #1a1210; }
-        .strat-intro-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; font-weight: 600; color: #c0392b; text-decoration: none; transition: color 0.15s; }
-        .strat-intro-cta:hover { color: #a5301f; }
+        .strategy-bar { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; padding: 18px 24px; background: var(--surface, #fff); border-radius: var(--radius-lg, 16px); margin-bottom: 16px; border-left: 3px solid var(--info, #2d5a8c); }
+        .strategy-bar.strat-travaux { border-left-color: var(--warning, #b8891a); }
+        .strategy-bar.strat-immeuble { border-left-color: var(--accent, #b4442e); }
+        .strategy-bar.strat-division { border-left-color: var(--success, #2e7c5d); }
+        .strategy-bar.strat-encheres { border-left-color: #8a5a3c; }
+        .strategy-bar .sb-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--info-soft, #dde8f4); color: var(--info, #2d5a8c); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .strategy-bar.strat-travaux .sb-icon { background: #fef3cd; color: var(--warning, #b8891a); }
+        .strategy-bar.strat-immeuble .sb-icon { background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
+        .strategy-bar.strat-division .sb-icon { background: var(--success-soft, #d4ebde); color: var(--success, #2e7c5d); }
+        .strategy-bar.strat-encheres .sb-icon { background: #efe0d1; color: #8a5a3c; }
+        .strategy-bar .sb-txt { font-size: 13px; color: var(--ink-soft, #6b6358); line-height: 1.5; }
+        .strategy-bar .sb-txt strong { color: var(--ink, #1f1b16); font-weight: 600; font-size: 13px; display: block; margin-bottom: 2px; }
+        .strategy-bar .sb-link { color: var(--accent, #b4442e); font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+        .strategy-bar .sb-link:hover { text-decoration: underline; }
+        .completion-widget { background: linear-gradient(135deg, var(--accent-soft, #f2d9d1) 0%, #f7e4dc 100%); border-radius: var(--radius-lg, 16px); padding: 20px 24px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 20px; margin-bottom: 20px; }
+        .completion-widget .cw-txt strong { font-family: "Fraunces", Georgia, serif; font-size: 16px; color: var(--ink, #1f1b16); display: block; margin-bottom: 2px; }
+        .completion-widget .cw-txt .cw-sub { font-size: 12px; color: var(--ink-soft, #6b6358); }
+        .completion-widget .cw-progress { width: 120px; height: 6px; background: rgba(180,68,46,0.15); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+        .completion-widget .cw-progress .cw-bar { height: 100%; background: var(--accent, #b4442e); border-radius: 999px; }
+        .completion-widget .cw-btn { background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); padding: 12px 28px; font-size: 13px; font-weight: 600; border-radius: var(--radius-md, 14px); border: none; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.15s; }
+        .completion-widget .cw-btn:hover { background: #000; }
+        .modal-section-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: var(--ink, #1f1b16); margin-bottom: 10px; }
+        .modal-section-count { font-size: 11px; font-weight: 500; background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); padding: 2px 10px; border-radius: 999px; }
+        .modal-fields { display: flex; flex-direction: column; border: 1px solid var(--line, #e6dccb); border-radius: 10px; overflow: hidden; }
+        .modal-field { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 14px; background: #fff; border-bottom: 1px solid var(--line-soft, #efe7d7); }
+        .modal-field:last-child { border-bottom: none; }
+        .mf-label { font-size: 13px; color: var(--ink, #1f1b16); }
+        .mf-unit { font-size: 11px; color: var(--ink-mute, #a39a8c); }
+        .mf-control { display: flex; align-items: center; justify-content: flex-end; }
+        .mf-control input, .mf-control select { padding: 6px 10px; border: 1.5px solid var(--line, #e6dccb); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--paper, #f5ede2); color: var(--ink, #1f1b16); text-align: right; width: 160px; }
+        .mf-control input:focus, .mf-control select:focus { outline: none; border-color: var(--ink, #1f1b16); }
+        .mf-control input::placeholder { color: var(--accent, #b4442e); opacity: 0.7; }
+        .mf-control input.mf-nc, .mf-control select.mf-nc { background: var(--accent-soft, #f2d9d1); border-color: rgba(180,68,46,0.35); color: var(--accent, #b4442e); }
+        .mf-control input.mf-draft, .mf-control select.mf-draft { background: var(--info-soft, #dde8f4); border-color: var(--info, #2d5a8c); color: var(--info, #2d5a8c); }
+        .mf-control input.mf-jaune, .mf-control select.mf-jaune { background: #fef9e7; border-color: #e6b800; color: #7a5800; }
+        .mf-control input.mf-vert, .mf-control select.mf-vert { background: var(--success-soft, #d4ebde); border-color: var(--success, #2e7c5d); color: var(--success, #2e7c5d); }
+        .mf-control input.mf-filled, .mf-control select.mf-filled { background: #fff; border-color: var(--line, #e6dccb); color: var(--ink, #1f1b16); }
+        .mf-validate { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--success, #2e7c5d); color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
+        .mf-validate.mf-validate-draft { background: var(--info, #2d5a8c); }
+        .mf-validate.mf-validate-draft:hover { background: #1e3d60; }
+        .mf-validate:hover { background: #1f5c42; }
+        .mf-validate:disabled { background: var(--line, #e6dccb); color: var(--ink-mute, #a39a8c); cursor: default; }
+        .modal-footer-note { margin-top: 20px; padding: 12px 16px; background: var(--info-soft, #dde8f4); border-radius: 10px; font-size: 12px; color: var(--ink-soft, #6b6358); line-height: 1.5; }
         .data-missing { color: #c0392b; font-style: italic; font-weight: 400; font-size: 13px; }
         .param-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
         .param-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -2640,69 +2723,38 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </nav>
         </div>
 
-        {/* Intro stratégie */}
-        <div className="strat-intro">
-          {bien.strategie_mdb === 'Locataire en place' && (
-            <>
-              <div>
-                <strong>Stratégie Locataire en place</strong> — Les biens vendus occupés sont parmi les plus difficiles à vendre sur le marché immobilier&nbsp;: peu d{"'"}acquéreurs souhaitent acheter un logement qu{"'"}ils ne peuvent pas habiter immédiatement. C{"'"}est précisément ce qui permet de négocier des prix avec une <strong>forte décote</strong> par rapport au marché libre.
-              </div>
-              <div>
-                Une fois le bien acheté, le marchand de biens propose généralement une <strong>prime d{"'"}éviction</strong> (entre 4 et 8 mois de loyer selon les pratiques) afin de permettre au locataire de partir et de se reloger, pour ensuite <strong>revendre le bien au prix du marché</strong>. Cette stratégie implique de faire beaucoup d{"'"}offres avant d{"'"}obtenir un retour positif&nbsp;: il n{"'"}est donc pas nécessaire de visiter avant de faire une offre, mais seulement une fois celle-ci acceptée, pour vérifier la conformité avec les informations transmises par le vendeur.
-              </div>
-              <div>
-                Même si l{"'"}objectif est d{"'"}acheter et revendre le plus rapidement possible, cette stratégie génère un <strong>revenu locatif dès l{"'"}acquisition</strong>. L{"'"}analyse ci-dessous calcule le <strong>cash flow avant impôt</strong> (loyer − charges − crédit), puis l{"'"}<strong>analyse fiscale</strong> détermine le cash flow net d{"'"}impôt et simule la plus-value à la revente sur 1 à 5&nbsp;ans. Complétez les données manquantes (en rouge) pour affiner les résultats.
-              </div>
-              <a href="/strategies#s1" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {bien.strategie_mdb === 'Travaux lourds' && (
-            <>
-              <div>
-                <strong>Stratégie Travaux lourds</strong> — Ce bien nécessite des travaux importants, ce qui entraîne un prix d{"'"}achat fortement décoté. L{"'"}objectif est de le rénover pour le revendre au <strong>prix marché</strong> ou le louer avec un rendement optimisé. Le <strong>score travaux IA</strong> (de 1 = bon état à 5 = très lourds) est généré automatiquement par analyse de la description de l{"'"}annonce. À chaque score correspond un <strong>budget travaux au m²</strong> paramétrable dans <a href="/parametres" style={{color: '#c0392b', fontWeight: 600}}>Mes paramètres</a> → Budget travaux.
-              </div>
-              <div>
-                L{"'"}<strong>estimation DVF</strong> correspond au prix marché <strong>après rénovation</strong> (sans décote travaux). L{"'"}analyse calcule la <strong>plus-value nette avant impôt</strong> (estimation − prix − travaux − frais) et la fiscalité selon le régime choisi.
-              </div>
-              <div>
-                En régime <strong>marchand de biens</strong>, l{"'"}option <strong>TVA sur marge</strong> (art. 260-5° bis CGI) peut être particulièrement avantageuse sur ce type de bien&nbsp;: en optant pour la TVA, vous payez 20&nbsp;% sur la marge (revente − achat), mais vous pouvez <strong>récupérer la TVA sur les travaux</strong> (20&nbsp;% du montant HT). Lorsque le budget travaux est élevé, la TVA récupérée peut dépasser la TVA due sur la marge. L{"'"}analyse fiscale ci-dessous intègre ce calcul avec un toggle TVA activable dans la colonne MdB.
-              </div>
-              <a href="/strategies#s2" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {bien.strategie_mdb === 'Division' && (
-            <>
-              <div>
-                <strong>Stratégie Division</strong> — Ce bien présente un potentiel de division en plusieurs lots indépendants. L{"'"}idée est de <strong>multiplier les loyers</strong> en créant plusieurs logements à partir d{"'"}un seul bien (ex&nbsp;: un T5 divisé en 3 studios). Le rendement locatif peut être multiplié par 2 à 3 après travaux.
-              </div>
-              <div>
-                L{"'"}analyse estime la rentabilité locative globale et le scénario de revente lot par lot. Vérifiez le PLU et les règles de copropriété avant de vous engager.
-              </div>
-              <a href="/strategies#s3" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {bien.strategie_mdb === 'Immeuble de rapport' && (
-            <>
-              <div>
-                <strong>Stratégie Immeuble de rapport</strong> — Cet immeuble se compose de <strong>plusieurs lots</strong> achetés en bloc. L{"'"}approche marchand de biens consiste à acheter l{"'"}ensemble, rénover si nécessaire, créer la copropriété, puis <strong>revendre lot par lot</strong> pour dégager une marge nette de 15 à 25&nbsp;%.
-              </div>
-              <div>
-                L{"'"}analyse détaille les revenus locatifs par lot, le cashflow global, et propose un scénario de revente à la découpe avec estimation DVF par lot. Régime obligatoire&nbsp;: <strong>IS</strong> (frais notaire 2,5&nbsp;%, TVA sur marge 20/120).
-              </div>
-              <a href="/strategies#s4" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {isEnchere && (
-            <>
-              <div>
-                <strong>Vente aux enchères judiciaires</strong> — Ce bien est vendu par voie judiciaire (saisie immobilière ou liquidation). La mise à prix est fixée par le tribunal. L{"'"}adjudication se fait au plus offrant lors de l{"'"}audience.
-              </div>
-              <div>
-                L{"'"}analyse compare la mise à prix avec l{"'"}estimation DVF pour calculer la <strong>décote</strong> potentielle. Les frais d{"'"}acquisition incluent les émoluments du commissaire de justice et les frais de poursuites.
-              </div>
-            </>
-          )}
-        </div>
+        {/* Bannière stratégie */}
+        {(() => {
+          type StratKey = 'locataire' | 'travaux' | 'immeuble' | 'division' | 'encheres'
+          const stratMap: Record<string, { key: StratKey; title: string; desc: string; href: string; icon: React.ReactNode }> = {
+            'Locataire en place': { key: 'locataire', title: 'Locataire en place', desc: 'Forte décote à l\'achat grâce à l\'occupation. Prime d\'éviction (4-8 mois de loyer), puis revente au prix marché libre.', href: '/strategies#s1', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+            'Travaux lourds': { key: 'travaux', title: 'Travaux lourds', desc: 'Bien fortement décoté à rénover. Revente après rénovation à l\'estimation DVF (prix marché "en bon état").', href: '/strategies#s2', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+            'Division': { key: 'division', title: 'Division', desc: 'Grand bien à diviser en plusieurs lots indépendants pour multiplier les loyers ou revendre à la découpe.', href: '/strategies#s3', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
+            'Immeuble de rapport': { key: 'immeuble', title: 'Immeuble de rapport', desc: 'Multi-lots achetés en bloc. Création copropriété, revente lot par lot pour une marge nette de 15-25%.', href: '/strategies#s4', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> },
+          }
+          const enchereConf = { key: 'encheres' as StratKey, title: 'Vente aux enchères judiciaires', desc: 'Vente par voie judiciaire. Mise à prix fixée par le tribunal, adjudication au plus offrant lors de l\'audience.', href: '/strategies#encheres', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> }
+          const conf = isEnchere ? enchereConf : (bien.strategie_mdb ? stratMap[bien.strategie_mdb] : null)
+          if (!conf) return null
+          return (
+            <div className={`strategy-bar strat-${conf.key}`}>
+              <div className="sb-icon">{conf.icon}</div>
+              <div className="sb-txt"><strong>{conf.title}</strong>{conf.desc}</div>
+              <a href={conf.href} className="sb-link">En savoir plus</a>
+            </div>
+          )
+        })()}
+
+        {/* Completion widget */}
+        {completableManquants.length > 0 && (
+          <div className="completion-widget">
+            <div className="cw-txt">
+              <strong>Fiche à {pctComplete}% complétée</strong>
+              <div className="cw-sub">{completableManquants.length} données manquantes — {completableManquants.slice(0, 3).map(f => f.label).join(', ')}{completableManquants.length > 3 ? '…' : ''}</div>
+              <div className="cw-progress"><div className="cw-bar" style={{ width: `${pctComplete}%` }} /></div>
+            </div>
+            <button className="cw-btn" onClick={() => setShowCompleterModal(true)}>Compléter</button>
+          </div>
+        )}
 
         <div id="nav-donnees" className="section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -3793,6 +3845,153 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         })()}
 
       </div>
+
+      {/* Modal — Compléter les données du bien */}
+      <ModalPanel open={showCompleterModal} onClose={() => setShowCompleterModal(false)} title="Compléter les données du bien">
+        <div style={{ fontSize: '13px', color: 'var(--ink-soft, #6b6358)', marginBottom: '20px' }}>
+          Saisissez les infos que vous avez récupérées — chaque donnée partagée améliore la précision de l{"'"}analyse.
+        </div>
+
+        <div className="modal-section-title" style={{ marginBottom: '10px' }}>
+          <span>Caractéristiques du bien</span>
+          {completableManquants.length > 0 && <span className="modal-section-count">{completableManquants.length} à compléter</span>}
+        </div>
+
+        {/* Adresse */}
+        <div style={{ marginBottom: '16px', padding: '12px 14px', background: 'var(--paper, #f5ede2)', borderRadius: '10px', border: '1px solid var(--line, #e6dccb)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11px', color: 'var(--ink-mute, #a39a8c)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Adresse du bien</div>
+            {modalFieldVals['adresse'] !== undefined ? (
+              <input type="text" autoFocus value={modalFieldVals['adresse']} onChange={e => setModalFieldVals(p => ({ ...p, adresse: e.target.value }))} placeholder="Ex : 12 rue de Rivoli, 75001 Paris" style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '13px', fontFamily: 'inherit', color: 'var(--ink, #1f1b16)', outline: 'none' }} onKeyDown={e => e.key === 'Enter' && saveModalField('adresse')} />
+            ) : (
+              <div style={{ fontSize: '13px', color: bien.adresse ? 'var(--ink, #1f1b16)' : 'var(--ink-mute, #a39a8c)', cursor: 'pointer' }} onClick={() => setModalFieldVals(p => ({ ...p, adresse: bien.adresse || '' }))}>{bien.adresse || "Renseigner l'adresse"}</div>
+            )}
+          </div>
+          {modalFieldVals['adresse'] !== undefined ? (
+            <button className="mf-validate" onClick={() => saveModalField('adresse')}>✓</button>
+          ) : (
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-mute, #a39a8c)', padding: '4px' }} onClick={() => setModalFieldVals(p => ({ ...p, adresse: bien.adresse || '' }))}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+          )}
+        </div>
+
+        <div className="modal-fields" style={{ marginBottom: '20px' }}>
+          {([
+            { champ: 'annee_construction', label: 'Année de construction', type: 'number', min: 1800, max: 2030 },
+            { champ: 'surface_terrain', label: 'Surface terrain', unit: '(m²)', type: 'number', min: 0 },
+            { champ: 'nb_sdb', label: 'Salles de bain', type: 'number', min: 0, max: 20 },
+          ] as { champ: string; label: string; unit?: string; type: string; min?: number; max?: number }[]).map(({ champ, label, unit, min, max }) => {
+            const cls = getModalFieldClass(champ)
+            const isDraft = cls === 'mf-draft'
+            return (
+              <div key={champ} className="modal-field">
+                <span className="mf-label">{label}{unit && <> <span className="mf-unit">{unit}</span></>}</span>
+                <span className="mf-control">
+                  <input type="number" min={min} max={max} placeholder="NC"
+                    className={cls}
+                    value={getModalVal(champ)}
+                    onChange={e => setModalDraft(champ, e.target.value === '' ? '' : Number(e.target.value))}
+                    onKeyDown={e => e.key === 'Enter' && saveModalField(champ)} />
+                </span>
+                <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField(champ)}>✓</button>
+              </div>
+            )
+          })}
+          {([
+            { champ: 'type_chauffage', label: 'Type de chauffage', options: ['Gaz', 'Fioul', 'Électrique', 'Pompe à chaleur', 'Bois / pellets', 'Collectif'] },
+            { champ: 'ges', label: 'GES', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] },
+          ] as { champ: string; label: string; options: string[] }[]).map(({ champ, label, options }) => {
+            const cls = getModalFieldClass(champ)
+            const isDraft = cls === 'mf-draft'
+            return (
+              <div key={champ} className="modal-field">
+                <span className="mf-label">{label}</span>
+                <span className="mf-control">
+                  <select className={cls} value={getModalVal(champ)} onChange={e => { setModalDraft(champ, e.target.value) }}>
+                    <option value="">NC</option>
+                    {options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </span>
+                <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField(champ)}>✓</button>
+              </div>
+            )
+          })}
+        </div>
+
+        {isEnchere && (
+          <>
+            <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
+              <span>Lots de la vente</span>
+              <span className="modal-section-count">Spécifique enchères</span>
+            </div>
+            <div className="modal-fields" style={{ marginBottom: '20px' }}>
+              {(() => { const cls = getModalFieldClass('nb_lots'); const isDraft = cls === 'mf-draft'; return (
+                <div className="modal-field">
+                  <span className="mf-label">Nombre de lots</span>
+                  <span className="mf-control">
+                    <input type="number" min={1} max={50} placeholder="NC" className={cls} value={getModalVal('nb_lots')} onChange={e => setModalDraft('nb_lots', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('nb_lots')} />
+                  </span>
+                  <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField('nb_lots')}>✓</button>
+                </div>
+              )})()}
+            </div>
+          </>
+        )}
+
+        <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
+          <span>Données locatives</span>
+        </div>
+        <div className="modal-fields" style={{ marginBottom: '20px' }}>
+          {([
+            { champ: 'loyer', label: 'Loyer mensuel', unit: '(€)', min: 0 },
+            { champ: 'charges_copro', label: 'Charges copropriété', unit: '(€/mois)', min: 0 },
+            { champ: 'taxe_fonc_ann', label: 'Taxe foncière', unit: '(€/an)', min: 0 },
+          ] as { champ: string; label: string; unit: string; min: number }[]).map(({ champ, label, unit, min }) => {
+            const cls = getModalFieldClass(champ); const isDraft = cls === 'mf-draft'
+            return (
+              <div key={champ} className="modal-field">
+                <span className="mf-label">{label} <span className="mf-unit">{unit}</span></span>
+                <span className="mf-control">
+                  <input type="number" min={min} placeholder="NC" className={cls} value={getModalVal(champ)} onChange={e => setModalDraft(champ, e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField(champ)} />
+                </span>
+                <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField(champ)}>✓</button>
+              </div>
+            )
+          })}
+          {(() => { const cls = getModalFieldClass('fin_bail'); const isDraft = cls === 'mf-draft'; return (
+            <div className="modal-field">
+              <span className="mf-label">Fin de bail</span>
+              <span className="mf-control">
+                <input type="date" className={cls} value={getModalVal('fin_bail')} onChange={e => setModalDraft('fin_bail', e.target.value)} onKeyDown={e => e.key === 'Enter' && saveModalField('fin_bail')} />
+              </span>
+              <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField('fin_bail')}>✓</button>
+            </div>
+          )})()}
+          {(() => { const cls = getModalFieldClass('profil_locataire'); const isDraft = cls === 'mf-draft'; return (
+            <div className="modal-field">
+              <span className="mf-label">Profil locataire</span>
+              <span className="mf-control">
+                <select className={cls} value={getModalVal('profil_locataire')} onChange={e => setModalDraft('profil_locataire', e.target.value)}>
+                  <option value="">NC</option>
+                  {['Actif CDI', 'Actif CDD / intérim', 'Indépendant', 'Retraité', 'Étudiant', 'Inconnu'].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </span>
+              <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField('profil_locataire')}>✓</button>
+            </div>
+          )})()}
+          <div className="modal-field" style={{ background: 'var(--paper, #f5ede2)' }}>
+            <span className="mf-label" style={{ color: 'var(--ink-soft, #6b6358)' }}>Rendement brut</span>
+            <span style={{ fontSize: '12px', color: 'var(--ink-mute, #a39a8c)', fontStyle: 'italic', gridColumn: '2 / span 2', textAlign: 'right' }}>Calcul auto dès que le loyer est saisi</span>
+          </div>
+        </div>
+
+        <div className="modal-footer-note">
+          <strong>Statut après soumission :</strong> 1<sup>re</sup> saisie → <span style={{ color: '#b8891a', fontWeight: 600 }}>Soumis par 1 utilisateur</span> · 2<sup>e</sup> confirmation concordante → <span style={{ color: 'var(--success, #2e7c5d)', fontWeight: 600 }}>Validé 2+ utilisateurs</span>
+        </div>
+      </ModalPanel>
+
     </Layout>
   )
 }
