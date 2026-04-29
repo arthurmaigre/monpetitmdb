@@ -3195,20 +3195,32 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 {bien.salle_criees ? <>{" \u00B7 "}{bien.salle_criees}</> : null}
               </p>
             )}
+            {(() => {
+              const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
+              const isMDB = regime === 'marchand_de_biens'
+              const frais = bien.mise_a_prix && bien.mise_a_prix > 0 ? calculerFraisEnchere(prixBase, undefined, { isMDB }) : null
+              return (
             <div className="data-grid">
+              {/* 1. Tribunal */}
               {bien.tribunal && (
                 <div className="data-item">
                   <span className="data-label">Tribunal</span>
                   <span className="data-value">
                     {bien.tribunal}
                     {isVenteDelocalisee(bien.departement, bien.tribunal) && (
-                      <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">
-                        {"📍 D\u00E9localis\u00E9e"}
-                      </span>
+                      <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">{"📍 D\u00E9localis\u00E9e"}</span>
                     )}
                   </span>
                 </div>
               )}
+              {/* 2. Mise à prix */}
+              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Mise \u00E0 prix"}</span>
+                  <span className="data-value" style={{ fontWeight: 700 }}>{bien.mise_a_prix.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {/* 3. Date d'audience */}
               {bien.date_audience && (
                 <div className="data-item">
                   <span className="data-label">{"Date d\u2019audience"}</span>
@@ -3218,39 +3230,14 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   </span>
                 </div>
               )}
-              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
-                <div className="data-item">
-                  <span className="data-label">{"Mise \u00E0 prix"}</span>
-                  <span className="data-value" style={{ fontWeight: 700 }}>{bien.mise_a_prix.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                </div>
-              )}
-              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
-                <div className="data-item">
-                  <span className="data-label">
-                    {"Consignation "}
-                    <span style={{ color: '#a39a8c', fontWeight: 500 }}>(10 %)</span>
-                  </span>
-                  <span className="data-value">{Math.round((bien.consignation || bien.mise_a_prix * 0.1)).toLocaleString('fr-FR')} {'\u20AC'}</span>
-                </div>
-              )}
+              {/* 4. Date de visite */}
               {bien.date_visite && (
                 <div className="data-item">
-                  <span className="data-label">Visite</span>
-                  <span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  <span className="data-label">{"Date de visite"}</span>
+                  <span className="data-value" style={{ whiteSpace: 'nowrap' }}>{new Date(bien.date_visite).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
               )}
-              {bien.prix_adjuge && bien.prix_adjuge > 0 && (
-                <div className="data-item">
-                  <span className="data-label">{"Prix adjug\u00E9"}</span>
-                  <span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span>
-                </div>
-              )}
-              {bien.statut && bien.statut !== 'a_venir' && (
-                <div className="data-item">
-                  <span className="data-label">Statut</span>
-                  <span className="data-value">{({ surenchere: 'En surench\u00E8re', adjuge: 'Adjug\u00E9', vendu: 'Vendu', retire: 'Retir\u00E9', expire: 'Expir\u00E9' } as Record<string, string>)[bien.statut] || bien.statut}</span>
-                </div>
-              )}
+              {/* 5. Frais préalables */}
               <div className="data-item">
                 <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {"Frais pr\u00E9alables"}
@@ -3260,6 +3247,23 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 </span>
                 <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
+              {/* 6. Frais de mutation */}
+              {frais && (
+                <div className="data-item">
+                  <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {"Frais de mutation"}
+                    <span style={{ padding: '1px 7px', background: 'var(--success-soft, #d4f5e0)', color: 'var(--success, #1a7a40)', borderRadius: '999px', fontSize: '10px', fontWeight: 600 }}>{`\u2212${Math.round(frais.pct_sans_prealables)}\u00A0%`}</span>
+                    <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais d\u2019acquisition calcul\u00E9s : \u00E9moluments avocat + droits de mutation + CSI. Hors frais pr\u00E9alables et honoraires (\u00E0 renseigner s\u00E9par\u00E9ment)."}</span>
+                    </span>
+                  </span>
+                  <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '4px', width: '100%', whiteSpace: 'nowrap' }}>
+                    {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'}
+                    <span style={{ color: '#a39a8c', fontSize: '11px' }}>›</span>
+                  </button>
+                </div>
+              )}
+              {/* 7. Honoraires d'avocat */}
               <div className="data-item">
                 <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {"Honoraires d\u2019avocat"}
@@ -3281,26 +3285,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   </div>
                 </div>
               </div>
-              {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
-                const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
-                const isMDB = regime === 'marchand_de_biens'
-                const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
-                return (
-                  <div className="data-item">
-                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {"Frais de mutation"}
-                      <span style={{ padding: '1px 7px', background: 'var(--success-soft, #d4f5e0)', color: 'var(--success, #1a7a40)', borderRadius: '999px', fontSize: '10px', fontWeight: 600 }}>{`\u2212${Math.round(frais.pct_sans_prealables)}\u00A0%`}</span>
-                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais d\u2019acquisition calcul\u00E9s : \u00E9moluments avocat + droits de mutation + CSI. Hors frais pr\u00E9alables et honoraires (\u00E0 renseigner s\u00E9par\u00E9ment)."}</span>
-                      </span>
-                    </span>
-                    <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '4px', width: '100%', whiteSpace: 'nowrap' }}>
-                      {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'}
-                      <span style={{ color: '#a39a8c', fontSize: '11px' }}>›</span>
-                    </button>
-                  </div>
-                )
-              })()}
+              {/* 8. Avocat poursuivant */}
+              {/* 8. Avocat poursuivant */}
               {bien.avocat_nom && (
                 <div className="data-item">
                   <span className="data-label">Avocat poursuivant</span>
@@ -3313,7 +3299,29 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   </button>
                 </div>
               )}
+              {/* 9. Consignation */}
+              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Consignation "}<span style={{ color: '#a39a8c', fontWeight: 500 }}>(10 %)</span></span>
+                  <span className="data-value">{Math.round((bien.consignation || bien.mise_a_prix * 0.1)).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {/* Prix adjugé et Statut — affichés en fin si disponibles */}
+              {bien.prix_adjuge && bien.prix_adjuge > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Prix adjug\u00E9"}</span>
+                  <span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {bien.statut && bien.statut !== 'a_venir' && (
+                <div className="data-item">
+                  <span className="data-label">Statut</span>
+                  <span className="data-value">{({ surenchere: 'En surench\u00E8re', adjuge: 'Adjug\u00E9', vendu: 'Vendu', retire: 'Retir\u00E9', expire: 'Expir\u00E9' } as Record<string, string>)[bien.statut] || bien.statut}</span>
+                </div>
+              )}
             </div>
+              )
+            })()}
             {/* Surenchère alert */}
             {(bien.date_surenchere || bien.mise_a_prix_surenchere) && (
               <div style={{ marginTop: '16px', padding: '12px 14px', background: '#efe0d1', borderRadius: 'var(--radius-sm)', fontSize: '13px', color: '#5d3d24' }}>
