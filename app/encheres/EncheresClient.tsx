@@ -89,6 +89,9 @@ export default function EncheresPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string | null>(null)
+  const [avocatModal, setAvocatModal] = useState<{ id: string; nom: string; cabinet?: string; tel?: string; email?: string; tribunal?: string } | null>(null)
+  const [avocatEmailInput, setAvocatEmailInput] = useState('')
+  const [avocatEmailSaving, setAvocatEmailSaving] = useState(false)
 
   // Sentinel for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -536,6 +539,7 @@ export default function EncheresPage() {
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Occupation</th>
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Tribunal</th>
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Audience</th>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Avocat</th>
                   <th style={{ padding: '12px 8px' }}></th>
                 </tr>
               </thead>
@@ -574,6 +578,16 @@ export default function EncheresPage() {
                         )}
                       </td>
                       <td style={{ padding: '10px 8px' }}>
+                        {e.avocat_nom ? (
+                          <button
+                            onClick={() => { setAvocatModal({ id: String(e.id), nom: e.avocat_nom, cabinet: e.avocat_cabinet, tel: e.avocat_tel, email: e.avocat_email, tribunal: e.tribunal }); setAvocatEmailInput('') }}
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px', color: '#2a4a8a', fontWeight: 600, fontFamily: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
+                          >
+                            {e.avocat_nom}
+                          </button>
+                        ) : <span style={{ color: '#c0b0a0', fontSize: '12px' }}>-</span>}
+                      </td>
+                      <td style={{ padding: '10px 8px' }}>
                         <a href={`/encheres/${e.id}`} style={{
                           padding: '6px 12px', borderRadius: theme.radii.sm,
                           background: theme.colors.sandLight, border: `1px solid ${theme.colors.sand}`,
@@ -603,6 +617,67 @@ export default function EncheresPage() {
           </div>
         )}
       </div>
+
+      {/* Modal avocat poursuivant */}
+      {avocatModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(26,18,16,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }} onClick={() => setAvocatModal(null)}>
+          <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '400px', padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700 }}>Avocat poursuivant</h3>
+              <button onClick={() => setAvocatModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#7a6a60', padding: '0 4px', lineHeight: 1 }}>{'\u00D7'}</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>{'\u2696'}</div>
+                <div>
+                  <div style={{ fontSize: '17px', fontWeight: 700, color: '#1a1210' }}>{avocatModal.nom}</div>
+                  {avocatModal.cabinet && <div style={{ fontSize: '14px', color: '#7a6a60', marginTop: '2px' }}>{avocatModal.cabinet}</div>}
+                </div>
+              </div>
+              {avocatModal.tel && (
+                <a href={`tel:${avocatModal.tel.replace(/\s/g, '')}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8', textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '20px' }}>{'\uD83D\uDCDE'}</span>{avocatModal.tel}
+                </a>
+              )}
+              {avocatModal.email ? (
+                <a href={`mailto:${avocatModal.email}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8', textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '20px' }}>{'\u2709'}</span>{avocatModal.email}
+                </a>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="email"
+                    placeholder="Email de l'avocat"
+                    value={avocatEmailInput}
+                    onChange={ev => setAvocatEmailInput(ev.target.value)}
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontSize: '14px', outline: 'none' }}
+                  />
+                  <button
+                    disabled={!avocatEmailInput || avocatEmailSaving}
+                    onClick={async () => {
+                      if (!avocatEmailInput) return
+                      setAvocatEmailSaving(true)
+                      const res = await fetch(`/api/encheres/${avocatModal.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ avocat_email: avocatEmailInput }),
+                      })
+                      if (res.ok) setAvocatModal(prev => prev ? { ...prev, email: avocatEmailInput } : null)
+                      setAvocatEmailSaving(false)
+                    }}
+                    style={{ padding: '10px 16px', borderRadius: '8px', background: '#2a4a8a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', opacity: avocatEmailInput ? 1 : 0.5 }}
+                  >
+                    {avocatEmailSaving ? '...' : 'Enregistrer'}
+                  </button>
+                </div>
+              )}
+              {avocatModal.tribunal && (
+                <div style={{ fontSize: '13px', color: '#7a6a60', padding: '8px 0', borderTop: '1px solid #f0ede8' }}>{avocatModal.tribunal}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
