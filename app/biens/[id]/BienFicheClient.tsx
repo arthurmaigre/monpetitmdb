@@ -127,7 +127,7 @@ const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: stri
 function ModalPanel({ open, onClose, title, children, size }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; size?: 'large' }) {
   if (!open) return null
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className={`modal-overlay${size === 'large' ? ' modal-overlay-large' : ''}`} onClick={onClose}>
       <div className={`modal-panel${size === 'large' ? ' modal-panel-large' : ''}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{title}</h3>
@@ -2616,13 +2616,15 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         /* Modal panel */
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(26,18,16,0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .modal-overlay.modal-overlay-large { padding: 8px; }
         .modal-panel { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: modalIn 0.2s ease; display: flex; flex-direction: column; }
         .modal-panel.modal-panel-large { max-width: 880px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 12px; flex-shrink: 0; }
         .modal-header h3 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #1a1210; margin: 0; }
         .modal-close { background: none; border: none; cursor: pointer; color: #7a6a60; font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.15s; }
         .modal-close:hover { background: #f0ede8; color: #1a1210; }
-        .modal-body { padding: 0 24px 24px; overflow-y: auto; flex: 1; }
+        .modal-body { padding: 0 24px 24px; overflow-y: auto; overflow-x: hidden; flex: 1; }
+        .modal-panel-large .modal-body { overflow-x: auto; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
         @media (max-width: 767px) { .fiche-wrap { padding: 16px 0; } .hero-grid { grid-template-columns: 1fr; } .dual-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } .two-cols { flex-direction: column; } .col { width: 100%; } .sticky-nav { padding: 3px; } .sticky-nav-item { padding: 8px 14px; font-size: 12px; } .modal-panel { max-width: 100%; max-height: 90vh; } .data-grid { grid-template-columns: repeat(3, 1fr); } .section { padding: 16px 14px; } .breadcrumb { padding: 0 14px; } .fiche-info { padding: 0 14px; } .estimation-price-grid { grid-template-columns: 1fr !important; } .estimation-price-grid > div { padding: 10px 0 !important; border-left: none !important; border-right: none !important; } }
