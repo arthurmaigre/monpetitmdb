@@ -2151,19 +2151,37 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
 
   // Completion widget
-  const COMPLETABLE = [
-    { champ: 'adresse', label: 'adresse' },
-    { champ: 'annee_construction', label: 'année de construction' },
-    { champ: 'surface_terrain', label: 'surface terrain' },
-    { champ: 'nb_sdb', label: 'salles de bain' },
-    { champ: 'type_chauffage', label: 'type de chauffage' },
-    { champ: 'ges', label: 'GES' },
-    { champ: 'loyer', label: 'loyer' },
-    { champ: 'charges_copro', label: 'charges copro' },
-    { champ: 'taxe_fonc_ann', label: 'taxe foncière' },
-    { champ: 'fin_bail', label: 'fin de bail' },
-    { champ: 'profil_locataire', label: 'profil locataire' },
-  ]
+  const COMPLETABLE = (() => {
+    const isIDRs = isIDR
+    const base = [
+      { champ: 'adresse', label: 'adresse' },
+      { champ: 'annee_construction', label: 'année de construction' },
+      { champ: 'ges', label: 'GES' },
+      { champ: 'charges_copro', label: 'charges copro' },
+      { champ: 'taxe_fonc_ann', label: 'taxe foncière' },
+    ]
+    const nonIDR = [
+      { champ: 'nb_sdb', label: 'salles de bain' },
+      { champ: 'type_chauffage', label: 'type de chauffage' },
+    ]
+    const locatif = [
+      { champ: 'loyer', label: 'loyer' },
+      { champ: 'fin_bail', label: 'fin de bail' },
+      { champ: 'profil_locataire', label: 'profil locataire' },
+    ]
+    const idrFields = [
+      { champ: 'loyer', label: 'loyer' },
+      { champ: 'nb_lots', label: 'nb lots' },
+      { champ: 'monopropriete', label: 'monopropriété' },
+      { champ: 'compteurs_individuels', label: 'compteurs individuels' },
+    ]
+    return [
+      ...base,
+      ...((bien.type_bien || '').toLowerCase().includes('maison') ? [{ champ: 'surface_terrain', label: 'surface terrain' }] : []),
+      ...(!isIDRs ? nonIDR : []),
+      ...(!isIDRs ? locatif : idrFields),
+    ]
+  })()
   const completableRemplis = COMPLETABLE.filter(f => { const v = (bien as any)[f.champ]; return v != null && v !== '' && v !== 'NC' && v !== 0 }).length
   const pctComplete = Math.round(completableRemplis / COMPLETABLE.length * 100)
   const completableManquants = COMPLETABLE.filter(f => { const v = (bien as any)[f.champ]; return !v || v === 'NC' })
@@ -3908,53 +3926,123 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         </div>
 
         <div className="modal-fields" style={{ marginBottom: '20px' }}>
-          {([
-            { champ: 'annee_construction', label: 'Année de construction', type: 'number', min: 1800, max: 2030 },
-            { champ: 'surface_terrain', label: 'Surface terrain', unit: '(m²)', type: 'number', min: 0 },
-            { champ: 'nb_sdb', label: 'Salles de bain', type: 'number', min: 0, max: 20 },
-          ] as { champ: string; label: string; unit?: string; type: string; min?: number; max?: number }[]).map(({ champ, label, unit, min, max }) => {
-            const cls = getModalFieldClass(champ)
-            const isDraft = cls === 'mf-draft'
-            return (
-              <div key={champ} className="modal-field">
-                <span className="mf-label">{label}{unit && <> <span className="mf-unit">{unit}</span></>}</span>
-                <span className="mf-control">
-                  <input type="number" min={min} max={max} placeholder="NC"
-                    className={cls}
-                    value={getModalVal(champ)}
-                    onChange={e => setModalDraft(champ, e.target.value === '' ? '' : Number(e.target.value))}
-                    onKeyDown={e => e.key === 'Enter' && saveModalField(champ)} />
-                </span>
-                <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField(champ)}>✓</button>
-              </div>
-            )
-          })}
-          {([
-            { champ: 'type_chauffage', label: 'Type de chauffage', options: ['Gaz', 'Fioul', 'Électrique', 'Pompe à chaleur', 'Bois / pellets', 'Collectif'] },
-            { champ: 'ges', label: 'GES', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] },
-          ] as { champ: string; label: string; options: string[] }[]).map(({ champ, label, options }) => {
-            const cls = getModalFieldClass(champ)
-            const isDraft = cls === 'mf-draft'
-            return (
-              <div key={champ} className="modal-field">
-                <span className="mf-label">{label}</span>
-                <span className="mf-control">
-                  <select className={cls} value={getModalVal(champ)} onChange={e => { setModalDraft(champ, e.target.value) }}>
-                    <option value="">NC</option>
-                    {options.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </span>
-                <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField(champ)}>✓</button>
-              </div>
-            )
-          })}
+          {/* Année de construction — toutes stratégies */}
+          <div className="modal-field">
+            <span className="mf-label">{"Ann\u00E9e de construction"}</span>
+            <span className="mf-control"><input type="number" min={1800} max={2030} placeholder="NC" className={getModalFieldClass('annee_construction')} value={getModalVal('annee_construction')} onChange={e => setModalDraft('annee_construction', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('annee_construction')} /></span>
+            <button className={`mf-validate${getModalFieldClass('annee_construction') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('annee_construction') !== 'mf-draft'} onClick={() => saveModalField('annee_construction')}>✓</button>
+          </div>
+          {/* Surface terrain — maison uniquement */}
+          {(bien.type_bien || '').toLowerCase().includes('maison') && (
+            <div className="modal-field">
+              <span className="mf-label">Surface terrain <span className="mf-unit">(m²)</span></span>
+              <span className="mf-control"><input type="number" min={0} placeholder="NC" className={getModalFieldClass('surface_terrain')} value={getModalVal('surface_terrain')} onChange={e => setModalDraft('surface_terrain', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('surface_terrain')} /></span>
+              <button className={`mf-validate${getModalFieldClass('surface_terrain') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('surface_terrain') !== 'mf-draft'} onClick={() => saveModalField('surface_terrain')}>✓</button>
+            </div>
+          )}
+          {/* Salles de bain — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Salles de bain</span>
+              <span className="mf-control"><input type="number" min={0} max={20} placeholder="NC" className={getModalFieldClass('nb_sdb')} value={getModalVal('nb_sdb')} onChange={e => setModalDraft('nb_sdb', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('nb_sdb')} /></span>
+              <button className={`mf-validate${getModalFieldClass('nb_sdb') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('nb_sdb') !== 'mf-draft'} onClick={() => saveModalField('nb_sdb')}>✓</button>
+            </div>
+          )}
+          {/* GES — toutes stratégies */}
+          <div className="modal-field">
+            <span className="mf-label">GES</span>
+            <span className="mf-control"><select className={getModalFieldClass('ges')} value={getModalVal('ges')} onChange={e => setModalDraft('ges', e.target.value)}><option value="">NC</option>{['A','B','C','D','E','F','G'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+            <button className={`mf-validate${getModalFieldClass('ges') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('ges') !== 'mf-draft'} onClick={() => saveModalField('ges')}>✓</button>
+          </div>
+          {/* Type de chauffage — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Type de chauffage</span>
+              <span className="mf-control"><select className={getModalFieldClass('type_chauffage')} value={getModalVal('type_chauffage')} onChange={e => setModalDraft('type_chauffage', e.target.value)}><option value="">NC</option>{['Gaz','Fioul','\u00C9lectrique','Pompe \u00E0 chaleur','Bois / pellets','Collectif'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('type_chauffage') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('type_chauffage') !== 'mf-draft'} onClick={() => saveModalField('type_chauffage')}>✓</button>
+            </div>
+          )}
+          {/* Exposition — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Exposition</span>
+              <span className="mf-control"><select className={getModalFieldClass('exposition')} value={getModalVal('exposition')} onChange={e => setModalDraft('exposition', e.target.value)}><option value="">NC</option>{['N','S','E','O','NE','NO','SE','SO'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('exposition') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('exposition') !== 'mf-draft'} onClick={() => saveModalField('exposition')}>✓</button>
+            </div>
+          )}
+          {/* Balcon / Terrasse — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Balcon / Terrasse</span>
+              <span className="mf-control"><select className={getModalFieldClass('acces_exterieur')} value={getModalVal('acces_exterieur')} onChange={e => setModalDraft('acces_exterieur', e.target.value)}><option value="">NC</option>{['aucun','balcon','terrasse','loggia','jardin'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('acces_exterieur') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('acces_exterieur') !== 'mf-draft'} onClick={() => saveModalField('acces_exterieur')}>✓</button>
+            </div>
+          )}
+          {/* Parking / Garage — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Parking / Garage</span>
+              <span className="mf-control"><select className={getModalFieldClass('parking_type')} value={getModalVal('parking_type')} onChange={e => setModalDraft('parking_type', e.target.value)}><option value="">NC</option>{['aucun','inclus','en option','box'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('parking_type') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('parking_type') !== 'mf-draft'} onClick={() => saveModalField('parking_type')}>✓</button>
+            </div>
+          )}
+          {/* Ascenseur — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Ascenseur</span>
+              <span className="mf-control"><select className={modalFieldVals['ascenseur'] !== undefined ? 'mf-draft' : bien.ascenseur != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['ascenseur'] !== undefined ? (modalFieldVals['ascenseur'] === true ? 'oui' : modalFieldVals['ascenseur'] === false ? 'non' : '') : (bien.ascenseur === true ? 'oui' : bien.ascenseur === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, ascenseur: v })); setBien((prev: any) => ({ ...prev, ascenseur: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+              <button className={`mf-validate${modalFieldVals['ascenseur'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['ascenseur'] === undefined} onClick={() => { handleUpdate('ascenseur', modalFieldVals['ascenseur']); setModalFieldVals(p => { const n = { ...p }; delete n['ascenseur']; return n }) }}>✓</button>
+            </div>
+          )}
+          {/* Cave — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Cave</span>
+              <span className="mf-control"><select className={modalFieldVals['has_cave'] !== undefined ? 'mf-draft' : bien.has_cave != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['has_cave'] !== undefined ? (modalFieldVals['has_cave'] === true ? 'oui' : modalFieldVals['has_cave'] === false ? 'non' : '') : (bien.has_cave === true ? 'oui' : bien.has_cave === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, has_cave: v })); setBien((prev: any) => ({ ...prev, has_cave: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+              <button className={`mf-validate${modalFieldVals['has_cave'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['has_cave'] === undefined} onClick={() => { handleUpdate('has_cave', modalFieldVals['has_cave']); setModalFieldVals(p => { const n = { ...p }; delete n['has_cave']; return n }) }}>✓</button>
+            </div>
+          )}
+          {/* Copropriété — toutes stratégies */}
+          <div className="modal-field">
+            <span className="mf-label">{"Copropri\u00E9t\u00E9"}</span>
+            <span className="mf-control"><select className={modalFieldVals['en_copropriete'] !== undefined ? 'mf-draft' : (bien as any).en_copropriete != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['en_copropriete'] !== undefined ? (modalFieldVals['en_copropriete'] === true ? 'oui' : modalFieldVals['en_copropriete'] === false ? 'non' : '') : ((bien as any).en_copropriete === true ? 'oui' : (bien as any).en_copropriete === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, en_copropriete: v })); setBien((prev: any) => ({ ...prev, en_copropriete: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+            <button className={`mf-validate${modalFieldVals['en_copropriete'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['en_copropriete'] === undefined} onClick={() => { handleUpdate('en_copropriete', modalFieldVals['en_copropriete']); setModalFieldVals(p => { const n = { ...p }; delete n['en_copropriete']; return n }) }}>✓</button>
+          </div>
         </div>
 
+        {/* IDR — champs immeuble */}
+        {isIDR && (
+          <>
+            <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
+              <span>Immeuble</span>
+              <span className="modal-section-count">IDR</span>
+            </div>
+            <div className="modal-fields" style={{ marginBottom: '20px' }}>
+              <div className="modal-field">
+                <span className="mf-label">Nombre de lots</span>
+                <span className="mf-control"><input type="number" min={1} max={100} placeholder="NC" className={getModalFieldClass('nb_lots')} value={getModalVal('nb_lots')} onChange={e => setModalDraft('nb_lots', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('nb_lots')} /></span>
+                <button className={`mf-validate${getModalFieldClass('nb_lots') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('nb_lots') !== 'mf-draft'} onClick={() => saveModalField('nb_lots')}>✓</button>
+              </div>
+              <div className="modal-field">
+                <span className="mf-label">{"Monopropri\u00E9t\u00E9"}</span>
+                <span className="mf-control"><select className={modalFieldVals['monopropriete'] !== undefined ? 'mf-draft' : bien.monopropriete != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['monopropriete'] !== undefined ? (modalFieldVals['monopropriete'] === true ? 'oui' : modalFieldVals['monopropriete'] === false ? 'non' : '') : (bien.monopropriete === true ? 'oui' : bien.monopropriete === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, monopropriete: v })); setBien((prev: any) => ({ ...prev, monopropriete: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+                <button className={`mf-validate${modalFieldVals['monopropriete'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['monopropriete'] === undefined} onClick={() => { handleUpdate('monopropriete', modalFieldVals['monopropriete']); setModalFieldVals(p => { const n = { ...p }; delete n['monopropriete']; return n }) }}>✓</button>
+              </div>
+              <div className="modal-field">
+                <span className="mf-label">Compteurs individuels</span>
+                <span className="mf-control"><select className={modalFieldVals['compteurs_individuels'] !== undefined ? 'mf-draft' : bien.compteurs_individuels != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['compteurs_individuels'] !== undefined ? (modalFieldVals['compteurs_individuels'] === true ? 'oui' : modalFieldVals['compteurs_individuels'] === false ? 'non' : '') : (bien.compteurs_individuels === true ? 'oui' : bien.compteurs_individuels === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, compteurs_individuels: v })); setBien((prev: any) => ({ ...prev, compteurs_individuels: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+                <button className={`mf-validate${modalFieldVals['compteurs_individuels'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['compteurs_individuels'] === undefined} onClick={() => { handleUpdate('compteurs_individuels', modalFieldVals['compteurs_individuels']); setModalFieldVals(p => { const n = { ...p }; delete n['compteurs_individuels']; return n }) }}>✓</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Lots de la vente — enchères */}
         {isEnchere && (
           <>
             <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
               <span>Lots de la vente</span>
-              <span className="modal-section-count">Spécifique enchères</span>
+              <span className="modal-section-count">{"Spécifique enchères"}</span>
             </div>
             <div className="modal-fields" style={{ marginBottom: '20px' }}>
               {(() => { const cls = getModalFieldClass('nb_lots'); const isDraft = cls === 'mf-draft'; return (
@@ -3971,13 +4059,13 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         )}
 
         <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
-          <span>Données locatives</span>
+          <span>{"Donn\u00E9es locatives"}</span>
         </div>
         <div className="modal-fields" style={{ marginBottom: '20px' }}>
           {([
-            { champ: 'loyer', label: 'Loyer mensuel', unit: '(€)', min: 0 },
-            { champ: 'charges_copro', label: 'Charges copropriété', unit: '(€/mois)', min: 0 },
-            { champ: 'taxe_fonc_ann', label: 'Taxe foncière', unit: '(€/an)', min: 0 },
+            { champ: 'loyer', label: 'Loyer mensuel', unit: '(\u20AC)', min: 0 },
+            { champ: 'charges_copro', label: 'Charges copropriété', unit: '(\u20AC/mois)', min: 0 },
+            { champ: 'taxe_fonc_ann', label: 'Taxe foncière', unit: '(\u20AC/an)', min: 0 },
           ] as { champ: string; label: string; unit: string; min: number }[]).map(({ champ, label, unit, min }) => {
             const cls = getModalFieldClass(champ); const isDraft = cls === 'mf-draft'
             return (
@@ -3990,30 +4078,30 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               </div>
             )
           })}
-          {(() => { const cls = getModalFieldClass('fin_bail'); const isDraft = cls === 'mf-draft'; return (
+          {!isIDR && (
             <div className="modal-field">
               <span className="mf-label">Fin de bail</span>
               <span className="mf-control">
-                <input type="date" className={cls} value={getModalVal('fin_bail')} onChange={e => setModalDraft('fin_bail', e.target.value)} onKeyDown={e => e.key === 'Enter' && saveModalField('fin_bail')} />
+                <input type="date" className={getModalFieldClass('fin_bail')} value={getModalVal('fin_bail')} onChange={e => setModalDraft('fin_bail', e.target.value)} onKeyDown={e => e.key === 'Enter' && saveModalField('fin_bail')} />
               </span>
-              <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField('fin_bail')}>✓</button>
+              <button className={`mf-validate${getModalFieldClass('fin_bail') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('fin_bail') !== 'mf-draft'} onClick={() => saveModalField('fin_bail')}>✓</button>
             </div>
-          )})()}
-          {(() => { const cls = getModalFieldClass('profil_locataire'); const isDraft = cls === 'mf-draft'; return (
+          )}
+          {!isIDR && (
             <div className="modal-field">
               <span className="mf-label">Profil locataire</span>
               <span className="mf-control">
-                <select className={cls} value={getModalVal('profil_locataire')} onChange={e => setModalDraft('profil_locataire', e.target.value)}>
+                <select className={getModalFieldClass('profil_locataire')} value={getModalVal('profil_locataire')} onChange={e => setModalDraft('profil_locataire', e.target.value)}>
                   <option value="">NC</option>
                   {['Actif CDI', 'Actif CDD / intérim', 'Indépendant', 'Retraité', 'Étudiant', 'Inconnu'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </span>
-              <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField('profil_locataire')}>✓</button>
+              <button className={`mf-validate${getModalFieldClass('profil_locataire') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('profil_locataire') !== 'mf-draft'} onClick={() => saveModalField('profil_locataire')}>✓</button>
             </div>
-          )})()}
+          )}
           <div className="modal-field" style={{ background: 'var(--paper, #f5ede2)' }}>
             <span className="mf-label" style={{ color: 'var(--ink-soft, #6b6358)' }}>Rendement brut</span>
-            <span style={{ fontSize: '12px', color: 'var(--ink-mute, #a39a8c)', fontStyle: 'italic', gridColumn: '2 / span 2', textAlign: 'right' }}>Calcul auto dès que le loyer est saisi</span>
+            <span style={{ fontSize: '12px', color: 'var(--ink-mute, #a39a8c)', fontStyle: 'italic', gridColumn: '2 / span 2', textAlign: 'right' }}>{"Calcul auto dès que le loyer est saisi"}</span>
           </div>
         </div>
 
