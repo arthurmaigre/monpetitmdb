@@ -995,7 +995,7 @@ export default function MesBiensPage() {
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td>
                               {e.avocat_nom ? (
-                                <button onClick={() => { setAvocatModal({ id: String(e.id), nom: e.avocat_nom, cabinet: e.avocat_cabinet, tel: e.avocat_tel, email: e.avocat_email, tribunal: e.tribunal }); setAvocatEmailInput('') }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px', color: '#2a4a8a', fontWeight: 600, fontFamily: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                                <button onClick={() => { setAvocatModal({ id: String(e.id), nom: e.avocat_nom, cabinet: e.avocat_cabinet, tel: e.avocat_tel, email: e.avocat_email, tribunal: e.tribunal }); setAvocatEmailInput('') }} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                                   {e.avocat_nom}
                                 </button>
                               ) : <span style={{ color: '#c0b0a0' }}>-</span>}
