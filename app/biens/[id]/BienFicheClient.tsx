@@ -3246,7 +3246,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Honoraires libres \u2014 fix\u00E9s par l\u2019avocat mandat\u00E9 pour vous repr\u00E9senter \u00E0 l\u2019audience. G\u00E9n\u00E9ralement entre 1\u00A0000 et 3\u00A0000\u00A0\u20AC. 1\u00A0500\u00A0\u20AC par d\u00E9faut."}</span>
                   </span>
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
                   <input
                     type="number"
                     value={honorairesAvocat}
