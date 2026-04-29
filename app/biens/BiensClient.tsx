@@ -66,6 +66,9 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [enchereDelocalise, setEnchereDelocalise] = useState<boolean>(saved.current?.enchereDelocalise || false)
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const [avocatModal, setAvocatModal] = useState<any>(null)
+  const [avocatEmailInput, setAvocatEmailInput] = useState('')
+  const [avocatEmailSaving, setAvocatEmailSaving] = useState(false)
+  const [avocatEmailSaved, setAvocatEmailSaved] = useState<string | null>(null)
   const [keyword, setKeyword] = useState(saved.current?.keyword || '')
   const keywordTimeout = useRef<any>(null)
   const [keywordSearch, setKeywordSearch] = useState(saved.current?.keyword || '')
@@ -1038,7 +1041,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {e.avocat_nom ? (
-                                <button onClick={() => setAvocatModal(e)} style={{
+                                <button onClick={() => { setAvocatModal(e); setAvocatEmailInput(''); setAvocatEmailSaved(null) }} style={{
                                   background: 'none', border: '1px solid #e8e2d8', borderRadius: '6px',
                                   padding: '4px 8px', fontSize: '11px', fontWeight: 600, color: '#7a6a60',
                                   cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
@@ -1204,15 +1207,42 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                   {avocatModal.avocat_tel}
                 </a>
               )}
-              {avocatModal.avocat_email && (
-                <a href={`mailto:${avocatModal.avocat_email}`} style={{
+              {(avocatModal.avocat_email || avocatEmailSaved) ? (
+                <a href={`mailto:${avocatEmailSaved || avocatModal.avocat_email}`} style={{
                   display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
                   background: '#faf8f5', borderRadius: '10px', border: '1px solid #e8e2d8',
                   textDecoration: 'none', color: '#1a1210', fontSize: '14px', fontWeight: 600,
                 }}>
                   <span style={{ fontSize: '18px' }}>{'\u2709'}</span>
-                  {avocatModal.avocat_email}
+                  {avocatEmailSaved || avocatModal.avocat_email}
                 </a>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="email"
+                    placeholder="Email de l'avocat"
+                    value={avocatEmailInput}
+                    onChange={ev => setAvocatEmailInput(ev.target.value)}
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontSize: '14px', outline: 'none' }}
+                  />
+                  <button
+                    disabled={!avocatEmailInput || avocatEmailSaving}
+                    onClick={async () => {
+                      if (!avocatEmailInput) return
+                      setAvocatEmailSaving(true)
+                      const res = await fetch(`/api/encheres/${avocatModal.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ avocat_email: avocatEmailInput }),
+                      })
+                      if (res.ok) setAvocatEmailSaved(avocatEmailInput)
+                      setAvocatEmailSaving(false)
+                    }}
+                    style={{ padding: '10px 16px', borderRadius: '8px', background: '#2a4a8a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', opacity: avocatEmailInput ? 1 : 0.5 }}
+                  >
+                    {avocatEmailSaving ? '...' : 'Enregistrer'}
+                  </button>
+                </div>
               )}
               {avocatModal.tribunal && (
                 <div style={{ fontSize: '13px', color: '#7a6a60', marginTop: '4px' }}>
