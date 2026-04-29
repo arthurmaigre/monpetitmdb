@@ -530,11 +530,12 @@ export default function EncheresPage() {
                 <tr style={{ borderBottom: `2px solid ${theme.colors.sand}`, textAlign: 'left' }}>
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Bien</th>
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Ville</th>
-                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Prix</th>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Mise à prix</th>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Adjugé</th>
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Surface</th>
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Occupation</th>
                   <th style={{ padding: '12px 8px', fontWeight: 600 }}>Tribunal</th>
-                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Date</th>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Audience</th>
                   <th style={{ padding: '12px 8px' }}></th>
                 </tr>
               </thead>
@@ -547,16 +548,9 @@ export default function EncheresPage() {
                         {e.type_bien}{e.nb_pieces ? ` ${e.nb_pieces}p` : ''}
                       </td>
                       <td style={{ padding: '10px 8px' }}>{e.ville}</td>
-                      <td style={{ padding: '10px 8px' }}>
-                        {e.statut === 'a_venir' ? (
-                          <><span style={{ fontSize: '10px', color: '#a39a8c', display: 'block' }}>Mise à prix</span><span style={{ fontWeight: 600 }}>{formatPrix(e.mise_a_prix)}</span></>
-                        ) : e.statut === 'adjuge' ? (
-                          <><span style={{ fontSize: '10px', color: '#a39a8c', display: 'block' }}>Prix adjugé</span><span style={{ fontWeight: 600, color: '#2a4a8a' }}>{e.prix_adjuge ? formatPrix(e.prix_adjuge) : '—'}</span><span style={{ fontSize: '11px', color: '#a39a8c', display: 'block' }}>MAP : {formatPrix(e.mise_a_prix)}</span></>
-                        ) : e.statut === 'surenchere' ? (
-                          <><span style={{ fontSize: '10px', color: '#e65100', display: 'block' }}>Surenchère</span><span style={{ fontWeight: 600 }}>{e.prix_adjuge ? formatPrix(e.prix_adjuge) : formatPrix(e.mise_a_prix)}</span></>
-                        ) : (
-                          <span style={{ fontWeight: 600 }}>{formatPrix(e.mise_a_prix)}</span>
-                        )}
+                      <td style={{ padding: '10px 8px', fontWeight: 600 }}>{formatPrix(e.mise_a_prix)}</td>
+                      <td style={{ padding: '10px 8px', color: e.prix_adjuge ? theme.colors.ink : theme.colors.textTertiary }}>
+                        {e.prix_adjuge ? formatPrix(e.prix_adjuge) : '-'}
                       </td>
                       <td style={{ padding: '10px 8px' }}>{e.surface ? `${e.surface} m²` : '-'}</td>
                       <td style={{ padding: '10px 8px' }}>
@@ -569,14 +563,14 @@ export default function EncheresPage() {
                         )}
                       </td>
                       <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
-                        {e.statut === 'surenchere' && e.date_surenchere ? (
-                          <><span style={{ fontSize: '10px', color: '#e65100', display: 'block' }}>Surenchère jusqu'au</span>{new Date(e.date_surenchere).toLocaleDateString('fr-FR')}</>
-                        ) : (
-                          <><span style={{ fontSize: '10px', color: '#a39a8c', display: 'block' }}>Audience</span>
-                          {e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR') : '-'}
-                          {countdown !== null && countdown >= 0 && (
-                            <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: 600, color: countdown <= 7 ? '#c0392b' : countdown <= 14 ? '#e67e22' : theme.colors.muted }}>J-{countdown}</span>
-                          )}</>
+                        {e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR') : '-'}
+                        {countdown !== null && countdown >= 0 && (
+                          <span style={{
+                            marginLeft: '6px', fontSize: '11px', fontWeight: 600,
+                            color: countdown <= 7 ? '#c0392b' : countdown <= 14 ? '#e67e22' : theme.colors.muted,
+                          }}>
+                            J-{countdown}
+                          </span>
                         )}
                       </td>
                       <td style={{ padding: '10px 8px' }}>
