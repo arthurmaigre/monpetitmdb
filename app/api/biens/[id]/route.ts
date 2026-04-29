@@ -52,7 +52,7 @@ export async function PATCH(
 
   const { data: bien } = await supabaseAdmin
     .from('biens')
-    .select('loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, prix_fai, adresse, latitude, longitude')
+    .select('loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann, prix_fai, adresse, latitude, longitude, annee_construction, nb_sdb, type_chauffage, ges, surface_terrain, profil_locataire, nb_lots, monopropriete, compteurs_individuels, exposition, ascenseur, has_cave, acces_exterieur, parking_type, en_copropriete')
     .eq('id', id)
     .maybeSingle()
 
@@ -65,13 +65,21 @@ export async function PATCH(
 
   const champsUserEdits = new Set(userEdits?.map((e: any) => e.champ) || [])
 
-  const champsAutorises = ['loyer', 'type_loyer', 'charges_rec', 'charges_copro', 'taxe_fonc_ann', 'fin_bail', 'adresse', 'latitude', 'longitude']
+  const champsAutorises = [
+    'loyer', 'type_loyer', 'charges_rec', 'charges_copro', 'taxe_fonc_ann', 'fin_bail',
+    'adresse', 'latitude', 'longitude',
+    'annee_construction', 'nb_sdb', 'type_chauffage', 'ges', 'surface_terrain',
+    'profil_locataire', 'nb_lots', 'monopropriete', 'compteurs_individuels',
+    'exposition', 'ascenseur', 'has_cave', 'acces_exterieur', 'parking_type', 'en_copropriete',
+  ]
   const updates: any = {}
   const audits: any[] = []
 
   for (const champ of champsAutorises) {
     if (body[champ] === undefined) continue
     const valeurActuelle = (bien as any)[champ]
+    // Champs libres : toujours modifiables (user-only, jamais scrapés)
+    // Les autres champs sont protégés : modifiables seulement si null ou déjà édités par user
     const champsLibres = ['adresse', 'latitude', 'longitude', 'fin_bail']
     if (valeurActuelle === null || champsUserEdits.has(champ) || champsLibres.includes(champ)) {
       updates[champ] = body[champ]
