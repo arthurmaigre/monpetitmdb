@@ -46,3 +46,9 @@ node_modules/
 *.log
 .vercel
 scrapper/__pycache__/
+
+# Claude Code local config (peut contenir des secrets)
+.claude/settings.local.json
+.claude/.consolidation-log.txt
+.claude/.consolidation-pending
+.claude/.last-consolidation
