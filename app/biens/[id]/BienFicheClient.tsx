@@ -127,8 +127,8 @@ const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: stri
 function ModalPanel({ open, onClose, title, children, size }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; size?: 'large' }) {
   if (!open) return null
   return (
-    <div className={`modal-overlay${size === 'large' ? ' modal-overlay-large' : ''}`} onClick={onClose}>
-      <div className={`modal-panel${size === 'large' ? ' modal-panel-large' : ''}`} onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} style={size === 'large' ? { padding: '8px' } : undefined}>
+      <div className="modal-panel" onClick={e => e.stopPropagation()} style={size === 'large' ? { maxWidth: '880px' } : undefined}>
         <div className="modal-header">
           <h3>{title}</h3>
           <button className="modal-close" onClick={onClose}>{'\u00D7'}</button>
