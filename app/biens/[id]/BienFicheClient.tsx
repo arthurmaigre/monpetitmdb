@@ -2308,7 +2308,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .estimation-price-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; }
         .data-subtitle { grid-column: 1 / -1; font-size: 10px; font-weight: 600; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 16px 6px; background: var(--surface, #fff); }
         .data-item { display: grid; grid-template-columns: 1fr 110px 44px; align-items: center; column-gap: 0; padding: 14px 16px; background: var(--surface, #fff); transition: background var(--dur-hover, 150ms); }
-        .encheres-info-grid .data-item { grid-template-columns: 1fr 170px 44px; }
         .encheres-info-grid .data-value { font-weight: 400; }
         .data-item:hover { background: var(--paper, #f5ede2); }
         .data-label { font-size: 11px; color: var(--ink-mute, #a39a8c); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
