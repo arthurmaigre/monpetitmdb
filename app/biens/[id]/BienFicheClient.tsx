@@ -2838,91 +2838,170 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               </>
             )}
             <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>
+            {/* Adresse */}
             {bien.adresse && (
               <div className="data-item" style={{ gridColumn: '1 / -1' }}>
                 <span className="data-label">Adresse</span>
                 <span className="data-value">{bien.adresse}{bien.code_postal ? `, ${bien.code_postal}` : ''} {bien.ville || ''}</span>
               </div>
             )}
-            <div className="data-item">
-              <span className="data-label">{"Ann\u00E9e de construction"}</span>
-              <span className={`data-value ${!bien.annee_construction ? 'nc' : ''}`}>{bien.annee_construction || 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">DPE</span>
-              {bien.dpe ? (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff',
-                  background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60'
-                }}>{bien.dpe}</span>
-              ) : <span className="data-value nc">NC</span>}
-            </div>
-            <div className="data-item">
-              <span className="data-label">Surface</span>
-              <span className="data-value">{bien.surface ? `${bien.surface} m²` : 'NC'}</span>
-            </div>
-            {(bien.type_bien || '').toLowerCase().includes('maison') && (
+            {/* Année construction — show only if non-null */}
+            {bien.annee_construction != null && (
               <div className="data-item">
-                <span className="data-label">Terrain</span>
-                <span className={`data-value ${!bien.surface_terrain ? 'nc' : ''}`}>{bien.surface_terrain ? `${bien.surface_terrain} m²` : 'NC'}</span>
+                <span className="data-label">{"Ann\u00E9e de construction"}</span>
+                <span className="data-value">{bien.annee_construction}</span>
               </div>
             )}
-            <div className="data-item">
-              <span className="data-label">{"Pièces"}</span>
-              <span className={`data-value ${!bien.nb_pieces ? 'nc' : ''}`}>{bien.nb_pieces || 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Chambres</span>
-              <span className={`data-value ${bien.nb_chambres == null ? 'nc' : ''}`}>{bien.nb_chambres != null ? bien.nb_chambres : 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Salles de bain</span>
-              <span className={`data-value ${bien.nb_sdb == null ? 'nc' : ''}`}>{bien.nb_sdb != null ? bien.nb_sdb : 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">{"Étage"}</span>
-              <span className={`data-value ${!bien.etage ? 'nc' : ''}`}>{bien.etage || 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Chauffage</span>
-              <span className={`data-value ${!bien.type_chauffage ? 'nc' : ''}`}>{[bien.type_chauffage, bien.mode_chauffage].filter(Boolean).join(' / ') || 'NC'}</span>
-            </div>
+            {/* DPE — show only if non-null */}
+            {bien.dpe && (
+              <div className="data-item">
+                <span className="data-label">DPE</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60' }}>{bien.dpe}</span>
+              </div>
+            )}
+            {/* GES — show only if non-null */}
+            {bien.ges && (
+              <div className="data-item">
+                <span className="data-label">GES</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.ges] || '#7a6a60' }}>{bien.ges}</span>
+              </div>
+            )}
+            {/* Budget énergie — show only if non-null */}
+            {bien.budget_energie_min != null && bien.budget_energie_max != null && (
+              <div className="data-item">
+                <span className="data-label">Budget énergie</span>
+                <span className="data-value">{bien.budget_energie_min}–{bien.budget_energie_max} {'\u20AC'}/an</span>
+              </div>
+            )}
+            {/* Surface */}
+            {bien.surface != null && (
+              <div className="data-item">
+                <span className="data-label">Surface</span>
+                <span className="data-value">{bien.surface} m²</span>
+              </div>
+            )}
+            {/* Surface terrain — maison uniquement */}
+            {(bien.type_bien || '').toLowerCase().includes('maison') && bien.surface_terrain != null && (
+              <div className="data-item">
+                <span className="data-label">Terrain</span>
+                <span className="data-value">{bien.surface_terrain} m²</span>
+              </div>
+            )}
+            {/* Pièces — pas pour IDR */}
+            {!isIDR && bien.nb_pieces && (
+              <div className="data-item">
+                <span className="data-label">{"Pi\u00E8ces"}</span>
+                <span className="data-value">{bien.nb_pieces}</span>
+              </div>
+            )}
+            {/* Chambres — pas pour IDR */}
+            {!isIDR && bien.nb_chambres != null && (
+              <div className="data-item">
+                <span className="data-label">Chambres</span>
+                <span className="data-value">{bien.nb_chambres}</span>
+              </div>
+            )}
+            {/* Salles de bain — pas pour IDR */}
+            {!isIDR && bien.nb_sdb != null && (
+              <div className="data-item">
+                <span className="data-label">Salles de bain</span>
+                <span className="data-value">{bien.nb_sdb}</span>
+              </div>
+            )}
+            {/* Étage — pas pour IDR ni maison */}
+            {!isIDR && !(bien.type_bien || '').toLowerCase().includes('maison') && bien.etage && (
+              <div className="data-item">
+                <span className="data-label">{"Étage"}</span>
+                <span className="data-value">{bien.etage}</span>
+              </div>
+            )}
+            {/* Chauffage */}
+            {(bien.type_chauffage || bien.mode_chauffage) && (
+              <div className="data-item">
+                <span className="data-label">Chauffage</span>
+                <span className="data-value">{[bien.type_chauffage, bien.mode_chauffage].filter(Boolean).join(' / ')}</span>
+              </div>
+            )}
+            {/* Exposition */}
+            {bien.exposition && (
+              <div className="data-item">
+                <span className="data-label">Exposition</span>
+                <span className="data-value">{bien.exposition}</span>
+              </div>
+            )}
+            {/* Ascenseur */}
+            {bien.ascenseur != null && (
+              <div className="data-item">
+                <span className="data-label">Ascenseur</span>
+                <span className="data-value">{bien.ascenseur ? 'Oui' : 'Non'}</span>
+              </div>
+            )}
+            {/* Cave */}
+            {bien.has_cave != null && (
+              <div className="data-item">
+                <span className="data-label">Cave</span>
+                <span className="data-value">{bien.has_cave ? 'Oui' : 'Non'}</span>
+              </div>
+            )}
+            {/* Balcon / Terrasse */}
+            {bien.acces_exterieur && (
+              <div className="data-item">
+                <span className="data-label">Balcon / Terrasse</span>
+                <span className="data-value">{bien.acces_exterieur}</span>
+              </div>
+            )}
+            {/* Parking / Garage */}
+            {bien.parking_type && (
+              <div className="data-item">
+                <span className="data-label">Parking / Garage</span>
+                <span className="data-value">{bien.parking_type}</span>
+              </div>
+            )}
+            {/* Copropriété */}
+            {bien.en_copropriete != null && (
+              <div className="data-item">
+                <span className="data-label">{"Copropri\u00E9t\u00E9"}</span>
+                <span className="data-value">{bien.en_copropriete ? 'Oui' : 'Non'}</span>
+              </div>
+            )}
+            {/* IDR — champs immeuble, affichés seulement si non-null */}
+            {isIDR && (bien.nb_lots != null || bien.monopropriete != null || bien.compteurs_individuels != null) && (
+              <div className="data-subtitle" style={{ gridColumn: '1 / -1', marginTop: '4px' }}>Immeuble</div>
+            )}
+            {isIDR && bien.nb_lots != null && (
+              <div className="data-item">
+                <span className="data-label">Nb lots</span>
+                <CellEditable bien={bien} champ="nb_lots" suffix=" lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+              </div>
+            )}
+            {isIDR && bien.monopropriete != null && (
+              <div className="data-item">
+                <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
+                {userToken ? (
+                  <select value={bien.monopropriete === true ? 'oui' : bien.monopropriete === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, monopropriete: v })); handleUpdate('monopropriete', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.monopropriete === true ? '#1a7a40' : bien.monopropriete === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
+                    <option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option>
+                  </select>
+                ) : (
+                  <span className="data-value" style={{ color: bien.monopropriete ? '#1a7a40' : '#7a6a60' }}>{bien.monopropriete === true ? 'Oui' : 'Non'}</span>
+                )}
+              </div>
+            )}
+            {isIDR && bien.compteurs_individuels != null && (
+              <div className="data-item">
+                <span className="data-label">Compteurs individuels</span>
+                {userToken ? (
+                  <select value={bien.compteurs_individuels === true ? 'oui' : bien.compteurs_individuels === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, compteurs_individuels: v })); handleUpdate('compteurs_individuels', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.compteurs_individuels === true ? '#1a7a40' : bien.compteurs_individuels === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
+                    <option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option>
+                  </select>
+                ) : (
+                  <span className="data-value" style={{ color: bien.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{bien.compteurs_individuels === true ? 'Oui' : 'Non'}</span>
+                )}
+              </div>
+            )}
           </div>
-          {/* IDR : infos agrégées + tableau lots dépliable */}
+          {/* IDR : tableau lots dépliable */}
           {isIDR && (
             <>
-              <div className="data-grid" style={{ marginTop: '12px' }}>
-                <div className="data-subtitle">Immeuble</div>
-                <div className="data-item">
-                  <span className="data-label">Nb lots</span>
-                  <CellEditable bien={bien} champ="nb_lots" suffix=" lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-                </div>
-                <div className="data-item">
-                  <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
-                  {userToken ? (
-                    <select value={bien.monopropriete === true ? 'oui' : bien.monopropriete === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, monopropriete: v })); handleUpdate('monopropriete', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.monopropriete === true ? '#1a7a40' : bien.monopropriete === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
-                      <option value="">NC</option>
-                      <option value="oui">Oui</option>
-                      <option value="non">Non</option>
-                    </select>
-                  ) : (
-                    <span className="data-value" style={{ color: bien.monopropriete ? '#1a7a40' : '#7a6a60' }}>{bien.monopropriete === true ? 'Oui' : bien.monopropriete === false ? 'Non' : 'NC'}</span>
-                  )}
-                </div>
-                <div className="data-item">
-                  <span className="data-label">Compteurs individuels</span>
-                  {userToken ? (
-                    <select value={bien.compteurs_individuels === true ? 'oui' : bien.compteurs_individuels === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, compteurs_individuels: v })); handleUpdate('compteurs_individuels', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.compteurs_individuels === true ? '#1a7a40' : bien.compteurs_individuels === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
-                      <option value="">NC</option>
-                      <option value="oui">Oui</option>
-                      <option value="non">Non</option>
-                    </select>
-                  ) : (
-                    <span className="data-value" style={{ color: bien.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{bien.compteurs_individuels === true ? 'Oui' : bien.compteurs_individuels === false ? 'Non' : 'NC'}</span>
-                  )}
-                </div>
-              </div>
               <div style={{ marginTop: '12px', textAlign: 'center' }}>
                 <button onClick={() => setShowLotsDetail(!showLotsDetail)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                   {showLotsDetail ? "Masquer le d\u00E9tail des lots" : "Voir le d\u00E9tail des lots"}
@@ -2935,40 +3014,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           )}
         </div>
 
-        {bien.strategie_mdb === 'Travaux lourds' || (isEnchere && !bien.loyer) ? (
-          <div className="section">
-            <h2 className="section-title">{"Donn\u00E9es du Bien"}</h2>
-            <div className="data-grid">
-              <div className="data-item">
-                <span className="data-label">{"Taxe foncière"}</span>
-                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-              </div>
-              {!(bien.type_bien || '').toLowerCase().includes('maison') && (
-                <div className="data-item">
-                  <span className="data-label">Charges copro</span>
-                  <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-                </div>
-              )}
-              <div className="data-item">
-                <span className="data-label">{"Budget énergie"}</span>
-                <span className={`data-value ${!bien.budget_energie_min ? 'nc' : ''}`}>
-                  {bien.budget_energie_min && bien.budget_energie_max ? `${bien.budget_energie_min} - ${bien.budget_energie_max} \u20AC/an` : 'NC'}
-                </span>
-              </div>
-              <div className="data-item">
-                <span className="data-label">GES</span>
-                <span className={`data-value ${!bien.ges ? 'nc' : ''}`}>{bien.ges || 'NC'}</span>
-              </div>
-            </div>
-            <div className="legende" style={{ marginTop: '12px' }}>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#c0392b' }}></div>{"Donn\u00E9e manquante \u2014 \u00E9ditable"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#2a4a8a' }}></div>{"Simulation \u2014 \u2713 pour soumettre, \u00D7 pour annuler"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Soumis par 1 utilisateur"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"\u2713 Valid\u00E9 par 2+ utilisateurs"}</div>
-            </div>
-            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
-          </div>
-        ) : (
+        {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli */}
+        {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && !isEnchere && (
           <div className="section">
             <h2 className="section-title">{"Donn\u00E9es Locatives"}</h2>
             <div className="data-grid">
