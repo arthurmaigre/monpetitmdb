@@ -3169,7 +3169,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               background: 'var(--surface, #fff)', borderRadius: 'var(--radius-md, 14px)',
               border: '1.5px dashed var(--line, #e6dccb)',
               cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-              transition: 'border-color .2s, background .2s',
+              transition: 'border-color .2s, background .2s', marginBottom: '16px',
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#b4442e'; (e.currentTarget as HTMLElement).style.background = '#fdfaf7' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--line, #e6dccb)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface, #fff)' }}
