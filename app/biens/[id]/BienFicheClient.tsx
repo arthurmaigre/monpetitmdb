@@ -2776,8 +2776,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                           </select>
                         </div>
                         {enchereBaseCalc === 'libre' ? (
-                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px' }}>
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', border: '1.5px solid #e8e2d8', borderRadius: '6px', background: '#fff', padding: '4px 8px', gap: '4px' }}>
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px', overflow: 'hidden' }}>
+                            <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', border: '1.5px solid #e8e2d8', borderRadius: '6px', background: '#fff', padding: '4px 8px', gap: '4px' }}>
                               <input
                                 type="text"
                                 inputMode="numeric"
@@ -2786,13 +2786,13 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                                 onChange={ev => setEnchereManuelDraft(ev.target.value.replace(/\s/g, ''))}
                                 onFocus={() => { if (enchereManuelMax && enchereManuelDraft === '') setEnchereManuelDraft(String(enchereManuelMax)) }}
                                 onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(enchereManuelDraft.replace(/\s/g, '')); setEnchereManuelMax(v || null); setEnchereManuelDraft('') } }}
-                                style={{ flex: 1, fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#1a1210', background: 'transparent', border: 'none', minWidth: 0 }}
+                                style={{ flex: 1, fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#1a1210', background: 'transparent', border: 'none', minWidth: 0, width: '100%' }}
                               />
                               <span style={{ fontSize: '14px', fontWeight: 600, color: '#7a6a60', flexShrink: 0 }}>{'€'}</span>
                             </div>
                             <button
                               onClick={() => { const v = Number(enchereManuelDraft.replace(/\s/g, '')); setEnchereManuelMax(v || enchereManuelMax); setEnchereManuelDraft('') }}
-                              style={{ background: '#2a4a8a', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 8px', lineHeight: 1 }}
+                              style={{ background: '#2f7d5b', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 8px', lineHeight: 1, flexShrink: 0 }}
                             >{'✓'}</button>
                             {enchereManuelMax && !enchereManuelDraft && (
                               <button onClick={() => { setEnchereManuelMax(null); setEnchereManuelDraft('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
