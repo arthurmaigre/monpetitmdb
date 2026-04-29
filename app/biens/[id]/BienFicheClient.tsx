@@ -3298,6 +3298,29 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </div>
         )}
 
+        {/* CTA "Ajouter données locatives" — Travaux, IDR, Enchères sans loyer */}
+        {(isTravauxLourds || isIDR || isEnchere) && bien.loyer == null && userToken && (
+          <button
+            onClick={() => setShowCompleterModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '16px',
+              width: '100%', padding: '16px 20px',
+              background: 'var(--surface, #fff)', borderRadius: 'var(--radius-md, 14px)',
+              border: '1.5px dashed var(--line, #e6dccb)',
+              cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+              transition: 'border-color .2s, background .2s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#b4442e'; (e.currentTarget as HTMLElement).style.background = '#fdfaf7' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--line, #e6dccb)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface, #fff)' }}
+          >
+            <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--paper, #f5ede2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#b4442e', flexShrink: 0 }}>+</span>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#1a1210' }}>{"Ajouter des donn\u00E9es locatives"}</div>
+              <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '2px' }}>{"Loyer, charges, profil locataire \u2014 pour activer les indicateurs de rendement"}</div>
+            </div>
+          </button>
+        )}
+
         {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli (enchères incluses) */}
         {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && (
           <div className="section">
