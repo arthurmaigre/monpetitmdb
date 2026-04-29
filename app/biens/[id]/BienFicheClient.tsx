@@ -3393,63 +3393,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         {!peutCalculer && !isTravauxLourds && !bien.prix_fai && (
           <div className="section"><div className="nc-warning">Le prix est manquant — impossible de calculer.</div></div>
         )}
-        {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && peutCalculer && !isTravauxLourds && bien.loyer && (
-          <div className="section">
-              <h2 className="section-title">{"Cash Flow Avant Imp\u00F4t"}</h2>
-                  <table className="results-table">
-                    <thead>
-                      <tr>
-                        <th></th>
-                        <th>Mensuel</th>
-                        <th>Annuel</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                            <tr>
-                              <td>{"Loyer"} <span style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></td>
-                              <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                              <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                            </tr>
-                            <tr>
-                              <td>{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (incluses CC)" : "Charges r\u00E9cup."}</td>
-                              <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                              <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                            </tr>
-                            <tr>
-                              <td>{"Charges copro"}</td>
-                              <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                              <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                            </tr>
-                            <tr>
-                              <td>{"Taxe fonci\u00E8re"}</td>
-                              <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1/12} /></td>
-                              <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                            </tr>
-                            <tr>
-                              <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit)} {'\u20AC'}</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
-                            </tr>
-                            <tr>
-                              <td>Assurance emprunteur</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss)} {'\u20AC'}</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
-                            </tr>
-                    </tbody>
-                  </table>
-                  <div style={{ marginTop: '16px', background: cashflowBrut >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
-                    <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Avant Imp\u00F4t"}</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
-                        {cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}/mois
-                      </span>
-                      <span style={{ fontSize: '13px', color: (cashflowBrut * 12) >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
-                        {(cashflowBrut * 12) >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}/an
-                      </span>
-                    </div>
-                  </div>
-          </div>
-        )}
         </div>{/* fin col gauche */}
 
         <div className="col" style={{ display: (activeNav === 'travaux' || activeNav === 'financement') ? '' : 'none' }}>
@@ -3784,6 +3727,63 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 </div>
                 {profil && <div className="profil-bar">{"Paramètres pré-remplis depuis votre profil — modifiables dans Mon profil"}</div>}
             </div>
+            {peutCalculer && !isTravauxLourds && bien.loyer && (
+              <div className="section">
+                <h2 className="section-title">{"Cash Flow Avant Imp\u00F4t"}</h2>
+                <table className="results-table">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>Mensuel</th>
+                      <th>Annuel</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{"Loyer"} <span style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></td>
+                      <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                      <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
+                    </tr>
+                    <tr>
+                      <td>{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (incluses CC)" : "Charges r\u00E9cup."}</td>
+                      <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                      <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
+                    </tr>
+                    <tr>
+                      <td>{"Charges copro"}</td>
+                      <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                      <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
+                    </tr>
+                    <tr>
+                      <td>{"Taxe fonci\u00E8re"}</td>
+                      <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1/12} /></td>
+                      <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
+                    </tr>
+                    <tr>
+                      <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
+                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit)} {'\u20AC'}</td>
+                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
+                    </tr>
+                    <tr>
+                      <td>Assurance emprunteur</td>
+                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss)} {'\u20AC'}</td>
+                      <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div style={{ marginTop: '16px', background: cashflowBrut >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+                  <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Avant Imp\u00F4t"}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
+                      {cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}/mois
+                    </span>
+                    <span style={{ fontSize: '13px', color: (cashflowBrut * 12) >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
+                      {(cashflowBrut * 12) >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}/an
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
         </div>{/* fin col droite */}
