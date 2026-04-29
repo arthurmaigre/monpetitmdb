@@ -996,10 +996,25 @@ export default function MesBiensPage() {
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: e.date_visite ? undefined : '#c0b0a0' }}>{dateVisite}</td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
                             <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span></td>
-                            <td className="td-prix">{e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {e.statut === 'a_venir' ? (
+                                <><span style={{ fontSize: '10px', color: '#a39a8c', display: 'block' }}>Mise à prix</span><span className="td-prix">{e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</span></>
+                              ) : e.statut === 'adjuge' ? (
+                                <><span style={{ fontSize: '10px', color: '#a39a8c', display: 'block' }}>Prix adjugé</span><span className="td-prix" style={{ color: '#2a4a8a' }}>{e.prix_adjuge ? formatPrix(e.prix_adjuge) : '—'}</span><span style={{ fontSize: '11px', color: '#a39a8c', display: 'block' }}>MAP : {e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</span></>
+                              ) : e.statut === 'surenchere' ? (
+                                <><span style={{ fontSize: '10px', color: '#e65100', display: 'block' }}>Surenchère</span><span className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</span></>
+                              ) : (
+                                <span className="td-prix">{e.mise_a_prix ? formatPrix(e.mise_a_prix) : '-'}</span>
+                              )}
+                            </td>
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: e.date_surenchere ? undefined : '#c0b0a0' }}>{dateSurenchere}</td>
-                            <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>
+                              {e.statut === 'surenchere' && e.date_surenchere ? (
+                                <><span style={{ fontSize: '10px', color: '#e65100', display: 'block' }}>Surenchère jusqu'au</span>{dateSurenchere}</>
+                              ) : (
+                                <><span style={{ fontSize: '10px', color: '#a39a8c', display: 'block' }}>Audience</span>{dateAudience}</>
+                              )}
+                            </td>
                             <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '160px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.avocat_nom || '-'}</td>
                           </>
                         })() : (
