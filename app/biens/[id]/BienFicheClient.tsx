@@ -2336,7 +2336,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .decote-banner .pct { font-family: "Fraunces", Georgia, serif; font-size: 34px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 2px; }
         .decote-banner .arrow { font-size: 28px; opacity: 0.6; }
         .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line, #e6dccb); padding-top: 18px; }
-        .kpi-row[data-count="2"] { grid-template-columns: repeat(2, 1fr); max-width: 320px; margin-left: auto; margin-right: auto; }
+        .kpi-row[data-count="2"] { grid-template-columns: repeat(2, 1fr); }
         .kpi { text-align: center; padding: 0 10px; border-right: 1px solid var(--line-soft, #efe7d7); }
         .kpi:last-child { border-right: none; }
         .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 18px; font-weight: 500; color: var(--ink, #1f1b16); }
