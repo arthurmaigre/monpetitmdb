@@ -3289,11 +3289,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               {bien.avocat_nom && (
                 <div className="data-item">
                   <span className="data-label">Avocat poursuivant</span>
-                  <button onClick={() => setShowAvocatModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                  <button onClick={() => setShowAvocatModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', gridColumn: '2 / 4', whiteSpace: 'nowrap' }}>
                     <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--info-soft, #d3deea)', color: 'var(--info, #3a5f7d)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, flexShrink: 0 }}>
                       {bien.avocat_nom.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
                     </span>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bien.avocat_nom}</span>
+                    {bien.avocat_nom}
                     <span style={{ color: '#a39a8c', fontSize: '11px', flexShrink: 0 }}>›</span>
                   </button>
                 </div>
