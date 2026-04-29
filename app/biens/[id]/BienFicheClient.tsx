@@ -3273,18 +3273,16 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Honoraires libres \u2014 fix\u00E9s par l\u2019avocat mandat\u00E9 pour vous repr\u00E9senter \u00E0 l\u2019audience. G\u00E9n\u00E9ralement entre 1\u00A0000 et 3\u00A0000\u00A0\u20AC. 1\u00A0500\u00A0\u20AC par d\u00E9faut."}</span>
                   </span>
                 </span>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '6px', padding: '4px 8px', gap: '4px' }}>
-                    <input
-                      type="number"
-                      value={honorairesAvocat}
-                      onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
-                      onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
-                      placeholder="1500"
-                      style={{ width: '60px', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textAlign: 'right', background: 'transparent', color: '#1a1210' }}
-                    />
-                    <span style={{ fontSize: '13px', color: '#7a6a60', flexShrink: 0 }}>{'\u20AC'}</span>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box', background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '6px', padding: '4px 8px', gap: '4px' }}>
+                  <input
+                    type="number"
+                    value={honorairesAvocat}
+                    onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
+                    onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
+                    placeholder="1500"
+                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textAlign: 'right', background: 'transparent', color: '#1a1210' }}
+                  />
+                  <span style={{ fontSize: '13px', color: '#7a6a60', flexShrink: 0 }}>{'\u20AC'}</span>
                 </div>
               </div>
               {/* 8. Avocat poursuivant */}
@@ -3292,12 +3290,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               {bien.avocat_nom && (
                 <div className="data-item">
                   <span className="data-label">Avocat poursuivant</span>
-                  <button onClick={() => setShowAvocatModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', textAlign: 'right', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                  <button onClick={() => setShowAvocatModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
                     <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--info-soft, #d3deea)', color: 'var(--info, #3a5f7d)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, flexShrink: 0 }}>
                       {bien.avocat_nom.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
                     </span>
-                    {bien.avocat_nom}
-                    <span style={{ color: '#a39a8c', fontSize: '11px' }}>›</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bien.avocat_nom}</span>
+                    <span style={{ color: '#a39a8c', fontSize: '11px', flexShrink: 0 }}>›</span>
                   </button>
                 </div>
               )}
