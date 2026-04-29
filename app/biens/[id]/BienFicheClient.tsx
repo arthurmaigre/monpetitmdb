@@ -3172,9 +3172,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                           }}
                           style={{
                             width: '100%', boxSizing: 'border-box', padding: '4px 22px 4px 8px', borderRadius: '6px',
-                            border: '1.5px solid #e8e2d8',
+                            border: `1.5px solid ${isEmpty ? '#c0392b' : '#e8e2d8'}`,
                             fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
-                            background: '#faf8f5',
+                            background: isEmpty ? '#fde8e8' : '#faf8f5',
                             color: isEmpty ? '#a39a8c' : '#1a1210',
                             cursor: 'pointer', outline: 'none',
                             appearance: 'none', WebkitAppearance: 'none',
