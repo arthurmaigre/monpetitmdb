@@ -2342,11 +2342,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .kpi .num.mute { color: var(--ink-mute, #a39a8c); font-weight: 400; }
         .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; white-space: nowrap; }
         .deal-actions { display: flex; gap: 10px; }
-        .deal-btn-watchlist { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 18px; border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); background: #fff; color: var(--ink, #1f1b16); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-watchlist { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 22px; border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); background: #fff; color: var(--ink, #1f1b16); font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
         .deal-btn-watchlist:hover { background: var(--paper, #f5ede2); border-color: var(--ink, #1f1b16); }
         .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
-        .deal-btn-source { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 18px; border-radius: var(--radius-md, 14px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-source { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 22px; border-radius: var(--radius-md, 14px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; font-family: inherit; white-space: nowrap; }
         .deal-btn-source:hover { background: #000; transform: translateY(-1px); }
         .deal-btn-completer { font-size: 12px; font-weight: 600; color: var(--accent, #b4442e); padding: 9px 14px; border: 1.5px solid var(--line, #e6dccb); border-radius: var(--radius-sm, 8px); background: #fff; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
