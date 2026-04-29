@@ -1883,6 +1883,51 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   )
 }
 
+function LabelSelect({ value, options, onChange, info }: { value: string, options: { value: string, label: string }[], onChange: (v: string) => void, info?: string }) {
+  const [open, setOpen] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+  const current = options.find(o => o.value === value)
+  const active = open || hovered
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'block' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', fontWeight: 600, color: active ? 'var(--ink, #1f1b16)' : 'var(--ink-mute, #a39a8c)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, lineHeight: 1, marginBottom: '6px', transition: 'color 150ms' }}
+      >
+        {current?.label}
+        {info && (
+          <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>?<span className="pnl-tooltip-text" style={{ left: 'auto', right: 0, transform: 'none' }}>{info}</span></span>
+        )}
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '4px', background: active ? 'var(--accent, #b4442e)' : 'rgba(0,0,0,0.07)', transition: 'background 150ms' }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={active ? '#fff' : 'currentColor'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: '#fff', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', border: '1px solid #e8e2d8', overflow: 'hidden', minWidth: '180px' }}>
+          {options.map(o => (
+            <button key={o.value} onClick={() => { onChange(o.value); setOpen(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: o.value === value ? 'var(--accent)' : 'var(--ink)', background: o.value === value ? 'var(--accent-bg, #f5f1ec)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'background 100ms' }}
+              onMouseEnter={e => { if (o.value !== value) e.currentTarget.style.background = '#f9f6f2' }}
+              onMouseLeave={e => { if (o.value !== value) e.currentTarget.style.background = 'transparent' }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function BienFicheClient({ initialBien, id, isEnchere }: { initialBien: any, id: string, isEnchere: boolean }) {
   const apiBase = isEnchere ? '/api/encheres' : '/api/biens'
   const estimationBase = isEnchere ? '/api/estimation/encheres' : '/api/estimation'
@@ -1947,7 +1992,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   }, 0)
   const hasDetail = Object.values(detailTravaux).some(v => v && v.qte > 0)
 
-  const [baseCalc, setBaseCalc] = useState<'fai' | 'cible'>('fai')
+  const [baseCalc, setBaseCalc] = useState<'fai' | 'cible' | 'libre'>('fai')
+  const [prixLibreManuel, setPrixLibreManuel] = useState<number | null>(null)
+  const [prixLibreDraft, setPrixLibreDraft] = useState<string>('')
   const [modeCible, setModeCible] = useState<'cashflow' | 'pv'>('pv')
   const [apport, setApport] = useState<number | ''>(0)
   const [taux, setTaux] = useState<number | ''>(3.5)
@@ -1972,7 +2019,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [estimationData, setEstimationData] = useState<any>(null)
   const [dureeRevente, setDureeRevente] = useState<number>(1)
   const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number | ''>(5) // 5% par defaut = frais agence inclus dans le FAI
-  const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(1500)
+  const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(bien.honoraires_avocat ?? 1500)
   const [adresseRowEditing, setAdresseRowEditing] = useState(false)
   const [adresseRowDraft, setAdresseRowDraft] = useState('')
 
@@ -2287,7 +2334,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     ? (enchereFinMode === 'libre' ? (enchereManuelMax || enchMaxCalc || bien.prix_fai)
       : enchereFinMode === 'mise_a_prix' ? bien.prix_fai
       : (enchMaxCalc || bien.prix_fai))
-    : (baseCalc === 'fai' ? bien.prix_fai : (prixCibleCombine || bien.prix_fai))
+    : (baseCalc === 'fai' ? bien.prix_fai : baseCalc === 'libre' ? (prixLibreManuel || bien.prix_fai) : (prixCibleCombine || bien.prix_fai))
   const montantProjet = prixBase * (1 + fraisNotaire / 100) + budgetTravCalc
   const montantEmprunte = Math.max(0, montantProjet - apportNum)
   const apportPct = montantProjet > 0 ? Math.round(apportNum / montantProjet * 1000) / 10 : 0
@@ -2697,6 +2744,19 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   </span>
                 )
               })()}
+              {/* Badge occupation — bottom-left */}
+              {isEnchere && bien.occupation && bien.occupation !== 'NC' && (() => {
+                const cfg = bien.occupation === 'libre'
+                  ? { bg: '#d4f5e0', color: '#1a7a40', label: 'Bien Libre' }
+                  : bien.occupation === 'loue'
+                  ? { bg: '#d4ddf5', color: '#2a4a8a', label: 'Bien Lou\u00e9' }
+                  : { bg: '#ffecd2', color: '#8a5a00', label: 'Bien Occup\u00e9' }
+                return (
+                  <span style={{ position: 'absolute', bottom: '16px', left: '16px', background: cfg.bg, color: cfg.color, fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '999px', zIndex: 2, letterSpacing: '0.02em' }}>
+                    {cfg.label}
+                  </span>
+                )
+              })()}
               {/* Badge countdown enchères — top-right */}
               {isEnchere && bien.date_audience && (() => {
                 const days = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000)
@@ -2745,13 +2805,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       const s = statutMap[bien.statut] || statutMap.a_venir
                       return <span className="tag" style={{ background: s.bg, color: s.color, fontWeight: 700 }}>{s.label}</span>
                     })()}
-                    {bien.occupation && bien.occupation !== 'NC' && (
-                      <span className="tag" style={{
-                        background: bien.occupation === 'libre' ? '#d4f5e0' : bien.occupation === 'loue' ? '#d4ddf5' : '#ffecd2',
-                        color: bien.occupation === 'libre' ? '#1a7a40' : bien.occupation === 'loue' ? '#2a4a8a' : '#8a5a00',
-                        fontWeight: 700,
-                      }}>{bien.occupation === 'libre' ? 'Bien Libre' : bien.occupation === 'loue' ? 'Bien Lou\u00e9' : 'Bien Occup\u00e9'}</span>
-                    )}
                     {isVenteDelocalisee(bien.departement, bien.tribunal) && (
                       <span className="tag" style={{ background: '#fff3e0', color: '#e65100', fontWeight: 700 }} title="La vente se d\u00e9roule dans un tribunal d'un autre d\u00e9partement">
                         Delocalise
@@ -2779,16 +2832,15 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   (() => {
                     return (
                       <>
-                        <div className="label">
-                          <select
-                            value={enchereBaseCalc}
-                            onChange={e => setEnchereBaseCalc(e.target.value as 'calcule' | 'libre')}
-                            style={{ fontSize: '10px', fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-                          >
-                            <option value="calcule">{`ENCHÈRE MAX (OBJ. ${objectifPV || 20}% PV)`}</option>
-                            <option value="libre">ENCHÈRE MAX (LIBRE)</option>
-                          </select>
-                        </div>
+                        <LabelSelect
+                          value={enchereBaseCalc}
+                          options={[
+                            { value: 'calcule', label: `ENCHÈRE MAX (OBJ. ${objectifPV || 20}% PV)` },
+                            { value: 'libre', label: 'ENCHÈRE MAX (LIBRE)' },
+                          ]}
+                          onChange={v => setEnchereBaseCalc(v as 'calcule' | 'libre')}
+                          info={`Enchère max pour que la plus-value nette avant impôt atteigne +${objectifPV || 20}% du coût total de l'opération. Objectif configurable dans Paramètres.`}
+                        />
                         {enchereBaseCalc === 'libre' ? (
                           enchereManuelMax && !enchereManuelDraft ? (
                             // Valeur confirmée — affichage figé
@@ -2806,7 +2858,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                                 <input
                                   type="text"
                                   inputMode="numeric"
-                                  placeholder="400 000"
+                                  placeholder=""
                                   value={enchereManuelDraft}
                                   onChange={ev => setEnchereManuelDraft(ev.target.value.replace(/[^\d]/g, ''))}
                                   onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(enchereManuelDraft); if (v) { setEnchereManuelMax(v); setEnchereFinMode('libre'); setEnchereManuelDraft('') } } }}
@@ -2831,31 +2883,79 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   })()
                 ) : (prixCibleCashflow || prixCiblePV) ? (
                   <>
-                    <div className="label">
-                      {!isTravauxLourds && prixCibleCashflow && prixCiblePV ? (
-                        <select value={modeCible} onChange={e => setModeCible(e.target.value as 'cashflow' | 'pv')}
-                          style={{ fontSize: '10px', fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                          <option value="cashflow">{`PRIX CIBLE (CF ${objectifCashflow}%)`}</option>
-                          <option value="pv">{`PRIX CIBLE (PV ${objectifPV}%)`}</option>
-                        </select>
-                      ) : (
-                        prixCiblePV && (isTravauxLourds || !prixCibleCashflow)
-                          ? `PRIX CIBLE (OBJ. ${objectifPV}% PV)`
-                          : `PRIX CIBLE (OBJ. ${objectifCashflow}% CF)`
-                      )}
+                    <div className="label" style={{ overflow: 'visible' }}>
+                      {(() => {
+                        const hasBoth = !isTravauxLourds && !!prixCibleCashflow && !!prixCiblePV
+                        const opts = [
+                          ...(hasBoth
+                            ? [{ value: 'cashflow', label: `PRIX CIBLE (CF ${objectifCashflow}%)` }, { value: 'pv', label: `PRIX CIBLE (PV ${objectifPV}%)` }]
+                            : prixCiblePV ? [{ value: 'pv', label: `PRIX CIBLE (PV ${objectifPV}%)` }] : [{ value: 'cashflow', label: `PRIX CIBLE (CF ${objectifCashflow}%)` }]
+                          ),
+                          { value: 'libre', label: 'PRIX LIBRE' },
+                        ]
+                        const currentVal = baseCalc === 'libre' ? 'libre' : (hasBoth && modeCible === 'cashflow' ? 'cashflow' : (prixCiblePV ? 'pv' : 'cashflow'))
+                        return (
+                          <LabelSelect
+                            value={currentVal}
+                            options={opts}
+                            onChange={v => {
+                              if (v === 'libre') { setBaseCalc('libre'); setPrixLibreDraft('') }
+                              else { setModeCible(v as 'cashflow' | 'pv'); setBaseCalc('cible') }
+                            }}
+                            info={currentVal === 'libre'
+                              ? `Simulez avec un prix d'achat personnalisé. Toutes les analyses s'adaptent à ce prix.`
+                              : currentVal === 'cashflow'
+                                ? `Prix max pour que le cash flow avant impôt atteigne +${objectifCashflow}% du loyer brut. Objectif configurable dans Paramètres.`
+                                : `Prix max pour que la plus-value nette avant impôt atteigne +${objectifPV}% du coût total de l'opération. Objectif configurable dans Paramètres.`
+                            }
+                          />
+                        )
+                      })()}
                     </div>
-                    {(() => {
-                      const prixAffiche = modeCible === 'cashflow' && prixCibleCashflow ? prixCibleCashflow : (prixCiblePV || prixCibleCashflow || 0)
-                      const cibleSuperieur = prixAffiche >= bien.prix_fai
-                      return (
-                        <>
-                          <div className={`value target${cibleSuperieur ? ' positive' : ''} ${isFreeBlocked ? 'val-blur' : ''}`}>
-                            {fmt(prixAffiche)} {'€'}
+                    {baseCalc === 'libre' ? (
+                      prixLibreManuel && !prixLibreDraft ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          <div className="value target" style={{ flex: 1, margin: 0 }}>{fmt(prixLibreManuel)} {'€'}</div>
+                          <button onClick={() => setPrixLibreDraft(String(prixLibreManuel))} title="Modifier" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s', flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                          </button>
+                          <button onClick={() => { setPrixLibreManuel(null); setPrixLibreDraft(''); setBaseCalc('cible') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px', overflow: 'hidden' }}>
+                          <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', border: '1.5px solid #e8e2d8', borderRadius: '6px', background: '#fff', padding: '4px 8px', gap: '4px' }}>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder=""
+                              value={prixLibreDraft}
+                              onChange={ev => setPrixLibreDraft(ev.target.value.replace(/[^\d]/g, ''))}
+                              onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(prixLibreDraft); if (v) { setPrixLibreManuel(v); setPrixLibreDraft('') } } }}
+                              style={{ flex: 1, fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#1a1210', background: 'transparent', border: 'none', minWidth: 0, width: '100%' }}
+                              autoFocus
+                            />
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#7a6a60', flexShrink: 0 }}>{'€'}</span>
                           </div>
-                          <div className="sub">{ecartNegatif ? "Prix d\u2019achat MDB" : 'Plafond \u00e0 ne pas d\u00e9passer'}</div>
-                        </>
+                          <button
+                            onClick={() => { const v = Number(prixLibreDraft); if (v) { setPrixLibreManuel(v); setPrixLibreDraft('') } }}
+                            style={{ background: '#2f7d5b', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 8px', lineHeight: 1, flexShrink: 0 }}
+                          >{'✓'}</button>
+                        </div>
                       )
-                    })()}
+                    ) : (
+                      (() => {
+                        const prixAffiche = modeCible === 'cashflow' && prixCibleCashflow ? prixCibleCashflow : (prixCiblePV || prixCibleCashflow || 0)
+                        const cibleSuperieur = prixAffiche >= bien.prix_fai
+                        return (
+                          <>
+                            <div className={`value target${cibleSuperieur ? ' positive' : ''} ${isFreeBlocked ? 'val-blur' : ''}`}>
+                              {fmt(prixAffiche)} {'€'}
+                            </div>
+                            <div className="sub">{ecartNegatif ? "Prix d\u2019achat MDB" : 'Plafond \u00e0 ne pas d\u00e9passer'}</div>
+                          </>
+                        )
+                      })()
+                    )}
                   </>
                 ) : (
                   <>
@@ -3062,7 +3162,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {/* Année construction — show only if non-null */}
             {bien.annee_construction != null && (
               <div className="data-item">
-                <span className="data-label">{"Ann\u00E9e de construction"}</span>
+                <span className="data-label">Année de construction</span>
                 <span className="data-value">{bien.annee_construction}</span>
               </div>
             )}
@@ -3376,7 +3476,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     type="number"
                     value={honorairesAvocat}
                     onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
-                    onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
+                    onBlur={e => {
+                      const val = e.target.value === '' ? 1500 : Number(e.target.value)
+                      setHonorairesAvocat(val)
+                      handleUpdate('honoraires_avocat', val)
+                    }}
                     placeholder="1500"
                     style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textAlign: 'right', background: 'transparent', color: '#1a1210' }}
                   />
@@ -3466,7 +3570,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             <p className="section-subtitle">{isIDR ? "Somme des loyers et charges \u00E0 l\u2019\u00E9chelle de l\u2019immeuble" : "Cliquez sur une valeur pour la saisir ou la modifier"}</p>
             <div className="data-grid">
               <div className="data-item">
-                <span className="data-label">{isIDR ? "Loyer total" : <>"Loyer "<span className="k-unit">/mois</span></>}</span>
+                <span className="data-label">{isIDR ? "Loyer total" : <>Loyer <span className="k-unit">/mois</span></>}</span>
                 <CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               {!isIDR && (
@@ -3476,15 +3580,15 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 </div>
               )}
               <div className="data-item">
-                <span className="data-label">{isIDR ? "Charges r\u00E9cup. totales" : <>"Charges r\u00E9cup." <span className="k-unit">/mois</span></>}</span>
+                <span className="data-label">{isIDR ? "Charges récup. totales" : <>Charges récup. <span className="k-unit">/mois</span></>}</span>
                 <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
-                <span className="data-label">{isIDR ? "Charges copro totales" : <>"Charges copro " <span className="k-unit">/mois</span></>}</span>
+                <span className="data-label">{isIDR ? "Charges copro totales" : <>Charges copro <span className="k-unit">/mois</span></>}</span>
                 <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               <div className="data-item">
-                <span className="data-label">{isIDR ? "Taxe fonci\u00E8re globale" : <>"Taxe fonci\u00E8re" <span className="k-unit">/an</span></>}</span>
+                <span className="data-label">{isIDR ? "Taxe foncière globale" : <>Taxe foncière <span className="k-unit">/an</span></>}</span>
                 <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
               </div>
               {!isIDR && (
@@ -3917,9 +4021,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             <div className="section">
               <h2 className="section-title">Simulateur de financement</h2>
               <p className="section-subtitle">{"Ajustez les param\u00E8tres pour calculer vos mensualit\u00E9s"}</p>
-              {isEnchere && (
+              {isEnchere ? (
                 <div className="fin-block">
-                  <div className="fin-label">Prix d{'\''}enchère simulé</div>
+                  <div className="fin-label">Base de calcul</div>
                   <div className="fin-chip-group">
                     <button className={`fin-chip ${enchereFinMode === 'mise_a_prix' ? 'active' : ''}`} onClick={() => setEnchereFinMode('mise_a_prix')}>Mise à prix</button>
                     <button className={`fin-chip ${enchereFinMode === 'calcule' ? 'active' : ''}`} onClick={() => setEnchereFinMode('calcule')}>{`Enchère max (obj. ${objectifPV || 20}% PV)`}</button>
@@ -3929,7 +4033,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '8px' }}>
                       <input
                         type="number"
-                        placeholder="Mon prix max…"
+                        placeholder=""
                         value={enchereManuelMax || ''}
                         onChange={ev => setEnchereManuelMax(ev.target.value ? Number(ev.target.value) : null)}
                         className="fin-field"
@@ -3941,13 +4045,13 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     </div>
                   )}
                 </div>
-              )}
-              {prixCibleCombine && !isEnchere && (
+              ) : (
                 <div className="fin-block">
-                  <div className="fin-label">Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce (frais d\u2019agence inclus). Utile pour simuler l\u2019achat au prix demand\u00E9.\n\n\u2022 Prix cible : le prix id\u00E9al calcul\u00E9 selon votre objectif de cashflow ou de plus-value. Utile pour pr\u00E9parer une offre."}</span></span></div>
+                  <div className="fin-label">Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce.\n\n\u2022 Prix cible : le prix calcul\u00E9 selon votre objectif (cashflow ou plus-value).\n\n\u2022 Prix libre : saisissez un prix personnalis\u00E9 pour simuler un sc\u00E9nario sp\u00E9cifique."}</span></span></div>
                   <div className="fin-chip-group">
                     <button className={`fin-chip ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                    <button className={`fin-chip ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
+                    <button className={`fin-chip ${prixCibleCombine ? (baseCalc === 'cible' ? 'active' : '') : ''}`} onClick={() => prixCibleCombine && setBaseCalc('cible')} style={!prixCibleCombine ? { opacity: 0.4, cursor: 'default' } : {}}>Prix cible</button>
+                    <button className={`fin-chip ${baseCalc === 'libre' ? 'active' : ''}`} onClick={() => setBaseCalc('libre')}>Prix libre</button>
                   </div>
                 </div>
               )}
@@ -4139,12 +4243,22 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ))}
                   </div>
                 </div>
-                {!isEnchere && (
+                {isEnchere ? (
+                <div className="control-group">
+                  <span className="lbl">Base de calcul</span>
+                  <div className="chip-group">
+                    <button className={`chip-btn${enchereFinMode === 'mise_a_prix' ? ' active' : ''}`} onClick={() => setEnchereFinMode('mise_a_prix')}>Mise à prix</button>
+                    <button className={`chip-btn${enchereFinMode === 'calcule' ? ' active' : ''}`} onClick={() => setEnchereFinMode('calcule')}>{`Max (obj. ${objectifPV || 20}% PV)`}</button>
+                    <button className={`chip-btn${enchereFinMode === 'libre' ? ' active' : ''}`} onClick={() => setEnchereFinMode('libre')}>Max libre</button>
+                  </div>
+                </div>
+                ) : (
                 <div className="control-group">
                   <span className="lbl">Base de calcul</span>
                   <div className="chip-group">
                     <button className={`chip-btn${baseCalc === 'fai' ? ' active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                    <button className={`chip-btn${prixCibleCombine ? (baseCalc === 'cible' ? ' active' : '') : ' active'}`} onClick={() => prixCibleCombine && setBaseCalc('cible')} style={!prixCibleCombine ? { opacity: 0.4, cursor: 'default' } : {}}>Prix cible</button>
+                    <button className={`chip-btn${prixCibleCombine ? (baseCalc === 'cible' ? ' active' : '') : ''}`} onClick={() => prixCibleCombine && setBaseCalc('cible')} style={!prixCibleCombine ? { opacity: 0.4, cursor: 'default' } : {}}>Prix cible</button>
+                    <button className={`chip-btn${baseCalc === 'libre' ? ' active' : ''}`} onClick={() => setBaseCalc('libre')}>Prix libre</button>
                   </div>
                 </div>
                 )}

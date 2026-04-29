@@ -27,6 +27,7 @@ interface Message {
 
 const STORAGE_KEY = 'mdb_chat_history'
 const COUNTER_KEY = 'mdb_chat_count'
+const CLOSE_KEY = 'memo_closed_at'
 const MAX_HISTORY = 20
 
 function getWelcomeMessage(plan?: string | null): string {
@@ -68,7 +69,14 @@ function saveHistory(messages: Message[]): void {
 export default function ChatWidget({ plan, context }: ChatWidgetProps) {
   const [open, setOpen] = useState(false)
 
-  useEffect(() => { if (window.innerWidth > 767) setOpen(true) }, [])
+  useEffect(() => {
+    if (window.innerWidth > 767) {
+      const closedAt = localStorage.getItem(CLOSE_KEY)
+      if (!closedAt || Date.now() - Number(closedAt) > 24 * 3600 * 1000) {
+        setOpen(true)
+      }
+    }
+  }, [])
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -225,7 +233,7 @@ export default function ChatWidget({ plan, context }: ChatWidgetProps) {
               <div style={{ fontSize: 10, color: '#b0a898', marginTop: 2 }}>{"Historique de session uniquement"}</div>
             </div>
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); localStorage.setItem(CLOSE_KEY, String(Date.now())) }}
               aria-label="Fermer"
               style={{
                 background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.6)',

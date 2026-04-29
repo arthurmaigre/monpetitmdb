@@ -20,6 +20,87 @@ function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
 }
 
+function InlineNumEdit({ value, enchereId, champ, userToken, onSave }: { value: number | null, enchereId: string, champ: string, userToken: string | null, onSave: (v: number) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const startEdit = () => { setDraft(value != null ? String(value) : ''); setEditing(true) }
+  const cancel = () => setEditing(false)
+  const save = async () => {
+    const n = parseInt(draft.replace(/\s/g, ''), 10)
+    if (!isNaN(n) && n >= 0 && userToken) {
+      setSubmitting(true)
+      await fetch(`/api/encheres/${enchereId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` }, body: JSON.stringify({ [champ]: n }) })
+      onSave(n)
+      setSubmitting(false)
+    }
+    setEditing(false)
+  }
+
+  if (!editing) {
+    if (value == null) return (
+      <input type="number" placeholder="NC" onClick={startEdit}
+        style={{ width: '80px', padding: '3px 6px', border: '1.5px solid #c0392b', borderRadius: '6px', background: '#fde8e8', fontSize: '12px', fontFamily: 'inherit', textAlign: 'right', outline: 'none', color: '#c0392b', cursor: 'pointer' }} readOnly />
+    )
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', cursor: 'pointer' }} onClick={startEdit}>
+        <span style={{ fontSize: '13px', fontWeight: 600 }}>{value.toLocaleString('fr-FR')}{'\u00A0\u20AC'}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4, flexShrink: 0 }}><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+      </span>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+      <input autoFocus type="number" value={draft} onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
+        style={{ width: '72px', padding: '3px 6px', border: '1.5px solid #2a4a8a', borderRadius: '6px', background: '#f0f4ff', fontSize: '12px', fontFamily: 'inherit', textAlign: 'right', outline: 'none' }} />
+      <button onClick={save} disabled={submitting || !draft} style={{ width: '20px', height: '20px', borderRadius: '5px', border: 'none', background: '#1a7a40', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{'\u2713'}</button>
+      <button onClick={cancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c0392b', fontSize: '15px', lineHeight: 1, flexShrink: 0 }}>{'\u00D7'}</button>
+    </div>
+  )
+}
+
+function FraisMutationPopover({ frais }: { frais: ReturnType<typeof calculerFraisEnchere> | null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+  if (!frais) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>
+  const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR')
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: '13px', fontWeight: 600, color: '#1a1210', textAlign: 'right', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {fmt(frais.total_sans_prealables)}{'\u00A0\u20AC'}
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200, background: '#fff', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', border: '1px solid #e8e2d8', padding: '12px 16px', minWidth: '240px', fontSize: '12px' }}>
+          <div style={{ fontWeight: 700, marginBottom: '8px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7a6a60' }}>Détail frais de mutation</div>
+          {[
+            { label: `Émoluments avocat TTC`, value: frais.emoluments_ttc },
+            { label: `Droits d'enregistrement (${frais.droits_enregistrement_pct}\u00A0%)`, value: frais.droits_enregistrement },
+            { label: `CSI (0,1\u00A0%)`, value: frais.csi },
+          ].map(row => (
+            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', padding: '3px 0', borderBottom: '1px solid #f0ede8' }}>
+              <span style={{ color: '#5a4a40' }}>{row.label}</span>
+              <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{fmt(row.value)}{'\u00A0\u20AC'}</span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', paddingTop: '6px', fontWeight: 700 }}>
+            <span>Total</span>
+            <span>{fmt(frais.total_sans_prealables)}{'\u00A0\u20AC'} <span style={{ fontWeight: 400, color: '#7a6a60' }}>({frais.pct_sans_prealables}{'\u00A0'}%)</span></span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function getSessionFilters() {
   if (typeof window === 'undefined') return null
   try {
@@ -42,7 +123,13 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [metropoles, setMetropoles] = useState<string[]>([])
   const [loading, setLoading] = useState(hasInitialData && !saved.current?.strategie ? false : true)
   const [error, setError] = useState<string | null>(null)
-  const [view, setView] = useState<'grid' | 'list' | 'map'>(saved.current?.view || 'grid')
+  const [view, setView] = useState<'grid' | 'list' | 'map'>(() => {
+    if (typeof window !== 'undefined') {
+      const lsView = localStorage.getItem('biens_view') as 'grid' | 'list' | 'map' | null
+      if (lsView) return lsView
+    }
+    return saved.current?.view || 'grid'
+  })
   const [filtersOpen, setFiltersOpen] = useState(true)
   const [strategie, setStrategie] = useState(defaultStrategie)
   const [metropole, setMetropole] = useState(saved.current?.metropole || 'Toutes')
@@ -757,9 +844,9 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
             </button>
           )}
           <div className="view-toggle">
-            <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
-            <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
-            <button className={`view-btn ${view === 'map' ? 'active' : ''}`} onClick={() => setView('map')}>Carte</button>
+            <button className={`view-btn ${view === 'grid' ? 'active' : ''}`} onClick={() => { setView('grid'); localStorage.setItem('biens_view', 'grid') }}>Grille</button>
+            <button className={`view-btn ${view === 'list' ? 'active' : ''}`} onClick={() => { setView('list'); localStorage.setItem('biens_view', 'list') }}>Liste</button>
+            <button className={`view-btn ${view === 'map' ? 'active' : ''}`} onClick={() => { setView('map'); localStorage.setItem('biens_view', 'map') }}>Carte</button>
           </div>
           {(prixMin || prixMax || surfaceMin || surfaceMax || rendMin || scoreTravauxMin || typesBien.size > 0 || selectedCommune) && (
             <button
@@ -902,6 +989,9 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                           <th>Mise à prix<span></span></th>
                           <th>Occupation<span></span></th>
                           <th>Prix adjugé<span></span></th>
+                          <th>Frais préalables<span></span></th>
+                          <th>Hon. avocat<span></span></th>
+                          <th>Frais mutation<span></span></th>
                           <th>Avocat<span></span></th>
                         </>
                       ) : (
@@ -979,7 +1069,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                         {isEncheres ? (() => {
                           const e = bien as any
                           const miseAPrix = e.mise_a_prix || 0
-                          const frais = miseAPrix ? calculerFraisEnchere(miseAPrix, undefined, { isMDB: userRegime === 'marchand_de_biens' }) : null
+                          const frais = miseAPrix ? calculerFraisEnchere(miseAPrix, e.frais_preemption || undefined, { isMDB: userRegime === 'marchand_de_biens' }) : null
                           const statutLabels: Record<string, { label: string; bg: string; color: string }> = {
                             a_venir: { label: 'À venir', bg: '#e8f4fd', color: '#1a6aa0' },
                             surenchere: { label: 'Surenchère', bg: '#fff3e0', color: '#e65100' },
@@ -1039,6 +1129,9 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             <td className="td-prix">{miseAPrix ? formatPrix(miseAPrix) : '-'}</td>
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
+                            <td className="td-prix"><InlineNumEdit value={e.frais_preemption ?? null} enchereId={String(e.id)} champ="frais_preemption" userToken={userToken} onSave={v => setAllBiens(prev => prev.map(b => String(b.id) === String(e.id) ? { ...b, frais_preemption: v } as any : b))} /></td>
+                            <td className="td-prix"><InlineNumEdit value={e.honoraires_avocat ?? null} enchereId={String(e.id)} champ="honoraires_avocat" userToken={userToken} onSave={v => setAllBiens(prev => prev.map(b => String(b.id) === String(e.id) ? { ...b, honoraires_avocat: v } as any : b))} /></td>
+                            <td className="td-prix"><FraisMutationPopover frais={frais} /></td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {e.avocat_nom ? (
                                 <button onClick={() => { setAvocatModal(e); setAvocatEmailInput(''); setAvocatEmailSaved(null) }} style={{

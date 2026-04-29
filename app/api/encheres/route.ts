@@ -7,7 +7,7 @@ const ENCHERES_SELECT = `
   id, source, id_source, url, sources, statut,
   type_bien, adresse, ville, code_postal, departement,
   surface, nb_pieces, nb_lots, description, occupation,
-  tribunal, mise_a_prix, prix_adjuge, frais_preemption,
+  tribunal, mise_a_prix, prix_adjuge, frais_preemption, honoraires_avocat,
   date_audience, date_visite, date_surenchere, mise_a_prix_surenchere, consignation, publication,
   avocat_nom, avocat_cabinet, avocat_tel, avocat_email,
   latitude, longitude, photo_url, documents, lots_data,
