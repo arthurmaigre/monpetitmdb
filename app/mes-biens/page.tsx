@@ -73,6 +73,7 @@ export default function MesBiensPage() {
   const [hasLocatif, setHasLocatif] = useState(false)
   const [etageFocus, setEtageFocus] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [avocatModal, setAvocatModal] = useState<{ nom: string; cabinet?: string; tel?: string; email?: string; tribunal?: string } | null>(null)
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
   const [tableWidth, setTableWidth] = useState(0)
@@ -993,7 +994,13 @@ export default function MesBiensPage() {
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: e.date_surenchere ? undefined : '#c0b0a0' }}>{dateSurenchere}</td>
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
-                            <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '160px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.avocat_nom || '-'}</td>
+                            <td>
+                              {e.avocat_nom ? (
+                                <button onClick={() => setAvocatModal({ nom: e.avocat_nom, cabinet: e.avocat_cabinet, tel: e.avocat_tel, email: e.avocat_email, tribunal: e.tribunal })} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px', color: '#2a4a8a', fontWeight: 600, fontFamily: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                                  {e.avocat_nom}
+                                </button>
+                              ) : <span style={{ color: '#c0b0a0' }}>-</span>}
+                            </td>
                           </>
                         })() : (
                         <>
@@ -1106,6 +1113,40 @@ export default function MesBiensPage() {
         )}
         {AddBienModal()}
       </div>
+
+      {/* Modal avocat poursuivant */}
+      {avocatModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(26,18,16,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }} onClick={() => setAvocatModal(null)}>
+          <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '400px', padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700 }}>Avocat poursuivant</h3>
+              <button onClick={() => setAvocatModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#7a6a60', padding: '0 4px', lineHeight: 1 }}>{'\u00D7'}</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>{'\u2696'}</div>
+                <div>
+                  <div style={{ fontSize: '17px', fontWeight: 700, color: '#1a1210' }}>{avocatModal.nom}</div>
+                  {avocatModal.cabinet && <div style={{ fontSize: '14px', color: '#7a6a60', marginTop: '2px' }}>{avocatModal.cabinet}</div>}
+                </div>
+              </div>
+              {avocatModal.tel && (
+                <a href={`tel:${avocatModal.tel.replace(/\s/g, '')}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8', textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '20px' }}>{'\uD83D\uDCDE'}</span>{avocatModal.tel}
+                </a>
+              )}
+              {avocatModal.email && (
+                <a href={`mailto:${avocatModal.email}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8', textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '20px' }}>{'\u2709'}</span>{avocatModal.email}
+                </a>
+              )}
+              {avocatModal.tribunal && (
+                <div style={{ fontSize: '13px', color: '#7a6a60', padding: '8px 0', borderTop: '1px solid #f0ede8' }}>{avocatModal.tribunal}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
