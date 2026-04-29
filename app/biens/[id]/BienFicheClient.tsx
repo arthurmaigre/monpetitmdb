@@ -1950,6 +1950,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [objectifCashflow, setObjectifCashflow] = useState(0)
   const [objectifPV, setObjectifPV] = useState(20)
   const [enchereManuelMax, setEnchereManuelMax] = useState<number | null>(null)
+  const [enchereManuelDraft, setEnchereManuelDraft] = useState('')
   const [enchereBaseCalc, setEnchereBaseCalc] = useState<'calcule' | 'libre'>('calcule')
   const [enchereFinMode, setEnchereFinMode] = useState<'mise_a_prix' | 'calcule' | 'libre'>('calcule')
   const [regime2, setRegime2] = useState('nu_reel_foncier')
@@ -2779,12 +2780,17 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                             <input
                               type="number"
                               placeholder="Mon prix max…"
-                              value={enchereManuelMax || ''}
-                              onChange={ev => setEnchereManuelMax(ev.target.value ? Number(ev.target.value) : null)}
+                              value={enchereManuelDraft !== '' ? enchereManuelDraft : (enchereManuelMax || '')}
+                              onChange={ev => setEnchereManuelDraft(ev.target.value)}
+                              onKeyDown={ev => { if (ev.key === 'Enter') { setEnchereManuelMax(enchereManuelDraft ? Number(enchereManuelDraft) : null); setEnchereManuelDraft('') } }}
                               style={{ flex: 1, padding: '4px 8px', borderRadius: '6px', border: '1.5px solid var(--success, #2f7d5b)', fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: 'var(--success, #2f7d5b)', background: '#f0faf5', width: '100%' }}
                             />
-                            {enchereManuelMax && (
-                              <button onClick={() => setEnchereManuelMax(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
+                            <button
+                              onClick={() => { setEnchereManuelMax(enchereManuelDraft ? Number(enchereManuelDraft) : enchereManuelMax); setEnchereManuelDraft('') }}
+                              style={{ background: '#2f7d5b', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '4px 8px', lineHeight: 1, whiteSpace: 'nowrap' }}
+                            >{'✓'}</button>
+                            {enchereManuelMax && !enchereManuelDraft && (
+                              <button onClick={() => { setEnchereManuelMax(null); setEnchereManuelDraft('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
                             )}
                           </div>
                         ) : enchMaxCalc ? (
