@@ -2177,6 +2177,20 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   // => prixCible = (estimPrix - budgetTrav) / ((1 + fraisNotaire/100) × (1 + objectifPV/100))
   const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix - budgetTravCalc) / ((1 + fraisNotaire / 100) * (1 + objectifPV / 100))) : null
 
+  // Enchère max calculé (obj. PV) — utilisé comme prixBase quand mode "calculé"
+  const enchMaxCalc = (() => {
+    if (!isEnchere || !estimPrix) return null
+    const obj = (objectifPV || 20) / 100
+    const isMDB = regime === 'marchand_de_biens'
+    const fp = bien.frais_preemption || 0
+    const K = estimPrix / (1 + obj) - budgetTravCalc
+    let p = K / 1.1
+    for (let i = 0; i < 5; i++) {
+      p = K - calculerFraisEnchere(Math.max(1, p), fp, { isMDB }).total
+    }
+    return Math.round(p)
+  })()
+
   // Prix cible cashflow (locatif)
   const prixCibleCashflow = resultatFAI?.prix_cible || null
 
@@ -2254,7 +2268,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const tauxAssuranceNum = tauxAssurance || 0
   const fraisAgenceNum = fraisAgenceRevente || 0
   const prixBase = isEnchere
-    ? (enchereBaseCalc === 'libre' && enchereManuelMax ? enchereManuelMax : bien.prix_fai)
+    ? (enchereBaseCalc === 'libre' && enchereManuelMax ? enchereManuelMax : (enchMaxCalc || bien.prix_fai))
     : (baseCalc === 'fai' ? bien.prix_fai : (prixCibleCombine || bien.prix_fai))
   const montantProjet = prixBase * (1 + fraisNotaire / 100) + budgetTravCalc
   const montantEmprunte = Math.max(0, montantProjet - apportNum)
@@ -2745,30 +2759,36 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               <div className="price-block">
                 {isEnchere ? (
                   (() => {
-                    const dvf = estimationData?.prix_total || 0
-                    const travaux = dvf && (bien.score_travaux || scorePerso) && bien.surface
-                      ? (budgetTravauxM2[String(bien.score_travaux || scorePerso)] || 0) * bien.surface : 0
-                    const enchMax = (() => {
-                      if (!dvf) return null
-                      const obj = (objectifPV || 20) / 100
-                      const isMDB = regime === 'marchand_de_biens'
-                      const fp = bien.frais_preemption || 0
-                      const K = dvf / (1 + obj) - travaux
-                      let p = K / 1.1
-                      for (let i = 0; i < 5; i++) {
-                        p = K - calculerFraisEnchere(Math.max(1, p), fp, { isMDB }).total
-                      }
-                      return Math.round(p)
-                    })()
-                    return enchMax ? (
+                    return (
                       <>
-                        <div className="label">{`ENCH\u00c8RE MAX (OBJ. ${objectifPV || 20}% PV)`}</div>
-                        <div className="value enchere-max">{fmt(enchMax)} {'€'}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="label">REVENTE ESTIM\u00c9E</div>
-                        <div className="value" style={{ color: 'var(--ink-mute)' }}>NC</div>
+                        <div className="label">
+                          <select
+                            value={enchereBaseCalc}
+                            onChange={e => setEnchereBaseCalc(e.target.value as 'calcule' | 'libre')}
+                            style={{ fontSize: '10px', fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                          >
+                            <option value="calcule">{`ENCHÈRE MAX (OBJ. ${objectifPV || 20}% PV)`}</option>
+                            <option value="libre">ENCHÈRE MAX (LIBRE)</option>
+                          </select>
+                        </div>
+                        {enchereBaseCalc === 'libre' ? (
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px' }}>
+                            <input
+                              type="number"
+                              placeholder="Mon prix max…"
+                              value={enchereManuelMax || ''}
+                              onChange={ev => setEnchereManuelMax(ev.target.value ? Number(ev.target.value) : null)}
+                              style={{ flex: 1, padding: '4px 8px', borderRadius: '6px', border: '1.5px solid var(--success, #2f7d5b)', fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: 'var(--success, #2f7d5b)', background: '#f0faf5', width: '100%' }}
+                            />
+                            {enchereManuelMax && (
+                              <button onClick={() => setEnchereManuelMax(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
+                            )}
+                          </div>
+                        ) : enchMaxCalc ? (
+                          <div className="value enchere-max">{fmt(enchMaxCalc)} {'€'}</div>
+                        ) : (
+                          <div className="value" style={{ color: 'var(--ink-mute)' }}>NC</div>
+                        )}
                       </>
                     )
                   })()
@@ -3860,30 +3880,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             <div className="section">
               <h2 className="section-title">Simulateur de financement</h2>
               <p className="section-subtitle">{"Ajustez les param\u00E8tres pour calculer vos mensualit\u00E9s"}</p>
-              {isEnchere && (
-                <div className="fin-block">
-                  <div className="fin-label">Prix d{'\''}enchère utilisé</div>
-                  <div className="fin-chip-group">
-                    <button className={`fin-chip ${enchereBaseCalc === 'calcule' ? 'active' : ''}`} onClick={() => setEnchereBaseCalc('calcule')}>Enchère max obj.</button>
-                    <button className={`fin-chip ${enchereBaseCalc === 'libre' ? 'active' : ''}`} onClick={() => setEnchereBaseCalc('libre')}>Prix libre</button>
-                  </div>
-                  {enchereBaseCalc === 'libre' && (
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '8px' }}>
-                      <input
-                        type="number"
-                        placeholder="Mon prix max…"
-                        value={enchereManuelMax || ''}
-                        onChange={ev => setEnchereManuelMax(ev.target.value ? Number(ev.target.value) : null)}
-                        className="fin-field"
-                        style={{ flex: 1 }}
-                      />
-                      {enchereManuelMax && (
-                        <button onClick={() => setEnchereManuelMax(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '18px', padding: '4px', lineHeight: 1 }}>{'×'}</button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
               {prixCibleCombine && !isEnchere && (
                 <div className="fin-block">
                   <div className="fin-label">Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce (frais d\u2019agence inclus). Utile pour simuler l\u2019achat au prix demand\u00E9.\n\n\u2022 Prix cible : le prix id\u00E9al calcul\u00E9 selon votre objectif de cashflow ou de plus-value. Utile pour pr\u00E9parer une offre."}</span></span></div>
