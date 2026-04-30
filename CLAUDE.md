@@ -88,12 +88,13 @@ IDR (Immeuble de rapport) = Expert only.
 - Auto-deploy : git push → GitHub → Vercel (pas de `vercel --prod` manuel)
 - Domaine : `www.monpetitmdb.fr`
 - Crons externes : cron-job.org — uniquement alertes (9h) et regex (3h30, 15h30) — header `Authorization: Bearer <CRON_SECRET>`
+- Cron estimation VPS : `0 * * * *` (rattrapage) → `run_estimation_batch.sh` (tsx Node 22, séquentiel 200ms, limit 150, cron_config id: `estimation`)
 - Cron SE polling : crontab VPS (`0 23 * * *`) → `python3 ingest_stream_estate.py` (24h glissantes, Claude CLI)
 - Cron enchères : crontab VPS (`5 0 * * *`) → `cron_encheres.sh` (4 phases : scraping + extraction + dédup + statuts)
 - Cron extraction VPS : `0 4 * * *` → `run_extraction_nuit.sh` (Sonnet via Max, locataire + IDR + score)
 - Keepalive auth CLI Max : `1 0` (pre-enchères) et `50 3` (pre-extraction)
 - Routes admin : `CRON_SECRET` pour les crons, token user pour appels UI
-- **Monitoring process** : les 3 crons VPS écrivent leurs résultats dans `cron_config` (Supabase) à la fin de chaque run. L'API `app/api/admin/process-status/route.ts` lit `cron_config` + files d'attente → affiché dans `/admin/sourcing` (3 cartes : Poll SE, Extraction IA Nuit, Enchères). Badge ok/warning/error selon âge du dernier run (ok <26h, warning 26-48h, error >48h).
+- **Monitoring process** : les crons VPS écrivent leurs résultats dans `cron_config` (Supabase) à la fin de chaque run. L'API `app/api/admin/process-status/route.ts` lit `cron_config` + files d'attente → affiché dans `/admin/sourcing` (4 cartes : Poll SE, Extraction IA Nuit, Enchères, Estimation DVF). Badge ok/warning/error selon âge du dernier run (ok <26h, warning 26-48h, error >48h).
 
 ## OpenClaw (PAUSÉ)
 
@@ -118,6 +119,41 @@ Voir `OPENCLAW.md` pour la configuration complète (à charger avec `@OPENCLAW.m
 - Blanc stratégique : agrégation Licitor + Vench + Avoventes + analyse fiscale = 0 concurrent SaaS
 
 **Prochain chantier :** article pilier `/blog/encheres-judiciaires-immobilieres-guide-complet` (priorité P0)
+
+## Calendrier éditorial (interface `/editorial`)
+
+**Route API :** `app/api/editorial/calendar/route.ts` · `app/api/editorial/articles/route.ts`  
+**Interface :** `/editorial` — onglets Rédiger / Backlog / Articles / Calendrier  
+**Stockage :** tables Supabase `editorial_calendar` + `articles`
+
+**Pipeline génération (VPS Hetzner — zéro API Anthropic) :**  
+Architecture **async polling** — Vercel Hobby est limité à 60s mais le pipeline prend 135-250s.  
+POST Vercel répond en < 1s (stub `status='generating'`) → VPS génère en background → callback `/api/editorial/articles/complete` → Vercel fait Unsplash + Supabase update → frontend poll GET `?id=` toutes les 4s.
+
+- `/generate/calendar` : Opus planifie S13-S52 (timeout VPS 110s / Vercel 130s) — synchrone
+- `/generate/article` : mode async — Haiku claims → Google Custom Search → Opus → Sonnet (règle zéro-invention marché) → callback Vercel
+- Fichiers clés : `app/api/editorial/articles/route.ts`, `app/api/editorial/articles/complete/route.ts`, `lib/editorial.ts`, `scrapper/article-server.js`
+- Auth : header `x-generation-secret`. Env Vercel : `VPS_GENERATION_URL`, `GENERATION_SECRET`.
+- Supabase : table `articles` avec colonne `gen_error TEXT` (ajoutée 2026-04-27)
+
+**Workflow :**
+1. Onglet Calendrier → "Générer le planning" → insère 52 semaines (S1-S12 hardcodées + S13-S52 via VPS Opus)
+2. Sur une ligne du calendrier → "Rédiger" → prérempli le formulaire → "Générer l'article" → pipeline async VPS + Unsplash
+3. Statuts article : `generating` → `review` → `approved` → `published` (ping sitemap Google à la publication). `failed` si erreur VPS.
+
+**S1-S12 hardcodées (audit 2026-04-21) — NE PAS modifier sans mettre à jour cet index :**
+- S1 : Enchères judiciaires immobilières guide complet (P0, pilier, 3000 mots)
+- S2 : TVA sur marge immobilier — marchands de biens (satellite S1, 1500 mots)
+- S3 : Investir comme un marchand de biens : la méthode complète (P0, pilier, 2500 mots)
+- S4 : Mise à prix vs prix adjugé : calculer sa décote aux enchères (satellite S1, 1200 mots)
+- S5 : Immeuble de rapport guide complet (P1, pilier, 2500 mots)
+- S6 : Locataire en place : opportunité ou piège ? (satellite P3, 1500 mots)
+- S7 : Pages villes — Lyon, Marseille, Bordeaux, Lille, Nantes comparatif (3000 mots)
+- S8 : Fiscalité immobilière 7 régimes comparés (P1, pilier, 2500 mots)
+- S9 : Division immobilière méthode MdB (P2, pilier, 2000 mots)
+- S10 : Pages villes — Toulouse, Rennes, Strasbourg, Montpellier, Grenoble, Rouen, Nice (3000 mots)
+- S11 : Achat-revente immobilier fiscalité et stratégie (satellite P2, 1500 mots)
+- S12 : Pages villes — 9 dernières villes + bilan stratégie 2026 (3000 mots)
 
 ## Contexte supplémentaire (chargé à la demande)
 

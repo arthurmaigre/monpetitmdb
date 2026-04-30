@@ -97,6 +97,7 @@ export default function EditorialPage() {
   const [currentArticle, setCurrentArticle] = useState<any>(null)
   const [generating, setGenerating] = useState(false)
   const [genStep, setGenStep] = useState('')
+  const [genError, setGenError] = useState('')
 
   // Form state
   const [fTitle, setFTitle] = useState('')
@@ -115,12 +116,11 @@ export default function EditorialPage() {
   async function handleGenerate() {
     if (!fTitle.trim()) return
     setGenerating(true)
-    setGenStep('Analyse du sujet...')
+    setGenError('')
+    setGenStep('Lancement de la g\u00e9n\u00e9ration...')
 
-    const steps = ['Structuration du plan...', 'R\u00e9daction en cours...', 'Mise en forme finale...']
-    let si = 0
-    const interval = setInterval(() => { si = (si + 1) % steps.length; setGenStep(steps[si]) }, 2000)
-
+    // 1. POST \u2014 retourne imm\u00e9diatement avec le stub (status='generating')
+    let articleId: string
     try {
       const res = await fetch('/api/editorial/articles', {
         method: 'POST',
@@ -132,19 +132,43 @@ export default function EditorialPage() {
         }),
       })
       const data = await res.json()
-      clearInterval(interval)
-      setGenerating(false)
-
-      if (data.article) {
-        setArticles(prev => [data.article, ...prev])
-        setCurrentArticle(data.article)
-        setTab('articles')
-        setFTitle(''); setFCategory(''); setFKeyword(''); setFAngle('')
+      if (!data.article?.id) {
+        setGenError(data.error || 'Erreur au lancement')
+        setGenerating(false)
+        return
       }
-    } catch {
-      clearInterval(interval)
+      articleId = data.article.id
+      setArticles(prev => [data.article, ...prev])
+      setFTitle(''); setFCategory(''); setFKeyword(''); setFAngle('')
+    } catch (err: any) {
+      setGenError(err?.message || 'Erreur r\u00e9seau')
       setGenerating(false)
+      return
     }
+
+    // 2. Poll toutes les 4s jusqu'\u00e0 ce que le statut change (max 10 min)
+    const steps = ['Extraction des points cl\u00e9s...', 'Recherche des donn\u00e9es...', 'R\u00e9daction en cours...', 'Relecture finale...']
+    for (let i = 0; i < 150; i++) {
+      await new Promise(r => setTimeout(r, 4000))
+      setGenStep(steps[Math.floor(i / 6) % steps.length])
+      try {
+        const res = await fetch(`/api/editorial/articles?id=${articleId}`)
+        const data = await res.json()
+        const article = data.article
+        if (!article || article.status === 'generating') continue
+        setGenerating(false)
+        setArticles(prev => prev.map((a: any) => a.id === article.id ? article : a))
+        if (article.status === 'failed') {
+          setGenError(article.gen_error || 'G\u00e9n\u00e9ration \u00e9chou\u00e9e')
+          return
+        }
+        setCurrentArticle(article)
+        setTab('articles')
+        return
+      } catch {}
+    }
+    setGenerating(false)
+    setGenError('Timeout \u2014 g\u00e9n\u00e9ration trop longue (> 10 min)')
   }
 
   async function deleteArticle(id: string) {
@@ -436,8 +460,13 @@ export default function EditorialPage() {
         @media (max-width: 768px) {
           .ed-wrap { flex-direction: column; height: auto; }
           .ed-sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid #e2d9d0; }
-          .ed-aside { width: 100%; border-left: none; border-top: 1px solid #e2d9d0; }
           .ed-main { min-height: 60vh; }
+          .ed-content { padding: 20px 16px; }
+          .ed-editor-body { flex-direction: column; overflow: visible; }
+          .ed-article-content { padding: 20px 16px; overflow-y: visible; }
+          .ed-aside { width: 100%; border-left: none; border-top: 1px solid #e2d9d0; }
+          .ed-editor-toolbar { flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+          .ed-form-grid { grid-template-columns: 1fr; }
           .ed-overlay-box { padding: 24px 20px; }
           .ed-cal-table { font-size: 11px; }
           .ed-cal-table th, .ed-cal-table td { padding: 8px 10px; }
@@ -537,6 +566,11 @@ export default function EditorialPage() {
                 <button className="ed-btn-primary" onClick={handleGenerate} disabled={generating}>G{'\u00e9'}n{'\u00e9'}rer l'article</button>
                 <button className="ed-btn-secondary" onClick={() => setTab('backlog')}>Choisir depuis le backlog</button>
               </div>
+              {genError && (
+                <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fff0ee', border: '1px solid #f5c6c0', borderRadius: '4px', fontSize: '12px', color: '#c0392b' }}>
+                  {genError}
+                </div>
+              )}
             </div>
           )}
 

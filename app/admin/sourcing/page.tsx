@@ -582,10 +582,18 @@ export default function AdminSourcingPage() {
           const se = ps.poll_se
           const seRes = se?.result || {}
           const seByStrat = seRes.by_strategie || {}
-          const STRAT_LABELS: Record<string, string> = { lep: 'LEP', travaux: 'Travaux', division: 'Division', idr: 'IDR' }
-          const STRAT_ORDER = ['lep', 'travaux', 'division', 'idr']
+          const STRAT_LABELS: Record<string, string> = { locataire: 'LEP', travaux: 'Travaux', division: 'Division', idr: 'IDR' }
+          const STRAT_ORDER = ['locataire', 'travaux', 'division', 'idr']
           const seTotal = { inserted: seRes.new || 0, fp: seRes.fp || 0, credits: seRes.credits || 0 }
           const seFpRate = seTotal.credits > 0 ? Math.round((seTotal.fp / seTotal.credits) * 100) : 0
+
+          // ── Card Sync Expired ─────────────────────────────────
+          const syncExp = ps.sync_expired_se
+          const syncExpRes = syncExp?.result || {}
+          const syncExpByStrat = syncExpRes.by_strategie || {}
+          const SYNC_STRAT_LABELS: Record<string, string> = { locataire: 'LEP', travaux: 'Travaux', division: 'Division', idr: 'IDR' }
+          const SYNC_STRAT_ORDER = ['locataire', 'travaux', 'division', 'idr']
+          const syncExpTotal = { updated: syncExpRes.updated || 0, credits: syncExpRes.credits || 0 }
 
           // ── Card Extraction IA ─────────────────────────────────
           const ex = ps.extraction_nuit
@@ -643,6 +651,40 @@ export default function AdminSourcingPage() {
                   </table>
                 ) : (
                   <div style={{ color: '#7a6a60', fontSize: 12, fontStyle: 'italic' }}>Aucune donnée disponible</div>
+                )}
+                {Object.keys(syncExpByStrat).length > 0 && (
+                  <>
+                    <div style={{ borderTop: '1.5px solid #e8e2d8', margin: '10px 0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expirés J-1</span>
+                      {syncExp?.last_run && <span style={{ fontSize: 10, color: '#aaa' }}>{new Date(syncExp.last_run).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1.5px solid #e8e2d8' }}>
+                          <th style={{ textAlign: 'left', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Stratégie"}</th>
+                          <th style={{ textAlign: 'right', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Expirés"}</th>
+                          <th style={{ textAlign: 'right', padding: '4px 8px', color: '#7a6a60', fontSize: 11, fontWeight: 600 }}>{"Crédits SE"}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {SYNC_STRAT_ORDER.filter(k => syncExpByStrat[k]).map(k => {
+                          const s = syncExpByStrat[k]
+                          return (
+                            <tr key={k} style={{ borderBottom: '1px solid #f0ede8' }}>
+                              <td style={{ padding: '5px 8px', fontWeight: 600, color: '#1a1210' }}>{SYNC_STRAT_LABELS[k] || k}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', color: '#c0392b', fontWeight: 700 }}>{s.updated ?? 0}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', color: '#2a4a8a' }}>{s.credits ?? 0}</td>
+                            </tr>
+                          )
+                        })}
+                        <tr style={{ borderTop: '1.5px solid #e8e2d8', fontWeight: 700 }}>
+                          <td style={{ padding: '5px 8px', color: '#1a1210' }}>Total</td>
+                          <td style={{ padding: '5px 8px', textAlign: 'right', color: '#c0392b' }}>{syncExpTotal.updated}</td>
+                          <td style={{ padding: '5px 8px', textAlign: 'right', color: '#2a4a8a' }}>{syncExpTotal.credits}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </>
                 )}
               </MonitorCard>
 
@@ -734,7 +776,7 @@ export default function AdminSourcingPage() {
                     <span style={{ fontWeight: 600, color: '#7a6a60', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phase 3 — Dédup</span>
                     <div style={{ marginTop: 4 }}>
                       <Pill color="#2a4a8a" bg="#d4ddf5"><strong>{encP3.fusions ?? 0}</strong> fusions</Pill>
-                      {(encP3.supprimes ?? 0) > 0 && <> <Pill color="#7a6a60" bg="#f0ede8"><strong>{encP3.supprimes}</strong> supprimés</Pill></>}
+                      {(encP3.doublons ?? 0) > 0 && <> <Pill color="#7a6a60" bg="#f0ede8"><strong>{encP3.doublons}</strong> doublons</Pill></>}
                     </div>
                   </div>
                   <div>

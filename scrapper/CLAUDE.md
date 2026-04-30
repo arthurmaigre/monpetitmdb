@@ -33,14 +33,16 @@ git pull origin main
 |---|---|---|---|
 | `1 0` | keepalive auth CLI Max (pre-enchères) | `/home/openclaw/logs/auth-keepalive.log` | — |
 | `5 0` | `cron_encheres.sh` — pipeline 4 phases | `/home/openclaw/logs/encheres/encheres_cron.log` | `encheres_pipeline` |
-| `0 23` | `ingest_stream_estate.py` — SE polling 24h | `/home/openclaw/logs/se-polling.log` | `poll_se` |
+| `5 1` | `ingest_stream_estate.py` — SE polling (hier, heure locale) | `/home/openclaw/logs/se-polling.log` | `poll_se` |
+| `0 2` | `sync_expired_se.py` — sync expirés SE (hier, heure locale) | `/home/openclaw/logs/sync-expired.log` | `sync_expired_se` |
 | `50 3` | keepalive auth CLI Max (pre-extraction) | `/home/openclaw/logs/auth-keepalive.log` | — |
 | `0 4` | `run_extraction_nuit.sh` — locataire+IDR+score | `/home/openclaw/logs/extractions/nuit_YYYY-MM-DD.log` | `extraction_nuit` |
 
 **Chaque script VPS écrit ses résultats dans `cron_config` (upsert sur `id`) à la fin du run.** Format `last_result` :
 - `poll_se` : `{ new, fp, credits, by_strategie: { lep, travaux, division, idr: { inserted, fp, credits } }, status }`
+- `sync_expired_se` : `{ credits, in_db, updated, by_strategie: { locataire, travaux, division, idr: { credits, in_db, updated } }, status }`
 - `extraction_nuit` : `{ lep: { processed, loyers, profils, errors }, idr: { processed, avec_lots, errors }, travaux: { processed, errors }, status }`
-- `encheres_pipeline` : `{ phase1: { licitor, avoventes, vench, total_nouveaux, total_deja_en_base }, phase2: { extracted, errors }, phase3: { fusions, supprimes }, phase4: { updated }, status }`
+- `encheres_pipeline` : `{ phase1: { licitor, avoventes, vench, total_nouveaux, total_deja_en_base }, phase2: { extracted, errors }, phase3: { fusions, doublons }, phase4: { updated }, status }`
 
 ```bash
 # Voir les crons
@@ -192,6 +194,31 @@ WHERE strategie_mdb = 'Travaux lourds' AND statut = 'Toujours disponible'
 - `enrichissement_statut` = `ok` ET `no_data` (les deux sont chargés)
 - Licitor "Vente sur saisie immobilière" → date extraite par pattern jour-de-semaine (pas conditionnel sur le header)
 - Arrondissements : "Marseille 7ème" = "Marseille", "Paris 17ème" = "Paris"
+
+## Article Server (`article-server.js`)
+
+Serveur HTTP Node.js sur le VPS (port 3099, pm2 `article-server`) qui génère les articles éditoriaux en background pour contourner le timeout Vercel Hobby (60s max).
+
+**Pipeline de génération (séquentiel) :**
+1. Haiku — extrait 3 queries factuelles (timeout 10s)
+2. Google Custom Search — 3 requêtes web (timeout 3s chacune)
+3. **Opus** — génère l'article HTML complet **(timeout 260s)**
+4. Sonnet — relit et corrige (timeout 75s)
+
+**Total pire cas : ~350-400s (~6 min) pour un article pilier 3000 mots.**
+
+**Timeouts à ne PAS réduire sous ces seuils :**
+- Opus : **260s minimum** — le CLI a ~20-30s d'overhead OAuth au démarrage, 3000 mots Opus = 60-120s. 160s timeout → échec systématique sur les piliers.
+- Ne pas mettre un timeout aberrant (ex. 2h) : si ça dépasse 260s, c'est un incident (token expiré, réseau) à détecter vite, pas à attendre.
+
+**Redémarrer après modif :**
+```bash
+su - openclaw -c "pm2 restart article-server"
+```
+
+**Mode async :** le VPS répond `{ queued: true }` en < 1s, génère en background, puis POST vers `/api/editorial/articles/complete` (callback Vercel) avec le HTML final.
+
+**Frontend polling :** 150 × 4s = **10 min max** (paramètre dans `app/editorial/page.tsx` ligne ~151).
 
 ## Fichiers clés
 

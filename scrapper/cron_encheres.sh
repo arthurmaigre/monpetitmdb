@@ -137,8 +137,8 @@ p1_total = sum(v['nouveaux'] for v in phase1.values())
 p1_deja = sum(v['deja_en_base'] for v in phase1.values())
 result = {
     'phase1': {**phase1, 'total_nouveaux': p1_total, 'total_deja_en_base': p1_deja},
-    'phase2': {'extracted': phase2.get('ok', 0), 'errors': phase2.get('echec', 0) + phase2.get('no_data', 0)},
-    'phase3': {'fusions': phase3.get('merged', 0), 'supprimes': phase3.get('duplicates_removed', 0)},
+    'phase2': {'extracted': phase2.get('enriched', 0), 'errors': phase2.get('errors', 0) + phase2.get('no_data', 0)},
+    'phase3': {'fusions': phase3.get('merged', 0), 'doublons': phase3.get('duplicates_removed', 0)},
     'phase4': {'updated': phase4_count},
     'status': 'success',
 }
