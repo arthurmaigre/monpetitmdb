@@ -1210,7 +1210,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    dbVal={bien.loyer ?? null}
                                    draftVal={allDrafts[String(bien.id)]?.["loyer"] ?? null}
                                    statut={allStatuts[String(bien.id)]?.["loyer"] ?? null}
-                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   isSourceData={bien.loyer !== null}
                                    onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
@@ -1221,7 +1221,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    champ="type_loyer"
                                    dbVal={bien.type_loyer ?? null}
                                    statut={allStatuts[String(bien.id)]?.["type_loyer"] ?? null}
-                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   isSourceData={bien.type_loyer !== null}
                                    onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
@@ -1232,7 +1232,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    dbVal={bien.charges_rec ?? null}
                                    draftVal={allDrafts[String(bien.id)]?.["charges_rec"] ?? null}
                                    statut={allStatuts[String(bien.id)]?.["charges_rec"] ?? null}
-                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   isSourceData={bien.charges_rec !== null}
                                    onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
@@ -1244,7 +1244,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    dbVal={bien.charges_copro ?? null}
                                    draftVal={allDrafts[String(bien.id)]?.["charges_copro"] ?? null}
                                    statut={allStatuts[String(bien.id)]?.["charges_copro"] ?? null}
-                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   isSourceData={bien.charges_copro !== null}
                                    onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
@@ -1256,7 +1256,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    dbVal={bien.taxe_fonc_ann ?? null}
                                    draftVal={allDrafts[String(bien.id)]?.["taxe_fonc_ann"] ?? null}
                                    statut={allStatuts[String(bien.id)]?.["taxe_fonc_ann"] ?? null}
-                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   isSourceData={bien.taxe_fonc_ann !== null}
                                    onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
