@@ -606,9 +606,12 @@ def main():
     args = parser.parse_args()
 
     if not args.from_date:
-        from datetime import datetime, timedelta, timezone
-        args.from_date = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime('%Y-%m-%dT%H:%M:%SZ')
-        log.info(f'--from-date non fourni, défaut: dernières 24h ({args.from_date})')
+        from datetime import datetime, timedelta
+        hier = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        args.from_date = hier
+        if not args.to_date:
+            args.to_date = hier
+        log.info(f'--from-date non fourni, défaut: hier ({hier})')
 
     strategies = [args.strategie] if args.strategie else list(STRATEGIES.keys())
     run_ingestion(

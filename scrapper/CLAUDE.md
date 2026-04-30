@@ -33,8 +33,8 @@ git pull origin main
 |---|---|---|---|
 | `1 0` | keepalive auth CLI Max (pre-enchères) | `/home/openclaw/logs/auth-keepalive.log` | — |
 | `5 0` | `cron_encheres.sh` — pipeline 4 phases | `/home/openclaw/logs/encheres/encheres_cron.log` | `encheres_pipeline` |
-| `0 1` | `sync_expired_se.py` — sync expirés SE (hier) | `/home/openclaw/logs/sync-expired.log` | `sync_expired_se` |
-| `0 23` | `ingest_stream_estate.py` — SE polling 24h | `/home/openclaw/logs/se-polling.log` | `poll_se` |
+| `5 1` | `ingest_stream_estate.py` — SE polling (hier, heure locale) | `/home/openclaw/logs/se-polling.log` | `poll_se` |
+| `0 2` | `sync_expired_se.py` — sync expirés SE (hier, heure locale) | `/home/openclaw/logs/sync-expired.log` | `sync_expired_se` |
 | `50 3` | keepalive auth CLI Max (pre-extraction) | `/home/openclaw/logs/auth-keepalive.log` | — |
 | `0 4` | `run_extraction_nuit.sh` — locataire+IDR+score | `/home/openclaw/logs/extractions/nuit_YYYY-MM-DD.log` | `extraction_nuit` |
 
