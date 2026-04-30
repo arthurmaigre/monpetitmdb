@@ -158,6 +158,7 @@ export default function MesBiensPage() {
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const floatingScrollRef = useRef<HTMLDivElement>(null)
   const [tableWidth, setTableWidth] = useState(0)
+  const [tableZoom, setTableZoom] = useState(1)
   const syncing = useRef(false)
 
   const syncScroll = useCallback((source: 'table' | 'float') => {
@@ -170,6 +171,18 @@ export default function MesBiensPage() {
       else tw.scrollLeft = fs.scrollLeft
     }
     requestAnimationFrame(() => { syncing.current = false })
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: WheelEvent) => {
+      if (!e.shiftKey) return
+      const el = tableWrapRef.current
+      if (!el || !el.contains(e.target as Node)) return
+      e.preventDefault()
+      setTableZoom(z => Math.min(1.2, Math.max(0.5, +(z + (e.deltaY < 0 ? 0.05 : -0.05)).toFixed(2))))
+    }
+    document.addEventListener('wheel', handler, { passive: false })
+    return () => document.removeEventListener('wheel', handler)
   }, [])
 
   useEffect(() => {
@@ -235,8 +248,7 @@ export default function MesBiensPage() {
         const allBiens = [...allBiensItems, ...allEncheresItems]
         setBiens(allBiens)
 
-        const strategies = [...new Set(allBiens.map((x: any) => x.strategie_mdb).filter(Boolean))]
-        if (strategies.length > 0) setActiveTab(strategies[0] as string)
+        // Pas de présélection d'onglet — on affiche tout par défaut
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement')
       } finally {
@@ -271,15 +283,20 @@ export default function MesBiensPage() {
   const watchlistLimit = plan === 'expert' ? Infinity : plan === 'pro' ? 50 : 10
   const isAtLimit = activeBiens.length >= watchlistLimit
   const isExpert = plan === 'expert'
-  const strategies = [...new Set(displayBiens.map(b => b.strategie_mdb).filter(Boolean))] as string[]
+  const ALL_STRATEGIES = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport', 'Enchères']
   const filteredBiens = activeTab && !showArchived ? displayBiens.filter(b => b.strategie_mdb === activeTab) : displayBiens
+
+  function getSourceTable(bienId: string) {
+    const b = biens.find(x => String(x.id) === String(bienId))
+    return b?.strategie_mdb === 'Enchères' ? 'encheres' : 'biens'
+  }
 
   async function handleSuiviChange(bienId: string, newSuivi: string) {
     setSuiviMap(prev => ({ ...prev, [bienId]: newSuivi }))
     await fetch('/api/watchlist', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-      body: JSON.stringify({ bien_id: bienId, suivi: newSuivi })
+      body: JSON.stringify({ bien_id: bienId, suivi: newSuivi, source_table: getSourceTable(bienId) })
     })
   }
 
@@ -289,7 +306,7 @@ export default function MesBiensPage() {
     await fetch('/api/watchlist', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-      body: JSON.stringify({ bien_id: bienId })
+      body: JSON.stringify({ bien_id: bienId, source_table: getSourceTable(bienId) })
     })
   }
 
@@ -299,7 +316,19 @@ export default function MesBiensPage() {
     await fetch('/api/watchlist', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-      body: JSON.stringify({ bien_id: bienId, suivi: 'a_analyser' })
+      body: JSON.stringify({ bien_id: bienId, suivi: 'a_analyser', source_table: getSourceTable(bienId) })
+    })
+  }
+
+  async function handleDelete(bienId: string) {
+    if (!userToken) return
+    const sourceTable = getSourceTable(bienId)
+    setBiens(prev => prev.filter(b => String(b.id) !== String(bienId)))
+    setSuiviMap(prev => { const next = { ...prev }; delete next[String(bienId)]; return next })
+    await fetch('/api/watchlist', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ bien_id: bienId, source_table: sourceTable, permanent: true })
     })
   }
 
@@ -426,8 +455,7 @@ export default function MesBiensPage() {
         const encheresAvecStrategie2 = (encheresData2.encheres || []).map((e: any) => ({ ...e, strategie_mdb: 'Enchères' }))
         const allBiens2 = [...(biensData2.biens || []), ...encheresAvecStrategie2]
         setBiens(allBiens2)
-        const strats = [...new Set(allBiens2.map((x: any) => x.strategie_mdb).filter(Boolean))]
-        if (strats.length > 0 && !strats.includes(activeTab)) setActiveTab(strats[0] as string)
+        // Pas de présélection d'onglet
       }
       setShowAddModal(false)
     } catch {
@@ -757,7 +785,7 @@ export default function MesBiensPage() {
         .mes-biens-error { background: #fdedec; color: #e74c3c; border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; }
         .list-wrap { position: relative; overflow-x: scroll; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
         .list-wrap::-webkit-scrollbar { height: 0; }
-        .floating-scroll { position: fixed; bottom: 0; left: 48px; right: 48px; z-index: 50; overflow-x: auto; overflow-y: hidden; background: rgba(240,237,232,0.95); backdrop-filter: blur(6px); border-top: 1px solid #e8e2d8; height: 16px; max-width: 1504px; margin: 0 auto; }
+        .floating-scroll { overflow-x: auto; overflow-y: hidden; background: #f0ede8; border-top: 1px solid #e8e2d8; height: 16px; border-radius: 0 0 16px 16px; }
         .floating-scroll-inner { height: 1px; pointer-events: none; }
         .list-table { border-collapse: separate; border-spacing: 0; background: #fff; min-width: 100%; }
         .list-table thead tr { background: #f7f4f0; }
@@ -876,19 +904,17 @@ export default function MesBiensPage() {
           </div>
         ) : (
           <>
-            {strategies.length > 1 && (
-              <div className="tabs" role="tablist">
-                {strategies.map(strat => {
-                  const count = biens.filter(b => b.strategie_mdb === strat).length
-                  return (
-                    <button key={strat} role="tab" aria-selected={activeTab === strat} className={`tab ${activeTab === strat ? 'active' : ''}`} onClick={() => setActiveTab(strat)}>
-                      {strat}
-                      <span className="tab-count">{count}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+            <div className="tabs" role="tablist">
+              {ALL_STRATEGIES.map(strat => {
+                const count = displayBiens.filter(b => b.strategie_mdb === strat).length
+                return (
+                  <button key={strat} role="tab" aria-selected={activeTab === strat} className={`tab ${activeTab === strat ? 'active' : ''}`} onClick={() => setActiveTab(prev => prev === strat ? '' : strat)}>
+                    {strat}
+                    <span className="tab-count">{count}</span>
+                  </button>
+                )
+              })}
+            </div>
 
             <p style={{ fontSize: '14px', color: '#7a6a60', marginBottom: '16px' }}>
               {showArchived ? (
@@ -902,11 +928,14 @@ export default function MesBiensPage() {
               <div className="grid">
                 {filteredBiens.map(bien => {
                   const opts = getSuiviOptions(bien.strategie_mdb); const opt = opts.find(o => o.value === (suiviMap[bien.id] || 'a_analyser')) || opts[0]
-                  if (activeTab === 'Enchères') {
+                  if (bien.strategie_mdb === 'Enchères') {
                     return showArchived ? (
                       <div key={bien.id} style={{ position: 'relative', opacity: 0.7 }}>
                         <EnchereCard enchere={bien as any} />
-                        <button onClick={() => handleRestore(bien.id)} style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', padding: '10px', borderRadius: '8px', border: 'none', background: '#27ae60', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"\u21A9 Restaurer"}</button>
+                        <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', display: 'flex', gap: '8px' }}>
+                          <button onClick={() => handleRestore(bien.id)} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#27ae60', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"\u21A9 Restaurer"}</button>
+                          <button onClick={() => handleDelete(bien.id)} style={{ padding: '10px 14px', borderRadius: '8px', border: 'none', background: '#e74c3c', color: '#fff', fontSize: '15px', cursor: 'pointer' }} title="Supprimer d\u00E9finitivement">{"\uD83D\uDDD1"}</button>
+                        </div>
                       </div>
                     ) : (
                       <EnchereCard key={bien.id} enchere={bien as any} inWatchlist={true} userToken={userToken} onWatchlistChange={(id, added) => { if (!added) handleRemove(String(id)) }} />
@@ -915,12 +944,10 @@ export default function MesBiensPage() {
                   return showArchived ? (
                     <div key={bien.id} style={{ position: 'relative', opacity: 0.7 }}>
                       <BienCard bien={bien} inWatchlist={false} userToken={userToken} />
-                      <button
-                        onClick={() => handleRestore(bien.id)}
-                        style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', padding: '10px', borderRadius: '8px', border: 'none', background: '#27ae60', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        {"\u21A9 Restaurer dans ma watchlist"}
-                      </button>
+                      <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleRestore(bien.id)} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#27ae60', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{"\u21A9 Restaurer"}</button>
+                        <button onClick={() => handleDelete(bien.id)} style={{ padding: '10px 14px', borderRadius: '8px', border: 'none', background: '#e74c3c', color: '#fff', fontSize: '15px', cursor: 'pointer' }} title="Supprimer d\u00E9finitivement">{"\uD83D\uDDD1"}</button>
+                      </div>
                     </div>
                   ) : (
                   <div key={bien.id} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -965,7 +992,7 @@ export default function MesBiensPage() {
             ) : (
               <>
                 {userId && <p className="edit-hint">Les champs NC sont editables — vos modifications enrichissent la base de donnees.</p>}
-                <div className="list-wrap" ref={tableWrapRef} onScroll={() => syncScroll('table')}><table className="list-table">
+                <div className="list-wrap" ref={tableWrapRef} onScroll={() => syncScroll('table')} style={{ zoom: tableZoom }}><table className="list-table">
                   <thead>
                     <tr>
                       <th className="sticky-col-head" style={{ left: 0, width: '40px', minWidth: '40px' }}><span></span></th>
@@ -1026,7 +1053,10 @@ export default function MesBiensPage() {
                       <tr key={bien.id}>
                         <td className="sticky-col" style={{ left: 0, width: '40px', minWidth: '40px' }}>
                           {showArchived ? (
-                            <button className="td-heart" style={{ color: '#27ae60' }} onClick={() => handleRestore(bien.id)} title="Restaurer">{'\u21A9'}</button>
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                              <button className="td-heart" style={{ color: '#27ae60' }} onClick={() => handleRestore(bien.id)} title="Restaurer">{'\u21A9'}</button>
+                              <button className="td-heart" style={{ color: '#e74c3c' }} onClick={() => handleDelete(bien.id)} title="Supprimer d\u00E9finitivement">{'\u{1F5D1}'}</button>
+                            </div>
                           ) : (
                             <button className="td-heart" onClick={() => handleArchive(bien.id)}>{'\u2665'}</button>
                           )}
@@ -1042,7 +1072,7 @@ export default function MesBiensPage() {
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
                         <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
-                        {activeTab === 'Enchères' ? (() => {
+                        {bien.strategie_mdb === 'Enchères' ? (() => {
                           const e = bien as any
                           const miseAPrixW = e.mise_a_prix || 0
                           const fraisW = miseAPrixW ? calculerFraisEnchere(miseAPrixW, e.frais_preemption || undefined, { isMDB: false }) : null
@@ -1099,7 +1129,7 @@ export default function MesBiensPage() {
                             { tmi: 30, regime: 'nu_micro_foncier' }
                           ) : null
                           const ecartPct = resultat ? ((resultat.prix_cible - bien.prix_fai) / bien.prix_fai * 100) : null
-                          const isLocataire = activeTab !== 'Travaux lourds'
+                          const isLocataire = bien.strategie_mdb !== 'Travaux lourds'
                           return <>
                             <td className="td-prix">{formatPrix(bien.prix_fai)}</td>
                             {isLocataire && (
@@ -1181,8 +1211,8 @@ export default function MesBiensPage() {
                           />
                         </td>
                         <td style={{ whiteSpace: 'nowrap' }}>
-                          <a href={activeTab === 'Enchères' ? `/biens/${bien.id}?source=encheres` : `/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
-                          {activeTab !== 'Enchères' && <>{' '}<a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{"R\u00E9cup\u00E9rer les donn\u00E9es"}</a></>}
+                          <a href={bien.strategie_mdb === 'Enchères' ? `/biens/${bien.id}?source=encheres` : `/biens/${bien.id}`} className="td-btn">{"Voir l\u2019analyse"}</a>
+                          {bien.strategie_mdb !== 'Enchères' && <>{' '}<a href={`/biens/${bien.id}#contact`} className="td-btn-contact">{"R\u00E9cup\u00E9rer les donn\u00E9es"}</a></>}
                         </td>
                       </tr>
                     ))}
