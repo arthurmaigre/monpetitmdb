@@ -76,17 +76,21 @@ function ListCellFull({ bienId, champ, dbVal, draftVal = null, statut = null, su
       <Slot />
     </span>
   )
-  // JAUNE — 1 user, slot réservé pour bouton (pas de décalage)
+  // JAUNE — 1 user, clic sur valeur pour ré-éditer
   if (isJaune && dbVal != null) return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-      <span style={{ fontSize: '12px', fontWeight: 500, color: '#a06010' }}>{fmt(dbVal)}</span>
+      <span onClick={() => { setInputVal(String(Math.round(dbVal))); setEditing(true) }}
+        title="Cliquer pour modifier"
+        style={{ fontSize: '12px', fontWeight: 500, color: '#a06010', cursor: 'text' }}>{fmt(dbVal)}</span>
       <Slot btn={<ValidBtn val={dbVal} />} />
     </span>
   )
-  // BLEU — brouillon localStorage, slot réservé pour bouton
+  // BLEU — brouillon localStorage, clic sur valeur pour ré-éditer
   if (hasDraft && draftVal != null) return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-      <span style={{ fontSize: '12px', fontWeight: 500, color: '#2a4a8a' }}>{fmt(draftVal)}</span>
+      <span onClick={() => { setInputVal(String(Math.round(draftVal))); setEditing(true) }}
+        title="Cliquer pour modifier"
+        style={{ fontSize: '12px', fontWeight: 500, color: '#2a4a8a', cursor: 'text' }}>{fmt(draftVal)}</span>
       <Slot btn={<ValidBtn val={draftVal} />} />
     </span>
   )
