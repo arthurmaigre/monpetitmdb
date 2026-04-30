@@ -15,6 +15,8 @@ import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien, Enchere } from '@/lib/types'
 import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, TRIS_ENCHERES, STRATEGIES_VISIBLES } from '@/lib/constants'
 import { calculerCashflow, calculerFraisEnchere } from '@/lib/calculs'
+import { CellEditable as CellEditableShared, CellTypeLoyer as CellTypeLoyerShared } from '@/components/CellEditable'
+import { getDrafts } from '@/lib/drafts'
 
 function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
@@ -169,6 +171,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
+  const [allDrafts, setAllDrafts] = useState<Record<string, Record<string, number>>>({})
+  const [allStatuts, setAllStatuts] = useState<Record<string, Record<string, any>>>({})
   const [hoverPhoto, setHoverPhoto] = useState<{ urls: string[], x: number, y: number, idx: number } | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
@@ -327,10 +331,24 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
       .then(r => { if (!r.ok) throw new Error('Erreur serveur'); return r.json() })
       .then(d => {
         // L'API enchères retourne "encheres", l'API biens retourne "biens"
-        setAllBiens(d.biens || d.encheres || [])
+        const biens = d.biens || d.encheres || []
+        setAllBiens(biens)
         setTotalBiens(d.total || 0)
         setHasMore(d.hasMore || false)
         setLoading(false)
+        // Charger les brouillons localStorage
+        const drafts: Record<string, Record<string, number>> = {}
+        for (const b of biens) {
+          const bd = getDrafts(String(b.id))
+          if (Object.keys(bd).length > 0) drafts[String(b.id)] = bd
+        }
+        setAllDrafts(drafts)
+        // Charger les statuts communautaires
+        if (userToken && biens.length > 0 && !biens[0].source) {
+          const ids = biens.map((b: any) => b.id).join(',')
+          fetch('/api/biens/edits-bulk?ids=' + ids, { headers: { Authorization: 'Bearer ' + userToken } })
+            .then(r => r.json()).then(s => setAllStatuts(s)).catch(() => {})
+        }
       })
       .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
   }, [strategie, selectedCommune, typesBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise, tri, authChecked])
@@ -457,8 +475,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
 
   async function updateBien(bien: any, champ: string, valeur: any) {
     if (!userToken) return
-    if ((bien as any)[champ] !== null && (bien as any)[champ] !== undefined) return
-    setSaving(bien.id + champ)
     const res = await fetch('/api/biens/' + bien.id, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
@@ -467,8 +483,13 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     if (res.ok) {
       const data = await res.json()
       setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, ...data.bien } : b))
+      // Rafraichir les statuts communautaires pour ce bien
+      try {
+        const editsRes = await fetch('/api/biens/' + bien.id + '/edits', { headers: { Authorization: 'Bearer ' + userToken } })
+        const editsData = await editsRes.json()
+        setAllStatuts(prev => ({ ...prev, [String(bien.id)]: editsData.champs || {} }))
+      } catch {}
     }
-    setSaving(null)
   }
 
   const villes = metropole === 'Toutes' ? [] :
@@ -507,33 +528,6 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     obs.observe(tw)
     return () => obs.disconnect()
   }, [view, loading, strategie, allBiens.length])
-
-  function CellEditable({ bien, champ, suffix = '' }: { bien: any, champ: string, suffix?: string }) {
-    const valeur = bien[champ]
-    const estSaving = saving === bien.id + champ
-    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555', whiteSpace: 'nowrap' }}>{typeof valeur === 'number' ? valeur.toLocaleString('fr-FR') : valeur}{suffix.replace(/ /g, '\u00A0')}</span>
-    if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
-    return (
-      <input type="number" defaultValue="" placeholder="NC" disabled={!!estSaving}
-        style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: estSaving ? '#f0ede8' : '#faf8f5', outline: 'none' }}
-        onBlur={e => { if (e.target.value) updateBien(bien, champ, Number(e.target.value)) }}
-        onFocus={e => e.target.style.borderColor = '#c0392b'} />
-    )
-  }
-
-  function CellTypeLoyer({ bien }: { bien: any }) {
-    const valeur = (bien as any).type_loyer
-    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}</span>
-    if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
-    return (
-      <select defaultValue="" onChange={e => { if (e.target.value) updateBien(bien, 'type_loyer', e.target.value) }}
-        style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: '#faf8f5', outline: 'none' }}>
-        <option value="">NC</option>
-        <option value="HC">HC</option>
-        <option value="CC">CC</option>
-      </select>
-    )
-  }
 
   return (
     <Layout>
@@ -1210,11 +1204,64 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               </>
                             ) : (
                               <>
-                                <td><CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} /></td>
-                                <td className="col-optional"><CellTypeLoyer bien={bien} /></td>
-                                <td className="col-optional"><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
-                                <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
-                                <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
+                                 <td><CellEditableShared
+                                   bienId={String(bien.id)}
+                                   champ="loyer"
+                                   dbVal={bien.loyer ?? null}
+                                   draftVal={allDrafts[String(bien.id)]?.["loyer"] ?? null}
+                                   statut={allStatuts[String(bien.id)]?.["loyer"] ?? null}
+                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
+                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
+                                   userToken={userToken ?? undefined}
+                                   suffix={` €`}
+                                 /></td>
+                                 <td className="col-optional"><CellTypeLoyerShared
+                                   bienId={String(bien.id)}
+                                   champ="type_loyer"
+                                   dbVal={bien.type_loyer ?? null}
+                                   statut={allStatuts[String(bien.id)]?.["type_loyer"] ?? null}
+                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
+                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
+                                   userToken={userToken ?? undefined}
+                                 /></td>
+                                 <td className="col-optional"><CellEditableShared
+                                   bienId={String(bien.id)}
+                                   champ="charges_rec"
+                                   dbVal={bien.charges_rec ?? null}
+                                   draftVal={allDrafts[String(bien.id)]?.["charges_rec"] ?? null}
+                                   statut={allStatuts[String(bien.id)]?.["charges_rec"] ?? null}
+                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
+                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
+                                   userToken={userToken ?? undefined}
+                                   suffix={` €`}
+                                 /></td>
+                                 <td><CellEditableShared
+                                   bienId={String(bien.id)}
+                                   champ="charges_copro"
+                                   dbVal={bien.charges_copro ?? null}
+                                   draftVal={allDrafts[String(bien.id)]?.["charges_copro"] ?? null}
+                                   statut={allStatuts[String(bien.id)]?.["charges_copro"] ?? null}
+                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
+                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
+                                   userToken={userToken ?? undefined}
+                                   suffix={` €`}
+                                 /></td>
+                                 <td><CellEditableShared
+                                   bienId={String(bien.id)}
+                                   champ="taxe_fonc_ann"
+                                   dbVal={bien.taxe_fonc_ann ?? null}
+                                   draftVal={allDrafts[String(bien.id)]?.["taxe_fonc_ann"] ?? null}
+                                   statut={allStatuts[String(bien.id)]?.["taxe_fonc_ann"] ?? null}
+                                   isSourceData={(bien as any).extraction_statut === 'ok'}
+                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
+                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
+                                   userToken={userToken ?? undefined}
+                                   suffix={` €`}
+                                 /></td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>

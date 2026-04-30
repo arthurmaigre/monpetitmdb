@@ -7,6 +7,8 @@ import Layout from '@/components/Layout'
 import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV, calculerFraisEnchere } from '@/lib/calculs'
 import { isVenteDelocalisee } from '@/lib/utils-encheres'
 import TypeBienIllustration from '@/components/TypeBienIllustration'
+import { CellEditable as CellEditableShared, CellTypeLoyer as CellTypeLoyerShared } from '@/components/CellEditable'
+import { getDrafts } from '@/lib/drafts'
 
 function getPhotos(bien: any): string[] {
   const photos: string[] = []
@@ -244,200 +246,6 @@ const REGIMES_IDR = [
   { value: 'sci_is', label: "SCI \u00E0 l'IS" },
   { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
 ]
-
-function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate, setBien: setBienProp, scale = 1, dirtyChamps, setDirtyChamps, originalVals, setOriginalVals }: any) {
-  // scale: 1 = affiche/édite la valeur DB directe
-  //        12 = affiche valeur × 12 (annuel), enregistre ÷ 12
-  //        1/12 = affiche valeur ÷ 12 (mensuel depuis annuel), enregistre × 12
-  const dbVal = bien[champ]
-  const displayVal = dbVal != null ? Math.round(dbVal * scale) : null
-  const displayFormatted = displayVal != null ? `${displayVal.toLocaleString('fr-FR')}\u00A0\u20AC` : null
-  const statut = champsStatut[champ]
-  const hasSourceData = dbVal != null && !statut
-  const isVert = statut?.statut === 'vert'
-  const isJaune = statut?.statut === 'jaune'
-  const dirty = dirtyChamps?.[champ] || false
-  const [submitting, setSubmitting] = useState(false)
-
-  // Valeur affichée : toujours dérivée de bien[champ] × scale
-  const localVal = displayVal != null ? String(displayVal) : ''
-
-  function setDirty(val: boolean) {
-    if (setDirtyChamps) setDirtyChamps((prev: any) => ({ ...prev, [champ]: val }))
-  }
-
-  function startEdit() {
-    if (setOriginalVals) setOriginalVals((prev: any) => ({ ...prev, [champ]: dbVal }))
-    setDirty(true)
-  }
-
-  function toDbVal(v: string): number | null {
-    if (!v) return null
-    return Math.round(Number(v) / scale)
-  }
-
-  function handleChange(v: string) {
-    if (!dirty) startEdit()
-    else setDirty(true)
-    if (setBienProp) {
-      const newDbVal = v ? Math.round(Number(v) / scale) : null
-      setBienProp((prev: any) => ({ ...prev, [champ]: newDbVal }))
-    }
-  }
-
-  async function handleSubmit() {
-    if (dbVal == null) return
-    setSubmitting(true)
-    await onUpdate(champ, dbVal)
-    setDirty(false)
-    setSubmitting(false)
-  }
-
-  function handleCancel() {
-    setDirty(false)
-    const orig = originalVals?.[champ]
-    if (setBienProp) setBienProp((prev: any) => ({ ...prev, [champ]: orig !== undefined ? orig : null }))
-  }
-
-  const PencilBtn = () => (
-    <button
-      onClick={startEdit}
-      title={"Modifier pour simulation"}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s' }}
-      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-      onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-    </button>
-  )
-
-  // Texte formaté pour lecture seule
-  const readText = suffix ? `${displayVal != null ? displayVal.toLocaleString('fr-FR') : ''}${suffix.replace(/ /g, '\u00A0')}` : displayFormatted
-
-  const vStyle: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'right', fontSize: '13px', fontWeight: 600 }
-  const bStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }
-
-  // --- Pas connecté : lecture seule ---
-  if (!userToken) {
-    if (displayVal == null) return <><span style={{ ...vStyle, color: '#c0392b', fontStyle: 'italic', fontWeight: 400 }}>NC</span><span /></>
-    return <><span style={{ ...vStyle, color: '#1a1210' }}>{readText}</span><span /></>
-  }
-
-  // --- Donnée source (IA/scraper) : lecture seule + crayon ---
-  if (hasSourceData && !dirty) {
-    return (
-      <>
-        <span style={{ ...vStyle, color: '#1a1210' }}>{readText}</span>
-        <div style={bStyle}><PencilBtn /></div>
-      </>
-    )
-  }
-
-  // --- Donnée validée (vert) ---
-  if (isVert && !dirty) {
-    return (
-      <>
-        <span style={{ ...vStyle, color: '#1a7a40' }}>{readText}</span>
-        <div style={bStyle}>
-          <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '10px', color: '#1a7a40' }}>{'\u2713'}</span>
-          <PencilBtn />
-        </div>
-      </>
-    )
-  }
-
-  // --- Donnée jaune (1 user) ---
-  if (isJaune && !dirty) {
-    return (
-      <>
-        <span style={{ ...vStyle, color: '#a06010' }}>{readText}</span>
-        <div style={bStyle}><PencilBtn /></div>
-      </>
-    )
-  }
-
-  // --- Éditable (manquante ou en cours de simulation) ---
-  const isEmpty = !localVal
-  const borderColor = dirty ? '#2a4a8a' : isEmpty ? '#c0392b' : '#e8e2d8'
-  const bgColor = dirty ? '#f0f4ff' : isEmpty ? '#fde8e8' : '#faf8f5'
-
-  return (
-    <>
-      <input
-        type="number"
-        value={localVal}
-        placeholder="NC"
-        style={{
-          width: '100%', boxSizing: 'border-box', padding: '4px 8px', borderRadius: '6px',
-          border: `1.5px solid ${borderColor}`,
-          fontFamily: "'DM Sans', sans-serif", fontSize: '13px',
-          background: bgColor, textAlign: 'right',
-          outline: 'none', color: isEmpty ? '#c0392b' : '#1a1210',
-        }}
-        onChange={e => handleChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
-      />
-      <div style={bStyle}>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || !localVal}
-          title={"Soumettre \u00E0 la communaut\u00E9"}
-          style={{
-            width: '22px', height: '22px', borderRadius: '6px', border: 'none',
-            background: '#1a7a40', color: '#fff', fontSize: '12px', fontWeight: 700,
-            cursor: dirty && localVal ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-            visibility: dirty && localVal ? 'visible' : 'hidden',
-            pointerEvents: dirty && localVal ? 'auto' : 'none',
-          }}
-        >{'\u2713'}</button>
-        <button onClick={handleCancel} title={"Annuler"}
-          style={{
-            background: 'none', border: 'none', cursor: dirty ? 'pointer' : 'default',
-            padding: '1px', display: 'flex', alignItems: 'center', color: '#c0392b', fontSize: '14px',
-            visibility: dirty ? 'visible' : 'hidden',
-            pointerEvents: dirty ? 'auto' : 'none',
-            flexShrink: 0,
-          }}
-        >{'\u00D7'}</button>
-      </div>
-    </>
-  )
-}
-
-function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
-  const valeur = bien.type_loyer
-  const statut = champsStatut['type_loyer']
-  const hasSourceData = valeur && !statut
-  const isVert = statut?.statut === 'vert'
-  const vStyle: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'right', fontSize: '13px', fontWeight: 600 }
-
-  if (!userToken || hasSourceData) {
-    if (!valeur) return <><span style={{ ...vStyle, color: '#c0392b', fontStyle: 'italic', fontWeight: 400 }}>NC</span><span /></>
-    return <><span style={{ ...vStyle, color: '#1a1210' }}>{valeur}</span><span /></>
-  }
-
-  const borderColor = !valeur ? '#c0392b' : isVert ? '#1a7a40' : '#e8e2d8'
-  const bgColor = !valeur ? '#fde8e8' : isVert ? '#eafaf1' : '#faf8f5'
-
-  return (
-    <>
-      <select
-        value={valeur || ''}
-        onChange={e => { if (e.target.value) onUpdate('type_loyer', e.target.value) }}
-        style={{ width: '100%', boxSizing: 'border-box', padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${borderColor}`, fontFamily: "'DM Sans', sans-serif", fontSize: '13px', background: bgColor, outline: 'none' }}
-      >
-        <option value="">NC</option>
-        <option value="HC">HC</option>
-        <option value="CC">CC</option>
-      </select>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {isVert && <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '10px', color: '#1a7a40' }}>{'\u2713'}</span>}
-      </div>
-    </>
-  )
-}
 
 function ExpandableTaxRow({ label, total, isFree, details, info }: { label: string, total: number, isFree: boolean, details: { label: string, value: string, vert?: boolean }[], info?: string }) {
   const [open, setOpen] = useState(false)
@@ -1940,8 +1748,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [freeAnalysesLeft, setFreeAnalysesLeft] = useState<number>(0)
   const [freeAnalysesUsed, setFreeAnalysesUsed] = useState<number>(0)
   const [champsStatut, setChampsStatut] = useState<Record<string, { valeur: string, statut: 'jaune' | 'vert' }>>({})
-  const [dirtyChamps, setDirtyChamps] = useState<Record<string, boolean>>({})
-  const [originalVals, setOriginalVals] = useState<Record<string, any>>({})
   const [scorePerso, setScorePerso] = useState<number | null>(null)
   const [inWatchlist, setInWatchlist] = useState(false)
   const [showDetailTravaux, setShowDetailTravaux] = useState(false)
@@ -2016,12 +1822,22 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [enchereFinMode, setEnchereFinMode] = useState<'mise_a_prix' | 'calcule' | 'libre'>('calcule')
   const [regime2, setRegime2] = useState('nu_reel_foncier')
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
-  const [estimationData, setEstimationData] = useState<any>(null)
+  const [estimationData, setEstimationData] = useState<any>(bien.estimation_details || null)
   const [dureeRevente, setDureeRevente] = useState<number>(1)
   const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number | ''>(5) // 5% par defaut = frais agence inclus dans le FAI
   const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(bien.honoraires_avocat ?? 1500)
   const [adresseRowEditing, setAdresseRowEditing] = useState(false)
   const [adresseRowDraft, setAdresseRowDraft] = useState('')
+  // Charger les brouillons localStorage au montage
+  useEffect(() => {
+    if (!isEnchere) {
+      const drafts = getDrafts(id)
+      if (Object.keys(drafts).length > 0) {
+        setBien((prev: any) => ({ ...prev, ...drafts }))
+      }
+    }
+  }, [id, isEnchere])
+
 
   useEffect(() => {
     async function load() {
@@ -2372,6 +2188,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     frais_bancaires: profil.frais_bancaires || 0,
   } : null
 
+  const localDrafts = getDrafts(id)
   return (
     <Layout>
       <style>{`
@@ -2957,14 +2774,14 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       })()
                     )}
                   </>
-                ) : (
+                ) : estimationData?.prix_total ? (
                   <>
-                    <div className="label">REVENTE ESTIM\u00c9E</div>
-                    <div className="value" style={{ color: estimationData?.prix_total ? 'var(--success)' : 'var(--ink-mute)' }}>
-                      {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} €` : 'NC'}
+                    <div className="label">REVENTE ESTIMÉE</div>
+                    <div className="value" style={{ color: 'var(--success)' }}>
+                      {fmt(estimationData.prix_total)} {'€'}
                     </div>
                   </>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -3300,7 +3117,18 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {isIDR && (
               <div className="data-item">
                 <span className="data-label">Nb lots</span>
-                <CellEditable bien={bien} champ="nb_lots" suffix=" lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <CellEditableShared
+                  bienId={id}
+                  champ="nb_lots"
+                  dbVal={bien.nb_lots ?? null}
+                  draftVal={localDrafts["nb_lots"] ?? null}
+                  statut={champsStatut["nb_lots"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix=" lots"
+                />
               </div>
             )}
             {isIDR && (
@@ -3445,7 +3273,18 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais de proc\u00E9dure (commissaire de justice, annonces l\u00E9gales, diagnostics). Communiqu\u00E9s par le tribunal env. 1 semaine avant l\u2019audience. Variables, \u00E0 renseigner si connus."}</span>
                   </span>
                 </span>
-                <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <CellEditableShared
+                  bienId={id}
+                  champ="frais_preemption"
+                  dbVal={bien.frais_preemption ?? null}
+                  draftVal={localDrafts["frais_preemption"] ?? null}
+                  statut={champsStatut["frais_preemption"] ?? null}
+                  isSourceData={false}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               {/* 6. Frais de mutation */}
               {frais && (
@@ -3571,25 +3410,78 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             <div className="data-grid">
               <div className="data-item">
                 <span className="data-label">{isIDR ? "Loyer total" : <>Loyer <span className="k-unit">/mois</span></>}</span>
-                <CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <CellEditableShared
+                  bienId={id}
+                  champ="loyer"
+                  dbVal={bien.loyer ?? null}
+                  draftVal={localDrafts["loyer"] ?? null}
+                  statut={champsStatut["loyer"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               {!isIDR && (
                 <div className="data-item">
                   <span className="data-label">Type loyer</span>
-                  <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                  <CellTypeLoyerShared
+                    bienId={id}
+                    champ="type_loyer"
+                    dbVal={bien.type_loyer}
+                    statut={champsStatut["type_loyer"] ?? null}
+                    isSourceData={bien.extraction_statut === 'ok'}
+                    onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                    onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                    userToken={userToken ?? undefined}
+                  />
                 </div>
               )}
               <div className="data-item">
                 <span className="data-label">{isIDR ? "Charges récup. totales" : <>Charges récup. <span className="k-unit">/mois</span></>}</span>
-                <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <CellEditableShared
+                  bienId={id}
+                  champ="charges_rec"
+                  dbVal={bien.charges_rec ?? null}
+                  draftVal={localDrafts["charges_rec"] ?? null}
+                  statut={champsStatut["charges_rec"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               <div className="data-item">
                 <span className="data-label">{isIDR ? "Charges copro totales" : <>Charges copro <span className="k-unit">/mois</span></>}</span>
-                <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <CellEditableShared
+                  bienId={id}
+                  champ="charges_copro"
+                  dbVal={bien.charges_copro ?? null}
+                  draftVal={localDrafts["charges_copro"] ?? null}
+                  statut={champsStatut["charges_copro"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               <div className="data-item">
                 <span className="data-label">{isIDR ? "Taxe foncière globale" : <>Taxe foncière <span className="k-unit">/an</span></>}</span>
-                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <CellEditableShared
+                  bienId={id}
+                  champ="taxe_fonc_ann"
+                  dbVal={bien.taxe_fonc_ann ?? null}
+                  draftVal={localDrafts["taxe_fonc_ann"] ?? null}
+                  statut={champsStatut["taxe_fonc_ann"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               {!isIDR && (
                 <div className="data-item">
@@ -4169,27 +4061,119 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     </div>
                     <div className="cf-grid-row">
                       <span className="cf-grid-lbl">{"Loyer"} <span style={{ fontSize: '11px', color: '#a39a8c' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></span>
-                      <CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="loyer"
+                        dbVal={bien.loyer ?? null}
+                        draftVal={localDrafts["loyer"] ?? null}
+                        statut={champsStatut["loyer"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
                       <span></span>
-                      <CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="loyer"
+                        dbVal={bien.loyer ?? null}
+                        draftVal={localDrafts["loyer"] ?? null}
+                        statut={champsStatut["loyer"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={12}
+                      />
                     </div>
                     <div className="cf-grid-row">
                       <span className="cf-grid-lbl">{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (CC)" : "Charges r\u00E9cup."}</span>
-                      <CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_rec"
+                        dbVal={bien.charges_rec ?? null}
+                        draftVal={localDrafts["charges_rec"] ?? null}
+                        statut={champsStatut["charges_rec"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
                       <span></span>
-                      <CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_rec"
+                        dbVal={bien.charges_rec ?? null}
+                        draftVal={localDrafts["charges_rec"] ?? null}
+                        statut={champsStatut["charges_rec"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={12}
+                      />
                     </div>
                     <div className="cf-grid-row">
                       <span className="cf-grid-lbl">{"Charges copro"}</span>
-                      <CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_copro"
+                        dbVal={bien.charges_copro ?? null}
+                        draftVal={localDrafts["charges_copro"] ?? null}
+                        statut={champsStatut["charges_copro"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
                       <span></span>
-                      <CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_copro"
+                        dbVal={bien.charges_copro ?? null}
+                        draftVal={localDrafts["charges_copro"] ?? null}
+                        statut={champsStatut["charges_copro"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={12}
+                      />
                     </div>
                     <div className="cf-grid-row">
                       <span className="cf-grid-lbl">{"Taxe fonci\u00E8re"}</span>
-                      <CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1/12} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="taxe_fonc_ann"
+                        dbVal={bien.taxe_fonc_ann ?? null}
+                        draftVal={localDrafts["taxe_fonc_ann"] ?? null}
+                        statut={champsStatut["taxe_fonc_ann"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={1/12}
+                      />
                       <span></span>
-                      <CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} />
+                      <CellEditableShared
+                        bienId={id}
+                        champ="taxe_fonc_ann"
+                        dbVal={bien.taxe_fonc_ann ?? null}
+                        draftVal={localDrafts["taxe_fonc_ann"] ?? null}
+                        statut={champsStatut["taxe_fonc_ann"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
                     </div>
                     <div className="cf-grid-row">
                       <span className="cf-grid-lbl">{"Mensualit\u00E9 cr\u00E9dit"}</span>
