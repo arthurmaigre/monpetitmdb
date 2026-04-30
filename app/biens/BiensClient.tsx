@@ -1204,7 +1204,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               </>
                             ) : (
                               <>
-                                 <td><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
+                                 <td><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="loyer"
                                    dbVal={bien.loyer ?? null}
@@ -1216,7 +1216,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    userToken={userToken ?? undefined}
                                    suffix={` €`}
                                  /></div></td>
-                                 <td className="col-optional"><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellTypeLoyerShared
+                                 <td className="col-optional"><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px' }}><CellTypeLoyerShared
                                    bienId={String(bien.id)}
                                    champ="type_loyer"
                                    dbVal={bien.type_loyer ?? null}
@@ -1226,7 +1226,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
                                  /></div></td>
-                                 <td className="col-optional"><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
+                                 <td className="col-optional"><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="charges_rec"
                                    dbVal={bien.charges_rec ?? null}
@@ -1238,7 +1238,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    userToken={userToken ?? undefined}
                                    suffix={` €`}
                                  /></div></td>
-                                 <td><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
+                                 <td><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="charges_copro"
                                    dbVal={bien.charges_copro ?? null}
@@ -1250,7 +1250,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    userToken={userToken ?? undefined}
                                    suffix={` €`}
                                  /></div></td>
-                                 <td><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
+                                 <td><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="taxe_fonc_ann"
                                    dbVal={bien.taxe_fonc_ann ?? null}
