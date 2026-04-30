@@ -15,46 +15,116 @@ import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien, Enchere } from '@/lib/types'
 import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, TRIS_ENCHERES, STRATEGIES_VISIBLES } from '@/lib/constants'
 import { calculerCashflow, calculerFraisEnchere } from '@/lib/calculs'
-// CellEditable removed from list view — read-only cells
+import { setDraft, clearDraft, getDrafts } from '@/lib/drafts'
 
 
 
-// Input inline pour cellules null en vue liste — display:inline-block aligne sur text-align:right du td
-function ListCellInput({ bienId, champ, suffix = ' €', userToken, onSaved }: { bienId: string, champ: string, suffix?: string, userToken: string, onSaved: (v: any) => void }) {
-  const [val, setVal] = useState('')
+// Composants cellules liste — inline-flex compatible avec col-right (text-align: right du td)
+function ListCellFull({ bienId, champ, dbVal, draftVal = null, statut = null, suffix = ' €', userToken, onSaved, onDraftChange }: {
+  bienId: string, champ: string, dbVal: number | null, draftVal?: number | null,
+  statut?: { statut: 'vert' | 'jaune', valeur: string } | null, suffix?: string,
+  userToken: string | null, onSaved: (v: any) => void, onDraftChange: (champ: string, val: number | null) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [inputVal, setInputVal] = useState('')
   const [saving, setSaving] = useState(false)
-  async function save() {
-    if (!val || saving) return
+  const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR') + suffix
+  const hasDraft = draftVal != null && !editing
+  const isVert = statut?.statut === 'vert' && !hasDraft
+  const isJaune = statut?.statut === 'jaune' && !hasDraft
+  const hasInput = inputVal.trim() !== ''
+
+  async function submitVal(val: number) {
+    if (saving || !userToken) return
     setSaving(true)
-    const num = Math.round(Number(val))
     const res = await fetch('/api/biens/' + bienId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + userToken },
-      body: JSON.stringify({ [champ]: num }),
+      body: JSON.stringify({ [champ]: val }),
     })
-    if (res.ok) { const d = await res.json(); onSaved(d.bien || { [champ]: num }) }
+    if (res.ok) {
+      const d = await res.json()
+      clearDraft(bienId, champ)
+      setEditing(false)
+      setInputVal('')
+      onSaved(d.bien || { [champ]: val })
+    }
     setSaving(false)
-    setVal('')
   }
-  const hasVal = val.trim() !== ''
+
+  // Slot réservé 20px : le bouton y apparaît sans décaler la valeur
+  const Slot = ({ btn }: { btn?: React.ReactNode }) => (
+    <span style={{ width: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      {btn ?? null}
+    </span>
+  )
+
+  const ValidBtn = ({ val }: { val: number }) => (
+    <button onClick={() => submitVal(val)} disabled={saving}
+      style={{ width: '18px', height: '18px', borderRadius: '4px', border: 'none', background: '#1a7a40', color: '#fff', fontSize: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>
+  )
+
+  if (!userToken) {
+    if (dbVal == null && !draftVal) return <span style={{ color: '#c0b0a0', fontSize: '12px' }}>NC</span>
+    const v = draftVal ?? dbVal!
+    return <span style={{ fontSize: '12px', fontWeight: 500 }}>{fmt(v)}</span>
+  }
+  // VERT — validé communauté (slot vide pour aligner avec les autres états)
+  if (isVert && dbVal != null) return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+      <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a7a40' }}>{fmt(dbVal)}<span style={{ fontSize: '9px', marginLeft: '2px' }}>✓</span></span>
+      <Slot />
+    </span>
+  )
+  // JAUNE — 1 user, slot réservé pour bouton (pas de décalage)
+  if (isJaune && dbVal != null) return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+      <span style={{ fontSize: '12px', fontWeight: 500, color: '#a06010' }}>{fmt(dbVal)}</span>
+      <Slot btn={<ValidBtn val={dbVal} />} />
+    </span>
+  )
+  // BLEU — brouillon localStorage, slot réservé pour bouton
+  if (hasDraft && draftVal != null) return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+      <span style={{ fontSize: '12px', fontWeight: 500, color: '#2a4a8a' }}>{fmt(draftVal)}</span>
+      <Slot btn={<ValidBtn val={draftVal} />} />
+    </span>
+  )
+  // Plain text — données extraites ou figées (slot vide pour aligner avec les états interactifs)
+  if (dbVal != null) return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+      <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{fmt(dbVal)}</span>
+      <Slot />
+    </span>
+  )
+  // ROUGE — null, saisie : slot toujours réservé → le bouton n'étend pas la largeur
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-      <input type="number" value={val} placeholder="—"
-        onChange={e => setVal(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') save() }}
+      <input type="number" value={inputVal} placeholder="NC"
+        onChange={e => {
+          const v = e.target.value
+          setInputVal(v); setEditing(true)
+          const num = v ? Math.round(Number(v)) : null
+          setDraft(bienId, champ, num)
+          onDraftChange(champ, num)
+        }}
+        onKeyDown={e => { if (e.key === 'Enter' && hasInput) submitVal(Math.round(Number(inputVal))) }}
         style={{ width: '68px', textAlign: 'right', fontSize: '12px', padding: '2px 5px',
-          border: '1.5px solid ' + (hasVal ? '#2a4a8a' : '#e8e2d8'), borderRadius: '4px',
-          fontFamily: "'DM Sans', sans-serif", outline: 'none',
-          background: hasVal ? '#f0f4ff' : '#faf8f5', color: hasVal ? '#2a4a8a' : '#aaa' }} />
-      {hasVal && <button onClick={save} disabled={saving}
-        style={{ width: '18px', height: '18px', borderRadius: '4px', border: 'none', background: '#1a7a40', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>}
+          border: '1.5px solid ' + (hasInput ? '#2a4a8a' : '#c0392b'), borderRadius: '4px',
+          fontFamily: `'DM Sans', sans-serif`, outline: 'none',
+          background: hasInput ? '#f0f4ff' : '#fde8e8', color: hasInput ? '#2a4a8a' : '#c0392b' }} />
+      <Slot btn={hasInput ? <ValidBtn val={Math.round(Number(inputVal))} /> : undefined} />
     </span>
   )
 }
 
-function ListCellSelect({ bienId, userToken, onSaved }: { bienId: string, userToken: string, onSaved: (v: any) => void }) {
+function ListCellSelect({ bienId, dbVal, statut, userToken, onSaved }: {
+  bienId: string, dbVal: string | null, statut?: { statut: 'vert' | 'jaune', valeur: string } | null, userToken: string | null, onSaved: (v: any) => void
+}) {
+  const isVert = statut?.statut === 'vert'
+  const isJaune = statut?.statut === 'jaune'
   async function save(v: string) {
-    if (!v) return
+    if (!v || !userToken) return
     const res = await fetch('/api/biens/' + bienId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + userToken },
@@ -62,11 +132,21 @@ function ListCellSelect({ bienId, userToken, onSaved }: { bienId: string, userTo
     })
     if (res.ok) { const d = await res.json(); onSaved(d.bien || { type_loyer: v }) }
   }
+  if (dbVal) {
+    const color = isVert ? '#1a7a40' : isJaune ? '#a06010' : '#1a1210'
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '12px', fontWeight: 500, color }}>
+        {dbVal}{isVert && <span style={{ fontSize: '9px' }}>✓</span>}
+        {isJaune && userToken && <button onClick={() => save(dbVal)} style={{ width: '18px', height: '18px', borderRadius: '4px', border: 'none', background: '#1a7a40', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</button>}
+      </span>
+    )
+  }
+  if (!userToken) return <span style={{ color: '#c0b0a0', fontSize: '12px' }}>NC</span>
   return (
     <select defaultValue="" onChange={e => { if (e.target.value) save(e.target.value) }}
-      style={{ fontSize: '12px', padding: '2px 4px', border: '1.5px solid #e8e2d8', borderRadius: '4px',
-        fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', color: '#aaa', outline: 'none', cursor: 'pointer' }}>
-      <option value="">—</option>
+      style={{ fontSize: '12px', padding: '2px 4px', border: '1.5px solid #c0392b', borderRadius: '4px',
+        fontFamily: `'DM Sans', sans-serif`, background: '#fde8e8', color: '#c0392b', outline: 'none', cursor: 'pointer' }}>
+      <option value="">NC</option>
       <option value="HC">HC</option>
       <option value="CC">CC</option>
     </select>
@@ -226,6 +306,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
+  const [allDrafts, setAllDrafts] = useState<Record<string, Record<string, number>>>({})
+  const [allStatuts, setAllStatuts] = useState<Record<string, Record<string, { statut: 'vert' | 'jaune', valeur: string }>>>({})
 
 
   const [hoverPhoto, setHoverPhoto] = useState<{ urls: string[], x: number, y: number, idx: number } | null>(null)
@@ -391,6 +473,19 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         setTotalBiens(d.total || 0)
         setHasMore(d.hasMore || false)
         setLoading(false)
+        // Charger les brouillons localStorage
+        const drafts: Record<string, Record<string, number>> = {}
+        for (const b of biens) {
+          const bd = getDrafts(String(b.id))
+          if (Object.keys(bd).length > 0) drafts[String(b.id)] = bd
+        }
+        setAllDrafts(drafts)
+        // Charger les statuts communautaires
+        if (userToken && biens.length > 0 && !biens[0].source) {
+          const ids = biens.map((b: any) => b.id).join(',')
+          fetch('/api/biens/edits-bulk?ids=' + ids, { headers: { Authorization: 'Bearer ' + userToken } })
+            .then(r => r.json()).then(s => setAllStatuts(s)).catch(() => {})
+        }
         // Charger les brouillons localStorage
 
 
@@ -1074,11 +1169,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             </>
                           ) : (
                             <>
-                              <th className="col-right" style={{ minWidth: "130px" }}>Loyer<span>/mois</span></th>
+                              <th style={{ minWidth: "130px" }}>Loyer<span>/mois</span></th>
                               <th className="col-optional" style={{ minWidth: "80px" }}>Type loyer<span></span></th>
-                              <th className="col-optional col-right" style={{ minWidth: "110px" }}>{"Charges r\u00E9cup."}<span>/mois</span></th>
-                              <th className="col-right" style={{ minWidth: "130px" }}>Charges copro<span>/mois</span></th>
-                              <th className="col-right" style={{ minWidth: "130px" }}>Taxe foncière<span>/an</span></th>
+                              <th className="col-optional" style={{ minWidth: "110px" }}>{"Charges r\u00E9cup."}<span>/mois</span></th>
+                              <th style={{ minWidth: "130px" }}>Charges copro<span>/mois</span></th>
+                              <th style={{ minWidth: "130px" }}>Taxe foncière<span>/an</span></th>
                               <th>Rendement brut<span></span></th>
                               <th>+/- Value<span></span></th>
                               <th>Cashflow brut<span>/mois</span></th>
@@ -1274,21 +1369,26 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               </>
                             ) : (
                               <>
-                                 <td className="col-right">{bien.loyer != null
-                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.loyer).toLocaleString('fr-FR') + ' €'}</span>
-                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="loyer" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
-                                 <td className="col-optional" style={{ textAlign: 'center' }}>{bien.type_loyer
-                                   ? <span style={{ fontWeight: 500, color: '#1a1210' }}>{bien.type_loyer}</span>
-                                   : userToken ? <ListCellSelect bienId={String(bien.id)} userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
-                                 <td className="col-optional col-right">{bien.charges_rec != null
-                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.charges_rec).toLocaleString('fr-FR') + ' €'}</span>
-                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="charges_rec" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
-                                 <td className="col-right">{bien.charges_copro != null
-                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.charges_copro).toLocaleString('fr-FR') + ' €'}</span>
-                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="charges_copro" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
-                                 <td className="col-right">{bien.taxe_fonc_ann != null
-                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.taxe_fonc_ann).toLocaleString('fr-FR') + ' €'}</span>
-                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="taxe_fonc_ann" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
+                                 <td className="col-right">{(() => {
+                                   const bId = String(bien.id)
+                                   return <ListCellFull bienId={bId} champ="loyer" dbVal={bien.loyer ?? null} draftVal={allDrafts[bId]?.['loyer'] ?? null} statut={allStatuts[bId]?.['loyer'] ?? null} suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} onDraftChange={(c, val) => setAllDrafts(prev => ({...prev, [bId]: {...(prev[bId]||{}), [c]: val} as any}))} />
+                                 })()}</td>
+                                 <td className="col-optional" style={{ textAlign: 'center' }}>{(() => {
+                                   const bId = String(bien.id)
+                                   return <ListCellSelect bienId={bId} dbVal={bien.type_loyer ?? null} statut={allStatuts[bId]?.['type_loyer'] ?? null} userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} />
+                                 })()}</td>
+                                 <td className="col-optional col-right">{(() => {
+                                   const bId = String(bien.id)
+                                   return <ListCellFull bienId={bId} champ="charges_rec" dbVal={bien.charges_rec ?? null} draftVal={allDrafts[bId]?.['charges_rec'] ?? null} statut={allStatuts[bId]?.['charges_rec'] ?? null} suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} onDraftChange={(c, val) => setAllDrafts(prev => ({...prev, [bId]: {...(prev[bId]||{}), [c]: val} as any}))} />
+                                 })()}</td>
+                                 <td className="col-right">{(() => {
+                                   const bId = String(bien.id)
+                                   return <ListCellFull bienId={bId} champ="charges_copro" dbVal={bien.charges_copro ?? null} draftVal={allDrafts[bId]?.['charges_copro'] ?? null} statut={allStatuts[bId]?.['charges_copro'] ?? null} suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} onDraftChange={(c, val) => setAllDrafts(prev => ({...prev, [bId]: {...(prev[bId]||{}), [c]: val} as any}))} />
+                                 })()}</td>
+                                 <td className="col-right">{(() => {
+                                   const bId = String(bien.id)
+                                   return <ListCellFull bienId={bId} champ="taxe_fonc_ann" dbVal={bien.taxe_fonc_ann ?? null} draftVal={allDrafts[bId]?.['taxe_fonc_ann'] ?? null} statut={allStatuts[bId]?.['taxe_fonc_ann'] ?? null} suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} onDraftChange={(c, val) => setAllDrafts(prev => ({...prev, [bId]: {...(prev[bId]||{}), [c]: val} as any}))} />
+                                 })()}</td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
