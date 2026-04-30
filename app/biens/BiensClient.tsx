@@ -19,7 +19,7 @@ import { setDraft, clearDraft, getDrafts } from '@/lib/drafts'
 
 
 
-// Composants cellules liste — inline-flex compatible avec col-right (text-align: right du td)
+// Composants cellules liste — clic droit pour enregistrer ou garder en local
 function ListCellFull({ bienId, champ, dbVal, draftVal = null, statut = null, suffix = ' €', userToken, onSaved, onDraftChange }: {
   bienId: string, champ: string, dbVal: number | null, draftVal?: number | null,
   statut?: { statut: 'vert' | 'jaune', valeur: string } | null, suffix?: string,
@@ -28,11 +28,19 @@ function ListCellFull({ bienId, champ, dbVal, draftVal = null, statut = null, su
   const [editing, setEditing] = useState(false)
   const [inputVal, setInputVal] = useState('')
   const [saving, setSaving] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; val: number } | null>(null)
   const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR') + suffix
   const hasDraft = draftVal != null && !editing
   const isVert = statut?.statut === 'vert' && !hasDraft
   const isJaune = statut?.statut === 'jaune' && !hasDraft
   const hasInput = inputVal.trim() !== ''
+
+  useEffect(() => {
+    if (!ctxMenu) return
+    const close = () => setCtxMenu(null)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [ctxMenu])
 
   async function submitVal(val: number) {
     if (saving || !userToken) return
@@ -50,18 +58,49 @@ function ListCellFull({ bienId, champ, dbVal, draftVal = null, statut = null, su
       onSaved(d.bien || { [champ]: val })
     }
     setSaving(false)
+    setCtxMenu(null)
   }
 
-  // Slot réservé 20px : le bouton y apparaît sans décaler la valeur
-  const Slot = ({ btn }: { btn?: React.ReactNode }) => (
-    <span style={{ width: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      {btn ?? null}
-    </span>
-  )
+  function openCtx(e: React.MouseEvent, val: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtxMenu({ x: e.clientX, y: e.clientY, val })
+  }
 
-  const ValidBtn = ({ val }: { val: number }) => (
-    <button onClick={() => submitVal(val)} disabled={saving}
-      style={{ width: '18px', height: '18px', borderRadius: '4px', border: 'none', background: '#1a7a40', color: '#fff', fontSize: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>
+  const CtxMenu = () => !ctxMenu ? null : (
+    <div onMouseDown={e => e.stopPropagation()} style={{
+      position: 'fixed', left: ctxMenu.x, top: ctxMenu.y, zIndex: 9999,
+      background: '#fff', borderRadius: '10px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+      border: '1px solid #e8e2d8', padding: '4px', minWidth: '290px',
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+      <button onClick={() => submitVal(ctxMenu.val)} style={{
+        display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%',
+        padding: '9px 12px', border: 'none', background: 'none', cursor: 'pointer',
+        borderRadius: '7px', textAlign: 'left',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#f0f8f4')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+        <span style={{ color: '#1a7a40', fontSize: '15px', fontWeight: 700, lineHeight: '1.2', flexShrink: 0 }}>{'✓'}</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210', lineHeight: '1.3' }}>Enregistrer la donnée en base</div>
+          <div style={{ fontSize: '11px', color: '#7a6a60', marginTop: '2px' }}>Information vérifiée auprès du vendeur</div>
+        </div>
+      </button>
+      <button onClick={() => setCtxMenu(null)} style={{
+        display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%',
+        padding: '9px 12px', border: 'none', background: 'none', cursor: 'pointer',
+        borderRadius: '7px', textAlign: 'left',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#fdf0ef')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+        <span style={{ color: '#c0392b', fontSize: '15px', fontWeight: 700, lineHeight: '1.2', flexShrink: 0 }}>{'✕'}</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210', lineHeight: '1.3' }}>Ne pas enregistrer en base</div>
+          <div style={{ fontSize: '11px', color: '#7a6a60', marginTop: '2px' }}>Données utilisées à des fins de simulation personnelles</div>
+        </div>
+      </button>
+    </div>
   )
 
   if (!userToken) {
@@ -69,41 +108,43 @@ function ListCellFull({ bienId, champ, dbVal, draftVal = null, statut = null, su
     const v = draftVal ?? dbVal!
     return <span style={{ fontSize: '12px', fontWeight: 500 }}>{fmt(v)}</span>
   }
-  // VERT — validé communauté (slot vide pour aligner avec les autres états)
+  // VERT — validé communauté (statique)
   if (isVert && dbVal != null) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-      <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a7a40' }}>{fmt(dbVal)}<span style={{ fontSize: '9px', marginLeft: '2px' }}>✓</span></span>
-      <Slot />
+    <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a7a40' }}>
+      {fmt(dbVal)}<span style={{ fontSize: '9px', marginLeft: '2px' }}>{'✓'}</span>
     </span>
   )
-  // JAUNE — 1 user, clic sur valeur pour ré-éditer
+  // JAUNE — 1 user, clic gauche pour ré-éditer, clic droit pour choisir
   if (isJaune && dbVal != null) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+    <>
       <span onClick={() => { setInputVal(String(Math.round(dbVal))); setEditing(true) }}
-        title="Cliquer pour modifier"
-        style={{ fontSize: '12px', fontWeight: 500, color: '#a06010', cursor: 'text' }}>{fmt(dbVal)}</span>
-      <Slot btn={<ValidBtn val={dbVal} />} />
-    </span>
+        onContextMenu={e => openCtx(e, dbVal)}
+        title="Clic droit pour enregistrer ou garder en local"
+        style={{ fontSize: '12px', fontWeight: 500, color: '#a06010', cursor: 'text' }}>
+        {fmt(dbVal)}
+      </span>
+      <CtxMenu />
+    </>
   )
-  // BLEU — brouillon localStorage, clic sur valeur pour ré-éditer
+  // BLEU — brouillon localStorage, clic gauche pour ré-éditer, clic droit pour choisir
   if (hasDraft && draftVal != null) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+    <>
       <span onClick={() => { setInputVal(String(Math.round(draftVal))); setEditing(true) }}
-        title="Cliquer pour modifier"
-        style={{ fontSize: '12px', fontWeight: 500, color: '#2a4a8a', cursor: 'text' }}>{fmt(draftVal)}</span>
-      <Slot btn={<ValidBtn val={draftVal} />} />
-    </span>
+        onContextMenu={e => openCtx(e, draftVal)}
+        title="Clic droit pour enregistrer ou garder en local"
+        style={{ fontSize: '12px', fontWeight: 500, color: '#2a4a8a', cursor: 'text' }}>
+        {fmt(draftVal)}
+      </span>
+      <CtxMenu />
+    </>
   )
-  // Plain text — données extraites ou figées (slot vide pour aligner avec les états interactifs)
+  // Plain text — données extraites ou figées (statique)
   if (dbVal != null) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-      <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{fmt(dbVal)}</span>
-      <Slot />
-    </span>
+    <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{fmt(dbVal)}</span>
   )
-  // ROUGE — null, saisie : slot toujours réservé → le bouton n'étend pas la largeur
+  // ROUGE → saisie libre ; Enter ou clic droit sur le champ bleu pour choisir
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+    <>
       <input type="number" value={inputVal} placeholder="NC"
         onChange={e => {
           const v = e.target.value
@@ -112,13 +153,19 @@ function ListCellFull({ bienId, champ, dbVal, draftVal = null, statut = null, su
           setDraft(bienId, champ, num)
           onDraftChange(champ, num)
         }}
-        onKeyDown={e => { if (e.key === 'Enter' && hasInput) submitVal(Math.round(Number(inputVal))) }}
-        style={{ width: '68px', textAlign: 'right', fontSize: '12px', padding: '2px 5px',
+        onContextMenu={e => { if (hasInput) openCtx(e, Math.round(Number(inputVal))) }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && hasInput) {
+            const rect = (e.currentTarget as HTMLInputElement).getBoundingClientRect()
+            setCtxMenu({ x: rect.left, y: rect.bottom + 6, val: Math.round(Number(inputVal)) })
+          }
+        }}
+        style={{ width: '78px', textAlign: 'right', fontSize: '12px', padding: '2px 5px',
           border: '1.5px solid ' + (hasInput ? '#2a4a8a' : '#c0392b'), borderRadius: '4px',
-          fontFamily: `'DM Sans', sans-serif`, outline: 'none',
+          fontFamily: "'DM Sans', sans-serif", outline: 'none',
           background: hasInput ? '#f0f4ff' : '#fde8e8', color: hasInput ? '#2a4a8a' : '#c0392b' }} />
-      <Slot btn={hasInput ? <ValidBtn val={Math.round(Number(inputVal))} /> : undefined} />
-    </span>
+      <CtxMenu />
+    </>
   )
 }
 
