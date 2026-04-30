@@ -189,8 +189,8 @@ export function CellEditable({
     </button>
   )
 
-  // Bouton ··· — ouvre le menu enregistrer/garder local au clic
-  const MenuBtn = () => (
+  // Bouton ··· — uniquement sur champs NC remplis par l'utilisateur (pas sur données extraites)
+  const MenuBtn = ({ color = '#2a4a8a' }: { color?: string }) => (
     <button
       onClick={e => {
         const rect = e.currentTarget.getBoundingClientRect()
@@ -198,10 +198,11 @@ export function CellEditable({
       }}
       title="Enregistrer ou garder en local"
       style={{
-        background: 'none', border: '1px solid #c8c0b5', borderRadius: '4px',
-        cursor: 'pointer', padding: '0px 4px', display: 'flex', alignItems: 'center',
-        color: '#7a6a60', fontSize: '13px', fontWeight: 700, flexShrink: 0, lineHeight: '18px',
-        letterSpacing: '1px',
+        background: color === '#2a4a8a' ? '#eef1fa' : '#fef6e8',
+        border: 'none', borderRadius: '4px',
+        cursor: 'pointer', padding: '1px 5px', display: 'flex', alignItems: 'center',
+        color, fontSize: '11px', fontWeight: 700, flexShrink: 0, lineHeight: '16px',
+        letterSpacing: '2px', opacity: 0.85,
       }}>
       {'···'}
     </button>
@@ -211,7 +212,7 @@ export function CellEditable({
     <CtxSaveMenu
       x={ctxMenu.x} y={ctxMenu.y}
       onSave={handleSubmit}
-      onKeepLocal={() => { setCtxMenu(null); if (dirty) { setDirty(false); setOriginalVal(null) } }}
+      onKeepLocal={() => setCtxMenu(null)}
       onClose={() => setCtxMenu(null)}
     />
   ) : null
@@ -222,16 +223,16 @@ export function CellEditable({
     return <><span style={{ ...vStyle, color: '#7a6a60' }}>{readText}</span><span /></>
   }
 
-  // --- Brouillon localStorage (bleu, bouton ··· + clic droit pour choisir) ---
+  // --- Brouillon localStorage (bleu) — ··· uniquement si champ était NC (pas extrait) ---
   if (hasDraft) {
     return (
       <>
         <span
           onContextMenu={openCtxFromEvent}
-          title="Clic droit ou ··· pour enregistrer ou garder en local"
+          title="Clic droit pour enregistrer ou garder en local"
           style={{ ...vStyle, color: '#2a4a8a', cursor: 'context-menu' }}>{readText}</span>
         <div style={bStyle}>
-          <MenuBtn />
+          {!isSourceData && <MenuBtn color="#2a4a8a" />}
           <PencilBtn title="Modifier le brouillon" />
         </div>
         {ctxMenuEl}
@@ -288,16 +289,16 @@ export function CellEditable({
     )
   }
 
-  // --- Proposé par 1 user (jaune, bouton ··· + clic droit pour valider ou garder local) ---
+  // --- Proposé par 1 user (jaune, ··· pour valider ou garder local) ---
   if (isJaune && !dirty) {
     return (
       <>
         <span
           onContextMenu={openCtxFromEvent}
-          title="Clic droit ou ··· pour enregistrer ou garder en local"
+          title="Clic droit pour enregistrer ou garder en local"
           style={{ ...vStyle, color: '#a06010', cursor: 'context-menu' }}>{readText}</span>
         <div style={bStyle}>
-          <MenuBtn />
+          <MenuBtn color="#a06010" />
           <PencilBtn />
         </div>
         {ctxMenuEl}
@@ -328,7 +329,7 @@ export function CellEditable({
         onKeyDown={e => { if (e.key === 'Enter' && localVal) openCtxFromInput(e) }}
       />
       <div style={bStyle}>
-        {localVal && <MenuBtn />}
+        {localVal && !isSourceData && <MenuBtn color="#2a4a8a" />}
         <button onClick={handleCancel} title="Annuler"
           style={{
             background: 'none', border: 'none', cursor: dirty ? 'pointer' : 'default',
