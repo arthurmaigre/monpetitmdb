@@ -349,7 +349,7 @@ def main():
 
     # Par défaut : hier (cron quotidien)
     if not args.from_expired_at:
-        hier = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+        hier = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         args.from_expired_at = hier
         log.info(f"--from-expired-at non fourni, défaut: hier ({hier})")
 
