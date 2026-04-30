@@ -14,6 +14,7 @@ try {
 const SUPABASE_URL = process.env.SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_KEY! // service_role key
 const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] ?? '150')
+const ENCHERES_LIMIT = parseInt(process.argv.find(a => a.startsWith('--encheres-limit='))?.split('=')[1] ?? '50')
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('ERREUR: SUPABASE_URL et SUPABASE_KEY requis')
@@ -22,11 +23,10 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-async function run() {
-  const startTime = Date.now()
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+// ─── BIENS ───────────────────────────────────────────────────────────────────
 
-  console.log(`[${new Date().toISOString()}] Démarrage — limit=${LIMIT}`)
+async function runBiensEstimation() {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
 
   const { data: biens, error } = await supabase
     .from('biens')
@@ -37,13 +37,12 @@ async function run() {
     .limit(LIMIT)
 
   if (error) {
-    console.error('Erreur Supabase:', error.message)
-    await writeCronConfig({ total: 0, done: 0, errors: 0, skipped: 0, status: 'error' }, startTime)
-    process.exit(1)
+    console.error('Biens — erreur Supabase:', error.message)
+    return { total: 0, done: 0, errors: 0, skipped: 0 }
   }
 
   const total = biens?.length ?? 0
-  console.log(`${total} biens dans la queue`)
+  console.log(`\n── Biens : ${total} dans la queue (limit=${LIMIT})`)
 
   let done = 0, errors = 0, skipped = 0
 
@@ -139,18 +138,136 @@ async function run() {
       console.log(`err [${idx}/${total}] ${bien.id} — ${e instanceof Error ? e.message : String(e)}`)
     }
 
-    // Pause 200ms entre chaque bien (respecte l'API DVF)
     await new Promise(r => setTimeout(r, 200))
   }
 
-  const result = { total, done, errors, skipped, status: 'success' as const }
-  console.log(`\nRésultat : ${done} estimés, ${errors} erreurs, ${skipped} skippés`)
-
-  await writeCronConfig(result, startTime)
+  console.log(`Biens — résultat : ${done} estimés, ${errors} erreurs, ${skipped} skippés`)
+  return { total, done, errors, skipped }
 }
 
-async function writeCronConfig(result: object, startTime: number) {
-  const durationMs = Date.now() - startTime
+// ─── ENCHÈRES ─────────────────────────────────────────────────────────────────
+
+async function runEncheresEstimation() {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+
+  const { data: encheres, error } = await supabase
+    .from('encheres')
+    .select('id, surface, mise_a_prix, type_bien, nb_pieces, adresse, ville, code_postal, latitude, longitude, score_travaux, enrichissement_data')
+    .eq('enrichissement_statut', 'ok')
+    .eq('statut', 'a_venir')
+    .or(`estimation_date.is.null,estimation_date.lt.${thirtyDaysAgo}`)
+    .order('date_audience', { ascending: true })
+    .limit(ENCHERES_LIMIT)
+
+  if (error) {
+    console.error('Enchères — erreur Supabase:', error.message)
+    return { total: 0, done: 0, errors: 0, skipped: 0 }
+  }
+
+  const total = encheres?.length ?? 0
+  console.log(`\n── Enchères : ${total} dans la queue (limit=${ENCHERES_LIMIT})`)
+
+  let done = 0, errors = 0, skipped = 0
+
+  for (const enchere of (encheres ?? [])) {
+    const idx = done + errors + skipped + 1
+
+    if (!enchere.surface || !enchere.mise_a_prix || !enchere.ville) {
+      await supabase.from('encheres').update({
+        estimation_date: new Date().toISOString(),
+        estimation_confiance: null
+      }).eq('id', enchere.id)
+      skipped++
+      console.log(`skip [${idx}/${total}] ${enchere.id} — données manquantes`)
+      continue
+    }
+
+    try {
+      const existingGeo = (enchere.latitude && enchere.longitude)
+        ? { lat: enchere.latitude as number, lng: enchere.longitude as number }
+        : null
+
+      const enrichData = enchere.enrichissement_data || {}
+
+      let prixParkingLocal: { box: number, parking: number } | null = null
+      const { data: parkingData } = await supabase
+        .from('ref_prix_parking')
+        .select('prix_median_box, prix_median_parking')
+        .ilike('ville', enchere.ville)
+        .maybeSingle()
+      if (parkingData) {
+        prixParkingLocal = { box: parkingData.prix_median_box, parking: parkingData.prix_median_parking }
+      }
+
+      const estimation = await estimerBien({
+        surface: enchere.surface,
+        prix_fai: enchere.mise_a_prix,
+        type_bien: enchere.type_bien,
+        nb_pieces: enchere.nb_pieces ? String(enchere.nb_pieces) : undefined,
+        adresse: enchere.adresse,
+        ville: enchere.ville,
+        code_postal: enchere.code_postal,
+        score_travaux: enchere.score_travaux || undefined,
+        dpe: enrichData.dpe || undefined,
+        has_cave: enrichData.has_cave || undefined,
+        has_piscine: enrichData.has_piscine || undefined,
+        etat_interieur: enrichData.etat_interieur || undefined,
+        nb_chambres: enrichData.nb_chambres || undefined,
+      }, existingGeo, prixParkingLocal)
+
+      if (estimation) {
+        await supabase.from('encheres').update({
+          latitude: estimation.latitude,
+          longitude: estimation.longitude,
+          estimation_prix_m2: estimation.prix_m2_corrige,
+          estimation_prix_total: estimation.prix_total,
+          estimation_confiance: estimation.confiance,
+          estimation_nb_comparables: estimation.nb_comparables,
+          estimation_rayon_m: estimation.rayon_m,
+          estimation_date: new Date().toISOString(),
+          estimation_details: estimation
+        }).eq('id', enchere.id)
+        done++
+        console.log(`ok  [${idx}/${total}] ${enchere.ville} — ${estimation.confiance} ${estimation.prix_m2_corrige}€/m² (${estimation.rayon_m}m, ${estimation.nb_comparables} tx)`)
+      } else {
+        await supabase.from('encheres').update({
+          estimation_date: new Date().toISOString(),
+          estimation_confiance: null
+        }).eq('id', enchere.id)
+        errors++
+        console.log(`err [${idx}/${total}] ${enchere.ville} — aucun comparable DVF`)
+      }
+    } catch (e) {
+      await supabase.from('encheres').update({
+        estimation_date: new Date().toISOString(),
+        estimation_confiance: null
+      }).eq('id', enchere.id)
+      errors++
+      console.log(`err [${idx}/${total}] ${enchere.id} — ${e instanceof Error ? e.message : String(e)}`)
+    }
+
+    await new Promise(r => setTimeout(r, 200))
+  }
+
+  console.log(`Enchères — résultat : ${done} estimées, ${errors} erreurs, ${skipped} skippées`)
+  return { total, done, errors, skipped }
+}
+
+// ─── ORCHESTRATEUR ────────────────────────────────────────────────────────────
+
+async function run() {
+  const startTime = Date.now()
+  console.log(`[${new Date().toISOString()}] Démarrage — biens limit=${LIMIT}, enchères limit=${ENCHERES_LIMIT}`)
+
+  const biensResult = await runBiensEstimation()
+  const encheresResult = await runEncheresEstimation()
+
+  const result = {
+    biens: biensResult,
+    encheres: encheresResult,
+    status: 'success' as const
+  }
+
   const { error } = await supabase.from('cron_config').upsert({
     id: 'estimation',
     enabled: true,
@@ -158,8 +275,9 @@ async function writeCronConfig(result: object, startTime: number) {
     last_run: new Date().toISOString(),
     last_result: result,
   }, { onConflict: 'id' })
+
   if (error) console.error('cron_config upsert erreur:', error.message)
-  else console.log(`[${new Date().toISOString()}] cron_config mis à jour (${Math.round(durationMs / 1000)}s)`)
+  else console.log(`\n[${new Date().toISOString()}] cron_config mis à jour (${Math.round((Date.now() - startTime) / 1000)}s)`)
 }
 
 run().catch(e => {
