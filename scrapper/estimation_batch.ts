@@ -151,15 +151,15 @@ async function run() {
 
 async function writeCronConfig(result: object, startTime: number) {
   const durationMs = Date.now() - startTime
-  await supabase.from('cron_config').upsert({
+  const { error } = await supabase.from('cron_config').upsert({
     id: 'estimation',
     enabled: true,
     schedule: '0 * * * *',
     last_run: new Date().toISOString(),
     last_result: result,
-    last_duration_ms: durationMs
   }, { onConflict: 'id' })
-  console.log(`[${new Date().toISOString()}] cron_config mis à jour (${Math.round(durationMs / 1000)}s)`)
+  if (error) console.error('cron_config upsert erreur:', error.message)
+  else console.log(`[${new Date().toISOString()}] cron_config mis à jour (${Math.round(durationMs / 1000)}s)`)
 }
 
 run().catch(e => {
