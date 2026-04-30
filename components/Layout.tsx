@@ -58,7 +58,7 @@ export default function Layout({ children }: Props) {
       if (!session) return
       fetch('/api/watchlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
         .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d?.watchlist) setWatchlistCount(d.watchlist.length) })
+        .then(d => { if (d?.watchlist) setWatchlistCount(d.watchlist.filter((w: any) => w.suivi !== 'archive').length) })
         .catch(() => {})
     }).catch(() => {})
   }, [user, pathname])

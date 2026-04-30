@@ -28,30 +28,33 @@ async function getAdminUser(req: NextRequest) {
 }
 
 // GET — nombre de places early adopter restantes
+// Accessible publiquement (sans auth) — retourne uniquement remaining/maxRedemptions
+// Avec auth admin — retourne aussi active et percentOff
 export async function GET(req: NextRequest) {
-  const user = await getAdminUser(req)
-  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-
+  const isAdmin = !!(await getAdminUser(req))
 
   const couponId = process.env.STRIPE_COUPON_EARLY_ADOPTER
-  if (!couponId) return NextResponse.json({ active: false })
+  if (!couponId) return NextResponse.json({ active: false, remaining: 0, maxRedemptions: 100 })
 
   try {
     const stripe = getStripe()
     const coupon = await stripe.coupons.retrieve(couponId)
-    if (!coupon.valid) return NextResponse.json({ active: false })
 
     const maxRedemptions = coupon.max_redemptions || 100
     const timesRedeemed = coupon.times_redeemed || 0
     const remaining = maxRedemptions - timesRedeemed
 
-    return NextResponse.json({
-      active: remaining > 0,
-      remaining,
-      maxRedemptions,
-      percentOff: coupon.percent_off,
-    })
+    if (isAdmin) {
+      return NextResponse.json({
+        active: coupon.valid && remaining > 0,
+        remaining,
+        maxRedemptions,
+        percentOff: coupon.percent_off,
+      })
+    }
+
+    return NextResponse.json({ remaining, maxRedemptions })
   } catch {
-    return NextResponse.json({ active: false })
+    return NextResponse.json({ remaining: 0, maxRedemptions: 100 })
   }
 }

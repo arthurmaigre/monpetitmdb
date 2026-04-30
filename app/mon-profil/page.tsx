@@ -4,22 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
 
-const REGIMES = [
-  { value: 'nu_micro_foncier', label: 'Nu Micro-foncier' },
-  { value: 'nu_reel_foncier', label: 'Nu Réel foncier' },
-  { value: 'lmnp_micro_bic', label: 'LMNP Micro-BIC' },
-  { value: 'lmnp_reel_bic', label: 'LMNP Réel BIC' },
-  { value: 'lmp_reel_bic', label: 'LMP Réel BIC' },
-  { value: 'sci_is', label: "SCI à l'IS" },
-  { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
-]
-
-const STRATEGIES_PRO = [
-  { value: 'Locataire en place', label: 'Locataire en place' },
-  { value: 'Travaux lourds', label: 'Travaux lourds' },
-  { value: 'Division', label: 'Division' },
-]
-
 export default function MonProfilPage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -49,14 +33,6 @@ export default function MonProfilPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  // Modal Pro config
-  const [showProModal, setShowProModal] = useState(false)
-  const [proLoading, setProLoading] = useState(false)
-  const [proError, setProError] = useState('')
-  const [selectedRegime, setSelectedRegime] = useState('lmnp_reel_bic')
-  const [selectedRegime2, setSelectedRegime2] = useState('nu_reel_foncier')
-  const [selectedStrategie, setSelectedStrategie] = useState('Locataire en place')
-  const [selectedStrategie2, setSelectedStrategie2] = useState('Travaux lourds')
 
   // Polling plan après retour Stripe
   async function pollPlanAfterPayment(token: string) {
@@ -198,26 +174,11 @@ export default function MonProfilPage() {
   }
 
   async function handleUpgradePro() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { window.location.href = '/login'; return }
-    setShowProModal(true)
-    setProError('')
-  }
-
-  async function handleProCheckout() {
-    setProLoading(true)
-    setProError('')
+    setLoadingStripe(true)
+    setStripeError('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { window.location.href = '/login'; return }
-
-      // Sauvegarder les choix de stratégies et régimes
-      await fetch('/api/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ regime: selectedRegime, regime2: selectedRegime2, strategie_mdb: selectedStrategie, strategie_mdb_2: selectedStrategie2 }),
-      })
-
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
@@ -227,12 +188,12 @@ export default function MonProfilPage() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        setProError(data.error || 'Erreur lors de la redirection vers le paiement')
+        setStripeError(data.error || 'Erreur lors de la redirection vers le paiement')
       }
     } catch {
-      setProError('Erreur de connexion. Vérifiez votre réseau et réessayez.')
+      setStripeError('Erreur de connexion. Vérifiez votre réseau et réessayez.')
     } finally {
-      setProLoading(false)
+      setLoadingStripe(false)
     }
   }
 
@@ -258,9 +219,6 @@ export default function MonProfilPage() {
       setLoadingStripe(false)
     }
   }
-
-  const inputSelectStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', background: '#faf8f5', outline: 'none', boxSizing: 'border-box' }
-  const modalLabelStyle: React.CSSProperties = { fontSize: '12px', fontWeight: 600, color: '#7a6a60', letterSpacing: '0.04em', marginBottom: '4px', display: 'block' }
 
   if (loading) return (
     <Layout>
@@ -446,7 +404,13 @@ export default function MonProfilPage() {
               <div style={{ background: '#faf8f5', borderRadius: 12, padding: 20, border: '1.5px solid #e8e2d8' }}>
                 <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Pro</div>
                 <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, marginBottom: 4 }}>19 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: '#7a6a60' }}>/mois</span></div>
-                <div style={{ fontSize: 13, color: '#7a6a60', marginBottom: 16 }}>{"Simulateur fiscal, estimation DVF, scénario de revente"}</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {['Simulateur fiscal illimité', 'Estimation marché DVF', 'Comparaison 2 régimes', 'Scénario de revente', '2 stratégies + watchlist 50', '1 alerte email'].map(f => (
+                    <li key={f} style={{ fontSize: 12, color: '#1a1210', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 13, height: 13, borderRadius: '50%', background: '#d4f5e0', color: '#1a7a40', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, flexShrink: 0 }}>{'✓'}</span>{f}
+                    </li>
+                  ))}
+                </ul>
                 <button className="mp-btn mp-btn-primary" onClick={handleUpgradePro} disabled={loadingStripe} style={{ marginTop: 0 }}>
                   {loadingStripe ? 'Redirection...' : 'Passer au Pro'}
                 </button>
@@ -454,7 +418,13 @@ export default function MonProfilPage() {
               <div style={{ background: '#1a1210', borderRadius: 12, padding: 20, border: '1.5px solid #1a1210' }}>
                 <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 4 }}>Expert</div>
                 <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, color: '#fff', marginBottom: 4 }}>49 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.5)' }}>/mois</span></div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>{"Toutes les stratégies, tous les régimes, alertes, support prioritaire"}</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {['Tout le plan Pro', 'Enchères judiciaires', 'Toutes stratégies dont IDR', 'Watchlist illimitée', '5 alertes email', 'Export Excel + support prioritaire'].map(f => (
+                    <li key={f} style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'rgba(212,245,224,0.2)', color: '#6de8a0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, flexShrink: 0 }}>{'✓'}</span>{f}
+                    </li>
+                  ))}
+                </ul>
                 <button className="mp-btn" onClick={handleUpgradeExpert} disabled={loadingStripe} style={{ marginTop: 0, background: '#c0392b', color: '#fff' }}>
                   {loadingStripe ? 'Redirection...' : 'Passer Expert'}
                 </button>
@@ -467,7 +437,13 @@ export default function MonProfilPage() {
               <div style={{ background: '#1a1210', borderRadius: 12, padding: 20, border: '1.5px solid #1a1210' }}>
                 <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 4 }}>Expert</div>
                 <div style={{ fontSize: 24, fontFamily: "'Fraunces', serif", fontWeight: 800, color: '#fff', marginBottom: 4 }}>49 {'\u20AC'}<span style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.5)' }}>/mois</span></div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>{"Toutes les stratégies, tous les régimes, alertes, support prioritaire"}</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {['Enchères judiciaires', 'Toutes stratégies dont IDR', 'Watchlist illimitée', 'Comparaison tous les régimes', '5 alertes email', 'Export Excel + support prioritaire'].map(f => (
+                    <li key={f} style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'rgba(212,245,224,0.2)', color: '#6de8a0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, flexShrink: 0 }}>{'✓'}</span>{f}
+                    </li>
+                  ))}
+                </ul>
                 <button className="mp-btn" onClick={handleUpgradeExpert} disabled={loadingStripe} style={{ marginTop: 0, background: '#c0392b', color: '#fff' }}>
                   {loadingStripe ? 'Redirection...' : 'Passer Expert'}
                 </button>
@@ -516,66 +492,6 @@ export default function MonProfilPage() {
         </a>
       </div>
 
-      {/* Modal config Pro */}
-      {showProModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }} onClick={() => setShowProModal(false)}>
-          <div style={{ background: '#fff', borderRadius: '16px', maxWidth: '480px', width: '92%', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '28px 28px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 700, color: '#1a1210', margin: 0 }}>Configurez votre plan Pro</h2>
-                <button onClick={() => setShowProModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#7a6a60', lineHeight: 1 }}>{'\u00D7'}</button>
-              </div>
-              <p style={{ fontSize: '13px', color: '#7a6a60', margin: '0 0 20px' }}>{"Choisissez votre stratégie et vos régimes fiscaux. Vous pourrez les modifier à tout moment dans vos paramètres."}</p>
-            </div>
-
-            <div style={{ padding: '0 28px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={modalLabelStyle}>{"Stratégie MDB principale"}</label>
-                <select value={selectedStrategie} onChange={e => { setSelectedStrategie(e.target.value); if (e.target.value === selectedStrategie2) { const alt = STRATEGIES_PRO.find(s => s.value !== e.target.value); if (alt) setSelectedStrategie2(alt.value) } }} style={inputSelectStyle}>
-                  {STRATEGIES_PRO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={modalLabelStyle}>{"Stratégie MDB secondaire"}</label>
-                <select value={selectedStrategie2} onChange={e => setSelectedStrategie2(e.target.value)} style={inputSelectStyle}>
-                  {STRATEGIES_PRO.filter(s => s.value !== selectedStrategie).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-                <span style={{ fontSize: '11px', color: '#b0a898', marginTop: '4px', display: 'block' }}>{"Détermine les biens visibles dans le listing"}</span>
-              </div>
-
-              <div>
-                <label style={modalLabelStyle}>{"Régime fiscal principal"}</label>
-                <select value={selectedRegime} onChange={e => { setSelectedRegime(e.target.value); if (e.target.value === selectedRegime2) { const alt = REGIMES.find(r => r.value !== e.target.value); if (alt) setSelectedRegime2(alt.value) } }} style={inputSelectStyle}>
-                  {REGIMES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={modalLabelStyle}>{"Régime de comparaison"}</label>
-                <select value={selectedRegime2} onChange={e => setSelectedRegime2(e.target.value)} style={inputSelectStyle}>
-                  {REGIMES.filter(r => r.value !== selectedRegime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-                <span style={{ fontSize: '11px', color: '#b0a898', marginTop: '4px', display: 'block' }}>{"Comparez 2 régimes côte à côte sur chaque fiche bien"}</span>
-              </div>
-
-              {proError && (
-                <div style={{ padding: '10px 14px', background: '#fdedec', color: '#c0392b', borderRadius: '8px', fontSize: '13px' }}>
-                  {proError}
-                </div>
-              )}
-
-              <button
-                onClick={handleProCheckout}
-                disabled={proLoading}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: 'none', background: '#c0392b', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: proLoading ? 'wait' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: proLoading ? 0.7 : 1, marginTop: '4px' }}
-              >
-                {proLoading ? 'Redirection vers le paiement...' : 'Continuer vers le paiement \u2192'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </Layout>
   )
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
+import ProfileCompletenessBar from '@/components/ProfileCompletenessBar'
 
 const TMI_OPTIONS = [0, 11, 30, 41, 45]
 const REGIME_OPTIONS = [
@@ -206,31 +207,9 @@ export default function ParametresPage() {
         {error && <div className="profil-error" role="alert">{error}</div>}
         {success && <div className="profil-toast profil-toast-success" role="status">{"Profil sauvegard\u00E9 avec succ\u00E8s"}</div>}
 
-        {isFree && (
-          <div style={{
-            background: 'rgba(192,57,43,0.06)', border: '1.5px solid rgba(192,57,43,0.15)',
-            borderRadius: 12, padding: '16px 20px', marginBottom: 24,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12
-          }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1210', marginBottom: 4 }}>
-                {"Fonctionnalit\u00E9 r\u00E9serv\u00E9e au plan Pro"}
-              </div>
-              <div style={{ fontSize: 13, color: '#7a6a60' }}>
-                {"Personnalisez vos param\u00E8tres fiscaux et de financement pour des analyses sur-mesure."}
-              </div>
-            </div>
-            <a href="/mon-profil" style={{
-              display: 'inline-block', padding: '10px 24px', borderRadius: 10,
-              background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 14,
-              textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
-            }}>
-              {"Passer au Pro \u2014 19 \u20AC/mois"}
-            </a>
-          </div>
-        )}
+        <ProfileCompletenessBar profile={profile} showUpgradeCta={isFree} />
 
-        <form onSubmit={handleSave} style={isFree ? { filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const } : {}}>
+        <form onSubmit={handleSave}>
 
           <div className="profil-section">
             <h2 className="profil-section-title">{"Fiscalit\u00E9"}</h2>
@@ -271,16 +250,6 @@ export default function ParametresPage() {
                     {['Locataire en place', 'Travaux lourds', 'Division'].filter(s => s !== profile?.strategie_mdb).map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
-                {profile?.pro_config_updated_at && (() => {
-                  const last = new Date(profile.pro_config_updated_at)
-                  const next = new Date(last.getTime() + 7 * 24 * 60 * 60 * 1000)
-                  const canChange = Date.now() >= next.getTime()
-                  return !canChange ? (
-                    <p style={{ fontSize: '11px', color: '#7a6a60', fontStyle: 'italic', margin: '0' }}>
-                      {`Prochain changement de strat\u00E9gies et r\u00E9gime de comparaison possible le ${next.toLocaleDateString('fr-FR')}.`}
-                    </p>
-                  ) : null
-                })()}
               </>
             )}
           </div>

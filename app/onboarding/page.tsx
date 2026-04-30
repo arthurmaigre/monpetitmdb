@@ -8,9 +8,12 @@ import EarlyAdopterBadge from '@/components/EarlyAdopterBadge'
 const STRATEGIES = [
   { value: 'Locataire en place', label: 'Locataire en place', desc: 'Biens avec locataire, rendement locatif immédiat' },
   { value: 'Travaux lourds', label: 'Travaux lourds', desc: 'Biens à rénover, plus-value à la revente' },
-  { value: 'Immeuble de rapport', label: 'Immeuble de rapport', desc: 'Immeubles multi-lots, stratégie patrimoniale' },
   { value: 'Division', label: 'Division', desc: 'Division de biens, création de valeur' },
+  { value: 'Immeuble de rapport', label: 'Immeuble de rapport', desc: 'Immeubles multi-lots, stratégie patrimoniale' },
+  { value: 'Enchères', label: 'Enchères judiciaires', desc: 'Licitor, Vench, Avoventes — biens sous le marché' },
 ]
+
+const EXPERT_ONLY_STRATEGIES = ['Immeuble de rapport', 'Enchères']
 
 const TMI_OPTIONS = [
   { value: 0, label: '0 %' },
@@ -161,10 +164,10 @@ export default function OnboardingPage() {
   const maxStrategies = chosenPlan === 'expert' ? 4 : chosenPlan === 'pro' ? 2 : 1
   const strategiesDisponibles = chosenPlan === 'expert'
     ? STRATEGIES
-    : STRATEGIES.filter(s => s.value !== 'Immeuble de rapport')
+    : STRATEGIES.filter(s => !EXPERT_ONLY_STRATEGIES.includes(s.value))
 
   const canNext = step === 1
-    ? prenom.trim() !== '' && nom.trim() !== '' && tmi !== null && !!regime
+    ? prenom.trim() !== '' && nom.trim() !== ''
     : step === 2
     ? true
     : step === 3
@@ -320,18 +323,21 @@ export default function OnboardingPage() {
 
             {/* Section fiscalité */}
             <div className="ob-section">
-              <div className="ob-section-title">Votre fiscalité</div>
+              <div className="ob-section-title">Votre fiscalité <span style={{ fontSize: '11px', fontWeight: 400, color: theme.colors.muted, letterSpacing: 0, textTransform: 'none' as const }}>— optionnel</span></div>
+              <div style={{ fontSize: '13px', color: theme.colors.muted, background: theme.colors.sandLight, borderRadius: 8, padding: '10px 14px', marginBottom: '20px', lineHeight: 1.5 }}>
+                {"Sans ces informations, les simulations utilisent des valeurs moyennes (TMI 30%, LMNP Réel BIC). Vous pouvez les renseigner maintenant ou plus tard dans vos paramètres."}
+              </div>
               <div className="ob-field">
-                <label className="ob-label">Tranche marginale d'imposition (TMI) *</label>
+                <label className="ob-label">{"Tranche marginale d'imposition (TMI)"}</label>
                 <select className="ob-select" value={tmi ?? ''} onChange={e => setTmi(e.target.value ? parseInt(e.target.value) : null)}>
-                  <option value="">Sélectionnez votre TMI</option>
+                  <option value="">Je ne sais pas encore</option>
                   {TMI_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div className="ob-field">
-                <label className="ob-label">Régime fiscal principal *</label>
+                <label className="ob-label">{"Régime fiscal principal"}</label>
                 <select className="ob-select" value={regime} onChange={e => setRegime(e.target.value)}>
-                  <option value="">Sélectionnez un régime</option>
+                  <option value="">Je ne sais pas encore</option>
                   {REGIMES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
@@ -419,12 +425,13 @@ export default function OnboardingPage() {
                     <ul className="plan-feats">
                       <li><span className="pck">✓</span>Listing de tous les biens</li>
                       <li><span className="pck">✓</span>Fiches biens complètes</li>
-                      <li><span className="pck">✓</span>Enrichissement communautaire</li>
+                      <li><span className="pck">✓</span>5 analyses complètes offertes</li>
                       <li><span className="pck">✓</span>Watchlist (10 biens max)</li>
                       <li><span className="pck">✓</span>1 stratégie MDB</li>
-                      <li><span className="pck">✓</span>Memo — assistant IA (5 msg/jour)</li>
-                      <li><span className="pcx">✗</span><span style={{ color: '#c0b0a0' }}>Simulateur fiscal</span></li>
+                      <li><span className="pck">✓</span>{"Mémo IA (5 messages/jour)"}</li>
+                      <li><span className="pcx">✗</span><span style={{ color: '#c0b0a0' }}>Simulateur fiscal illimité</span></li>
                       <li><span className="pcx">✗</span><span style={{ color: '#c0b0a0' }}>Estimation marché DVF</span></li>
+                      <li><span className="pcx">✗</span><span style={{ color: '#c0b0a0' }}>Alertes email</span></li>
                     </ul>
                     <button className="plan-cta" onClick={handleChooseFree}>Commencer gratuitement</button>
                   </div>
@@ -436,15 +443,14 @@ export default function OnboardingPage() {
                     <div className="plan-period">par mois — sans engagement</div>
                     <div className="plan-div" />
                     <ul className="plan-feats">
-                      <li><span className="pck">✓</span>Tout le plan Free</li>
+                      <li><span className="pck">✓</span>Simulateur fiscal illimité</li>
+                      <li><span className="pck">✓</span>Estimation marché DVF</li>
+                      <li><span className="pck">✓</span>{"Comparaison 2 régimes côte à côte"}</li>
+                      <li><span className="pck">✓</span>{"Scénario de revente & plus-value"}</li>
                       <li><span className="pck">✓</span>2 stratégies MDB au choix</li>
                       <li><span className="pck">✓</span>Watchlist (50 biens max)</li>
-                      <li><span className="pck">✓</span>Simulateur fiscal complet</li>
-                      <li><span className="pck">✓</span>Estimation marché DVF</li>
-                      <li><span className="pck">✓</span>Scénario de revente</li>
-                      <li><span className="pck">✓</span>Comparaison 2 régimes</li>
                       <li><span className="pck">✓</span>1 alerte email</li>
-                      <li><span className="pck">✓</span>Memo — assistant IA (50 msg/jour)</li>
+                      <li><span className="pck">✓</span>{"Mémo IA (50 messages/jour)"}</li>
                     </ul>
                     <button className="plan-cta" disabled={checkoutLoading === 'pro'} onClick={() => goToCheckout('pro')}>{checkoutLoading === 'pro' ? 'Redirection...' : 'Passer au Pro'}</button>
                   </div>
@@ -456,13 +462,13 @@ export default function OnboardingPage() {
                     <div className="plan-div" />
                     <ul className="plan-feats">
                       <li><span className="pck">✓</span>Tout le plan Pro</li>
-                      <li><span className="pck">✓</span>Toutes les stratégies MDB (dont IDR)</li>
+                      <li><span className="pck">✓</span>{"Enchères judiciaires (Licitor, Vench…)"}</li>
+                      <li><span className="pck">✓</span>Toutes les stratégies dont IDR</li>
                       <li><span className="pck">✓</span>Watchlist illimitée</li>
                       <li><span className="pck">✓</span>Comparaison tous les régimes</li>
                       <li><span className="pck">✓</span>5 alertes email</li>
-                      <li><span className="pck">✓</span>Memo — assistant IA illimité</li>
-                      <li><span className="pck">✓</span>Export Excel</li>
-                      <li><span className="pck">✓</span>Support prioritaire</li>
+                      <li><span className="pck">✓</span>{"Mémo IA illimité"}</li>
+                      <li><span className="pck">✓</span>Export Excel + support prioritaire</li>
                     </ul>
                     <button className="plan-cta" disabled={checkoutLoading === 'expert'} onClick={() => goToCheckout('expert')}>{checkoutLoading === 'expert' ? 'Redirection...' : 'Commencer avec Expert'}</button>
                   </div>
@@ -487,7 +493,7 @@ export default function OnboardingPage() {
                   <label className="ob-label">Stratégie principale *</label>
                   <div className="ob-strats">
                     {STRATEGIES.map(s => {
-                      const disabled = chosenPlan !== 'expert' && s.value === 'Immeuble de rapport'
+                      const disabled = chosenPlan !== 'expert' && EXPERT_ONLY_STRATEGIES.includes(s.value)
                       return (
                         <div
                           key={s.value}

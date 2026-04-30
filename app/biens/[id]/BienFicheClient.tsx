@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
@@ -7,6 +7,9 @@ import Layout from '@/components/Layout'
 import { calculerCashflow, calculerMensualite, calculerRevente, calculerCapitalRestantDu, calculerAbattementPV, calculerFraisEnchere } from '@/lib/calculs'
 import { isVenteDelocalisee } from '@/lib/utils-encheres'
 import TypeBienIllustration from '@/components/TypeBienIllustration'
+import { CellEditable as CellEditableShared, CellTypeLoyer as CellTypeLoyerShared } from '@/components/CellEditable'
+import { getDrafts } from '@/lib/drafts'
+import Modal from '@/components/ui/Modal'
 
 function getPhotos(bien: any): string[] {
   const photos: string[] = []
@@ -90,45 +93,49 @@ function PhotoCarousel({ bien, overlay }: { bien: any, overlay?: React.ReactNode
 }
 
 const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: string }> = {
-  licitor: { name: 'Licitor', color: '#1565C0', abbrev: 'LIC' },
-  avoventes: { name: 'Avoventes', color: '#6A1B9A', abbrev: 'AVO' },
-  vench: { name: 'Vench', color: '#2E7D32', abbrev: 'VEN' },
-  leboncoin: { name: 'Leboncoin', color: '#F56B2A', abbrev: 'LBC' },
-  seloger: { name: 'SeLoger', color: '#E5002B', abbrev: 'SL' },
-  bienici: { name: 'Bien\'ici', color: '#00B8D4', abbrev: 'BI' },
-  pap: { name: 'PAP', color: '#004A8F', abbrev: 'PAP' },
-  orpi: { name: 'Orpi', color: '#003D6B', abbrev: 'OR' },
-  century21: { name: 'Century 21', color: '#B8860B', abbrev: 'C21' },
-  laforet: { name: 'Laforet', color: '#006633', abbrev: 'LF' },
-  figaro: { name: 'Le Figaro', color: '#1A1A1A', abbrev: 'FIG' },
-  ouestfrance: { name: 'Ouest-France', color: '#D4213D', abbrev: 'OF' },
-  paruvendu: { name: 'ParuVendu', color: '#FF6600', abbrev: 'PV' },
-  safti: { name: 'Safti', color: '#00A3E0', abbrev: 'SF' },
-  iad: { name: 'IAD', color: '#E30613', abbrev: 'IAD' },
-  capifrance: { name: 'Capifrance', color: '#003366', abbrev: 'CF' },
-  foncia: { name: 'Foncia', color: '#003D6B', abbrev: 'FO' },
-  guyhoquet: { name: 'Guy Hoquet', color: '#E30613', abbrev: 'GH' },
-  efficity: { name: 'Efficity', color: '#FF4500', abbrev: 'EF' },
-  notaires: { name: 'Notaires', color: '#1A1A1A', abbrev: 'NOT' },
-  immonot: { name: 'Immonot', color: '#003366', abbrev: 'IM' },
-  properstar: { name: 'Properstar', color: '#FF6600', abbrev: 'PS' },
-  lesiteimmo: { name: 'LeSiteImmo', color: '#0066CC', abbrev: 'LSI' },
-  immoregion: { name: 'ImmoRegion', color: '#336699', abbrev: 'IR' },
-  greenacres: { name: 'Green-Acres', color: '#4CAF50', abbrev: 'GA' },
-  megagence: { name: 'Megagence', color: '#E91E63', abbrev: 'MG' },
-  nestenn: { name: 'Nestenn', color: '#FF5722', abbrev: 'NE' },
-  era: { name: 'ERA', color: '#C62828', abbrev: 'ERA' },
-  arthurimmo: { name: 'Arthur Immo', color: '#1565C0', abbrev: 'AI' },
-  optimhome: { name: 'OptimHome', color: '#FF9800', abbrev: 'OH' },
-  cessionpme: { name: 'CessionPME', color: '#555', abbrev: 'CP' },
-  gensdeconfiance: { name: 'Gens de Confiance', color: '#2E7D32', abbrev: 'GC' },
+  // Enchères
+  licitor:         { name: 'Licitor',          color: '#1a3c6b', abbrev: 'LIC' },
+  avoventes:       { name: 'Avoventes',         color: '#5b2a8a', abbrev: 'AVO' },
+  vench:           { name: 'Vench',             color: '#1b6b3a', abbrev: 'VEN' },
+  // Portails grands publics
+  leboncoin:       { name: 'Leboncoin',         color: '#ec5a13', abbrev: 'LBC' }, // orange officiel
+  seloger:         { name: 'SeLoger',           color: '#e2001a', abbrev: 'SL'  }, // rouge officiel
+  bienici:         { name: "Bien'ici",          color: '#1a5490', abbrev: 'Bi'  }, // bleu foncé officiel
+  logicimmo:       { name: 'Logic-Immo',        color: '#ffcc00', abbrev: 'Lo'  }, // jaune officiel
+  paruvendu:       { name: 'ParuVendu',         color: '#00a76f', abbrev: 'PV'  }, // vert officiel
+  pap:             { name: 'PAP',               color: '#0057a8', abbrev: 'PAP' }, // bleu PAP
+  figaro:          { name: 'Le Figaro Immo',    color: '#c8102e', abbrev: 'FIG' }, // rouge Figaro
+  ouestfrance:     { name: 'Ouest-France',      color: '#c8102e', abbrev: 'OF'  },
+  greenacres:      { name: 'Green-Acres',       color: '#3a8c3f', abbrev: 'GA'  },
+  lesiteimmo:      { name: 'LeSiteImmo',        color: '#005bab', abbrev: 'LSI' },
+  immoregion:      { name: 'ImmoRegion',        color: '#336699', abbrev: 'IR'  },
+  properstar:      { name: 'Properstar',        color: '#0050c8', abbrev: 'PS'  },
+  notaires:        { name: 'Notaires.immo',     color: '#1a3670', abbrev: 'NOT' }, // bleu marine notaires
+  immonot:         { name: 'Immonot',           color: '#1a3670', abbrev: 'IMN' },
+  // Réseaux d'agences
+  orpi:            { name: 'Orpi',              color: '#f47920', abbrev: 'OR'  }, // orange officiel Orpi
+  century21:       { name: 'Century 21',        color: '#b8972a', abbrev: 'C21' }, // or Century 21
+  laforet:         { name: 'Laforêt',           color: '#006633', abbrev: 'LF'  }, // vert Laforêt
+  safti:           { name: 'Safti',             color: '#c8101e', abbrev: 'SF'  }, // rouge Safti
+  iad:             { name: 'IAD',               color: '#e30613', abbrev: 'IAD' }, // rouge IAD
+  capifrance:      { name: 'Capifrance',        color: '#e05a00', abbrev: 'CF'  }, // orange Capifrance
+  foncia:          { name: 'Foncia',            color: '#0076be', abbrev: 'FO'  }, // bleu Foncia
+  guyhoquet:       { name: 'Guy Hoquet',        color: '#f05a28', abbrev: 'GH'  }, // orange Guy Hoquet
+  era:             { name: 'ERA Immobilier',    color: '#003087', abbrev: 'ERA' }, // bleu marine ERA
+  arthurimmo:      { name: 'Arthur Immo',       color: '#003d7a', abbrev: 'AI'  },
+  optimhome:       { name: 'OptimHome',         color: '#f0a500', abbrev: 'OH'  }, // jaune-orange OptimHome
+  nestenn:         { name: 'Nestenn',           color: '#003f8a', abbrev: 'NE'  }, // bleu Nestenn
+  efficity:        { name: 'Efficity',          color: '#e8400a', abbrev: 'EF'  },
+  megagence:       { name: 'Megagence',         color: '#d4006a', abbrev: 'MG'  },
+  cessionpme:      { name: 'CessionPME',        color: '#555555', abbrev: 'CP'  },
+  gensdeconfiance: { name: 'Gens de Confiance', color: '#1b6b3a', abbrev: 'GC'  },
 }
 
-function ModalPanel({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+function ModalPanel({ open, onClose, title, children, size }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; size?: 'large' }) {
   if (!open) return null
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} style={size === 'large' ? { padding: '8px' } : undefined}>
+      <div className="modal-panel" onClick={e => e.stopPropagation()} style={size === 'large' ? { maxWidth: '700px' } : undefined}>
         <div className="modal-header">
           <h3>{title}</h3>
           <button className="modal-close" onClick={onClose}>{'\u00D7'}</button>
@@ -245,185 +252,6 @@ const REGIMES_IDR = [
   { value: 'marchand_de_biens', label: 'Marchand de biens (IS)' },
 ]
 
-function CellEditable({ bien, champ, suffix = '', userToken, champsStatut, onUpdate, setBien: setBienProp, scale = 1, dirtyChamps, setDirtyChamps, originalVals, setOriginalVals }: any) {
-  // scale: 1 = affiche/édite la valeur DB directe
-  //        12 = affiche valeur × 12 (annuel), enregistre ÷ 12
-  //        1/12 = affiche valeur ÷ 12 (mensuel depuis annuel), enregistre × 12
-  const dbVal = bien[champ]
-  const displayVal = dbVal != null ? Math.round(dbVal * scale) : null
-  const displayFormatted = displayVal != null ? `${displayVal.toLocaleString('fr-FR')}\u00A0\u20AC` : null
-  const statut = champsStatut[champ]
-  const hasSourceData = dbVal != null && !statut
-  const isVert = statut?.statut === 'vert'
-  const isJaune = statut?.statut === 'jaune'
-  const dirty = dirtyChamps?.[champ] || false
-  const [submitting, setSubmitting] = useState(false)
-
-  // Valeur affichée : toujours dérivée de bien[champ] × scale
-  const localVal = displayVal != null ? String(displayVal) : ''
-
-  function setDirty(val: boolean) {
-    if (setDirtyChamps) setDirtyChamps((prev: any) => ({ ...prev, [champ]: val }))
-  }
-
-  function startEdit() {
-    if (setOriginalVals) setOriginalVals((prev: any) => ({ ...prev, [champ]: dbVal }))
-    setDirty(true)
-  }
-
-  function toDbVal(v: string): number | null {
-    if (!v) return null
-    return Math.round(Number(v) / scale)
-  }
-
-  function handleChange(v: string) {
-    if (!dirty) startEdit()
-    else setDirty(true)
-    if (setBienProp) {
-      const newDbVal = v ? Math.round(Number(v) / scale) : null
-      setBienProp((prev: any) => ({ ...prev, [champ]: newDbVal }))
-    }
-  }
-
-  async function handleSubmit() {
-    if (dbVal == null) return
-    setSubmitting(true)
-    await onUpdate(champ, dbVal)
-    setDirty(false)
-    setSubmitting(false)
-  }
-
-  function handleCancel() {
-    setDirty(false)
-    const orig = originalVals?.[champ]
-    if (setBienProp) setBienProp((prev: any) => ({ ...prev, [champ]: orig !== undefined ? orig : null }))
-  }
-
-  const PencilBtn = () => (
-    <button
-      onClick={startEdit}
-      title={"Modifier pour simulation"}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s' }}
-      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-      onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-    </button>
-  )
-
-  // Texte formaté pour lecture seule
-  const readText = suffix ? `${displayVal != null ? displayVal.toLocaleString('fr-FR') : ''}${suffix.replace(/ /g, '\u00A0')}` : displayFormatted
-
-  // --- Pas connecté : lecture seule ---
-  if (!userToken) {
-    if (displayVal == null) return <span style={{ color: '#c0392b', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{readText}</span>
-  }
-
-  // --- Donnée source (IA/scraper) et pas en mode édition : lecture seule + crayon ---
-  if (hasSourceData && !dirty) {
-    return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-        <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{readText}</span>
-        <PencilBtn />
-      </div>
-    )
-  }
-
-  // --- Donnée validée (vert) et pas en mode édition ---
-  if (isVert && !dirty) {
-    return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontWeight: 600, color: '#1a7a40', fontSize: '13px' }}>{readText}</span>
-        <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '12px', color: '#1a7a40' }}>{'\u2713'}</span>
-        <PencilBtn />
-      </div>
-    )
-  }
-
-  // --- Donnée jaune (1 user) et pas en mode édition ---
-  if (isJaune && !dirty) {
-    return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontWeight: 600, color: '#a06010', fontSize: '13px' }}>{readText}</span>
-        <PencilBtn />
-      </div>
-    )
-  }
-
-  // --- Éditable (manquante ou en cours de simulation) ---
-  const isEmpty = !localVal
-  const borderColor = dirty ? '#2a4a8a' : isEmpty ? '#c0392b' : '#e8e2d8'
-  const bgColor = dirty ? '#f0f4ff' : isEmpty ? '#fde8e8' : '#faf8f5'
-
-  return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-      <input
-        type="number"
-        value={localVal}
-        placeholder="NC"
-        style={{
-          width: '80px', padding: '4px 8px', borderRadius: '6px',
-          border: `1.5px solid ${borderColor}`,
-          fontFamily: "'DM Sans', sans-serif", fontSize: '13px',
-          background: bgColor,
-          outline: 'none', color: isEmpty ? '#c0392b' : '#1a1210',
-        }}
-        onChange={e => handleChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
-      />
-      {dirty && localVal && (
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          title={"Soumettre \u00E0 la communaut\u00E9"}
-          style={{
-            width: '24px', height: '24px', borderRadius: '6px', border: 'none',
-            background: '#1a7a40', color: '#fff', fontSize: '14px', fontWeight: 700,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, transition: 'opacity 0.15s', opacity: submitting ? 0.5 : 1,
-          }}
-        >{'\u2713'}</button>
-      )}
-      {dirty && (
-        <button onClick={handleCancel} title={"Annuler"}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: '#c0392b', fontSize: '14px' }}
-        >{'\u00D7'}</button>
-      )}
-    </div>
-  )
-}
-
-function CellTypeLoyer({ bien, userToken, champsStatut, onUpdate }: any) {
-  const valeur = bien.type_loyer
-  const statut = champsStatut['type_loyer']
-  const hasSourceData = valeur && !statut
-  const isVert = statut?.statut === 'vert'
-
-  if (!userToken || hasSourceData) {
-    if (!valeur) return <span style={{ color: '#c0392b', fontStyle: 'italic', fontSize: '13px' }}>NC</span>
-    return <span style={{ fontWeight: 600, color: '#1a1210', fontSize: '13px' }}>{valeur}</span>
-  }
-
-  const borderColor = !valeur ? '#c0392b' : isVert ? '#1a7a40' : '#e8e2d8'
-  const bgColor = !valeur ? '#fde8e8' : isVert ? '#eafaf1' : '#faf8f5'
-
-  return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-      <select
-        value={valeur || ''}
-        onChange={e => { if (e.target.value) onUpdate('type_loyer', e.target.value) }}
-        style={{ padding: '4px 8px', borderRadius: '6px', border: `1.5px solid ${borderColor}`, fontFamily: "'DM Sans', sans-serif", fontSize: '13px', background: bgColor, outline: 'none' }}
-      >
-        <option value="">NC</option>
-        <option value="HC">HC</option>
-        <option value="CC">CC</option>
-      </select>
-      {isVert && <span title={"Valid\u00E9 par la communaut\u00E9"} style={{ fontSize: '12px', color: '#1a7a40' }}>{'\u2713'}</span>}
-    </div>
-  )
-}
-
 function ExpandableTaxRow({ label, total, isFree, details, info }: { label: string, total: number, isFree: boolean, details: { label: string, value: string, vert?: boolean }[], info?: string }) {
   const [open, setOpen] = useState(false)
   const hasDetails = details.length > 0
@@ -495,7 +323,7 @@ function ExpandableCharges({ label, total, isReel, isFree, details }: { label: s
   )
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false, fraisPrealables = 0 }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false, fraisPrealables = 0, honorairesAvocat = 0 }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { tauxCredit, tauxAssurance, dureeAns, typeCredit: typeCreditSimu } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
@@ -640,7 +468,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const fraisNotairePct = colFraisNotairePct
   const fraisNotaireMontant = Math.round(colFraisNotaireMontant)
   // Montant total des frais d'acquisition : frais enchere si enchère, frais notaire sinon
-  const fraisAcquisitionTotal = isEnchere ? (fraisEnchere?.total || 0) : fraisNotaireMontant
+  const fraisAcquisitionTotal = isEnchere ? ((fraisEnchere?.total || 0) + honorairesAvocat) : fraisNotaireMontant
 
   // PV brute = revente net vendeur - frais agence vendeur - achat FAI - notaire achat - travaux
   // L'estimation DVF est deja le prix net vendeur (pas de frais agence a deduire sauf si charge vendeur)
@@ -777,12 +605,12 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
 
   function Row({ label, value, rouge = false, bold = false, tiret = false, info = '', vert = false }: any) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0ede8' }}>
-        <span style={{ fontSize: '13px', color: '#555', fontWeight: bold ? 600 : 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div className={`fiscal-line${bold ? ' fl-bold' : ''}`}>
+        <span className="fl-k" style={{ fontWeight: bold ? 600 : 400 }}>
           {label}
           {info && !isFree && <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{info}</span></span>}
         </span>
-        <span style={{ fontSize: '14px', fontWeight: bold ? 700 : 500, color: tiret ? '#c0b0a0' : rouge ? '#c0392b' : vert ? '#1a7a40' : '#1a1210' }} className={isFree && !tiret ? 'val-blur' : ''}>
+        <span className={`fl-v${tiret ? ' muted' : rouge ? ' neg' : vert ? ' pos' : ''}${isFree && !tiret ? ' val-blur' : ''}`}>
           {tiret ? '-' : value}
         </span>
       </div>
@@ -790,23 +618,23 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   }
 
   function SectionLabel({ label }: { label: string }) {
-    return <div style={{ fontSize: '11px', fontWeight: 700, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '20px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #f0ede8' }}>{label}</div>
+    return <div className="fiscal-sl">{label}</div>
   }
 
   return (
-    <div style={{ background: highlight ? '#fff8f0' : '#fff', border: highlight ? '2px solid #f0d090' : '1.5px solid #ede8e0', borderRadius: '14px', padding: '20px 24px', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: '15px', fontWeight: 700, marginBottom: colFraisNotairePct !== (fraisNotaire || 7.5) ? '8px' : '16px', color: '#1a1210' }}>{titre}</div>
+    <div className={`fiscal-card${highlight ? ' your' : ''}`}>
+      <div className="fcard-title">{titre}</div>
       {(() => {
         const thisHasNote = colFraisNotairePct !== (fraisNotaire || 7.5)
         const otherNotairePct = otherRegime === 'marchand_de_biens' ? 2.5 : (fraisNotaireBase || 7.5)
         const otherHasNote = otherNotairePct !== (fraisNotaire || 7.5)
         if (thisHasNote) return (
-          <div style={{ fontSize: '11px', color: '#7a6a60', background: '#faf8f5', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, fontStyle: 'italic', minHeight: '44px' }}>
+          <div className="fiscal-note">
             {`Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s avec ${colFraisNotairePct}\u00A0% de frais de notaire${isMarchand ? ' (MdB)' : ''}, soit un emprunt de ${fmt(colMontantEmprunte)}\u00A0\u20AC.`}
           </div>
         )
         if (otherHasNote) return (
-          <div style={{ fontSize: '11px', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', lineHeight: 1.5, visibility: 'hidden', minHeight: '44px' }} aria-hidden="true">
+          <div className="fiscal-note" style={{ visibility: 'hidden' }} aria-hidden="true">
             {"Mensualit\u00E9s et int\u00E9r\u00EAts calcul\u00E9s avec 0,0\u00A0% de frais de notaire (MdB), soit un emprunt de 000\u00A0000\u00A0\u20AC."}
           </div>
         )
@@ -947,13 +775,13 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
         </>
       )}
       {hasLoyer && !isTravauxLourds && (
-        <div style={{ paddingTop: '12px', background: cashflowNetMensuel >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px', marginTop: '12px' }}>
-          <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Net d\u2019Imp\u00F4t"}</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowNetMensuel >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>
+        <div className={`fiscal-cf${cashflowNetMensuel >= 0 ? ' pos' : ' neg'}`}>
+          <div className="cf-lbl">{"Cash Flow Net d\u2019Imp\u00F4t"}</div>
+          <div className="cf-row">
+            <span className={`cf-main${isFree ? ' val-blur' : ''}`}>
               {cashflowNetMensuel >= 0 ? '+' : ''}{fmt(cashflowNetMensuel)} {'\u20AC'}/mois
             </span>
-            <span style={{ fontSize: '13px', color: cashflowNetAnnuel >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFree ? 'val-blur' : ''}>
+            <span className={`cf-ann${isFree ? ' val-blur' : ''}`}>
               {cashflowNetAnnuel >= 0 ? '+' : ''}{fmt(cashflowNetAnnuel)} {'\u20AC'}/an
             </span>
           </div>
@@ -970,7 +798,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               : regime === 'sci_is'
                 ? "Prix de revente estim\u00E9 via les donn\u00E9es DVF. En SCI IS, la plus-value se calcule sur la VNC (valeur nette comptable = prix + frais + travaux - amortissements cumul\u00E9s), pas sur le prix d\u2019achat."
                 : "Prix de revente estim\u00E9 via les donn\u00E9es DVF (transactions notariales r\u00E9elles). C\u2019est le prix net vendeur dans l\u2019acte. Les frais d\u2019agence sont g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur."} />
-          <Row label="Prix d'achat (net vendeur)" value={`-${fmt(prixNetVendeurAchat)} \u20AC`} rouge
+          <Row label={isEnchere ? "Prix d'achat (sans frais d'ench\u00E8re)" : "Prix d'achat (net vendeur)"} value={`-${fmt(prixNetVendeurAchat)} \u20AC`} rouge
             info={isEnchere
               ? "Mise à prix fixée par le tribunal, ou prix adjugé si le bien a déjà été vendu aux enchères. C'est le montant de référence avant les frais d'adjudication."
               : "Prix payé au vendeur du bien (hors frais d'agence). C'est le prix inscrit dans l'acte notarié d'achat."} />
@@ -988,8 +816,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
             <>
               <Row label={"Frais préalables"} value={fraisEnchere && fraisEnchere.frais_prealables > 0 ? `-${fmt(fraisEnchere.frais_prealables)} ${'\u20AC'}` : `0 ${'\u20AC'}`} rouge={fraisEnchere ? fraisEnchere.frais_prealables > 0 : false}
                 info={"Frais préalables engagés par l'avocat poursuivant avant l'audience (diagnostics, huissier, publication…). À demander à l'avocat et saisir dans la fiche une fois obtenus."} />
-              <Row label={`Frais de mutation (${fraisEnchere?.pct_sans_prealables ?? 0}\u00A0%)`} value={`-${fmt(fraisEnchere?.total_sans_prealables || 0)} ${'\u20AC'}`} rouge
-                info={`Émoluments avocat TTC : ${fmt(fraisEnchere?.emoluments_ttc || 0)}\u00A0${'\u20AC'}\nDroits de mutation (${fraisEnchere?.droits_enregistrement_pct ?? 5.8}\u00A0%) : ${fmt(fraisEnchere?.droits_enregistrement || 0)}\u00A0${'\u20AC'}\nCSI (0,1\u00A0%) : ${fmt(fraisEnchere?.csi || 0)}\u00A0${'\u20AC'}\n\nTotal hors frais préalables : ${fmt(fraisEnchere?.total_sans_prealables || 0)}\u00A0${'\u20AC'}`} />
+              <Row label={`Frais de mutation + honoraires avocat`} value={`-${fmt((fraisEnchere?.total_sans_prealables || 0) + honorairesAvocat)} ${'\u20AC'}`} rouge
+                info={`Frais de mutation (${fraisEnchere?.pct_sans_prealables ?? 0} %) : ${fmt(fraisEnchere?.total_sans_prealables || 0)} ${'€'}\n  • Émoluments avocat TTC : ${fmt(fraisEnchere?.emoluments_ttc || 0)} ${'€'}\n  • Droits de mutation (${fraisEnchere?.droits_enregistrement_pct ?? 5.8} %) : ${fmt(fraisEnchere?.droits_enregistrement || 0)} ${'€'}\n  • CSI (0,1 %) : ${fmt(fraisEnchere?.csi || 0)} ${'€'}\nHonoraires avocat (libres) : ${fmt(honorairesAvocat)} ${'€'}`} />
             </>
           ) : (
             <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge
@@ -1121,13 +949,11 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                   : "Plus-value nette apr\u00E8s tous les imp\u00F4ts (IR 19% + PS 17,2% avec abattements dur\u00E9e). C\u2019est le gain r\u00E9el sur la revente du bien."} />
 
           {/* BILAN FINAL */}
-          <div style={{ marginTop: '16px', paddingTop: '16px', background: profitNet >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '16px' }}>
-            <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}
-            </div>
+          <div className={`fiscal-bilan${profitNet >= 0 ? ' pos' : ' neg'}`}>
+            <div className="fb-lbl">{`Bilan sur ${dur} an${dur > 1 ? 's' : ''}`}</div>
             {!isTravauxLourds && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px', alignItems: 'center' }}>
-                <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help', color: '#555' }}>
+              <div className="fb-row">
+                <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>
                   {"Cashflow locatif net cumul\u00E9"}
                   <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>
                   <span className="pnl-tooltip-text">{`Somme des loyers nets encaiss\u00E9s apr\u00E8s d\u00E9duction des mensualit\u00E9s de cr\u00E9dit et de l\u2019imp\u00F4t, sur ${dur}\u00A0an${dur > 1 ? 's' : ''} de d\u00E9tention.\n\n${fmt(cashflowNetMensuel)}\u00A0\u20AC/mois \u00D7 ${dur * 12}\u00A0mois${fraisBancaires > 0 ? `\n- Frais bancaires : ${fmt(fraisBancaires)}\u00A0\u20AC` : ''}\n= ${fmt(cashflowCumule)}\u00A0\u20AC`}</span>
@@ -1135,8 +961,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                 <span style={{ fontWeight: 600, color: cashflowCumule >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{cashflowCumule >= 0 ? '+' : ''}{fmt(cashflowCumule)} {'\u20AC'}</span>
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px', alignItems: 'center' }}>
-              <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help', color: '#555' }}>
+            <div className="fb-row">
+              <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>
                 {"Cashflow achat-revente net"}
                 <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span>
                 <span className="pnl-tooltip-text">{`R\u00E9sultat net de l\u2019op\u00E9ration d\u2019achat-revente apr\u00E8s remboursement du cr\u00E9dit et fiscalit\u00E9.\n\n+ Emprunt re\u00E7u : ${fmt(colMontantEmprunte)}\u00A0\u20AC\n+ PV nette d\u2019imp\u00F4t : ${fmt(pvNette)}\u00A0\u20AC\n- Remboursement CRD : ${fmt(Math.round(crd))}\u00A0\u20AC${interetsCumules > 0 ? `\n- Int\u00E9r\u00EAts cumul\u00E9s : ${fmt(interetsCumules)}\u00A0\u20AC` : ''}\n= ${fmt(cashflowAchatRevente)}\u00A0\u20AC\n\n${colTypeCredit === 'in_fine' ? `Cr\u00E9dit in fine : le capital (${fmt(colMontantEmprunte)}\u00A0\u20AC) est int\u00E9gralement rembours\u00E9 \u00E0 la revente.` : `Cr\u00E9dit amortissable : ${fmt(Math.round(colMontantEmprunte - crd))}\u00A0\u20AC de capital d\u00E9j\u00E0 rembours\u00E9 via les mensualit\u00E9s.`}`}</span>
@@ -1145,22 +971,20 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
                 {cashflowAchatRevente >= 0 ? '+' : ''}{fmt(cashflowAchatRevente)} {'\u20AC'}
               </span>
             </div>
-            <div style={{ borderTop: '2px solid rgba(0,0,0,0.1)', paddingTop: '8px' }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: profitNet >= 0 ? '#1a7a40' : '#c0392b', marginBottom: '4px' }} className={isFree ? 'val-blur' : ''}>
-                {profitNet >= 0 ? '+' : ''}{fmt(profitNet)} {'\u20AC'}
+            <div className={`fb-total${isFree ? ' val-blur' : ''}`} style={{ color: profitNet >= 0 ? '#1a7a40' : '#c0392b' }}>
+              {profitNet >= 0 ? '+' : ''}{fmt(profitNet)} {'\u20AC'}
+            </div>
+            <div className="fb-metrics">
+              <div className="fb-metric">
+                <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROI <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Investment (retour sur investissement). C\u2019est votre gain total (cashflow + plus-value) divis\u00E9 par le co\u00FBt total de l\u2019op\u00E9ration (achat + notaire + travaux). Un ROI de 20% signifie que vous avez gagn\u00E9 20\u00A0\u20AC pour 100\u00A0\u20AC investis. Le ROI annualis\u00E9 permet de comparer des op\u00E9rations de dur\u00E9es diff\u00E9rentes."}</span></span>
+                <span style={{ fontWeight: 600, color: roiTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roiTotal > 0 ? '+' : ''}{roiTotal}% ({roiAnnualise > 0 ? '+' : ''}{roiAnnualise}%/an)</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', marginTop: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROI <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Investment (retour sur investissement). C\u2019est votre gain total (cashflow + plus-value) divis\u00E9 par le co\u00FBt total de l\u2019op\u00E9ration (achat + notaire + travaux). Un ROI de 20% signifie que vous avez gagn\u00E9 20\u00A0\u20AC pour 100\u00A0\u20AC investis. Le ROI annualis\u00E9 permet de comparer des op\u00E9rations de dur\u00E9es diff\u00E9rentes."}</span></span>
-                  <span style={{ fontWeight: 600, color: roiTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roiTotal > 0 ? '+' : ''}{roiTotal}% ({roiAnnualise > 0 ? '+' : ''}{roiAnnualise}%/an)</span>
+              {fondsInvestis > 0 && (
+                <div className="fb-metric">
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROE <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Equity (retour sur fonds propres). C\u2019est votre gain total divis\u00E9 par l\u2019argent que VOUS avez mis de votre poche (apport + frais de notaire). Gr\u00E2ce \u00E0 l\u2019effet de levier du cr\u00E9dit, le ROE est souvent bien sup\u00E9rieur au ROI. Un ROE de 50% signifie que vous avez gagn\u00E9 50\u00A0\u20AC pour 100\u00A0\u20AC sortis de votre poche."}</span></span>
+                  <span style={{ fontWeight: 600, color: roeTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roeTotal > 0 ? '+' : ''}{roeTotal}% ({roeAnnualise > 0 ? '+' : ''}{roeAnnualise}%/an)</span>
                 </div>
-                {fondsInvestis > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#555' }}>
-                    <span className="pnl-tooltip-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'help' }}>ROE <span style={{ fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</span><span className="pnl-tooltip-text">{"Return On Equity (retour sur fonds propres). C\u2019est votre gain total divis\u00E9 par l\u2019argent que VOUS avez mis de votre poche (apport + frais de notaire). Gr\u00E2ce \u00E0 l\u2019effet de levier du cr\u00E9dit, le ROE est souvent bien sup\u00E9rieur au ROI. Un ROE de 50% signifie que vous avez gagn\u00E9 50\u00A0\u20AC pour 100\u00A0\u20AC sortis de votre poche."}</span></span>
-                    <span style={{ fontWeight: 600, color: roeTotal >= 0 ? '#1a7a40' : '#c0392b' }} className={isFree ? 'val-blur' : ''}>{roeTotal > 0 ? '+' : ''}{roeTotal}% ({roeAnnualise > 0 ? '+' : ''}{roeAnnualise}%/an)</span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </>
@@ -1188,113 +1012,134 @@ function ScoreLabel({ score }: { score: number | null }) {
   )
 }
 
-function LotsEditor({ lots, nbLotsEffectif, userToken, onSave }: { lots: any[], nbLotsEffectif: number, userToken: string | null, onSave: (lots: any[]) => Promise<void> }) {
-  const [editLots, setEditLots] = useState(() => {
-    return Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => ({
+function LotsEditor({ lots, nbLotsEffectif, prixFai, userToken, onSave, onCancel }: { lots: any[], nbLotsEffectif: number, prixFai?: number, userToken: string | null, onSave: (lots: any[]) => Promise<void>, onCancel?: () => void }) {
+  const [editLots, setEditLots] = useState(() =>
+    Array.from({ length: Math.max(nbLotsEffectif, lots.length, 1) }).map((_, i) => ({
       type: lots[i]?.type || '',
-      surface: lots[i]?.surface || '',
-      loyer: lots[i]?.loyer || '',
+      surface: lots[i]?.surface != null ? String(lots[i].surface) : '',
+      loyer: lots[i]?.loyer != null ? String(lots[i].loyer) : '',
       etage: lots[i]?.etage || '',
       dpe: lots[i]?.dpe || '',
       etat: lots[i]?.etat || '',
     }))
-  })
+  )
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const VISIBLE = 5
 
   function updateLot(i: number, field: string, value: string) {
-    setEditLots(prev => {
-      const next = [...prev]
-      next[i] = { ...next[i], [field]: value }
-      return next
-    })
-    setSaved(false)
+    setEditLots(prev => { const n = [...prev]; n[i] = { ...n[i], [field]: value }; return n })
   }
-
-  function addLot() {
-    setEditLots(prev => [...prev, { type: '', surface: '', loyer: '', etage: '', dpe: '', etat: '' }])
-    setSaved(false)
-  }
+  function addLot() { setEditLots(prev => [...prev, { type: '', surface: '', loyer: '', etage: '', dpe: '', etat: '' }]) }
+  function deleteLot(i: number) { setEditLots(prev => prev.filter((_, idx) => idx !== i)) }
 
   async function handleSave() {
     setSaving(true)
-    const cleaned = editLots.map(l => ({
+    await onSave(editLots.map(l => ({
       type: l.type || undefined,
       surface: l.surface ? Number(l.surface) : undefined,
       loyer: l.loyer ? Number(l.loyer) : undefined,
       etage: l.etage || undefined,
       dpe: l.dpe || undefined,
       etat: l.etat || undefined,
-    }))
-    await onSave(cleaned)
+    })))
     setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    onCancel?.()
   }
 
-  const inputStyle: React.CSSProperties = { padding: '5px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', width: '100%', boxSizing: 'border-box' }
+  const totalSurface = editLots.reduce((s, l) => s + (Number(l.surface) || 0), 0)
+  const totalLoyer = editLots.reduce((s, l) => s + (Number(l.loyer) || 0), 0)
+  const loues = editLots.filter(l => l.etat === 'loue').length
+  const rdtBrut = prixFai && totalLoyer > 0 ? ((totalLoyer * 12) / prixFai * 100).toFixed(1) : null
+
+  const DPE_COLORS: Record<string, string> = { A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0a830', E: '#eb6a2a', F: '#e42a1e', G: '#a00000' }
+  const GRID = '44px 90px 90px 100px 56px 60px 100px 28px'
+
+  const inputU: React.CSSProperties = { border: 'none', padding: '5px 2px', minWidth: 0, background: 'transparent', fontFamily: 'inherit', fontSize: '12px', outline: 'none' }
+  const sel: React.CSSProperties = { padding: '5px 6px', border: '1px solid #e6dccb', borderRadius: '4px', fontFamily: 'inherit', fontSize: '12px', color: '#1f1b16', background: '#fff', cursor: 'pointer', width: '100%', outline: 'none' }
+  const inp: React.CSSProperties = { padding: '5px 8px', border: '1px solid #e6dccb', borderRadius: '4px', fontFamily: 'inherit', fontSize: '12px', color: '#1f1b16', background: '#fff', outline: 'none', width: '100%', boxSizing: 'border-box' }
+
+  const visibleLots = expanded ? editLots : editLots.slice(0, VISIBLE)
+  const hiddenLots = editLots.slice(VISIBLE)
+
+  function LotRow({ lot, i }: { lot: any, i: number }) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: '8px', padding: '9px 12px', alignItems: 'center', borderTop: '1px solid #efe7d7', fontSize: '13px', background: '#fff' }}>
+        <span style={{ fontFamily: 'var(--serif, "Fraunces", serif)', fontWeight: 500, color: 'var(--accent, #b4442e)', fontSize: '15px' }}>{i + 1}</span>
+        <select value={lot.type} onChange={e => updateLot(i, 'type', e.target.value)} style={sel}>
+          <option value="">—</option>
+          {['T1','T2','T3','T4','T5','Studio','Commerce','Parking','Cave'].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e6dccb', borderRadius: '4px', padding: '0 6px', minWidth: 0 }}>
+          <input type="number" placeholder="—" value={lot.surface} onChange={e => updateLot(i, 'surface', e.target.value)} style={{ ...inputU, width: '45px' }} />
+          <span style={{ fontSize: '10px', color: '#a39a8c', whiteSpace: 'nowrap' }}>m²</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e6dccb', borderRadius: '4px', padding: '0 6px', minWidth: 0 }}>
+          <input type="number" placeholder="—" value={lot.loyer} onChange={e => updateLot(i, 'loyer', e.target.value)} style={{ ...inputU, width: '50px' }} />
+          <span style={{ fontSize: '10px', color: '#a39a8c', whiteSpace: 'nowrap' }}>{'\u20AC'}/mois</span>
+        </div>
+        <input type="text" placeholder="RDC" value={lot.etage} onChange={e => updateLot(i, 'etage', e.target.value)} style={inp} />
+        <select value={lot.dpe} onChange={e => updateLot(i, 'dpe', e.target.value)} style={{ ...sel, color: lot.dpe ? (DPE_COLORS[lot.dpe] || '#1f1b16') : '#a39a8c', fontWeight: lot.dpe ? 700 : 400 }}>
+          <option value="">—</option>
+          {['A','B','C','D','E','F','G'].map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={lot.etat} onChange={e => updateLot(i, 'etat', e.target.value)} style={{ ...sel, color: lot.etat === 'loue' ? '#1a7a40' : lot.etat === 'vacant' ? '#7a6a60' : '#1f1b16', background: lot.etat === 'loue' ? '#e8f5ef' : lot.etat === 'vacant' ? '#faf8f5' : '#fff' }}>
+          <option value="">—</option>
+          <option value="loue">{"Occup\u00E9"}</option>
+          <option value="vacant">Vacant</option>
+          <option value="travaux">Travaux</option>
+        </select>
+        <button onClick={() => deleteLot(i)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', color: '#a39a8c', fontSize: '16px', cursor: 'pointer', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>{'×'}</button>
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div style={{ overflowX: 'auto' }}>
-        <table className="lots-table" style={{ fontSize: '12px' }}>
-          <thead>
-            <tr>
-              <th style={{ width: '36px' }}>Lot</th>
-              <th style={{ width: '90px' }}>Type</th>
-              <th style={{ width: '70px' }}>Surface</th>
-              <th style={{ width: '70px' }}>Loyer</th>
-              <th style={{ width: '60px' }}>{"\u00C9tage"}</th>
-              <th style={{ width: '50px' }}>DPE</th>
-              <th style={{ width: '70px' }}>{"\u00C9tat"}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {editLots.map((lot, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight: 600, textAlign: 'center' }}>{i + 1}</td>
-                <td>
-                  <select value={lot.type} onChange={e => updateLot(i, 'type', e.target.value)} style={inputStyle}>
-                    <option value="">-</option>
-                    <option value="Appartement">Appartement</option>
-                    <option value="Studio">Studio</option>
-                    <option value="Local commercial">Local commercial</option>
-                    <option value="Parking">Parking</option>
-                    <option value="Cave">Cave</option>
-                    <option value="Autre">Autre</option>
-                  </select>
-                </td>
-                <td><input type="number" placeholder={"m\u00B2"} value={lot.surface} onChange={e => updateLot(i, 'surface', e.target.value)} style={inputStyle} /></td>
-                <td><input type="number" placeholder={"\u20AC/mois"} value={lot.loyer} onChange={e => updateLot(i, 'loyer', e.target.value)} style={inputStyle} /></td>
-                <td><input type="text" placeholder="RDC" value={lot.etage} onChange={e => updateLot(i, 'etage', e.target.value)} style={inputStyle} /></td>
-                <td>
-                  <select value={lot.dpe} onChange={e => updateLot(i, 'dpe', e.target.value)} style={inputStyle}>
-                    <option value="">-</option>
-                    {['A','B','C','D','E','F','G'].map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </td>
-                <td>
-                  <select value={lot.etat} onChange={e => updateLot(i, 'etat', e.target.value)} style={inputStyle}>
-                    <option value="">-</option>
-                    <option value="loue">{"Lou\u00E9"}</option>
-                    <option value="vacant">Vacant</option>
-                    <option value="travaux">Travaux</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={addLot} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid #e8e2d8', background: '#faf8f5', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-          + Ajouter un lot
-        </button>
-        {userToken && (
-          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: saved ? '#1a7a40' : '#1a1210', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Sauvegarde...' : saved ? '\u2713 Sauvegard\u00E9' : 'Sauvegarder'}
-          </button>
+      <p style={{ fontSize: '12px', color: '#7a6a60', marginBottom: '12px' }}>{"Ajoutez ou modifiez les informations de chaque lot de l\u2019immeuble. Les totaux sont mis \u00E0 jour automatiquement."}</p>
+      <div style={{ border: '1px solid #efe7d7', borderRadius: '8px', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: '8px', padding: '10px 12px', background: '#f5ede2', fontSize: '10px', color: '#a39a8c', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, alignItems: 'center' }}>
+          <span>Lot</span><span>Type</span><span>Surface</span><span>Loyer</span><span>{"Étage"}</span><span>DPE</span><span>{"État"}</span><span></span>
+        </div>
+        {/* Rows */}
+        {visibleLots.map((lot, i) => <LotRow key={i} lot={lot} i={i} />)}
+        {/* Collapsed summary row */}
+        {!expanded && hiddenLots.length > 0 && (
+          <div onClick={() => setExpanded(true)} style={{ display: 'grid', gridTemplateColumns: GRID, gap: '8px', padding: '9px 12px', alignItems: 'center', borderTop: '1px solid #efe7d7', background: '#f5ede2', cursor: 'pointer', opacity: 0.85 }}>
+            <span style={{ fontFamily: 'var(--serif, "Fraunces", serif)', fontWeight: 500, color: 'var(--accent, #b4442e)', fontSize: '13px' }}>{VISIBLE + 1}–{editLots.length}</span>
+            <span style={{ color: '#7a6a60', fontSize: '12px' }}>{hiddenLots.length} lots supplémentaires</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>{hiddenLots.reduce((s, l) => s + (Number(l.surface) || 0), 0) > 0 ? `${hiddenLots.reduce((s, l) => s + (Number(l.surface) || 0), 0)} m²` : '—'}</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>{hiddenLots.reduce((s, l) => s + (Number(l.loyer) || 0), 0) > 0 ? `${hiddenLots.reduce((s, l) => s + (Number(l.loyer) || 0), 0).toLocaleString('fr-FR')} €/mois` : '—'}</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>{[...new Set(hiddenLots.map((l: any) => l.etage).filter(Boolean))].slice(0, 2).join('/') || '—'}</span>
+            <span style={{ color: '#a39a8c', fontSize: '12px' }}>—</span>
+            <span style={{ color: '#7a6a60', fontSize: '11px' }}>{hiddenLots.filter((l: any) => l.etat === 'loue').length} occ. / {hiddenLots.filter((l: any) => l.etat === 'vacant').length} vac.</span>
+            <span style={{ color: '#a39a8c', fontSize: '11px' }}>{'›'}</span>
+          </div>
         )}
+      </div>
+      {/* Totals */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', marginTop: '14px', border: '1px solid #e6dccb', borderRadius: '8px', background: '#f5ede2', padding: '12px 0' }}>
+        {[
+          { lbl: 'Total surface', val: totalSurface > 0 ? `${totalSurface} m²` : '—' },
+          { lbl: 'Total loyer', val: totalLoyer > 0 ? `${totalLoyer.toLocaleString('fr-FR')} €/mois` : '—' },
+          { lbl: 'Occupation', val: `${loues}/${editLots.length}` },
+          { lbl: 'Rdt brut', val: rdtBrut ? `${rdtBrut} %` : '—' },
+        ].map(({ lbl, val }, k) => (
+          <div key={k} style={{ textAlign: 'center', borderRight: k < 3 ? '1px solid #efe7d7' : 'none', padding: '0 10px' }}>
+            <span style={{ display: 'block', fontSize: '10px', color: '#a39a8c', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '4px' }}>{lbl}</span>
+            <span style={{ fontFamily: 'var(--serif, "Fraunces", serif)', fontSize: '17px', fontWeight: 500, color: '#1f1b16' }}>{val}</span>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ display: 'flex', gap: '8px', marginTop: '16px', alignItems: 'center' }}>
+        <button onClick={addLot} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e6dccb', background: 'transparent', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <span style={{ fontSize: '14px', marginRight: '2px' }}>+</span> Ajouter un lot
+        </button>
+        <div style={{ flex: 1 }} />
+        {onCancel && <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e6dccb', background: 'transparent', fontSize: '12px', fontWeight: 600, color: '#1f1b16', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>}
+        {userToken && <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: '#1a1210', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</button>}
       </div>
     </div>
   )
@@ -1544,9 +1389,11 @@ function ContactVendeur({ bien, userToken, onStatusUpdate }: { bien: any, userTo
   )
 }
 
-function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra, estimationApiBase, labelPrix }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode, estimationApiBase?: string, labelPrix?: React.ReactNode }) {
-  const [estimation, setEstimation] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeInitiale, userToken, onEstimationLoaded, isFree = false, extra, estimationApiBase, labelPrix, estimationInitiale, estimationDateInitiale }: { bienId: string, prixFai: number, surface?: number, adresseInitiale?: string, villeInitiale?: string, userToken?: string | null, onEstimationLoaded?: (est: any) => void, isFree?: boolean, extra?: React.ReactNode, estimationApiBase?: string, labelPrix?: React.ReactNode, estimationInitiale?: any, estimationDateInitiale?: string }) {
+  const isCacheValid = estimationInitiale && estimationDateInitiale && (Date.now() - new Date(estimationDateInitiale).getTime()) / 86400000 < 30
+  const [estimation, setEstimation] = useState<any>(isCacheValid ? estimationInitiale : null)
+  const [estimationDate, setEstimationDate] = useState<string | null>(isCacheValid ? estimationDateInitiale! : null)
+  const [loading, setLoading] = useState(!isCacheValid)
   const [error, setError] = useState('')
   const [adresse, setAdresse] = useState(adresseInitiale || '')
   const [adresseEdit, setAdresseEdit] = useState(false)
@@ -1562,6 +1409,7 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
       const data = await res.json()
       if (data.estimation) {
         setEstimation(data.estimation)
+        setEstimationDate(new Date().toISOString())
         onEstimationLoaded?.(data.estimation)
       }
       else if (data.error) setError(data.error)
@@ -1586,7 +1434,11 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   }
 
   useEffect(() => {
-    loadEstimation()
+    if (isCacheValid) {
+      onEstimationLoaded?.(estimationInitiale)
+    } else {
+      loadEstimation()
+    }
   }, [bienId])
 
   function fmt(n: number) { return Math.round(n).toLocaleString('fr-FR') }
@@ -1645,7 +1497,14 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
 
   return (
     <div className="section">
-      <h2 className="section-title">{"Estimation Prix de Revente"}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <h2 className="section-title" style={{ margin: 0 }}>{"Estimation Prix de Revente"}</h2>
+        {estimationDate && (
+          <span style={{ fontSize: '11px', color: '#b0a898' }}>
+            {`Estimé le ${new Date(estimationDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
+          </span>
+        )}
+      </div>
       {isFree && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
           <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
@@ -1837,6 +1696,51 @@ function EstimationSection({ bienId, prixFai, surface, adresseInitiale, villeIni
   )
 }
 
+function LabelSelect({ value, options, onChange, info }: { value: string, options: { value: string, label: string }[], onChange: (v: string) => void, info?: string }) {
+  const [open, setOpen] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+  const current = options.find(o => o.value === value)
+  const active = open || hovered
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'block' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', fontWeight: 600, color: active ? 'var(--ink, #1f1b16)' : 'var(--ink-mute, #a39a8c)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, lineHeight: 1, marginBottom: '6px', transition: 'color 150ms' }}
+      >
+        {current?.label}
+        {info && (
+          <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>?<span className="pnl-tooltip-text" style={{ left: 'auto', right: 0, transform: 'none' }}>{info}</span></span>
+        )}
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '4px', background: active ? 'var(--accent, #b4442e)' : 'rgba(0,0,0,0.07)', transition: 'background 150ms' }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={active ? '#fff' : 'currentColor'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: '#fff', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', border: '1px solid #e8e2d8', overflow: 'hidden', minWidth: '180px' }}>
+          {options.map(o => (
+            <button key={o.value} onClick={() => { onChange(o.value); setOpen(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: o.value === value ? 'var(--accent)' : 'var(--ink)', background: o.value === value ? 'var(--accent-bg, #f5f1ec)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'background 100ms' }}
+              onMouseEnter={e => { if (o.value !== value) e.currentTarget.style.background = '#f9f6f2' }}
+              onMouseLeave={e => { if (o.value !== value) e.currentTarget.style.background = 'transparent' }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function BienFicheClient({ initialBien, id, isEnchere }: { initialBien: any, id: string, isEnchere: boolean }) {
   const apiBase = isEnchere ? '/api/encheres' : '/api/biens'
   const estimationBase = isEnchere ? '/api/estimation/encheres' : '/api/estimation'
@@ -1849,18 +1753,21 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [freeAnalysesLeft, setFreeAnalysesLeft] = useState<number>(0)
   const [freeAnalysesUsed, setFreeAnalysesUsed] = useState<number>(0)
   const [champsStatut, setChampsStatut] = useState<Record<string, { valeur: string, statut: 'jaune' | 'vert' }>>({})
-  const [dirtyChamps, setDirtyChamps] = useState<Record<string, boolean>>({})
-  const [originalVals, setOriginalVals] = useState<Record<string, any>>({})
   const [scorePerso, setScorePerso] = useState<number | null>(null)
   const [inWatchlist, setInWatchlist] = useState(false)
   const [showDetailTravaux, setShowDetailTravaux] = useState(false)
   // IDR states
-  const [activeNav, setActiveNav] = useState('donnees')
+  const [activeNav, setActiveNav] = useState('apercu')
   const [showLotsDetail, setShowLotsDetail] = useState(false)
   const [showLotsLocatif, setShowLotsLocatif] = useState(false)
   const [showCoutsCopro, setShowCoutsCopro] = useState(false)
   const [showContact, setShowContact] = useState(false)
+  const [showCompleterModal, setShowCompleterModal] = useState(false)
+  const [modalFieldVals, setModalFieldVals] = useState<Record<string, any>>({})
   const [showAvocatModal, setShowAvocatModal] = useState(false)
+  const [avocatEmailInput, setAvocatEmailInput] = useState('')
+  const [avocatEmailSaving, setAvocatEmailSaving] = useState(false)
+  const [avocatEmailSaved, setAvocatEmailSaved] = useState<string | null>(null)
   const [showFraisModal, setShowFraisModal] = useState(false)
   const [showSourceModal, setShowSourceModal] = useState(false)
   const [showReventeLots, setShowReventeLots] = useState(false)
@@ -1896,7 +1803,9 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   }, 0)
   const hasDetail = Object.values(detailTravaux).some(v => v && v.qte > 0)
 
-  const [baseCalc, setBaseCalc] = useState<'fai' | 'cible'>('fai')
+  const [baseCalc, setBaseCalc] = useState<'fai' | 'cible' | 'libre'>('fai')
+  const [prixLibreManuel, setPrixLibreManuel] = useState<number | null>(null)
+  const [prixLibreDraft, setPrixLibreDraft] = useState<string>('')
   const [modeCible, setModeCible] = useState<'cashflow' | 'pv'>('pv')
   const [apport, setApport] = useState<number | ''>(0)
   const [taux, setTaux] = useState<number | ''>(3.5)
@@ -1910,14 +1819,43 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [fraisNotaireBase, setFraisNotaireBase] = useState(7.5) // valeur profil hors MdB
   const [tmi, setTmi] = useState(30)
   const [regime, setRegime] = useState('nu_micro_foncier')
+  const [showTmiDrawer, setShowTmiDrawer] = useState(false)
+  const [drawerTmi, setDrawerTmi] = useState<number | null>(null)
+  const [drawerRegime, setDrawerRegime] = useState('')
+  const [tmiDrawerSaving, setTmiDrawerSaving] = useState(false)
   const [objectifCashflow, setObjectifCashflow] = useState(0)
   const [objectifPV, setObjectifPV] = useState(20)
+  const [enchereManuelMax, setEnchereManuelMax] = useState<number | null>(null)
+  const [enchereManuelDraft, setEnchereManuelDraft] = useState('')
+  const [enchereBaseCalc, setEnchereBaseCalc] = useState<'calcule' | 'libre'>('calcule')
+  const [enchereFinMode, setEnchereFinMode] = useState<'mise_a_prix' | 'calcule' | 'libre'>('calcule')
   const [regime2, setRegime2] = useState('nu_reel_foncier')
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
-  const [estimationData, setEstimationData] = useState<any>(null)
+  const [estimationData, setEstimationData] = useState<any>(bien.estimation_details || null)
   const [dureeRevente, setDureeRevente] = useState<number>(1)
   const [fraisAgenceRevente, setFraisAgenceRevente] = useState<number | ''>(5) // 5% par defaut = frais agence inclus dans le FAI
-  const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(1500)
+  const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(bien.honoraires_avocat ?? 1500)
+  const [adresseRowEditing, setAdresseRowEditing] = useState(false)
+  const [adresseRowDraft, setAdresseRowDraft] = useState('')
+  // Projection de division
+  const [divProjection, setDivProjection] = useState<{ nbLots: number; typeLots: string; loyerParLot: number; cloisons: number; compteurs: number; autres: number } | null>(null)
+  const [showDivModal, setShowDivModal] = useState(false)
+  const [divDraft, setDivDraft] = useState<{ nbLots: string; typeLots: string; loyerParLot: string; cloisons: string; compteurs: string; autres: string }>({ nbLots: '', typeLots: 'Studios', loyerParLot: '', cloisons: '', compteurs: '', autres: '' })
+  // Charger les brouillons localStorage au montage
+  useEffect(() => {
+    if (!isEnchere) {
+      const drafts = getDrafts(id)
+      if (Object.keys(drafts).length > 0) {
+        setBien((prev: any) => ({ ...prev, ...drafts }))
+      }
+    }
+    // Charger projection division
+    try {
+      const raw = localStorage.getItem(`mdb_div_proj_${id}`)
+      if (raw) setDivProjection(JSON.parse(raw))
+    } catch {}
+  }, [id, isEnchere])
+
 
   useEffect(() => {
     async function load() {
@@ -1936,22 +1874,21 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         if (profilData.profile) {
           const p = profilData.profile
           setProfil(p)
-          if (p.plan) {
-            setUserPlan(p.plan)
-            // 2 analyses completes offertes aux Free
-            if (p.plan === 'free') {
-              const KEY = 'mdb_free_analyses'
-              const MAX = 2
-              try {
-                const viewed: string[] = JSON.parse(localStorage.getItem(KEY) || '[]')
-                if (!viewed.includes(id) && viewed.length < MAX) {
-                  viewed.push(id)
-                  localStorage.setItem(KEY, JSON.stringify(viewed))
-                }
-                setFreeAnalysesLeft(viewed.includes(id) ? 1 : 0)
-                setFreeAnalysesUsed(viewed.length)
-              } catch { setFreeAnalysesLeft(0); setFreeAnalysesUsed(0) }
-            }
+          const plan = p.plan || 'free'
+          setUserPlan(plan)
+          // 5 analyses completes offertes aux Free (plan null = Free)
+          if (plan === 'free') {
+            const KEY = `mdb_free_analyses_${session.user.id}`
+            const MAX = 5
+            try {
+              const viewed: string[] = JSON.parse(localStorage.getItem(KEY) || '[]')
+              if (!viewed.includes(id) && viewed.length < MAX) {
+                viewed.push(id)
+                localStorage.setItem(KEY, JSON.stringify(viewed))
+              }
+              setFreeAnalysesLeft(viewed.includes(id) ? 1 : 0)
+              setFreeAnalysesUsed(viewed.length)
+            } catch { setFreeAnalysesLeft(0); setFreeAnalysesUsed(0) }
           }
           if (p.apport != null) setApport(p.apport)
           if (p.taux_credit != null) setTaux(p.taux_credit)
@@ -1992,37 +1929,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     load()
   }, [id])
 
-  // Sticky nav — IntersectionObserver to highlight active section
-  useEffect(() => {
-    const sections = ['donnees', 'estimation', 'financement', 'fiscalite']
-    const observers: IntersectionObserver[] = []
-    const visibleSet = new Set<string>()
-    for (const sectionId of sections) {
-      const el = document.getElementById(`nav-${sectionId}`)
-      if (!el) continue
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) visibleSet.add(sectionId)
-          else visibleSet.delete(sectionId)
-          // Pick the first visible section in order
-          for (const s of sections) {
-            if (visibleSet.has(s)) { setActiveNav(s); break }
-          }
-        },
-        { rootMargin: '-120px 0px -60% 0px', threshold: 0 }
-      )
-      obs.observe(el)
-      observers.push(obs)
-    }
-    return () => observers.forEach(o => o.disconnect())
-  }, [bien])
-
   function scrollToNav(sectionId: string) {
-    const el = document.getElementById(`nav-${sectionId}`)
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 130
-      window.scrollTo({ top: y, behavior: 'smooth' })
-    }
+    setActiveNav(sectionId)
+    const nav = document.querySelector('.sticky-nav-wrap')
+    if (nav) window.scrollTo({ top: (nav as HTMLElement).getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' })
   }
 
 
@@ -2075,6 +1985,26 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         body: JSON.stringify({ bien_id: id, source_table: sourceTable })
       })
       if (res.ok || res.status === 409) setInWatchlist(true)
+    }
+  }
+
+  async function saveTmiDrawer() {
+    if (!userToken || drawerTmi === null) return
+    setTmiDrawerSaving(true)
+    try {
+      const body: Record<string, any> = { tmi: drawerTmi }
+      if (drawerRegime) body.regime = drawerRegime
+      await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify(body),
+      })
+      setProfil((prev: any) => ({ ...prev, tmi: drawerTmi, ...(drawerRegime ? { regime: drawerRegime } : {}) }))
+      setTmi(drawerTmi)
+      if (drawerRegime) setRegime(drawerRegime)
+      setShowTmiDrawer(false)
+    } finally {
+      setTmiDrawerSaving(false)
     }
   }
 
@@ -2163,6 +2093,20 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   // => prixCible = (estimPrix - budgetTrav) / ((1 + fraisNotaire/100) × (1 + objectifPV/100))
   const prixCiblePV = estimPrix > 0 ? Math.round((estimPrix - budgetTravCalc) / ((1 + fraisNotaire / 100) * (1 + objectifPV / 100))) : null
 
+  // Enchère max calculé (obj. PV) — utilisé comme prixBase quand mode "calculé"
+  const enchMaxCalc = (() => {
+    if (!isEnchere || !estimPrix) return null
+    const obj = (objectifPV || 20) / 100
+    const isMDB = regime === 'marchand_de_biens'
+    const fp = bien.frais_preemption || 0
+    const K = estimPrix / (1 + obj) - budgetTravCalc
+    let p = K / 1.1
+    for (let i = 0; i < 5; i++) {
+      p = K - calculerFraisEnchere(Math.max(1, p), fp, { isMDB }).total
+    }
+    return Math.round(p)
+  })()
+
   // Prix cible cashflow (locatif)
   const prixCibleCashflow = resultatFAI?.prix_cible || null
 
@@ -2174,12 +2118,76 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const hasCibleContraignant = prixCibleCombine && prixCibleCombine < bien?.prix_fai
 
   const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
+
+  // Completion widget
+  const COMPLETABLE = (() => {
+    const isIDRs = isIDR
+    const base = [
+      { champ: 'adresse', label: 'adresse' },
+      { champ: 'annee_construction', label: 'année de construction' },
+      { champ: 'ges', label: 'GES' },
+      { champ: 'charges_copro', label: 'charges copro' },
+      { champ: 'taxe_fonc_ann', label: 'taxe foncière' },
+    ]
+    const nonIDR = [
+      { champ: 'nb_sdb', label: 'salles de bain' },
+      { champ: 'type_chauffage', label: 'type de chauffage' },
+    ]
+    const locatif = [
+      { champ: 'loyer', label: 'loyer' },
+      { champ: 'fin_bail', label: 'fin de bail' },
+      { champ: 'profil_locataire', label: 'profil locataire' },
+    ]
+    const idrFields = [
+      { champ: 'loyer', label: 'loyer' },
+      { champ: 'nb_lots', label: 'nb lots' },
+      { champ: 'monopropriete', label: 'monopropriété' },
+      { champ: 'compteurs_individuels', label: 'compteurs individuels' },
+    ]
+    return [
+      ...base,
+      ...((bien.type_bien || '').toLowerCase().includes('maison') ? [{ champ: 'surface_terrain', label: 'surface terrain' }] : []),
+      ...(!isIDRs ? nonIDR : []),
+      ...(!isIDRs ? locatif : idrFields),
+    ]
+  })()
+  const completableRemplis = COMPLETABLE.filter(f => { const v = (bien as any)[f.champ]; return v != null && v !== '' && v !== 'NC' && v !== 0 }).length
+  const pctComplete = Math.round(completableRemplis / COMPLETABLE.length * 100)
+  const completableManquants = COMPLETABLE.filter(f => { const v = (bien as any)[f.champ]; return !v || v === 'NC' })
+
+  function getModalVal(champ: string) {
+    return modalFieldVals[champ] !== undefined ? modalFieldVals[champ] : ((bien as any)[champ] ?? '')
+  }
+  function getModalFieldClass(champ: string): string {
+    if (modalFieldVals[champ] !== undefined && modalFieldVals[champ] !== '') return 'mf-draft'
+    const statut = champsStatut?.[champ]?.statut
+    if (statut === 'vert') return 'mf-vert'
+    if (statut === 'jaune') return 'mf-jaune'
+    const v = (bien as any)[champ]
+    if (v != null && v !== '' && v !== 0 && v !== 'NC') return 'mf-filled'
+    return 'mf-nc'
+  }
+  function setModalDraft(champ: string, val: any) {
+    setModalFieldVals(p => ({ ...p, [champ]: val }))
+    setBien((prev: any) => ({ ...prev, [champ]: val === '' ? null : val }))
+  }
+  function saveModalField(champ: string) {
+    const val = modalFieldVals[champ]
+    if (val === undefined || val === '' || val === null) return
+    handleUpdate(champ, val)
+    setModalFieldVals(prev => { const n = { ...prev }; delete n[champ]; return n })
+  }
+
   // Valeurs numeriques (coerce '' -> 0 pour les calculs)
   const apportNum = apport || 0
   const tauxNum = taux || 0
   const tauxAssuranceNum = tauxAssurance || 0
   const fraisAgenceNum = fraisAgenceRevente || 0
-  const prixBase = baseCalc === 'fai' ? bien.prix_fai : (prixCibleCombine || bien.prix_fai)
+  const prixBase = isEnchere
+    ? (enchereFinMode === 'libre' ? (enchereManuelMax || enchMaxCalc || bien.prix_fai)
+      : enchereFinMode === 'mise_a_prix' ? bien.prix_fai
+      : (enchMaxCalc || bien.prix_fai))
+    : (baseCalc === 'fai' ? bien.prix_fai : baseCalc === 'libre' ? (prixLibreManuel || bien.prix_fai) : (prixCibleCombine || bien.prix_fai))
   const montantProjet = prixBase * (1 + fraisNotaire / 100) + budgetTravCalc
   const montantEmprunte = Math.max(0, montantProjet - apportNum)
   const apportPct = montantProjet > 0 ? Math.round(apportNum / montantProjet * 1000) / 10 : 0
@@ -2191,6 +2199,12 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     : calculerMensualite(montantEmprunte, tauxNum, duree)
   const mensualiteAss = montantEmprunte * (tauxAssuranceNum / 100) / 12
   const mensualiteTotale = mensualiteCredit + mensualiteAss
+  const totalInterets = typeCredit === 'in_fine'
+    ? mensualiteCredit * duree * 12
+    : Math.max(0, mensualiteCredit * duree * 12 - montantEmprunte)
+  const totalAssurance = mensualiteAss * duree * 12
+  const totalCredit = totalInterets + totalAssurance
+  const totalRembourser = montantEmprunte + totalCredit
 
   const chargesRec = bien.charges_rec || 0
   const chargesCoproMens = bien.charges_copro || 0 // deja mensuel en base
@@ -2211,26 +2225,29 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
     frais_bancaires: profil.frais_bancaires || 0,
   } : null
 
+  const localDrafts = getDrafts(id)
   return (
     <Layout>
       <style>{`
         .pnl-tooltip-wrap .pnl-tooltip-text { display: none; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1a1210; color: #fff; font-size: 11px; font-weight: 400; padding: 8px 12px; border-radius: 8px; white-space: pre-line; width: max-content; max-width: 280px; z-index: 10; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,.15); pointer-events: none; text-transform: none; letter-spacing: normal; }
         .pnl-tooltip-wrap .pnl-tooltip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1a1210; }
         .pnl-tooltip-wrap:hover .pnl-tooltip-text { display: block; }
-        .fiche-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 48px; }
+        input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
+        input[type=number] { -moz-appearance: textfield !important; appearance: textfield !important; }
+        .fiche-wrap { max-width: 1400px; margin: 0 auto; padding: 24px 32px 80px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
-        .hero-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-bottom: 24px; align-items: start; }
-        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); height: 100%; min-height: 420px; }
-        .fiche-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
+        .hero-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 28px; margin-bottom: 36px; align-items: stretch; }
+        .gallery-wrap { position: relative; border-radius: var(--radius-lg, 20px); overflow: hidden; background: var(--paper-alt, #ede3d4); height: 100%; min-height: 240px; box-shadow: var(--shadow-md); }
+        .fiche-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
         .gallery-wrap:hover .fiche-photo { transform: scale(1.02); }
-        .fiche-photo-empty { width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); max-height: 380px; }
-        .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--ink, #1f1b16); box-shadow: 0 1px 4px rgba(0,0,0,.12); transition: all .2s; }
+        .fiche-photo-empty { width: 100%; height: 100%; min-height: 240px; border-radius: var(--radius-lg, 20px); background: var(--paper-alt, #ede3d4); display: flex; align-items: center; justify-content: center; color: var(--ink-mute, #a39a8c); }
+        .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--ink, #1f1b16); box-shadow: 0 1px 4px rgba(0,0,0,.12); transition: all .2s; }
         .gallery-nav:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
-        .gallery-dots { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; background: rgba(31,27,22,0.5); backdrop-filter: blur(8px); border-radius: 999px; }
+        .gallery-dots { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; background: rgba(31,27,22,0.5); backdrop-filter: blur(8px); border-radius: 999px; }
         .gallery-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: all .2s; display: inline-block; }
         .gallery-dots .dot.active { background: #fff; width: 18px; border-radius: 999px; }
-        .gallery-count { position: absolute; bottom: 14px; right: 14px; padding: 4px 10px; background: rgba(31,27,22,0.55); backdrop-filter: blur(8px); border-radius: 6px; color: #fff; font-size: 11px; font-weight: 500; }
+        .gallery-count { position: absolute; bottom: 16px; right: 16px; padding: 5px 10px; background: rgba(31,27,22,0.6); backdrop-filter: blur(8px); border-radius: 6px; color: #fff; font-size: 11px; font-weight: 500; }
         .fiche-info { display: flex; flex-direction: column; gap: 14px; }
         .fiche-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 800; color: #1a1210; }
         .fiche-sub { font-size: 14px; color: #7a6a60; margin-top: -8px; }
@@ -2252,20 +2269,60 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .section-subtitle { font-size: 12px; color: var(--ink-soft, #6b6358); margin-bottom: 18px; }
         .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--line-soft, #efe7d7); border-radius: var(--radius-sm, 8px); overflow: hidden; }
         .estimation-price-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; }
-        .data-subtitle { grid-column: 1 / -1; font-size: 10px; font-weight: 600; color: var(--ink-mute, #a39a8c); text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 16px 6px; background: var(--surface, #fff); }
-        .data-item { display: grid; grid-template-columns: 1fr 160px; align-items: center; column-gap: 12px; padding: 14px 16px; background: var(--surface, #fff); transition: background var(--dur-hover, 150ms); }
+        .data-subtitle { grid-column: 1 / -1; font-size: 10px; font-weight: 600; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 16px 6px; background: var(--surface, #fff); }
+        .data-item { display: grid; grid-template-columns: 1fr 110px 44px; align-items: center; column-gap: 0; padding: 14px 16px; background: var(--surface, #fff); transition: background var(--dur-hover, 150ms); }
+        .encheres-info-grid .data-value { font-weight: 400; }
         .data-item:hover { background: var(--paper, #f5ede2); }
         .data-label { font-size: 11px; color: var(--ink-mute, #a39a8c); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
-        .data-value { font-size: 14px; font-weight: 500; color: var(--ink, #1f1b16); text-align: right; justify-self: end; }
+        .data-value { font-size: 14px; font-weight: 500; color: var(--ink, #1f1b16); text-align: right; display: block; width: 100%; }
         .data-value.nc { color: var(--ink-mute, #a39a8c); font-style: italic; font-weight: 400; }
         .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
         .two-cols { display: flex; gap: 24px; align-items: flex-start; }
         .two-cols > .col { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
         .simu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-        .strat-intro { background: #fff; border-radius: 12px; border: 1px solid #e8e2d8; padding: 18px 22px; margin-bottom: 20px; font-size: 13px; color: #7a6a60; line-height: 1.7; display: flex; flex-direction: column; gap: 10px; }
-        .strat-intro strong { color: #1a1210; }
-        .strat-intro-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; font-weight: 600; color: #c0392b; text-decoration: none; transition: color 0.15s; }
-        .strat-intro-cta:hover { color: #a5301f; }
+        .strategy-bar { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; padding: 18px 24px; background: var(--surface, #fff); border-radius: var(--radius-lg, 16px); margin-bottom: 16px; border-left: 3px solid var(--info, #2d5a8c); }
+        .strategy-bar.strat-travaux { border-left-color: var(--warning, #b8891a); }
+        .strategy-bar.strat-immeuble { border-left-color: var(--accent, #b4442e); }
+        .strategy-bar.strat-division { border-left-color: var(--success, #2e7c5d); }
+        .strategy-bar.strat-encheres { border-left-color: #8a5a3c; }
+        .strategy-bar .sb-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--info-soft, #dde8f4); color: var(--info, #2d5a8c); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .strategy-bar.strat-travaux .sb-icon { background: #fef3cd; color: var(--warning, #b8891a); }
+        .strategy-bar.strat-immeuble .sb-icon { background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
+        .strategy-bar.strat-division .sb-icon { background: var(--success-soft, #d4ebde); color: var(--success, #2e7c5d); }
+        .strategy-bar.strat-encheres .sb-icon { background: #efe0d1; color: #8a5a3c; }
+        .strategy-bar .sb-txt { font-size: 13px; color: var(--ink-soft, #6b6358); line-height: 1.5; }
+        .strategy-bar .sb-txt strong { color: var(--ink, #1f1b16); font-weight: 600; font-size: 13px; display: block; margin-bottom: 2px; }
+        .strategy-bar .sb-link { color: var(--accent, #b4442e); font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+        .strategy-bar .sb-link:hover { text-decoration: underline; }
+        .completion-widget { background: linear-gradient(135deg, var(--accent-soft, #f2d9d1) 0%, #f7e4dc 100%); border-radius: var(--radius-lg, 16px); padding: 20px 24px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 20px; margin-bottom: 20px; }
+        .completion-widget .cw-txt strong { font-family: "Fraunces", Georgia, serif; font-size: 16px; color: var(--ink, #1f1b16); display: block; margin-bottom: 2px; }
+        .completion-widget .cw-txt .cw-sub { font-size: 12px; color: var(--ink-soft, #6b6358); }
+        .completion-widget .cw-progress { width: 120px; height: 6px; background: rgba(180,68,46,0.15); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+        .completion-widget .cw-progress .cw-bar { height: 100%; background: var(--accent, #b4442e); border-radius: 999px; }
+        .completion-widget .cw-btn { background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); padding: 12px 28px; font-size: 13px; font-weight: 600; border-radius: var(--radius-md, 14px); border: none; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.15s; }
+        .completion-widget .cw-btn:hover { background: #000; }
+        .modal-section-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: var(--ink, #1f1b16); margin-bottom: 10px; }
+        .modal-section-count { font-size: 11px; font-weight: 500; background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); padding: 2px 10px; border-radius: 999px; }
+        .modal-fields { display: flex; flex-direction: column; border: 1px solid var(--line, #e6dccb); border-radius: 10px; overflow: hidden; }
+        .modal-field { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 14px; background: #fff; border-bottom: 1px solid var(--line-soft, #efe7d7); }
+        .modal-field:last-child { border-bottom: none; }
+        .mf-label { font-size: 13px; color: var(--ink, #1f1b16); }
+        .mf-unit { font-size: 11px; color: var(--ink-mute, #a39a8c); }
+        .mf-control { display: flex; align-items: center; justify-content: flex-end; }
+        .mf-control input, .mf-control select { padding: 6px 10px; border: 1.5px solid var(--line, #e6dccb); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--paper, #f5ede2); color: var(--ink, #1f1b16); text-align: right; width: 160px; }
+        .mf-control input:focus, .mf-control select:focus { outline: none; border-color: var(--ink, #1f1b16); }
+        .mf-control input::placeholder { color: var(--accent, #b4442e); opacity: 0.7; }
+        .mf-control input.mf-nc, .mf-control select.mf-nc { background: var(--accent-soft, #f2d9d1); border-color: rgba(180,68,46,0.35); color: var(--accent, #b4442e); }
+        .mf-control input.mf-draft, .mf-control select.mf-draft { background: var(--info-soft, #dde8f4); border-color: var(--info, #2d5a8c); color: var(--info, #2d5a8c); }
+        .mf-control input.mf-jaune, .mf-control select.mf-jaune { background: #fef9e7; border-color: #e6b800; color: #7a5800; }
+        .mf-control input.mf-vert, .mf-control select.mf-vert { background: var(--success-soft, #d4ebde); border-color: var(--success, #2e7c5d); color: var(--success, #2e7c5d); }
+        .mf-control input.mf-filled, .mf-control select.mf-filled { background: #fff; border-color: var(--line, #e6dccb); color: var(--ink, #1f1b16); }
+        .mf-validate { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--success, #2e7c5d); color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
+        .mf-validate.mf-validate-draft { background: var(--info, #2d5a8c); }
+        .mf-validate.mf-validate-draft:hover { background: #1e3d60; }
+        .mf-validate:hover { background: #1f5c42; }
+        .mf-validate:disabled { background: var(--line, #e6dccb); color: var(--ink-mute, #a39a8c); cursor: default; }
+        .modal-footer-note { margin-top: 20px; padding: 12px 16px; background: var(--info-soft, #dde8f4); border-radius: 10px; font-size: 12px; color: var(--ink-soft, #6b6358); line-height: 1.5; }
         .data-missing { color: #c0392b; font-style: italic; font-weight: 400; font-size: 13px; }
         .param-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
         .param-label { font-size: 11px; font-weight: 600; color: #7a6a60; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -2275,6 +2332,25 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .toggle-row { display: flex; gap: 8px; }
         .toggle-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; background: #faf8f5; color: #7a6a60; transition: all 0.15s; }
         .toggle-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
+        .fin-block { margin-top: 18px; padding-top: 18px; border-top: 1px solid #efe7d7; }
+        .fin-block:first-of-type { margin-top: 4px; padding-top: 0; border-top: none; }
+        .fin-label { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; margin-bottom: 10px; }
+        .fin-calc-field { padding: 12px 16px; background: var(--paper, #f5ede2); border-radius: 8px; font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; color: #1f1b16; letter-spacing: -0.01em; }
+        .fin-field { width: 100%; padding: 10px 14px; background: var(--paper, #f5ede2); border: 1.5px solid #e8e2d8; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1f1b16; outline: none; box-sizing: border-box; transition: border-color .15s; }
+        .fin-field:focus { border-color: #c0392b; box-shadow: 0 0 0 3px rgba(192,57,43,.08); }
+        .fin-hint { margin-top: 6px; font-size: 11px; color: #6b6358; }
+        .fin-slider { width: 100%; height: 6px; appearance: none; background: linear-gradient(to right, #c0392b calc(var(--val, 0) * 1%), #e8e2d8 calc(var(--val, 0) * 1%)); border-radius: 999px; outline: none; cursor: pointer; margin: 4px 0 8px; }
+        .fin-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; }
+        .fin-slider::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; background: #c0392b; border: 3px solid #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px #e8e2d8, 0 1px 3px rgba(0,0,0,.12); transition: transform .15s; margin-top: -6px; }
+        .fin-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .fin-slider::-moz-range-track { height: 6px; border-radius: 999px; background: #e8e2d8; }
+        .fin-slider::-moz-range-progress { height: 6px; border-radius: 999px; background: #c0392b; }
+        .fin-slider::-moz-range-thumb { width: 18px; height: 18px; background: #c0392b; border: 3px solid #fff; border-radius: 50%; cursor: pointer; }
+        .fin-slider-labels { display: flex; justify-content: space-between; font-size: 10px; color: #a39a8c; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 8px; }
+        .fin-chip-group { display: flex; gap: 4px; background: var(--paper, #f5ede2); padding: 4px; border-radius: 999px; }
+        .fin-chip { flex: 1; padding: 7px 12px; border: none; background: transparent; border-radius: 999px; font-size: 13px; font-weight: 500; color: #7a6a60; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
+        .fin-chip:hover { color: #1a1210; }
+        .fin-chip.active { background: #c0392b; color: #fff; }
         .slider-wrap { padding: 4px 0; }
         .slider { width: 100%; accent-color: #c0392b; cursor: pointer; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #b0a898; margin-top: 2px; }
@@ -2303,11 +2379,130 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .results-total td { font-weight: 700; background: #f7f4f0; }
         .cashflow-row td:not(:first-child) { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; }
         .pnl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+        .fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+        .fin-right-col { display: flex; flex-direction: column; gap: 20px; }
+        .fin-cashflow-card { flex: 1; display: flex; flex-direction: column; }
+        .fin-result-stack { display: flex; flex-direction: column; margin-top: 20px; }
+        .fin-result-line { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; border-bottom: 1px dashed #e8e2d8; font-size: 13px; color: #7a6a60; }
+        .fin-result-line:last-child { border-bottom: none; }
+        .fin-result-line .fin-v { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; color: #1a1210; font-variant-numeric: tabular-nums; }
+        .fin-highlight { margin-top: 8px !important; padding: 16px 18px !important; background: linear-gradient(135deg, #fde8e8 0%, #f7e4dc 100%) !important; border: none !important; border-bottom: none !important; border-radius: 10px; }
+        .fin-highlight .fin-v { font-size: 24px !important; font-weight: 600 !important; color: #c0392b !important; letter-spacing: -0.02em; }
+        .fin-unit { font-size: 12px; color: #c0392b; opacity: 0.7; margin-left: 2px; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+        .fin-sub-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e8e2d8; }
+        .fin-sub-stat { padding: 12px 14px; background: #f7f4f0; border-radius: 8px; }
+        .fin-sub-highlight { background: #1a1210 !important; }
+        .fin-sub-lbl { font-size: 10px; color: #a39a8c; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 4px; }
+        .fin-sub-highlight .fin-sub-lbl { color: #f0d090; }
+        .fin-sub-val { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; color: #1a1210; font-variant-numeric: tabular-nums; }
+        .fin-sub-highlight .fin-sub-val { color: #fff; font-size: 18px; }
+        .cf-grid { display: flex; flex-direction: column; margin-top: 16px; }
+        .cf-grid-header { display: grid; grid-template-columns: 1fr 110px 44px 24px 110px 44px; padding: 0 0 10px; border-bottom: 1px solid #e8e2d8; }
+        .cf-grid-header > span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #a39a8c; font-weight: 600; text-align: right; }
+        .cf-grid-header > span:first-child { text-align: left; }
+        .cf-grid-row { display: grid; grid-template-columns: 1fr 110px 44px 24px 110px 44px; align-items: center; padding: 2px 0; border-bottom: 1px dashed #e8e2d8; min-height: 44px; }
+        .cf-grid-row:last-of-type { border-bottom: none; }
+        .cf-grid-lbl { font-size: 13px; color: #6b6358; }
+        .cf-grid-static { text-align: right; font-size: 13px; font-weight: 500; }
+        .cf-total-box { margin-top: 18px; padding: 16px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .cf-total-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #6b6358; }
+        .cf-total-vals { display: flex; align-items: baseline; gap: 14px; }
+        .cf-total-main { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; }
+        .cf-total-ann { font-size: 12px; color: #6b6358; font-variant-numeric: tabular-nums; }
         .nc-warning { background: #fff8f0; border: 1.5px solid #f0d090; border-radius: 12px; padding: 16px 20px; color: #a06010; font-size: 13px; }
         .profil-bar { background: #f7f4f0; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #7a6a60; margin-top: 16px; }
-        .legende { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
-        .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #7a6a60; }
-        .legende-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .legende { display: flex; gap: 14px; flex-wrap: wrap; padding: 12px 16px; background: var(--paper, #f5ede2); border-radius: 10px; margin-top: 16px; }
+        .legende-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft, #6b6358); }
+        .legende-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .k-unit { text-transform: none; letter-spacing: 0; color: var(--ink-mute, #a39a8c); opacity: 0.7; margin-left: 2px; font-weight: 400; }
+        .address-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 14px; background: var(--paper, #f5ede2); border: 1px solid var(--line-soft, #efe7d7); border-radius: var(--radius-sm, 8px); transition: border-color .15s, background .15s; cursor: default; }
+        .address-row:hover { border-color: var(--line, #e6dccb); }
+        .address-row.editing { border-color: var(--info, #3a5f7d); background: var(--surface, #fff); box-shadow: 0 0 0 3px var(--info-soft, #d3deea); }
+        .address-icon { flex-shrink: 0; width: 22px; height: 22px; color: var(--accent, #b4442e); display: flex; align-items: center; justify-content: center; }
+        .address-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+        .address-lbl { font-size: 12px; color: var(--ink-soft, #6b6358); font-weight: 500; white-space: nowrap; }
+        .address-val { font-size: 13px; color: var(--ink, #1f1b16); flex: 1 1 auto; min-width: 120px; }
+        .address-val.placeholder { color: var(--accent, #b4442e); font-style: italic; cursor: pointer; }
+        .address-val.placeholder:hover { text-decoration: underline; }
+        .address-input { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 13px; color: var(--ink, #1f1b16); outline: none; }
+        .address-hint { flex-shrink: 0; font-size: 11px; color: var(--ink-mute, #a39a8c); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .address-edit-btn { flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; background: transparent; border: none; color: var(--ink-soft, #6b6358); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+        .address-edit-btn:hover { background: var(--surface, #fff); color: var(--accent, #b4442e); }
+        .add-feature-row { margin-top: 14px; padding: 14px 16px; background: var(--paper, #f5ede2); border-radius: var(--radius-sm, 8px); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .add-feature-lbl { font-size: 12px; color: var(--ink-soft, #6b6358); }
+        .add-feature-lbl strong { color: var(--ink, #1f1b16); font-weight: 600; }
+        .btn-add { padding: 8px 14px; background: var(--accent, #b4442e); color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: all .2s; white-space: nowrap; }
+        .btn-add:hover { background: #9a3626; transform: translateY(-1px); }
+        .btn-ghost { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 14px; padding: 10px; background: transparent; border: 1px solid #e8e2d8; border-radius: 8px; font-size: 13px; font-weight: 600; color: #6b6358; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .15s; }
+        .btn-ghost:hover { border-color: #1a1210; background: #faf8f5; }
+        .section-meta { font-size: 11px; color: #a39a8c; font-weight: 400; font-family: 'DM Sans', sans-serif; letter-spacing: 0; }
+        .section-subtitle { font-size: 13px; color: #7a6a60; margin-top: -10px; margin-bottom: 20px; }
+        .travaux-score { display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; margin-top: 16px; }
+        .score-circle { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--warning, #c77f1f) 0%, var(--accent, #b4442e) 100%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Fraunces', serif; line-height: 1; flex-shrink: 0; }
+        .score-circle .sc-big { font-size: 28px; font-weight: 500; }
+        .score-circle .sc-small { font-size: 10px; opacity: 0.85; letter-spacing: 0.08em; margin-top: 2px; }
+        .travaux-score.is-manual .score-circle { background: linear-gradient(135deg, #4a4240 0%, #7a6a60 100%); }
+        .score-info .si-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; font-weight: 600; margin-bottom: 4px; }
+        .score-info .si-h4 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; color: #1a1210; margin-bottom: 4px; }
+        .score-info .si-p { font-size: 12px; color: #6b6358; line-height: 1.5; margin: 0; }
+        .score-budget { text-align: right; }
+        .score-budget .sb-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; font-weight: 600; margin-bottom: 4px; }
+        .score-budget .sb-amount { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; color: var(--warning, #c77f1f); letter-spacing: -0.02em; line-height: 1; }
+        .score-budget .sb-calc { font-size: 11px; color: #6b6358; margin-top: 4px; }
+        .score-stepper { display: inline-flex; align-items: center; margin-top: 14px; background: #faf8f5; border: 1px solid #e8e2d8; border-radius: 999px; padding: 3px; }
+        .score-stepper .ss-step { width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: 999px; font-family: 'Fraunces', serif; font-size: 13px; font-weight: 500; color: #a39a8c; cursor: pointer; transition: all .15s ease; padding: 0; }
+        .score-stepper .ss-step:hover { color: #1a1210; background: #f0ede8; }
+        .score-stepper .ss-step.is-active { background: #1a1210; color: #fff; }
+        .score-stepper .ss-step.is-ia { background: var(--warning, #c77f1f); color: #fff; }
+        .score-stepper .ss-reset { margin-left: 6px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; font-family: 'DM Sans', sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; color: #a39a8c; cursor: pointer; text-transform: uppercase; border-radius: 999px; transition: color .15s ease; }
+        .score-stepper .ss-reset:hover { color: var(--accent, #b4442e); }
+        .tva-block { display: flex; align-items: flex-start; gap: 16px; padding: 14px 18px; background: var(--info-soft, #d3deea); border-radius: 10px; margin-top: 16px; }
+        .tva-block .txt { font-size: 12px; color: var(--info, #3a5f7d); line-height: 1.5; }
+        .tva-block .txt strong { color: var(--info, #3a5f7d); display: block; margin-bottom: 2px; }
+        .fiscal-controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; padding: 20px 24px; background: var(--surface, #fff); border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); box-shadow: var(--shadow-sm); }
+        .fiscal-controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; align-items: center; }
+        .fiscal-controls-grid.fiscal-row-2 { padding-top: 14px; border-top: 1px solid #efe7d7; }
+        .control-group { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
+        .control-group .lbl { font-size: 12px; color: #7a6a60; font-weight: 500; flex-shrink: 0; }
+        .chip-group { display: flex; gap: 4px; background: var(--paper, #f5ede2); padding: 4px; border-radius: 999px; flex-wrap: wrap; }
+        .chip-btn { padding: 6px 12px; border: none; background: transparent; border-radius: 999px; font-size: 12px; font-weight: 500; color: #7a6a60; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; white-space: nowrap; }
+        .chip-btn:hover { color: #1a1210; }
+        .chip-btn.active { background: var(--accent, #b4442e); color: #fff; }
+        .select-custom { padding: 6px 12px; background: #faf8f5; border: 1px solid #e8e2d8; border-radius: 8px; font-family: inherit; font-size: 13px; color: #1a1210; cursor: pointer; outline: none; }
+        .select-custom.select-inline-num { width: 64px; padding: 6px 8px; text-align: center; background: var(--paper, #f5ede2); }
+        .fiscal-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .fiscal-card { background: #fff; border-radius: 14px; padding: 24px 26px; border: 1px solid #e6dccb; position: relative; display: flex; flex-direction: column; }
+        .fiscal-card.your { background: linear-gradient(180deg, #fff 0%, #faf8f5 100%); border: 2px solid #f0d090; }
+        .fiscal-card.your::before { content: 'Votre régime'; position: absolute; top: -10px; left: 20px; padding: 3px 10px; background: #1a1210; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 999px; }
+        .fcard-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; color: #1a1210; margin-bottom: 16px; }
+        .fiscal-note { font-size: 11px; color: #7a6a60; font-style: italic; margin-bottom: 16px; line-height: 1.5; background: #faf8f5; border-radius: 8px; padding: 8px 12px; min-height: 44px; }
+        .fiscal-line { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; font-size: 13px; border-bottom: 1px dashed #efe7d7; min-height: 38px; }
+        .fiscal-line .fl-k { color: #6b6358; display: flex; align-items: center; gap: 6px; }
+        .fiscal-line .fl-v { font-weight: 500; color: #1a1210; font-variant-numeric: tabular-nums; }
+        .fiscal-line .fl-v.neg { color: #b4442e; }
+        .fiscal-line .fl-v.pos { color: #2e7c5d; }
+        .fiscal-line .fl-v.muted { color: #a39a8c; }
+        .fiscal-line.fl-bold { padding: 12px 0; border-top: 1px solid #e8e2d8 !important; border-bottom: 1px solid #e8e2d8 !important; margin: 6px 0; }
+        .fiscal-line.fl-bold .fl-k { color: #1a1210; font-weight: 600; }
+        .fiscal-line.fl-bold .fl-v { font-family: 'Fraunces', serif; font-size: 15px; }
+        .fiscal-sl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #a39a8c; font-weight: 600; margin: 16px 0 8px; padding-top: 14px; border-top: 1px solid #efe7d7; }
+        .fiscal-cf { margin: 14px 0 4px; padding: 14px 16px; border-radius: 10px; background: #f7f4f0; }
+        .fiscal-cf.neg { background: #f2d9d1; }
+        .fiscal-cf.pos { background: #d4e7dc; }
+        .fiscal-cf .cf-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b6358; font-weight: 600; margin-bottom: 4px; }
+        .fiscal-cf .cf-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+        .fiscal-cf .cf-main { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+        .fiscal-cf.neg .cf-main { color: #b4442e; }
+        .fiscal-cf.pos .cf-main { color: #2e7c5d; }
+        .fiscal-cf .cf-ann { font-size: 12px; color: #6b6358; font-variant-numeric: tabular-nums; }
+        .fiscal-bilan { margin-top: 16px; padding: 16px; border-radius: 10px; }
+        .fiscal-bilan.neg { background: #f2d9d1; }
+        .fiscal-bilan.pos { background: #d4e7dc; }
+        .fiscal-bilan .fb-lbl { font-size: 10px; color: #6b6358; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .fiscal-bilan .fb-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; align-items: center; color: #555; }
+        .fiscal-bilan .fb-total { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 800; margin-bottom: 4px; padding-top: 8px; border-top: 2px solid rgba(0,0,0,0.1); }
+        .fiscal-bilan .fb-metrics { display: flex; flex-direction: column; gap: 4px; font-size: 12px; margin-top: 4px; }
+        .fiscal-bilan .fb-metric { display: flex; justify-content: space-between; align-items: center; color: #555; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-mute, #a39a8c); margin-bottom: 20px; font-weight: 500; letter-spacing: 0.02em; }
         .breadcrumb a { color: var(--ink-soft, #6b6358); text-decoration: none; transition: color .2s; }
@@ -2316,41 +2511,45 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .breadcrumb .current { color: var(--ink, #1f1b16); }
 
         /* Deal card */
-        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 28px 30px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; }
+        .deal-card { background: var(--surface, #fff); border-radius: var(--radius-lg, 20px); padding: 28px 30px; box-shadow: var(--shadow-md, 0 2px 6px rgba(31,27,22,.04),0 8px 24px rgba(31,27,22,.06)); display: flex; flex-direction: column; gap: 22px; position: relative; overflow: hidden; align-self: start; }
         .deal-card-glow { position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; background: radial-gradient(circle, var(--accent-soft, #f2d9d1) 0%, transparent 70%); opacity: 0.5; pointer-events: none; }
-        .deal-header h1 { font-family: "Fraunces", Georgia, serif; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink, #1f1b16); margin: 0 0 6px; }
+        .deal-header h1 { font-family: "Fraunces", Georgia, serif; font-size: 32px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink, #1f1b16); margin: 0 0 8px; }
         .deal-header .location { font-size: 13px; color: var(--ink-soft, #6b6358); display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
-        .price-grid { display: grid; grid-template-columns: 1fr 1fr; padding: 16px 18px; background: var(--paper, #f5ede2); border-radius: var(--radius-md, 14px); }
+        .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 18px; background: var(--paper, #f5ede2); border-radius: var(--radius-md, 14px); }
         .price-block { min-width: 0; }
         .price-block + .price-block { padding-left: 16px; border-left: 1px solid var(--line, #e6dccb); }
         .price-block .label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute, #a39a8c); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .price-block .value { font-family: "Fraunces", Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink, #1f1b16); white-space: nowrap; }
+        .price-block .value { font-family: "Fraunces", Georgia, serif; font-size: 24px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink, #1f1b16); white-space: nowrap; }
         .price-block .value.target { color: var(--accent, #b4442e); }
         .price-block .value.target.positive { color: var(--success, #2f7d5b); }
         .price-block .value.enchere-max { color: var(--success, #2f7d5b); }
-        .price-block .sub { margin-top: 5px; font-size: 11px; color: var(--ink-soft, #6b6358); }
-        .decote-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, var(--accent, #b4442e) 0%, #8f3522 100%); border-radius: var(--radius-md, 14px); color: #fff; }
+        .price-block .sub { margin-top: 6px; font-size: 11px; color: var(--ink-soft, #6b6358); }
+        .decote-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, var(--accent, #b4442e) 0%, #8f3522 100%); border-radius: var(--radius-md, 14px); color: #fff; position: relative; overflow: hidden; }
+        .decote-banner::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 85% 50%, rgba(255,255,255,0.15), transparent 50%); pointer-events: none; }
         .decote-banner.positive { background: linear-gradient(135deg, var(--success, #2f7d5b) 0%, #1f5a40 100%); }
-        .decote-banner .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
-        .decote-banner .pct { font-family: "Fraunces", Georgia, serif; font-size: 30px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 2px; }
-        .decote-banner .arrow { font-size: 24px; opacity: 0.6; }
-        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line, #e6dccb); padding-top: 16px; }
-        .kpi { text-align: center; padding: 0 8px; border-right: 1px solid var(--line-soft, #efe7d7); }
+        .decote-banner .label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+        .decote-banner .pct { font-family: "Fraunces", Georgia, serif; font-size: 34px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 2px; }
+        .decote-banner .arrow { font-size: 28px; opacity: 0.6; }
+        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line, #e6dccb); padding-top: 18px; }
+        .kpi-row[data-count="2"] { grid-template-columns: repeat(2, 1fr); }
+        .kpi { text-align: center; padding: 0 10px; border-right: 1px solid var(--line-soft, #efe7d7); }
         .kpi:last-child { border-right: none; }
-        .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 17px; font-weight: 500; color: var(--ink, #1f1b16); }
+        .kpi .num { font-family: "Fraunces", Georgia, serif; font-size: 18px; font-weight: 500; color: var(--ink, #1f1b16); }
         .kpi .num.mute { color: var(--ink-mute, #a39a8c); font-weight: 400; }
-        .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
-        .deal-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        .deal-btn-watchlist { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: 1.5px solid var(--line, #e6dccb); background: #fff; color: var(--ink-soft, #6b6358); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; }
-        .deal-btn-watchlist:hover { border-color: var(--accent, #b4442e); color: var(--accent, #b4442e); }
+        .kpi .lbl { font-size: 10px; color: var(--ink-soft, #6b6358); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; white-space: nowrap; }
+        .deal-actions { display: flex; gap: 10px; }
+        .deal-btn-watchlist { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 22px; border-radius: var(--radius-md, 14px); border: 1px solid var(--line, #e6dccb); background: #fff; color: var(--ink, #1f1b16); font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-watchlist:hover { background: var(--paper, #f5ede2); border-color: var(--ink, #1f1b16); }
         .deal-btn-watchlist.active { border-color: var(--accent, #b4442e); background: var(--accent-soft, #f2d9d1); color: var(--accent, #b4442e); }
         .deal-btn-watchlist.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
-        .deal-btn-source { display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm, 8px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; font-family: inherit; white-space: nowrap; }
-        .deal-btn-source:hover { opacity: 0.85; }
+        .deal-btn-source { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 22px; border-radius: var(--radius-md, 14px); border: none; background: var(--ink, #1f1b16); color: var(--paper, #f5ede2); font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; font-family: inherit; white-space: nowrap; }
+        .deal-btn-source:hover { background: #000; transform: translateY(-1px); }
         .deal-btn-completer { font-size: 12px; font-weight: 600; color: var(--accent, #b4442e); padding: 9px 14px; border: 1.5px solid var(--line, #e6dccb); border-radius: var(--radius-sm, 8px); background: #fff; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
         .deal-btn-completer:hover { border-color: var(--accent, #b4442e); }
 
         /* Sticky nav */
+        .tab-panel { animation: fadeInTab .3s ease; }
+        @keyframes fadeInTab { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .sticky-nav-wrap { position: sticky; top: 68px; z-index: 50; display: flex; justify-content: center; margin-bottom: 28px; }
         .sticky-nav { background: var(--surface, #fff); border-radius: var(--radius-md, 14px); padding: 6px; display: inline-flex; gap: 4px; box-shadow: var(--shadow-sm, 0 1px 3px rgba(31,27,22,.06)); border: 1px solid var(--line, #e6dccb); }
         .sticky-nav-item { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; font-size: 13px; font-weight: 500; color: var(--ink-soft, #6b6358); white-space: nowrap; cursor: pointer; background: transparent; border: none; border-radius: 10px; font-family: "Inter", sans-serif; transition: all var(--dur-hover, 150ms) var(--ease); }
@@ -2359,12 +2558,15 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         /* Modal panel */
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(26,18,16,0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .modal-overlay.modal-overlay-large { padding: 8px; }
         .modal-panel { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: modalIn 0.2s ease; display: flex; flex-direction: column; }
+        .modal-panel.modal-panel-large { max-width: 880px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 12px; flex-shrink: 0; }
         .modal-header h3 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #1a1210; margin: 0; }
         .modal-close { background: none; border: none; cursor: pointer; color: #7a6a60; font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.15s; }
         .modal-close:hover { background: #f0ede8; color: #1a1210; }
-        .modal-body { padding: 0 24px 24px; overflow-y: auto; flex: 1; }
+        .modal-body { padding: 0 24px 24px; overflow-y: auto; overflow-x: hidden; flex: 1; }
+        .modal-panel-large .modal-body { overflow-x: auto; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
         @media (max-width: 767px) { .fiche-wrap { padding: 16px 0; } .hero-grid { grid-template-columns: 1fr; } .dual-grid { grid-template-columns: 1fr; } .simu-grid { grid-template-columns: 1fr; } .pnl-grid { grid-template-columns: 1fr; } .two-cols { flex-direction: column; } .col { width: 100%; } .sticky-nav { padding: 3px; } .sticky-nav-item { padding: 8px 14px; font-size: 12px; } .modal-panel { max-width: 100%; max-height: 90vh; } .data-grid { grid-template-columns: repeat(3, 1fr); } .section { padding: 16px 14px; } .breadcrumb { padding: 0 14px; } .fiche-info { padding: 0 14px; } .estimation-price-grid { grid-template-columns: 1fr !important; } .estimation-price-grid > div { padding: 10px 0 !important; border-left: none !important; border-right: none !important; } }
@@ -2380,21 +2582,34 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         </nav>
 
         <div className="hero-grid">
-          <div style={{ height: '100%' }}>
+          <div>
             <PhotoCarousel bien={bien} overlay={<>
               {/* Badge stratégie — top-left du carousel */}
               {!isEnchere && bien.strategie_mdb && (() => {
                 const stratColors: Record<string, { bg: string; color: string }> = {
-                  'Locataire en place': { bg: '#b4442e', color: '#fff' },
-                  'Travaux lourds': { bg: '#c77f1f', color: '#fff' },
-                  'Immeuble de rapport': { bg: '#3a5f7d', color: '#fff' },
-                  'Division': { bg: '#2f7d5b', color: '#fff' },
-                  'Enchères': { bg: '#6a2d2d', color: '#fff' },
+                  'Locataire en place': { bg: 'var(--strat-locataire-soft, #f2d9d1)', color: 'var(--strat-locataire, #b4442e)' },
+                  'Travaux lourds': { bg: 'var(--strat-travaux-soft, #f4e2c5)', color: 'var(--strat-travaux, #c77f1f)' },
+                  'Immeuble de rapport': { bg: 'var(--strat-immeuble-soft, #d3deea)', color: 'var(--strat-immeuble, #3a5f7d)' },
+                  'Division': { bg: 'var(--strat-division-soft, #d4e7dc)', color: 'var(--strat-division, #2f7d5b)' },
+                  'Enchères': { bg: 'var(--strat-encheres-soft, #e8d9d5)', color: 'var(--strat-encheres, #6a2d2d)' },
                 }
-                const sc = stratColors[bien.strategie_mdb] || { bg: 'rgba(31,27,22,0.6)', color: '#fff' }
+                const sc = stratColors[bien.strategie_mdb] || { bg: 'rgba(255,255,255,0.92)', color: 'var(--ink)' }
                 return (
-                  <span style={{ position: 'absolute', top: '12px', left: '12px', background: sc.bg, color: sc.color, fontSize: '11px', fontWeight: 600, padding: '5px 11px', borderRadius: '8px', zIndex: 2, letterSpacing: '0.02em' }}>
+                  <span style={{ position: 'absolute', top: '16px', left: '16px', background: sc.bg, backdropFilter: 'blur(8px)', color: sc.color, fontSize: '11px', fontWeight: 600, padding: '5px 12px', borderRadius: '999px', zIndex: 2, letterSpacing: '0.02em' }}>
                     {bien.strategie_mdb}
+                  </span>
+                )
+              })()}
+              {/* Badge occupation — bottom-left */}
+              {isEnchere && bien.occupation && bien.occupation !== 'NC' && (() => {
+                const cfg = bien.occupation === 'libre'
+                  ? { bg: '#d4f5e0', color: '#1a7a40', label: 'Bien Libre' }
+                  : bien.occupation === 'loue'
+                  ? { bg: '#d4ddf5', color: '#2a4a8a', label: 'Bien Lou\u00e9' }
+                  : { bg: '#ffecd2', color: '#8a5a00', label: 'Bien Occup\u00e9' }
+                return (
+                  <span style={{ position: 'absolute', bottom: '16px', left: '16px', background: cfg.bg, color: cfg.color, fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '999px', zIndex: 2, letterSpacing: '0.02em' }}>
+                    {cfg.label}
                   </span>
                 )
               })()}
@@ -2410,11 +2625,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                     ? new Date(bien.date_surenchere)
                     : new Date(new Date(bien.date_audience).getTime() + 10 * 86400000)
                   const remaining = Math.ceil((deadline.getTime() - Date.now()) / 86400000)
-                  if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e67e22' }
-                  else { label = 'Adjugé'; bg = '#2a4a8a' }
+                  if (remaining > 0) { label = `Surenchère J-${remaining}`; bg = '#e8871a' }
+                  else { label = 'Adjugé'; bg = '#3a5f7d' }
                 }
                 return label ? (
-                  <span style={{ position: 'absolute', top: '12px', right: '12px', background: bg, color: '#fff', fontSize: '12px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', zIndex: 2 }}>{label}</span>
+                  <span style={{ position: 'absolute', top: '16px', right: '16px', background: bg, color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px 14px', borderRadius: '6px', zIndex: 2, letterSpacing: '0.04em' }}>{label}</span>
                 ) : null
               })()}
             </>} />
@@ -2446,13 +2661,6 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       const s = statutMap[bien.statut] || statutMap.a_venir
                       return <span className="tag" style={{ background: s.bg, color: s.color, fontWeight: 700 }}>{s.label}</span>
                     })()}
-                    {bien.occupation && bien.occupation !== 'NC' && (
-                      <span className="tag" style={{
-                        background: bien.occupation === 'libre' ? '#d4f5e0' : bien.occupation === 'loue' ? '#d4ddf5' : '#ffecd2',
-                        color: bien.occupation === 'libre' ? '#1a7a40' : bien.occupation === 'loue' ? '#2a4a8a' : '#8a5a00',
-                        fontWeight: 700,
-                      }}>{bien.occupation === 'libre' ? 'Bien Libre' : bien.occupation === 'loue' ? 'Bien Lou\u00e9' : 'Bien Occup\u00e9'}</span>
-                    )}
                     {isVenteDelocalisee(bien.departement, bien.tribunal) && (
                       <span className="tag" style={{ background: '#fff3e0', color: '#e65100', fontWeight: 700 }} title="La vente se d\u00e9roule dans un tribunal d'un autre d\u00e9partement">
                         Delocalise
@@ -2469,7 +2677,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <div className="label">{isEnchere ? (bien.prix_adjuge && bien.prix_adjuge > 0 ? 'PRIX ADJUG\u00c9' : 'MISE \u00c0 PRIX') : 'PRIX FAI'}</div>
                 <div className="value">{fmt(isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.prix_fai)} {'€'}</div>
                 {isEnchere && bien.prix_adjuge && bien.prix_adjuge > 0 && (
-                  <div className="sub">Mise \u00e0 prix : {fmt(bien.prix_fai)} {'€'}</div>
+                  <div className="sub">Mise à prix : {fmt(bien.prix_fai)} {'€'}</div>
                 )}
                 {!isEnchere && ecartPct && (
                   <div className="sub">{ecartNegatif ? 'Prix demand\u00e9 vendeur' : 'Prix affich\u00e9 \u00b7 sous-\u00e9valu\u00e9'}</div>
@@ -2478,69 +2686,141 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               <div className="price-block">
                 {isEnchere ? (
                   (() => {
-                    const dvf = estimationData?.prix_total || 0
-                    const travaux = dvf && (bien.score_travaux || scorePerso) && bien.surface
-                      ? (budgetTravauxM2[String(bien.score_travaux || scorePerso)] || 0) * bien.surface : 0
-                    const enchMax = (() => {
-                      if (!dvf) return null
-                      const obj = (objectifPV || 20) / 100
-                      const isMDB = regime === 'marchand_de_biens'
-                      const fp = bien.frais_preemption || 0
-                      const K = dvf / (1 + obj) - travaux
-                      let p = K / 1.1
-                      for (let i = 0; i < 5; i++) {
-                        p = K - calculerFraisEnchere(Math.max(1, p), fp, { isMDB }).total
-                      }
-                      return Math.round(p)
-                    })()
-                    return enchMax ? (
+                    return (
                       <>
-                        <div className="label">{`ENCH\u00c8RE MAX (OBJ. ${objectifPV || 20}% PV)`}</div>
-                        <div className="value enchere-max">{fmt(enchMax)} {'€'}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="label">REVENTE ESTIM\u00c9E</div>
-                        <div className="value" style={{ color: 'var(--ink-mute)' }}>NC</div>
+                        <LabelSelect
+                          value={enchereBaseCalc}
+                          options={[
+                            { value: 'calcule', label: `ENCHÈRE MAX (OBJ. ${objectifPV || 20}% PV)` },
+                            { value: 'libre', label: 'ENCHÈRE MAX (LIBRE)' },
+                          ]}
+                          onChange={v => setEnchereBaseCalc(v as 'calcule' | 'libre')}
+                          info={`Enchère max pour que la plus-value nette avant impôt atteigne +${objectifPV || 20}% du coût total de l'opération. Objectif configurable dans Paramètres.`}
+                        />
+                        {enchereBaseCalc === 'libre' ? (
+                          enchereManuelMax && !enchereManuelDraft ? (
+                            // Valeur confirmée — affichage figé
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                              <div className="value enchere-max" style={{ flex: 1, margin: 0 }}>{fmt(enchereManuelMax)} {'€'}</div>
+                              <button onClick={() => setEnchereManuelDraft(String(enchereManuelMax))} title="Modifier" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s', flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                              </button>
+                              <button onClick={() => { setEnchereManuelMax(null); setEnchereManuelDraft(''); setEnchereFinMode('calcule') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
+                            </div>
+                          ) : (
+                            // Mode saisie
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px', overflow: 'hidden' }}>
+                              <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', border: '1.5px solid #e8e2d8', borderRadius: '6px', background: '#fff', padding: '4px 8px', gap: '4px' }}>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder=""
+                                  value={enchereManuelDraft}
+                                  onChange={ev => setEnchereManuelDraft(ev.target.value.replace(/[^\d]/g, ''))}
+                                  onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(enchereManuelDraft); if (v) { setEnchereManuelMax(v); setEnchereFinMode('libre'); setEnchereManuelDraft('') } } }}
+                                  style={{ flex: 1, fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#1a1210', background: 'transparent', border: 'none', minWidth: 0, width: '100%' }}
+                                  autoFocus
+                                />
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: '#7a6a60', flexShrink: 0 }}>{'€'}</span>
+                              </div>
+                              <button
+                                onClick={() => { const v = Number(enchereManuelDraft); if (v) { setEnchereManuelMax(v); setEnchereFinMode('libre'); setEnchereManuelDraft('') } }}
+                                style={{ background: '#2f7d5b', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 8px', lineHeight: 1, flexShrink: 0 }}
+                              >{'✓'}</button>
+                            </div>
+                          )
+                        ) : enchMaxCalc ? (
+                          <div className="value enchere-max">{fmt(enchMaxCalc)} {'€'}</div>
+                        ) : (
+                          <div className="value" style={{ color: 'var(--ink-mute)' }}>NC</div>
+                        )}
                       </>
                     )
                   })()
                 ) : (prixCibleCashflow || prixCiblePV) ? (
                   <>
-                    <div className="label">
-                      {!isTravauxLourds && prixCibleCashflow && prixCiblePV ? (
-                        <select value={modeCible} onChange={e => setModeCible(e.target.value as 'cashflow' | 'pv')}
-                          style={{ fontSize: '10px', fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                          <option value="cashflow">{`PRIX CIBLE (CF ${objectifCashflow}%)`}</option>
-                          <option value="pv">{`PRIX CIBLE (PV ${objectifPV}%)`}</option>
-                        </select>
+                    <div className="label" style={{ overflow: 'visible' }}>
+                      {(() => {
+                        const hasBoth = !isTravauxLourds && !!prixCibleCashflow && !!prixCiblePV
+                        const opts = [
+                          ...(hasBoth
+                            ? [{ value: 'cashflow', label: `PRIX CIBLE (CF ${objectifCashflow}%)` }, { value: 'pv', label: `PRIX CIBLE (PV ${objectifPV}%)` }]
+                            : prixCiblePV ? [{ value: 'pv', label: `PRIX CIBLE (PV ${objectifPV}%)` }] : [{ value: 'cashflow', label: `PRIX CIBLE (CF ${objectifCashflow}%)` }]
+                          ),
+                          { value: 'libre', label: 'PRIX LIBRE' },
+                        ]
+                        const currentVal = baseCalc === 'libre' ? 'libre' : (hasBoth && modeCible === 'cashflow' ? 'cashflow' : (prixCiblePV ? 'pv' : 'cashflow'))
+                        return (
+                          <LabelSelect
+                            value={currentVal}
+                            options={opts}
+                            onChange={v => {
+                              if (v === 'libre') { setBaseCalc('libre'); setPrixLibreDraft('') }
+                              else { setModeCible(v as 'cashflow' | 'pv'); setBaseCalc('cible') }
+                            }}
+                            info={currentVal === 'libre'
+                              ? `Simulez avec un prix d'achat personnalisé. Toutes les analyses s'adaptent à ce prix.`
+                              : currentVal === 'cashflow'
+                                ? `Prix max pour que le cash flow avant impôt atteigne +${objectifCashflow}% du loyer brut. Objectif configurable dans Paramètres.`
+                                : `Prix max pour que la plus-value nette avant impôt atteigne +${objectifPV}% du coût total de l'opération. Objectif configurable dans Paramètres.`
+                            }
+                          />
+                        )
+                      })()}
+                    </div>
+                    {baseCalc === 'libre' ? (
+                      prixLibreManuel && !prixLibreDraft ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          <div className="value target" style={{ flex: 1, margin: 0 }}>{fmt(prixLibreManuel)} {'€'}</div>
+                          <button onClick={() => setPrixLibreDraft(String(prixLibreManuel))} title="Modifier" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s', flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a6a60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                          </button>
+                          <button onClick={() => { setPrixLibreManuel(null); setPrixLibreDraft(''); setBaseCalc('cible') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '16px', padding: '2px 4px', lineHeight: 1 }}>{'×'}</button>
+                        </div>
                       ) : (
-                        prixCiblePV && (isTravauxLourds || !prixCibleCashflow)
-                          ? `PRIX CIBLE (OBJ. ${objectifPV}% PV)`
-                          : `PRIX CIBLE (OBJ. ${objectifCashflow}% CF)`
-                      )}
-                    </div>
-                    {(() => {
-                      const prixAffiche = modeCible === 'cashflow' && prixCibleCashflow ? prixCibleCashflow : (prixCiblePV || prixCibleCashflow || 0)
-                      const cibleSuperieur = prixAffiche >= bien.prix_fai
-                      return (
-                        <>
-                          <div className={`value target${cibleSuperieur ? ' positive' : ''} ${isFreeBlocked ? 'val-blur' : ''}`}>
-                            {fmt(prixAffiche)} \u20ac
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px', overflow: 'hidden' }}>
+                          <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', border: '1.5px solid #e8e2d8', borderRadius: '6px', background: '#fff', padding: '4px 8px', gap: '4px' }}>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder=""
+                              value={prixLibreDraft}
+                              onChange={ev => setPrixLibreDraft(ev.target.value.replace(/[^\d]/g, ''))}
+                              onKeyDown={ev => { if (ev.key === 'Enter') { const v = Number(prixLibreDraft); if (v) { setPrixLibreManuel(v); setPrixLibreDraft('') } } }}
+                              style={{ flex: 1, fontSize: '15px', fontWeight: 700, outline: 'none', fontFamily: 'inherit', color: '#1a1210', background: 'transparent', border: 'none', minWidth: 0, width: '100%' }}
+                              autoFocus
+                            />
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#7a6a60', flexShrink: 0 }}>{'€'}</span>
                           </div>
-                          <div className="sub">{ecartNegatif ? "Prix d\u2019achat MDB" : 'Plafond \u00e0 ne pas d\u00e9passer'}</div>
-                        </>
+                          <button
+                            onClick={() => { const v = Number(prixLibreDraft); if (v) { setPrixLibreManuel(v); setPrixLibreDraft('') } }}
+                            style={{ background: '#2f7d5b', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 8px', lineHeight: 1, flexShrink: 0 }}
+                          >{'✓'}</button>
+                        </div>
                       )
-                    })()}
+                    ) : (
+                      (() => {
+                        const prixAffiche = modeCible === 'cashflow' && prixCibleCashflow ? prixCibleCashflow : (prixCiblePV || prixCibleCashflow || 0)
+                        const cibleSuperieur = prixAffiche >= bien.prix_fai
+                        return (
+                          <>
+                            <div className={`value target${cibleSuperieur ? ' positive' : ''} ${isFreeBlocked ? 'val-blur' : ''}`}>
+                              {fmt(prixAffiche)} {'€'}
+                            </div>
+                            <div className="sub">{ecartNegatif ? "Prix d\u2019achat MDB" : 'Plafond \u00e0 ne pas d\u00e9passer'}</div>
+                          </>
+                        )
+                      })()
+                    )}
                   </>
-                ) : (
+                ) : estimationData?.prix_total ? (
                   <>
-                    <div className="label">REVENTE ESTIM\u00c9E</div>
-                    <div className="value" style={{ color: estimationData?.prix_total ? 'var(--success)' : 'var(--ink-mute)' }}>
-                      {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} €` : 'NC'}
+                    <div className="label">REVENTE ESTIMÉE</div>
+                    <div className="value" style={{ color: 'var(--success)' }}>
+                      {fmt(estimationData.prix_total)} {'€'}
                     </div>
                   </>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -2558,42 +2838,44 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
             {/* Surench\u00e8re (ench\u00e8res) */}
             {isEnchere && (bien.date_surenchere || bien.mise_a_prix_surenchere) && (
               <div style={{ padding: '12px 14px', background: '#fffaf0', borderRadius: 'var(--radius-sm)', border: '1.5px solid #f0d090', fontSize: '13px', color: '#6a4a00' }}>
-                <div><strong style={{ color: '#8a5a00' }}>Surench\u00e8re possible</strong>{bien.date_surenchere ? <> jusqu'au {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
+                <div><strong style={{ color: '#8a5a00' }}>Surenchère possible</strong>{bien.date_surenchere ? <> jusqu'au {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
                 {bien.mise_a_prix_surenchere && (
-                  <div style={{ marginTop: '3px' }}>Nouvelle mise \u00e0 prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} \u20ac</strong></div>
+                  <div style={{ marginTop: '3px' }}>Nouvelle mise à prix : <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'€'}</strong></div>
                 )}
                 {bien.consignation && (
-                  <div style={{ marginTop: '3px', color: '#9a7a50' }}>Consignation : <strong style={{ color: '#6a4a00' }}>{bien.consignation.toLocaleString('fr-FR')} \u20ac</strong></div>
+                  <div style={{ marginTop: '3px', color: '#9a7a50' }}>Consignation : <strong style={{ color: '#6a4a00' }}>{bien.consignation.toLocaleString('fr-FR')} {'€'}</strong></div>
                 )}
               </div>
             )}
 
             {/* KPI row */}
-            <div className="kpi-row">
-              <div className="kpi">
-                <div className={`num${!resultatFAI?.rendement_brut ? ' mute' : ''}`}>
-                  {resultatFAI?.rendement_brut ? `${Number(resultatFAI.rendement_brut).toFixed(1)} %` : 'NC'}
+            <div className="kpi-row" data-count={isEnchere ? '2' : '3'}>
+              {!isEnchere && (
+                <div className="kpi">
+                  <div className={`num${!resultatFAI?.rendement_brut ? ' mute' : ''}`}>
+                    {resultatFAI?.rendement_brut ? `${Number(resultatFAI.rendement_brut).toFixed(1)} %` : 'NC'}
+                  </div>
+                  <div className="lbl">Rdt brut</div>
                 </div>
-                <div className="lbl">Rdt brut</div>
-              </div>
+              )}
               <div className="kpi">
                 <div className={`num${!estimationData?.prix_total ? ' mute' : ''}`}>
                   {estimationData?.prix_total ? `${fmt(estimationData.prix_total)} \u20ac` : 'NC'}
                 </div>
-                <div className="lbl">Revente est.</div>
+                <div className="lbl">{isEnchere ? 'Revente est. DVF' : 'Revente est.'}</div>
               </div>
               <div className="kpi">
                 {(() => {
-                  if (!estimationData?.prix_total || !prixCibleCombine) return (
-                    <><div className="num mute">NC</div><div className="lbl">PV nette est.</div></>
+                  if (!estimationData?.prix_total) return (
+                    <><div className="num mute">NC</div><div className="lbl">{isEnchere ? 'PV brute' : 'PV nette est.'}</div></>
                   )
                   const pv = Math.round(estimationData.prix_total - bien.prix_fai * (1 + fraisNotaire / 100) - budgetTravCalc)
                   return (
                     <>
                       <div className={`num${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: pv >= 0 ? 'var(--success)' : 'var(--accent)' }}>
-                        {pv >= 0 ? '+' : ''}{fmt(pv)} \u20ac
+                        {pv >= 0 ? '+' : ''}{fmt(pv)} {'€'}
                       </div>
-                      <div className="lbl">PV nette est.</div>
+                      <div className="lbl">{isEnchere ? 'PV brute' : 'PV nette est.'}</div>
                     </>
                   )
                 })()}
@@ -2610,25 +2892,57 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 Source annonce
               </button>
-              {!isEnchere && (
-                <button onClick={() => setShowContact(true)} className="deal-btn-completer">
-                  Compl\u00e9ter les donn\u00e9es \u2192
-                </button>
-              )}
             </div>
           </div>
         </div>
 
+        {/* Bannière stratégie */}
+        {(() => {
+          type StratKey = 'locataire' | 'travaux' | 'immeuble' | 'division' | 'encheres'
+          const stratMap: Record<string, { key: StratKey; title: string; desc: string; href: string; icon: React.ReactNode }> = {
+            'Locataire en place': { key: 'locataire', title: 'Locataire en place', desc: 'Forte décote à l\'achat grâce à l\'occupation. Prime d\'éviction (4-8 mois de loyer), puis revente au prix marché libre.', href: '/strategies#s1', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+            'Travaux lourds': { key: 'travaux', title: 'Travaux lourds', desc: 'Bien fortement décoté à rénover. Revente après rénovation à l\'estimation DVF (prix marché "en bon état").', href: '/strategies#s2', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+            'Division': { key: 'division', title: 'Division', desc: 'Grand bien à diviser en plusieurs lots indépendants pour multiplier les loyers ou revendre à la découpe.', href: '/strategies#s3', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
+            'Immeuble de rapport': { key: 'immeuble', title: 'Immeuble de rapport', desc: 'Multi-lots achetés en bloc. Création copropriété, revente lot par lot pour une marge nette de 15-25%.', href: '/strategies#s4', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> },
+          }
+          const enchereConf = { key: 'encheres' as StratKey, title: 'Vente aux enchères judiciaires', desc: 'Vente par voie judiciaire. Mise à prix fixée par le tribunal, adjudication au plus offrant lors de l\'audience.', href: '/strategies#encheres', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> }
+          const conf = isEnchere ? enchereConf : (bien.strategie_mdb ? stratMap[bien.strategie_mdb] : null)
+          if (!conf) return null
+          return (
+            <div className={`strategy-bar strat-${conf.key}`}>
+              <div className="sb-icon">{conf.icon}</div>
+              <div className="sb-txt"><strong>{conf.title}</strong>{conf.desc}</div>
+              <a href={conf.href} className="sb-link">En savoir plus</a>
+            </div>
+          )
+        })()}
+
+        {/* Completion widget */}
+        {completableManquants.length > 0 && (
+          <div className="completion-widget">
+            <div className="cw-txt">
+              <strong>Fiche à {pctComplete}% complétée</strong>
+              <div className="cw-sub">{completableManquants.length} données manquantes — {completableManquants.slice(0, 3).map(f => f.label).join(', ')}{completableManquants.length > 3 ? '…' : ''}</div>
+              <div className="cw-progress"><div className="cw-bar" style={{ width: `${pctComplete}%` }} /></div>
+            </div>
+            <button className="cw-btn" onClick={() => setShowCompleterModal(true)}>Compléter</button>
+          </div>
+        )}
+
         {/* Sticky navigation */}
         <div className="sticky-nav-wrap">
           <nav className="sticky-nav">
-            <button className={`sticky-nav-item ${activeNav === 'donnees' ? 'active' : ''}`} onClick={() => scrollToNav('donnees')}>
+            <button className={`sticky-nav-item ${activeNav === 'apercu' ? 'active' : ''}`} onClick={() => scrollToNav('apercu')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              {"Donn\u00E9es"}
+              {"Aper\u00E7u"}
             </button>
             <button className={`sticky-nav-item ${activeNav === 'estimation' ? 'active' : ''}`} onClick={() => scrollToNav('estimation')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
               Estimation
+            </button>
+            <button className={`sticky-nav-item ${activeNav === 'travaux' ? 'active' : ''}`} onClick={() => scrollToNav('travaux')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              Diagnostic travaux
             </button>
             <button className={`sticky-nav-item ${activeNav === 'financement' ? 'active' : ''}`} onClick={() => scrollToNav('financement')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
@@ -2641,330 +2955,862 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </nav>
         </div>
 
-        {/* Intro stratégie */}
-        <div className="strat-intro">
-          {bien.strategie_mdb === 'Locataire en place' && (
-            <>
-              <div>
-                <strong>Stratégie Locataire en place</strong> — Les biens vendus occupés sont parmi les plus difficiles à vendre sur le marché immobilier&nbsp;: peu d{"'"}acquéreurs souhaitent acheter un logement qu{"'"}ils ne peuvent pas habiter immédiatement. C{"'"}est précisément ce qui permet de négocier des prix avec une <strong>forte décote</strong> par rapport au marché libre.
+        {/* Bandeau IDR aper\u00E7u Pro */}
+        {isIDR && userPlan === 'pro' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
+            background: '#fff8e1', border: '1.5px solid #f39c12', borderRadius: 10,
+            padding: '12px 18px', marginBottom: 16,
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1210', marginBottom: 2 }}>
+                {'Immeuble de rapport \u2014 aper\u00E7u Pro'}
               </div>
-              <div>
-                Une fois le bien acheté, le marchand de biens propose généralement une <strong>prime d{"'"}éviction</strong> (entre 4 et 8 mois de loyer selon les pratiques) afin de permettre au locataire de partir et de se reloger, pour ensuite <strong>revendre le bien au prix du marché</strong>. Cette stratégie implique de faire beaucoup d{"'"}offres avant d{"'"}obtenir un retour positif&nbsp;: il n{"'"}est donc pas nécessaire de visiter avant de faire une offre, mais seulement une fois celle-ci acceptée, pour vérifier la conformité avec les informations transmises par le vendeur.
+              <div style={{ fontSize: 13, color: '#7a4f00' }}>
+                {"M\u00E9triques basiques disponibles. L'analyse fiscale compl\u00E8te (SCI IS, LMP, simulation de division) est r\u00E9serv\u00E9e au plan Expert."}
               </div>
-              <div>
-                Même si l{"'"}objectif est d{"'"}acheter et revendre le plus rapidement possible, cette stratégie génère un <strong>revenu locatif dès l{"'"}acquisition</strong>. L{"'"}analyse ci-dessous calcule le <strong>cash flow avant impôt</strong> (loyer − charges − crédit), puis l{"'"}<strong>analyse fiscale</strong> détermine le cash flow net d{"'"}impôt et simule la plus-value à la revente sur 1 à 5&nbsp;ans. Complétez les données manquantes (en rouge) pour affiner les résultats.
-              </div>
-              <a href="/strategies#s1" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {bien.strategie_mdb === 'Travaux lourds' && (
-            <>
-              <div>
-                <strong>Stratégie Travaux lourds</strong> — Ce bien nécessite des travaux importants, ce qui entraîne un prix d{"'"}achat fortement décoté. L{"'"}objectif est de le rénover pour le revendre au <strong>prix marché</strong> ou le louer avec un rendement optimisé. Le <strong>score travaux IA</strong> (de 1 = bon état à 5 = très lourds) est généré automatiquement par analyse de la description de l{"'"}annonce. À chaque score correspond un <strong>budget travaux au m²</strong> paramétrable dans <a href="/parametres" style={{color: '#c0392b', fontWeight: 600}}>Mes paramètres</a> → Budget travaux.
-              </div>
-              <div>
-                L{"'"}<strong>estimation DVF</strong> correspond au prix marché <strong>après rénovation</strong> (sans décote travaux). L{"'"}analyse calcule la <strong>plus-value nette avant impôt</strong> (estimation − prix − travaux − frais) et la fiscalité selon le régime choisi.
-              </div>
-              <div>
-                En régime <strong>marchand de biens</strong>, l{"'"}option <strong>TVA sur marge</strong> (art. 260-5° bis CGI) peut être particulièrement avantageuse sur ce type de bien&nbsp;: en optant pour la TVA, vous payez 20&nbsp;% sur la marge (revente − achat), mais vous pouvez <strong>récupérer la TVA sur les travaux</strong> (20&nbsp;% du montant HT). Lorsque le budget travaux est élevé, la TVA récupérée peut dépasser la TVA due sur la marge. L{"'"}analyse fiscale ci-dessous intègre ce calcul avec un toggle TVA activable dans la colonne MdB.
-              </div>
-              <a href="/strategies#s2" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {bien.strategie_mdb === 'Division' && (
-            <>
-              <div>
-                <strong>Stratégie Division</strong> — Ce bien présente un potentiel de division en plusieurs lots indépendants. L{"'"}idée est de <strong>multiplier les loyers</strong> en créant plusieurs logements à partir d{"'"}un seul bien (ex&nbsp;: un T5 divisé en 3 studios). Le rendement locatif peut être multiplié par 2 à 3 après travaux.
-              </div>
-              <div>
-                L{"'"}analyse estime la rentabilité locative globale et le scénario de revente lot par lot. Vérifiez le PLU et les règles de copropriété avant de vous engager.
-              </div>
-              <a href="/strategies#s3" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {bien.strategie_mdb === 'Immeuble de rapport' && (
-            <>
-              <div>
-                <strong>Stratégie Immeuble de rapport</strong> — Cet immeuble se compose de <strong>plusieurs lots</strong> achetés en bloc. L{"'"}approche marchand de biens consiste à acheter l{"'"}ensemble, rénover si nécessaire, créer la copropriété, puis <strong>revendre lot par lot</strong> pour dégager une marge nette de 15 à 25&nbsp;%.
-              </div>
-              <div>
-                L{"'"}analyse détaille les revenus locatifs par lot, le cashflow global, et propose un scénario de revente à la découpe avec estimation DVF par lot. Régime obligatoire&nbsp;: <strong>IS</strong> (frais notaire 2,5&nbsp;%, TVA sur marge 20/120).
-              </div>
-              <a href="/strategies#s4" className="strat-intro-cta">En savoir plus sur cette stratégie →</a>
-            </>
-          )}
-          {isEnchere && (
-            <>
-              <div>
-                <strong>Vente aux enchères judiciaires</strong> — Ce bien est vendu par voie judiciaire (saisie immobilière ou liquidation). La mise à prix est fixée par le tribunal. L{"'"}adjudication se fait au plus offrant lors de l{"'"}audience.
-              </div>
-              <div>
-                L{"'"}analyse compare la mise à prix avec l{"'"}estimation DVF pour calculer la <strong>décote</strong> potentielle. Les frais d{"'"}acquisition incluent les émoluments du commissaire de justice et les frais de poursuites.
-              </div>
-            </>
-          )}
-        </div>
+            </div>
+            <a href="/mon-profil" style={{
+              display: 'inline-block', padding: '8px 20px', borderRadius: 8,
+              background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 13,
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}>
+              {'Passer Expert \u2014 49 \u20AC/mois \u2192'}
+            </a>
+          </div>
+        )}
 
-        <div id="nav-donnees" className="section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-            <h2 className="section-title" style={{ margin: 0 }}>{"Caract\u00E9ristiques du Bien"}</h2>
+        {/* Bandeau upgrade Pro — affiché sous tous les onglets */}
+        {userPlan === 'free' && freeAnalysesLeft > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fdf4f3', border: '1.5px solid #c0392b', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#7a6a60', fontWeight: 500 }}>
+            <span>{'✨ Analyse complète offerte (' + freeAnalysesUsed + '/5 utilisées) — passez Pro pour des analyses illimitées et toutes les stratégies.'}</span>
+            <a href="/mon-profil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#c0392b', color: '#fff', borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>{'Passer Pro →'}</a>
+          </div>
+        )}
+        {activeNav === 'apercu' && (<div className="tab-panel">
+        <div id="nav-apercu" className="section">
+          <h2 className="section-title">
+            {isIDR ? "Caract\u00E9ristiques de l\u2019immeuble" : "Caract\u00E9ristiques du Bien"}
             {(() => {
               const mi = typeof bien.moteurimmo_data === 'string' ? JSON.parse(bien.moteurimmo_data) : bien.moteurimmo_data
               const creationDate = mi?.creationDate
               if (!creationDate) return null
               const formatted = new Date(creationDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-              return <span style={{ fontSize: '12px', color: '#7a6a60' }}>{"En ligne depuis le "}{formatted}</span>
+              return <span className="section-title-meta" style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"En ligne depuis le "}{formatted}</span>
             })()}
-          </div>
-          <div className="data-grid">
-            {/* Infos enchère dans les caractéristiques */}
-            {isEnchere && (
-              <>
-                <div className="data-subtitle">Enchère</div>
-                {bien.tribunal && <div className="data-item"><span className="data-label">Tribunal</span><span className="data-value">{bien.tribunal}{isVenteDelocalisee(bien.departement, bien.tribunal) && <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">📍 Délocalisée</span>}</span></div>}
-                {bien.date_audience && <div className="data-item"><span className="data-label">Audience</span><span className="data-value">{new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (passée)' })()}</span></div>}
-                {bien.date_visite && <div className="data-item"><span className="data-label">Visite</span><span className="data-value">{new Date(bien.date_visite).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div>}
-                {bien.prix_adjuge && bien.prix_adjuge > 0 && <div className="data-item"><span className="data-label">Prix adjugé</span><span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span></div>}
-                {bien.statut && bien.statut !== 'a_venir' && <div className="data-item"><span className="data-label">Statut</span><span className="data-value">{({ surenchere: 'En surenchère', adjuge: 'Adjugé', vendu: 'Vendu', retire: 'Retiré', expire: 'Expiré' } as Record<string, string>)[bien.statut] || bien.statut}</span></div>}
-                {/* Frais préalables + Honoraires avocat + Frais de mutation + Avocat — même ligne */}
-                <div className="data-grid" style={{ gridColumn: '1 / -1' }}>
-                  <div className="data-item">
-                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Frais préalables
-                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais de procédure (commissaire de justice, annonces légales, diagnostics). Communiqués par le tribunal env. 1 semaine avant l{"'"}audience. Variables, à renseigner si connus.</span>
-                      </span>
-                    </span>
-                    <CellEditable bien={bien} champ="frais_preemption" suffix={` \u20AC`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-                  </div>
-                  {/* Honoraires d'avocat — libres */}
-                  <div className="data-item">
-                    <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Honoraires d{"'"}avocat
-                      <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Honoraires libres — fixés par l{"'"}avocat mandaté pour vous représenter à l{"'"}audience. Généralement entre 1{'\u00A0'}000 et 3{'\u00A0'}000{'\u00A0'}{'\u20AC'}. 1{'\u00A0'}500{'\u00A0'}{'\u20AC'} par défaut.</span>
-                      </span>
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <input
-                        type="number"
-                        value={honorairesAvocat}
-                        onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
-                        onBlur={e => { if (e.target.value === '') setHonorairesAvocat(1500) }}
-                        placeholder="1500"
-                        style={{
-                          width: '80px', padding: '4px 8px', borderRadius: '6px',
-                          border: '1.5px solid #e8e2d8', fontSize: '13px', fontWeight: 600,
-                          fontFamily: "'DM Sans', sans-serif", textAlign: 'right',
-                          background: '#fff', color: '#1a1210',
-                        }}
-                      />
-                      <span style={{ fontSize: '13px', color: '#7a6a60' }}>{'\u20AC'}</span>
-                    </div>
-                  </div>
-                  {/* Frais de mutation */}
-                  {bien.mise_a_prix && bien.mise_a_prix > 0 && (() => {
-                    const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
-                    const isMDB = regime === 'marchand_de_biens'
-                    const frais = calculerFraisEnchere(prixBase, undefined, { isMDB })
-                    return (
-                      <div className="data-item">
-                        <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          Frais de mutation
-                          <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>Frais d{"'"}acquisition calculés : émoluments avocat + droits de mutation + CSI. Hors frais préalables et honoraires (à renseigner séparément).</span>
-                          </span>
-                        </span>
-                        <button onClick={() => setShowFraisModal(true)} style={{
-                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                          fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600,
-                          color: '#2a4a8a', textDecoration: 'underline dotted', textUnderlineOffset: '2px',
-                          textAlign: 'left',
-                        }}>
-                          {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'} (~{Math.round(frais.pct_sans_prealables)}%)
-                        </button>
-                      </div>
-                    )
-                  })()}
-                  {/* Avocat poursuivant */}
-                  {bien.avocat_nom && (
-                    <div className="data-item">
-                      <span className="data-label">Avocat poursuivant</span>
-                      <button onClick={() => setShowAvocatModal(true)} style={{
-                        background: '#faf8f5', border: '1.5px solid #e8e2d8', borderRadius: '10px',
-                        padding: '8px 12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                        display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left',
-                      }}>
-                        <span style={{ fontSize: '16px' }}>{'\u2696'}</span>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210' }}>{bien.avocat_nom}</div>
-                          {bien.avocat_cabinet && <div style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.avocat_cabinet}</div>}
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
+          </h2>
+          <p className="section-subtitle">{isIDR ? "Donn\u00E9es \u00E0 l\u2019\u00E9chelle de l\u2019immeuble entier" : "Renseignez les donn\u00E9es du bien et son adresse d\u00E8s que vous les avez r\u00E9cup\u00E9r\u00E9es du vendeur"}</p>
+
+          {/* Address-row — interactive, en dehors de la grille */}
+          <div
+            className={`address-row${adresseRowEditing ? ' editing' : ''}`}
+            onClick={() => { if (!adresseRowEditing && userToken) { setAdresseRowEditing(true); setAdresseRowDraft(bien.adresse || '') } }}
+          >
+            <div className="address-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div className="address-main">
+              <span className="address-lbl">{isIDR ? "Adresse de l\u2019immeuble" : "Adresse"}</span>
+              <span className="address-val">
+                {adresseRowEditing ? (
+                  <input
+                    className="address-input"
+                    autoFocus
+                    value={adresseRowDraft}
+                    onChange={e => setAdresseRowDraft(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { handleUpdate('adresse', adresseRowDraft); setAdresseRowEditing(false) }
+                      if (e.key === 'Escape') { setAdresseRowEditing(false) }
+                    }}
+                    onBlur={() => { if (adresseRowDraft) handleUpdate('adresse', adresseRowDraft); setAdresseRowEditing(false) }}
+                    placeholder="Ex : 12 rue de Rivoli, 75001 Paris"
+                  />
+                ) : (
+                  <span className={bien.adresse ? '' : 'placeholder'} onClick={() => { if (userToken) { setAdresseRowEditing(true); setAdresseRowDraft(bien.adresse || '') } }}>
+                    {bien.adresse ? `${bien.adresse}${bien.code_postal ? `, ${bien.code_postal}` : ''} ${bien.ville || ''}`.trim() : "Renseigner l'adresse"}
+                  </span>
+                )}
+              </span>
+            </div>
+            {!adresseRowEditing && <span className="address-hint">{"Améliore la précision de l'estimation"}</span>}
+            {!adresseRowEditing && userToken && (
+              <button
+                type="button"
+                className="address-edit-btn"
+                onClick={e => { e.stopPropagation(); setAdresseRowEditing(true); setAdresseRowDraft(bien.adresse || '') }}
+                title="Modifier"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
             )}
-            <div className="data-subtitle">{"Caract\u00E9ristiques"}</div>
-            {bien.adresse && (
-              <div className="data-item" style={{ gridColumn: '1 / -1' }}>
-                <span className="data-label">Adresse</span>
-                <span className="data-value">{bien.adresse}{bien.code_postal ? `, ${bien.code_postal}` : ''} {bien.ville || ''}</span>
+          </div>
+
+          <div className="data-grid">
+            {/* Année construction — show only if non-null */}
+            {bien.annee_construction != null && (
+              <div className="data-item">
+                <span className="data-label">Année de construction</span>
+                <span className="data-value">{bien.annee_construction}</span>
               </div>
             )}
-            <div className="data-item">
-              <span className="data-label">{"Ann\u00E9e de construction"}</span>
-              <span className={`data-value ${!bien.annee_construction ? 'nc' : ''}`}>{bien.annee_construction || 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">DPE</span>
-              {bien.dpe ? (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff',
-                  background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60'
-                }}>{bien.dpe}</span>
-              ) : <span className="data-value nc">NC</span>}
-            </div>
-            <div className="data-item">
-              <span className="data-label">Surface</span>
-              <span className="data-value">{bien.surface ? `${bien.surface} m²` : 'NC'}</span>
-            </div>
-            {(bien.type_bien || '').toLowerCase().includes('maison') && (
+            {/* DPE — show only if non-null */}
+            {bien.dpe && (
+              <div className="data-item">
+                <span className="data-label">{isIDR ? "DPE moyen" : "DPE"}</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.dpe] || '#7a6a60' }}>{bien.dpe}</span>
+                </div>
+              </div>
+            )}
+            {/* GES — show only if non-null */}
+            {bien.ges && (
+              <div className="data-item">
+                <span className="data-label">GES</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', fontWeight: 700, fontSize: '16px', color: '#fff', background: ({ A: '#319834', B: '#33a357', C: '#51b74b', D: '#f0e034', E: '#f0a830', F: '#eb6a2a', G: '#e42a1e' } as Record<string, string>)[bien.ges] || '#7a6a60' }}>{bien.ges}</span>
+                </div>
+              </div>
+            )}
+            {/* Budget énergie — show only if non-null */}
+            {bien.budget_energie_min != null && bien.budget_energie_max != null && (
+              <div className="data-item">
+                <span className="data-label">Budget énergie</span>
+                <span className="data-value">{bien.budget_energie_min}–{bien.budget_energie_max} {'\u20AC'}/an</span>
+              </div>
+            )}
+            {/* Surface */}
+            {bien.surface != null && (
+              <div className="data-item">
+                <span className="data-label">{isIDR ? "Surface totale habitable" : "Surface"}</span>
+                <span className="data-value">{bien.surface} m²</span>
+              </div>
+            )}
+            {/* Prix au m² — IDR uniquement */}
+            {isIDR && bien.prix_fai && bien.surface && (
+              <div className="data-item">
+                <span className="data-label">Prix au m²</span>
+                <span className="data-value">{Math.round(bien.prix_fai / bien.surface).toLocaleString('fr-FR')} {'\u20AC'}</span>
+              </div>
+            )}
+            {/* Surface terrain — maison uniquement */}
+            {(bien.type_bien || '').toLowerCase().includes('maison') && bien.surface_terrain != null && (
               <div className="data-item">
                 <span className="data-label">Terrain</span>
-                <span className={`data-value ${!bien.surface_terrain ? 'nc' : ''}`}>{bien.surface_terrain ? `${bien.surface_terrain} m²` : 'NC'}</span>
+                <span className="data-value">{bien.surface_terrain} m²</span>
               </div>
             )}
-            <div className="data-item">
-              <span className="data-label">{"Pièces"}</span>
-              <span className={`data-value ${!bien.nb_pieces ? 'nc' : ''}`}>{bien.nb_pieces || 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Chambres</span>
-              <span className={`data-value ${bien.nb_chambres == null ? 'nc' : ''}`}>{bien.nb_chambres != null ? bien.nb_chambres : 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Salles de bain</span>
-              <span className={`data-value ${bien.nb_sdb == null ? 'nc' : ''}`}>{bien.nb_sdb != null ? bien.nb_sdb : 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">{"Étage"}</span>
-              <span className={`data-value ${!bien.etage ? 'nc' : ''}`}>{bien.etage || 'NC'}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Chauffage</span>
-              <span className={`data-value ${!bien.type_chauffage ? 'nc' : ''}`}>{[bien.type_chauffage, bien.mode_chauffage].filter(Boolean).join(' / ') || 'NC'}</span>
-            </div>
+            {/* Pièces — pas pour IDR */}
+            {!isIDR && bien.nb_pieces && (
+              <div className="data-item">
+                <span className="data-label">{"Pi\u00E8ces"}</span>
+                <span className="data-value">{bien.nb_pieces}</span>
+              </div>
+            )}
+            {/* Chambres — pas pour IDR */}
+            {!isIDR && bien.nb_chambres != null && (
+              <div className="data-item">
+                <span className="data-label">Chambres</span>
+                <span className="data-value">{bien.nb_chambres}</span>
+              </div>
+            )}
+            {/* Salles de bain — pas pour IDR */}
+            {!isIDR && bien.nb_sdb != null && (
+              <div className="data-item">
+                <span className="data-label">Salles de bain</span>
+                <span className="data-value">{bien.nb_sdb}</span>
+              </div>
+            )}
+            {/* Étage — pas pour IDR ni maison */}
+            {!isIDR && !(bien.type_bien || '').toLowerCase().includes('maison') && bien.etage && (
+              <div className="data-item">
+                <span className="data-label">{"Étage"}</span>
+                <span className="data-value">{bien.etage}</span>
+              </div>
+            )}
+            {/* Nb étages — IDR uniquement */}
+            {isIDR && bien.etage && (
+              <div className="data-item">
+                <span className="data-label">Nb {"\u00E9tages"}</span>
+                <span className="data-value">{bien.etage}</span>
+              </div>
+            )}
+            {/* Chauffage */}
+            {(bien.type_chauffage || bien.mode_chauffage) && (
+              <div className="data-item">
+                <span className="data-label">Chauffage</span>
+                <span className="data-value">{[bien.type_chauffage, bien.mode_chauffage].filter(Boolean).join(' / ')}</span>
+              </div>
+            )}
+            {/* Exposition */}
+            {bien.exposition && (
+              <div className="data-item">
+                <span className="data-label">Exposition</span>
+                <span className="data-value">{bien.exposition}</span>
+              </div>
+            )}
+            {/* Ascenseur */}
+            {bien.ascenseur != null && (
+              <div className="data-item">
+                <span className="data-label">Ascenseur</span>
+                <span className="data-value">{bien.ascenseur ? 'Oui' : 'Non'}</span>
+              </div>
+            )}
+            {/* Cave */}
+            {bien.has_cave != null && (
+              <div className="data-item">
+                <span className="data-label">Cave</span>
+                <span className="data-value">{bien.has_cave ? 'Oui' : 'Non'}</span>
+              </div>
+            )}
+            {/* Balcon / Terrasse */}
+            {bien.acces_exterieur && (
+              <div className="data-item">
+                <span className="data-label">Balcon / Terrasse</span>
+                <span className="data-value">{bien.acces_exterieur}</span>
+              </div>
+            )}
+            {/* Parking / Garage */}
+            {bien.parking_type && (
+              <div className="data-item">
+                <span className="data-label">Parking / Garage</span>
+                <span className="data-value">{bien.parking_type}</span>
+              </div>
+            )}
+            {/* Copropriété */}
+            {bien.en_copropriete != null && (
+              <div className="data-item">
+                <span className="data-label">{"Copropri\u00E9t\u00E9"}</span>
+                <span className="data-value">{bien.en_copropriete ? 'Oui' : 'Non'}</span>
+              </div>
+            )}
+            {/* IDR — champs immeuble, toujours affichés */}
+            {isIDR && (
+              <div className="data-item">
+                <span className="data-label">Nb lots</span>
+                <CellEditableShared
+                  bienId={id}
+                  champ="nb_lots"
+                  dbVal={bien.nb_lots ?? null}
+                  draftVal={localDrafts["nb_lots"] ?? null}
+                  statut={champsStatut["nb_lots"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix=" lots"
+                />
+              </div>
+            )}
+            {isIDR && (
+              <div className="data-item">
+                <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
+                {userToken ? (
+                  <select value={bien.monopropriete === true ? 'oui' : bien.monopropriete === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, monopropriete: v })); handleUpdate('monopropriete', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.monopropriete === true ? '#1a7a40' : bien.monopropriete === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
+                    <option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option>
+                  </select>
+                ) : (
+                  <span className="data-value" style={{ color: bien.monopropriete ? '#1a7a40' : '#7a6a60' }}>{bien.monopropriete === true ? 'Oui' : 'Non'}</span>
+                )}
+              </div>
+            )}
+            {isIDR && (
+              <div className="data-item">
+                <span className="data-label">Compteurs individuels</span>
+                {userToken ? (
+                  <select value={bien.compteurs_individuels === true ? 'oui' : bien.compteurs_individuels === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, compteurs_individuels: v })); handleUpdate('compteurs_individuels', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.compteurs_individuels === true ? '#1a7a40' : bien.compteurs_individuels === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
+                    <option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option>
+                  </select>
+                ) : (
+                  <span className="data-value" style={{ color: bien.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{bien.compteurs_individuels === true ? 'Oui' : 'Non'}</span>
+                )}
+              </div>
+            )}
           </div>
-          {/* IDR : infos agrégées + tableau lots dépliable */}
+
+          {/* Add-feature-row — dans la section, sous la grille */}
+          {completableManquants.length > 0 && (
+            <div className="add-feature-row">
+              <div className="add-feature-lbl">
+                <strong>{completableManquants.length} {completableManquants.length === 1 ? 'caracteristique manquante' : 'caract\u00E9ristiques manquantes'}</strong>
+                <br />
+                <span style={{ color: 'var(--ink-mute, #a39a8c)', fontSize: '11px' }}>{completableManquants.slice(0, 3).map(f => f.label).join(', ')}{completableManquants.length > 3 ? '\u2026' : ''}</span>
+              </div>
+              <button className="btn-add" onClick={() => setShowCompleterModal(true)}>
+                <span style={{ fontSize: '16px', lineHeight: 0 }}>+</span>
+                Ajouter une info
+              </button>
+            </div>
+          )}
+
+          {/* IDR : tableau lots dépliable */}
           {isIDR && (
             <>
-              <div className="data-grid" style={{ marginTop: '12px' }}>
-                <div className="data-subtitle">Immeuble</div>
-                <div className="data-item">
-                  <span className="data-label">Nb lots</span>
-                  <CellEditable bien={bien} champ="nb_lots" suffix=" lots" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-                </div>
-                <div className="data-item">
-                  <span className="data-label">{"Monopropri\u00E9t\u00E9"}</span>
-                  {userToken ? (
-                    <select value={bien.monopropriete === true ? 'oui' : bien.monopropriete === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, monopropriete: v })); handleUpdate('monopropriete', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.monopropriete === true ? '#1a7a40' : bien.monopropriete === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
-                      <option value="">NC</option>
-                      <option value="oui">Oui</option>
-                      <option value="non">Non</option>
-                    </select>
-                  ) : (
-                    <span className="data-value" style={{ color: bien.monopropriete ? '#1a7a40' : '#7a6a60' }}>{bien.monopropriete === true ? 'Oui' : bien.monopropriete === false ? 'Non' : 'NC'}</span>
-                  )}
-                </div>
-                <div className="data-item">
-                  <span className="data-label">Compteurs individuels</span>
-                  {userToken ? (
-                    <select value={bien.compteurs_individuels === true ? 'oui' : bien.compteurs_individuels === false ? 'non' : ''} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setBien((prev: any) => ({ ...prev, compteurs_individuels: v })); handleUpdate('compteurs_individuels', v) }} style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", width: 'auto', maxWidth: '80px', color: bien.compteurs_individuels === true ? '#1a7a40' : bien.compteurs_individuels === false ? '#c0392b' : '#7a6a60', background: '#faf8f5', cursor: 'pointer' }}>
-                      <option value="">NC</option>
-                      <option value="oui">Oui</option>
-                      <option value="non">Non</option>
-                    </select>
-                  ) : (
-                    <span className="data-value" style={{ color: bien.compteurs_individuels ? '#1a7a40' : '#7a6a60' }}>{bien.compteurs_individuels === true ? 'Oui' : bien.compteurs_individuels === false ? 'Non' : 'NC'}</span>
-                  )}
-                </div>
-              </div>
               <div style={{ marginTop: '12px', textAlign: 'center' }}>
                 <button onClick={() => setShowLotsDetail(!showLotsDetail)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                   {showLotsDetail ? "Masquer le d\u00E9tail des lots" : "Voir le d\u00E9tail des lots"}
                 </button>
               </div>
-              <ModalPanel open={showLotsDetail} onClose={() => setShowLotsDetail(false)} title={"D\u00E9tail des lots"}>
-                <LotsEditor lots={lots} nbLotsEffectif={nbLotsEffectif} userToken={userToken} onSave={async (newLots) => { await handleUpdate('lots_data', { lots: newLots }); }} />
+              <ModalPanel open={showLotsDetail} onClose={() => setShowLotsDetail(false)} title={"D\u00E9tail des lots"} size="large">
+                <LotsEditor lots={lots} nbLotsEffectif={nbLotsEffectif} prixFai={bien.prix_fai} userToken={userToken} onSave={async (newLots) => { await handleUpdate('lots_data', { lots: newLots }); }} onCancel={() => setShowLotsDetail(false)} />
               </ModalPanel>
             </>
           )}
         </div>
 
-        {bien.strategie_mdb === 'Travaux lourds' || (isEnchere && !bien.loyer) ? (
+        {/* CTA "Ajouter données locatives" — Travaux, IDR, Enchères sans loyer */}
+        {(isTravauxLourds || isIDR || isEnchere) && bien.loyer == null && userToken && (
+          <button
+            onClick={() => setShowCompleterModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '16px',
+              width: '100%', padding: '16px 20px',
+              background: 'var(--surface, #fff)', borderRadius: 'var(--radius-md, 14px)',
+              border: '1.5px dashed var(--line, #e6dccb)',
+              cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+              transition: 'border-color .2s, background .2s', marginBottom: '16px',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#b4442e'; (e.currentTarget as HTMLElement).style.background = '#fdfaf7' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--line, #e6dccb)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface, #fff)' }}
+          >
+            <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--paper, #f5ede2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#b4442e', flexShrink: 0 }}>+</span>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#1a1210' }}>{"Ajouter des donn\u00E9es locatives"}</div>
+              <div style={{ fontSize: '12px', color: '#7a6a60', marginTop: '2px' }}>{"Loyer, charges, profil locataire \u2014 pour activer les indicateurs de rendement"}</div>
+            </div>
+          </button>
+        )}
+
+        {/* Informations Enchères — bloc dédié, stratégie enchère uniquement */}
+        {isEnchere && (
           <div className="section">
-            <h2 className="section-title">{"Donn\u00E9es du Bien"}</h2>
+            <h2 className="section-title">
+              {"Informations Ench\u00E8res"}
+              {bien.tribunal && <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{bien.tribunal}</span>}
+            </h2>
+            {bien.date_audience && (
+              <p className="section-subtitle">
+                {"Audience du "}{new Date(bien.date_audience).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {bien.salle_criees ? <>{" \u00B7 "}{bien.salle_criees}</> : null}
+              </p>
+            )}
+            {(() => {
+              const prixBase = (bien.prix_adjuge > 0 ? bien.prix_adjuge : bien.mise_a_prix) || 0
+              const isMDB = regime === 'marchand_de_biens'
+              const frais = bien.mise_a_prix && bien.mise_a_prix > 0 ? calculerFraisEnchere(prixBase, undefined, { isMDB }) : null
+              return (
+            <div className="data-grid encheres-info-grid">
+              {/* 1. Tribunal */}
+              {bien.tribunal && (
+                <div className="data-item">
+                  <span className="data-label">Tribunal</span>
+                  <span className="data-value">
+                    {bien.tribunal}
+                    {isVenteDelocalisee(bien.departement, bien.tribunal) && (
+                      <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 600, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '6px' }} title="La vente se déroule dans un tribunal d'un autre département">{"📍 D\u00E9localis\u00E9e"}</span>
+                    )}
+                  </span>
+                </div>
+              )}
+              {/* 2. Mise à prix */}
+              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Mise \u00E0 prix"}</span>
+                  <span className="data-value">{bien.mise_a_prix.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {/* 3. Date d'audience */}
+              {bien.date_audience && (
+                <div className="data-item">
+                  <span className="data-label">{"Date d\u2019audience"}</span>
+                  <span className="data-value" style={{ whiteSpace: 'nowrap' }}>
+                    {new Date(bien.date_audience).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {(() => { const d = Math.ceil((new Date(bien.date_audience).getTime() - Date.now()) / 86400000); return d >= 0 ? ` (J-${d})` : ' (pass\u00E9e)' })()}
+                  </span>
+                </div>
+              )}
+              {/* 4. Date de visite */}
+              {bien.date_visite && (
+                <div className="data-item">
+                  <span className="data-label">{"Date de visite"}</span>
+                  <span className="data-value" style={{ whiteSpace: 'nowrap' }}>{new Date(bien.date_visite).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+              )}
+              {/* 5. Frais préalables */}
+              <div className="data-item">
+                <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {"Frais pr\u00E9alables"}
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais de proc\u00E9dure (commissaire de justice, annonces l\u00E9gales, diagnostics). Communiqu\u00E9s par le tribunal env. 1 semaine avant l\u2019audience. Variables, \u00E0 renseigner si connus."}</span>
+                  </span>
+                </span>
+                <CellEditableShared
+                  bienId={id}
+                  champ="frais_preemption"
+                  dbVal={bien.frais_preemption ?? null}
+                  draftVal={localDrafts["frais_preemption"] ?? null}
+                  statut={champsStatut["frais_preemption"] ?? null}
+                  isSourceData={false}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
+              </div>
+              {/* 6. Frais de mutation */}
+              {frais && (
+                <div className="data-item">
+                  <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {"Frais de mutation"}
+                    <span style={{ padding: '1px 7px', background: 'var(--success-soft, #d4f5e0)', color: 'var(--success, #1a7a40)', borderRadius: '999px', fontSize: '10px', fontWeight: 600 }}>{`\u2212${Math.round(frais.pct_sans_prealables)}\u00A0%`}</span>
+                    <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Frais d\u2019acquisition calcul\u00E9s : \u00E9moluments avocat + droits de mutation + CSI. Hors frais pr\u00E9alables et honoraires (\u00E0 renseigner s\u00E9par\u00E9ment)."}</span>
+                    </span>
+                  </span>
+                  <button onClick={() => setShowFraisModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '4px', width: '100%', whiteSpace: 'nowrap' }}>
+                    {Math.round(frais.total_sans_prealables).toLocaleString('fr-FR')} {'\u20AC'}
+                    <span style={{ color: '#a39a8c', fontSize: '11px' }}>›</span>
+                  </button>
+                </div>
+              )}
+              {/* 7. Honoraires d'avocat */}
+              <div className="data-item">
+                <span className="data-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {"Honoraires d\u2019avocat"}
+                  <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '9px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '12px', height: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    ?<span className="pnl-tooltip-text" style={{ textTransform: 'none' }}>{"Honoraires libres \u2014 fix\u00E9s par l\u2019avocat mandat\u00E9 pour vous repr\u00E9senter \u00E0 l\u2019audience. G\u00E9n\u00E9ralement entre 1\u00A0000 et 3\u00A0000\u00A0\u20AC. 1\u00A0500\u00A0\u20AC par d\u00E9faut."}</span>
+                  </span>
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box', background: '#fff', border: '1.5px solid #e8e2d8', borderRadius: '6px', padding: '4px 8px', gap: '4px' }}>
+                  <input
+                    type="number"
+                    value={honorairesAvocat}
+                    onChange={e => setHonorairesAvocat(e.target.value === '' ? '' : Number(e.target.value))}
+                    onBlur={e => {
+                      const val = e.target.value === '' ? 1500 : Number(e.target.value)
+                      setHonorairesAvocat(val)
+                      handleUpdate('honoraires_avocat', val)
+                    }}
+                    placeholder="1500"
+                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textAlign: 'right', background: 'transparent', color: '#1a1210' }}
+                  />
+                  <span style={{ fontSize: '13px', color: '#7a6a60', flexShrink: 0 }}>{'\u20AC'}</span>
+                </div>
+              </div>
+              {/* 8. Avocat poursuivant */}
+              {/* 8. Avocat poursuivant */}
+              {bien.avocat_nom && (
+                <div className="data-item">
+                  <span className="data-label">Avocat poursuivant</span>
+                  <button onClick={() => setShowAvocatModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1a1210', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', gridColumn: '2 / 4', whiteSpace: 'nowrap' }}>
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--info-soft, #d3deea)', color: 'var(--info, #3a5f7d)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, flexShrink: 0 }}>
+                      {bien.avocat_nom.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                    </span>
+                    {bien.avocat_nom}
+                    <span style={{ color: '#a39a8c', fontSize: '11px', flexShrink: 0 }}>›</span>
+                  </button>
+                </div>
+              )}
+              {/* 9. Consignation */}
+              {bien.mise_a_prix && bien.mise_a_prix > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Consignation "}<span style={{ color: '#a39a8c', fontWeight: 500 }}>(10 %)</span></span>
+                  <span className="data-value">{Math.round((bien.consignation || bien.mise_a_prix * 0.1)).toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {/* Prix adjugé et Statut — affichés en fin si disponibles */}
+              {bien.prix_adjuge && bien.prix_adjuge > 0 && (
+                <div className="data-item">
+                  <span className="data-label">{"Prix adjug\u00E9"}</span>
+                  <span className="data-value" style={{ fontWeight: 700 }}>{bien.prix_adjuge.toLocaleString('fr-FR')} {'\u20AC'}</span>
+                </div>
+              )}
+              {bien.statut && bien.statut !== 'a_venir' && (
+                <div className="data-item">
+                  <span className="data-label">Statut</span>
+                  <span className="data-value">{({ surenchere: 'En surench\u00E8re', adjuge: 'Adjug\u00E9', vendu: 'Vendu', retire: 'Retir\u00E9', expire: 'Expir\u00E9' } as Record<string, string>)[bien.statut] || bien.statut}</span>
+                </div>
+              )}
+            </div>
+              )
+            })()}
+            {/* Surenchère alert */}
+            {(bien.date_surenchere || bien.mise_a_prix_surenchere) && (
+              <div style={{ marginTop: '16px', padding: '12px 14px', background: '#efe0d1', borderRadius: 'var(--radius-sm)', fontSize: '13px', color: '#5d3d24' }}>
+                <div><strong style={{ color: '#8a5a3c' }}>{"Surench\u00E8re possible pendant 10 jours apr\u00E8s l\u2019adjudication"}</strong>{bien.date_surenchere ? <> {"jusqu\u2019au"} {new Date(bien.date_surenchere).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}</div>
+                {bien.mise_a_prix_surenchere && <div style={{ marginTop: '3px' }}>{"Nouvelle mise \u00E0 prix :"} <strong>{bien.mise_a_prix_surenchere.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>}
+                {bien.consignation && <div style={{ marginTop: '3px' }}>{"Consignation :"} <strong>{bien.consignation.toLocaleString('fr-FR')} {'\u20AC'}</strong></div>}
+                <div style={{ marginTop: '4px', fontSize: '12px', color: '#7a5a3a' }}>{"Un tiers peut surench\u00E9rir de 10\u00A0% minimum dans les 10 jours suivant la vente. L\u2019adjudicataire final est celui de la seconde audience."}</div>
+              </div>
+            )}
+            {/* Documents juridiques */}
+            {bien.documents && (() => {
+              const docs = typeof bien.documents === 'string' ? JSON.parse(bien.documents) : bien.documents
+              if (!docs || docs.length === 0) return null
+              const icons: Record<string, string> = { ccv: '\uD83D\uDCCB', pv: '\uD83D\uDCDD', diag: '\uD83C\uDFE5', affiche: '\uD83D\uDCE2', autre: '\uD83D\uDCC4' }
+              return (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#7a6a60', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>{"Documents Juridiques"}</div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {docs.map((doc: any, i: number) => (
+                      <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#faf8f5', borderRadius: '8px', border: '1px solid #e8e2d8', textDecoration: 'none', color: '#1a1210', fontSize: '12px', fontWeight: 500 }}>
+                        <span style={{ fontSize: '14px' }}>{icons[doc.type] || icons.autre}</span>
+                        {doc.label || doc.type}
+                        <span style={{ color: '#7a6a60', marginLeft: '4px' }}>{"↗"}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* Projection de division */}
+        {bien.strategie_mdb === 'Division' && (() => {
+          const currentType = bien.type_bien || (bien.nb_pieces ? `T${bien.nb_pieces}` : null)
+          const currentLoyer = bien.loyer
+          const loyerTotal = divProjection ? divProjection.nbLots * divProjection.loyerParLot : null
+          const budgetTotal = divProjection ? divProjection.cloisons + divProjection.compteurs + divProjection.autres : null
+          const rendementBrut = loyerTotal && bien.prix_fai ? (loyerTotal * 12) / bien.prix_fai * 100 : null
+          const gainMensuel = loyerTotal !== null && currentLoyer ? loyerTotal - currentLoyer : null
+
+          const draftNbLots = parseInt(divDraft.nbLots) || 0
+          const draftLoyerParLot = parseInt(divDraft.loyerParLot) || 0
+          const draftCloisons = parseInt(divDraft.cloisons) || 0
+          const draftCompteurs = parseInt(divDraft.compteurs) || 0
+          const draftAutres = parseInt(divDraft.autres) || 0
+          const draftLoyerTotal = draftNbLots * draftLoyerParLot
+          const draftBudgetTotal = draftCloisons + draftCompteurs + draftAutres
+          const draftRendement = draftLoyerTotal && bien.prix_fai ? (draftLoyerTotal * 12) / bien.prix_fai * 100 : null
+
+          const fieldStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 10px', border: '1px solid #c0392b', background: '#f9eded', borderRadius: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#c0392b', textAlign: 'right', outline: 'none' }
+          const fieldRowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 170px 32px', alignItems: 'center', columnGap: 10, padding: '12px 4px', borderBottom: '1px solid #f0ebe3' }
+
+          return (
+            <div className="section">
+              {/* Modal projection — fidèle à la maquette v4 */}
+              {showDivModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(31,27,22,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowDivModal(false)}>
+                  <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
+                    {/* Header */}
+                    <div style={{ padding: '24px 28px 18px', borderBottom: '1px solid #e8e2d8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexShrink: 0 }}>
+                      <div>
+                        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', color: '#1a1210', marginBottom: 4 }}>{"Définir votre projection de division"}</div>
+                        <div style={{ fontSize: 13, color: '#6b6358' }}>{"Renseignez le nombre de lots cibles et le budget travaux associé. L'analyse fiscale se mettra à jour automatiquement."}</div>
+                      </div>
+                      <button onClick={() => setShowDivModal(false)} style={{ background: '#f2ece4', border: 'none', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b6358', fontSize: 18, flexShrink: 0 }}>{'\u00d7'}</button>
+                    </div>
+
+                    {/* Body */}
+                    <div style={{ padding: '24px 28px', overflowY: 'auto', flex: '1 1 auto' }}>
+                      {/* Section Projection */}
+                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 500, color: '#1a1210', letterSpacing: '-0.01em', paddingBottom: 10, borderBottom: '1px solid #e8e2d8', marginBottom: 0 }}>{"Projection de division"}</div>
+                      <div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Nombre de lots projetés"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" min={2} max={10} value={divDraft.nbLots} onChange={e => setDivDraft(p => ({ ...p, nbLots: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"lots"}</span>
+                        </div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Type de lots"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <select value={divDraft.typeLots} onChange={e => setDivDraft(p => ({ ...p, typeLots: e.target.value }))} style={{ ...fieldStyle, paddingRight: 28, appearance: 'none', backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23c0392b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/></svg>\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', cursor: 'pointer' }}>
+                              <option>Studios</option>
+                              <option>T1</option>
+                              <option>T2</option>
+                              <option>Mixte</option>
+                            </select>
+                          </span>
+                          <span />
+                        </div>
+                        <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Loyer moyen projeté par lot"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.loyerParLot} onChange={e => setDivDraft(p => ({ ...p, loyerParLot: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4, whiteSpace: 'nowrap' }}>{"€/mois"}</span>
+                        </div>
+                      </div>
+
+                      {/* Section Budget */}
+                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 500, color: '#1a1210', letterSpacing: '-0.01em', paddingBottom: 10, borderBottom: '1px solid #e8e2d8', marginTop: 24, marginBottom: 0 }}>{"Budget travaux division"}</div>
+                      <div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Cloisonnement & entrées"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.cloisons} onChange={e => setDivDraft(p => ({ ...p, cloisons: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"€"}</span>
+                        </div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Compteurs séparés"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.compteurs} onChange={e => setDivDraft(p => ({ ...p, compteurs: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"€"}</span>
+                        </div>
+                        <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Autres (plomberie, élec, frais admin)"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.autres} onChange={e => setDivDraft(p => ({ ...p, autres: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"€"}</span>
+                        </div>
+                      </div>
+
+                      {/* Preview temps réel */}
+                      <div style={{ marginTop: 20, padding: '16px 20px', background: '#d4ebde', borderRadius: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13 }}>
+                          <span style={{ color: '#6b6358' }}>{"Total budget travaux"}</span>
+                          <span style={{ color: '#1a1210', fontWeight: 600 }}>{draftBudgetTotal ? `${draftBudgetTotal.toLocaleString('fr-FR')} €` : '—'}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13 }}>
+                          <span style={{ color: '#6b6358' }}>{"Loyer total projeté"}</span>
+                          <span style={{ color: '#1a1210', fontWeight: 600 }}>{draftLoyerTotal ? `${draftLoyerTotal.toLocaleString('fr-FR')} €/mois` : '—'}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 6px', marginTop: 6, borderTop: '1px solid rgba(47,125,91,0.2)', fontSize: 13 }}>
+                          <span style={{ color: '#2e7c5d', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 11 }}>{"Rendement brut projeté"}</span>
+                          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: '#2e7c5d', fontWeight: 600 }}>{draftRendement ? `${draftRendement.toFixed(1).replace('.', ',')} %` : '—'}</span>
+                        </div>
+                      </div>
+
+                      {/* Footer note */}
+                      <div style={{ marginTop: 24, padding: '12px 16px', background: '#f2ece4', borderRadius: 10, fontSize: 11, color: '#6b6358', lineHeight: 1.6 }}>
+                        <strong style={{ color: '#1a1210', display: 'block', marginBottom: 2, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Points à vérifier avant d'acheter :"}</strong>
+                        {"PLU / zonage, accord AG de copropriété, déclaration préalable ou permis de construire, création d'entrées indépendantes."}
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{ padding: '18px 28px 24px', borderTop: '1px solid #e8e2d8', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+                      <button onClick={() => setShowDivModal(false)} style={{ padding: '12px 18px', borderRadius: 12, border: '1px solid #e8e2d8', background: 'transparent', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1a1210' }}>{"Annuler"}</button>
+                      <button onClick={() => {
+                        const proj = {
+                          nbLots: parseInt(divDraft.nbLots) || 1,
+                          typeLots: divDraft.typeLots || 'Studios',
+                          loyerParLot: parseInt(divDraft.loyerParLot) || 0,
+                          cloisons: parseInt(divDraft.cloisons) || 0,
+                          compteurs: parseInt(divDraft.compteurs) || 0,
+                          autres: parseInt(divDraft.autres) || 0,
+                        }
+                        try { localStorage.setItem(`mdb_div_proj_${id}`, JSON.stringify(proj)) } catch {}
+                        setDivProjection(proj)
+                        setShowDivModal(false)
+                      }} style={{ padding: '12px 18px', borderRadius: 12, border: 'none', background: '#1a1210', color: '#f2ece4', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{"Appliquer ma projection"}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Card principale */}
+              <div style={{ background: '#fff', borderRadius: 12, padding: '24px 26px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', marginTop: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600, color: '#1a1210' }}>{"Projection de division"}</span>
+                  <button
+                    onClick={() => {
+                      setDivDraft({
+                        nbLots: divProjection?.nbLots?.toString() || '',
+                        typeLots: divProjection?.typeLots || 'Studios',
+                        loyerParLot: divProjection?.loyerParLot?.toString() || '',
+                        cloisons: divProjection?.cloisons?.toString() || '',
+                        compteurs: divProjection?.compteurs?.toString() || '',
+                        autres: divProjection?.autres?.toString() || '',
+                      })
+                      setShowDivModal(true)
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: '#c0392b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    {"Définir ma projection"}
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: '#6b6358', marginBottom: 16 }}>{"Scénario projeté de transformation — éditable selon votre stratégie"}</div>
+
+                {/* État actuel → Après division */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 24, alignItems: 'center', padding: 22, background: '#f2ece4', borderRadius: 8 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 8 }}>{"\u00c9TAT ACTUEL"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: '#1a1210', marginBottom: 2 }}>{"1 × "}{currentType || '—'}</div>
+                    <div style={{ fontSize: 13, color: '#6b6358' }}>{currentLoyer ? `${currentLoyer.toLocaleString('fr-FR')} €/mois` : 'Loyer NC'}</div>
+                  </div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, color: '#c0392b' }}>{'→'}</div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 8 }}>{"APRÈS DIVISION"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: divProjection ? '#2e7c5d' : '#a39a8c', marginBottom: 2 }}>
+                      {divProjection ? `${divProjection.nbLots} × ${divProjection.typeLots}` : '— × —'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#6b6358' }}>
+                      {loyerTotal ? `${loyerTotal.toLocaleString('fr-FR')} €/mois` : 'Non défini'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Métriques */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
+                  <div style={{ padding: '14px 16px', background: '#f2ece4', borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 6 }}>{"Budget travaux division"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: '#c77f1f' }}>
+                      {budgetTotal ? `${budgetTotal.toLocaleString('fr-FR')} €` : '—'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b6358', marginTop: 2 }}>{"Saisi manuellement · cloisons, compteurs, entrées"}</div>
+                  </div>
+                  <div style={{ padding: '14px 16px', background: '#f2ece4', borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 6 }}>{"Gain locatif annuel"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: gainMensuel !== null && gainMensuel > 0 ? '#2e7c5d' : '#a39a8c' }}>
+                      {gainMensuel !== null ? `${gainMensuel >= 0 ? '+' : ''}${(gainMensuel * 12).toLocaleString('fr-FR')} €` : '—'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b6358', marginTop: 2 }}>
+                      {gainMensuel !== null ? `${gainMensuel >= 0 ? '+' : ''}${gainMensuel.toLocaleString('fr-FR')} €/mois supplémentaires` : "Définir une projection d'abord"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Checklist */}
+                <div style={{ marginTop: 16, padding: '16px 20px', background: '#fef6e8', borderRadius: 8 }}>
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c77f1f', fontWeight: 700, marginBottom: 8 }}>{"POINTS À VÉRIFIER AVANT L'ACQUISITION"}</div>
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, fontSize: 12, color: '#6b6358', lineHeight: 1.7 }}>
+                    {['PLU : zone, COS, règles de division parcellaire', "Accord de l'assemblée générale si copropriété", 'Déclaration préalable ou permis de construire', "Possibilité de créer des entrées indépendantes et compteurs séparés"].map((item, i) => (
+                      <li key={i} style={{ paddingLeft: 20, position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 0, color: '#c77f1f', fontWeight: 700 }}>{'\u2610'}</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+                {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli (enchères incluses) */}
+        {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && (
+          <div className="section">
+            <h2 className="section-title">
+              {isIDR ? "Donn\u00E9es locatives \u00B7 agr\u00E9g\u00E9es" : "Donn\u00E9es Locatives"}
+              {isIDR && bien.nb_lots ? (
+                <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"Totaux des "}{bien.nb_lots}{" lots"}</span>
+              ) : (
+                <span style={{ fontFamily: 'var(--sans, "DM Sans", sans-serif)', fontSize: '11px', fontWeight: 400, color: 'var(--ink-mute, #a39a8c)' }}>{"Soumises par la communaut\u00E9"}</span>
+              )}
+            </h2>
+            <p className="section-subtitle">{isIDR ? "Somme des loyers et charges \u00E0 l\u2019\u00E9chelle de l\u2019immeuble" : "Cliquez sur une valeur pour la saisir ou la modifier"}</p>
             <div className="data-grid">
               <div className="data-item">
-                <span className="data-label">{"Taxe foncière"}</span>
-                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <span className="data-label">{isIDR ? "Loyer total" : <>Loyer <span className="k-unit">/mois</span></>}</span>
+                <CellEditableShared
+                  bienId={id}
+                  champ="loyer"
+                  dbVal={bien.loyer ?? null}
+                  draftVal={localDrafts["loyer"] ?? null}
+                  statut={champsStatut["loyer"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
-              {!(bien.type_bien || '').toLowerCase().includes('maison') && (
+              {!isIDR && (
                 <div className="data-item">
-                  <span className="data-label">Charges copro</span>
-                  <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                  <span className="data-label">Type loyer</span>
+                  <CellTypeLoyerShared
+                    bienId={id}
+                    champ="type_loyer"
+                    dbVal={bien.type_loyer}
+                    statut={champsStatut["type_loyer"] ?? null}
+                    isSourceData={bien.extraction_statut === 'ok'}
+                    onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                    onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                    userToken={userToken ?? undefined}
+                  />
                 </div>
               )}
               <div className="data-item">
-                <span className="data-label">{"Budget énergie"}</span>
-                <span className={`data-value ${!bien.budget_energie_min ? 'nc' : ''}`}>
-                  {bien.budget_energie_min && bien.budget_energie_max ? `${bien.budget_energie_min} - ${bien.budget_energie_max} \u20AC/an` : 'NC'}
-                </span>
+                <span className="data-label">{isIDR ? "Charges récup. totales" : <>Charges récup. <span className="k-unit">/mois</span></>}</span>
+                <CellEditableShared
+                  bienId={id}
+                  champ="charges_rec"
+                  dbVal={bien.charges_rec ?? null}
+                  draftVal={localDrafts["charges_rec"] ?? null}
+                  statut={champsStatut["charges_rec"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               <div className="data-item">
-                <span className="data-label">GES</span>
-                <span className={`data-value ${!bien.ges ? 'nc' : ''}`}>{bien.ges || 'NC'}</span>
-              </div>
-            </div>
-            <div className="legende" style={{ marginTop: '12px' }}>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#c0392b' }}></div>{"Donn\u00E9e manquante \u2014 \u00E9ditable"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#2a4a8a' }}></div>{"Simulation \u2014 \u2713 pour soumettre, \u00D7 pour annuler"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Soumis par 1 utilisateur"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"\u2713 Valid\u00E9 par 2+ utilisateurs"}</div>
-            </div>
-            {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
-          </div>
-        ) : (
-          <div className="section">
-            <h2 className="section-title">{"Donn\u00E9es Locatives"}</h2>
-            <div className="data-grid">
-              <div className="data-item">
-                <span className="data-label">Loyer</span>
-                <CellEditable bien={bien} champ="loyer" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <span className="data-label">{isIDR ? "Charges copro totales" : <>Charges copro <span className="k-unit">/mois</span></>}</span>
+                <CellEditableShared
+                  bienId={id}
+                  champ="charges_copro"
+                  dbVal={bien.charges_copro ?? null}
+                  draftVal={localDrafts["charges_copro"] ?? null}
+                  statut={champsStatut["charges_copro"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               <div className="data-item">
-                <span className="data-label">Type loyer</span>
-                <CellTypeLoyer bien={bien} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">{"Charges récup."}</span>
-                <CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">Charges copro</span>
-                <CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC/mois`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
-              </div>
-              <div className="data-item">
-                <span className="data-label">{"Taxe foncière"}</span>
-                <CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC/an`} userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} />
+                <span className="data-label">{isIDR ? "Taxe foncière globale" : <>Taxe foncière <span className="k-unit">/an</span></>}</span>
+                <CellEditableShared
+                  bienId={id}
+                  champ="taxe_fonc_ann"
+                  dbVal={bien.taxe_fonc_ann ?? null}
+                  draftVal={localDrafts["taxe_fonc_ann"] ?? null}
+                  statut={champsStatut["taxe_fonc_ann"] ?? null}
+                  isSourceData={bien.extraction_statut === 'ok'}
+                  onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                  onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                  userToken={userToken ?? undefined}
+                  suffix={` €`}
+                />
               </div>
               {!isIDR && (
                 <div className="data-item">
                   <span className="data-label">Profil locataire</span>
-                  <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'Non communiqu\u00E9'}</span>
+                  {userToken ? (() => {
+                    const isEmpty = !bien.profil_locataire || bien.profil_locataire === 'NC'
+                    return (
+                      <div style={{ position: 'relative', width: '100%' }}>
+                        <select
+                          value={bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : ''}
+                          onChange={async e => {
+                            const val = e.target.value || null
+                            setBien((prev: any) => ({ ...prev, profil_locataire: val }))
+                            if (val) await handleUpdate('profil_locataire', val)
+                          }}
+                          style={{
+                            width: '100%', boxSizing: 'border-box', padding: '4px 22px 4px 8px', borderRadius: '6px',
+                            border: `1.5px solid ${isEmpty ? '#c0392b' : '#e8e2d8'}`,
+                            fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+                            background: isEmpty ? '#fde8e8' : '#faf8f5',
+                            color: isEmpty ? '#a39a8c' : '#1a1210',
+                            cursor: 'pointer', outline: 'none',
+                            appearance: 'none', WebkitAppearance: 'none',
+                            textAlign: 'right',
+                          } as React.CSSProperties}
+                        >
+                          <option value="">NC</option>
+                          {['Actif CDI', 'Actif CDD / int\u00E9rim', 'Ind\u00E9pendant', 'Retrait\u00E9', '\u00C9tudiant', 'Inconnu'].map(o => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+                        <span style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#7a6a60', pointerEvents: 'none' }}>{'▾'}</span>
+                      </div>
+                    )
+                  })() : (
+                    <span className={`data-value ${!bien.profil_locataire || bien.profil_locataire === 'NC' ? 'nc' : ''}`}>
+                      {bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : 'NC'}
+                    </span>
+                  )}
                 </div>
               )}
               {!isIDR && (
@@ -2983,7 +3829,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                       })
                       setBien((prev: any) => ({ ...prev, fin_bail: val }))
                     }}
-                    style={{ padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none', width: '120px' }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '3px 6px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', background: '#faf8f5', color: '#1a1210', outline: 'none' }}
                   />
                 </div>
               )}
@@ -2996,92 +3842,33 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
               </div>
             </div>
             <div className="legende">
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#c0392b' }}></div>{"Donn\u00E9e manquante \u2014 \u00E9ditable"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#2a4a8a' }}></div>{"Simulation \u2014 \u2713 pour soumettre, \u00D7 pour annuler"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#f0c040' }}></div>{"Soumis par 1 utilisateur"}</div>
-              <div className="legende-item"><div className="legende-dot" style={{ background: '#1a7a40' }}></div>{"\u2713 Valid\u00E9 par 2+ utilisateurs"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: 'var(--accent, #b4442e)' }}></div>Manquant</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: 'var(--info, #3a5f7d)' }}></div>Simulation</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: '#e8b843' }}></div>{"1 utilisateur"}</div>
+              <div className="legende-item"><div className="legende-dot" style={{ background: 'var(--success, #2f7d5b)' }}></div>{"Valid\u00E9 2+"}</div>
             </div>
             {!userToken && <p style={{ fontSize: '12px', color: '#b0a898', marginTop: '12px', fontStyle: 'italic' }}>{"Connectez-vous pour compléter les données manquantes"}</p>}
             {/* IDR : taux occupation + loyers par lot dépliable */}
-            {isIDR && lots.length > 0 && (
-              <>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', color: '#1a7a40', fontWeight: 600 }}>{lots.filter(l => l.etat === 'loue').length}/{nbLotsEffectif} lots {"lou\u00E9s"}</span>
-                  {bien.loyer && <span style={{ fontSize: '13px', color: '#7a6a60' }}>Loyer annuel : {(bien.loyer * 12).toLocaleString('fr-FR')} {'\u20AC'}</span>}
-                </div>
-                <div style={{ marginTop: '8px', textAlign: 'center' }}>
-                  <button onClick={() => setShowLotsLocatif(!showLotsLocatif)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                    {showLotsLocatif ? "Masquer" : "D\u00E9tail loyers par lot"}
-                  </button>
-                </div>
-                <ModalPanel open={showLotsLocatif} onClose={() => setShowLotsLocatif(false)} title={"D\u00E9tail loyers par lot"}>
-                  <div className="lots-table-wrap"><table className="lots-table">
-                    <thead><tr><th>Lot</th><th>Type</th><th>Loyer</th><th>{"\u00C9tat"}</th></tr></thead>
-                    <tbody>
-                      {Array.from({ length: Math.max(nbLotsEffectif, lots.length) }).map((_, i) => {
-                        const lot = lots[i] || {}
-                        return (
-                          <tr key={i}>
-                            <td style={{ fontWeight: 600 }}>{i + 1}</td>
-                            <td>
-                              {lot.type ? lot.type : (
-                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
-                                  <option value="">NC</option>
-                                  <option value="Studio">Studio</option>
-                                  <option value="T1">T1</option>
-                                  <option value="T2">T2</option>
-                                  <option value="T3">T3</option>
-                                  <option value="T4">T4</option>
-                                  <option value="T5">T5</option>
-                                  <option value="Local commercial">Local commercial</option>
-                                  <option value="Garage">Garage</option>
-                                </select>
-                              )}
-                            </td>
-                            <td>
-                              {lot.loyer ? `${lot.loyer.toLocaleString('fr-FR')} \u20AC` : (
-                                <input type="number" placeholder="0" style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', width: '70px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', textAlign: 'right' }} />
-                              )}
-                            </td>
-                            <td>
-                              {lot.etat ? (
-                                <span className={`lot-badge ${lot.etat === 'loue' ? 'lot-loue' : lot.etat === 'vacant' ? 'lot-vacant' : lot.etat === 'a_renover' ? 'lot-renover' : ''}`}>{lot.etat === 'loue' ? "Lou\u00E9" : lot.etat === 'vacant' ? 'Vacant' : lot.etat === 'a_renover' ? "\u00C0 r\u00E9nover" : 'NC'}</span>
-                              ) : (
-                                <select defaultValue="" style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid #e8e2d8', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", background: '#faf8f5' }}>
-                                  <option value="">NC</option>
-                                  <option value="loue">{"Lou\u00E9"}</option>
-                                  <option value="vacant">Vacant</option>
-                                  <option value="a_renover">{"\u00C0 r\u00E9nover"}</option>
-                                </select>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table></div>
-                </ModalPanel>
-              </>
+            {isIDR && (
+              <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                <button onClick={() => setShowLotsDetail(true)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  {"Voir le d\u00E9tail des lots"}
+                </button>
+              </div>
             )}
           </div>
         )}
+        </div>)}
 
+        {(activeNav === 'estimation' || activeNav === 'travaux' || activeNav === 'financement') && (<div className="tab-panel">
         <div id="nav-estimation" className="two-cols">
-        <div className="col">
+        <div className="col" style={{ display: activeNav === 'estimation' ? '' : 'none' }}>
         {(() => {
           const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
           return (
             <div style={isFreeBlocked ? { position: 'relative' } : {}}>
-              {userPlan === 'free' && freeAnalysesLeft > 0 && (
-                <div style={{
-                  background: 'rgba(26,122,64,0.06)', border: '1px solid rgba(26,122,64,0.15)',
-                  borderRadius: 10, padding: '10px 16px', marginBottom: 16,
-                  fontSize: 13, color: '#1a7a40', fontWeight: 500
-                }}>
-                  {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/2 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
-                </div>
-              )}
-              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined} labelPrix={isEnchere ? (bien.prix_adjuge > 0 ? <>{"Prix adjug\u00e9"}</> : <>{"Mise \u00e0 prix"}</>) : undefined}
+
+              <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined} labelPrix={isEnchere ? (bien.prix_adjuge > 0 ? <>{"Prix adjug\u00e9"}</> : <>{"Mise \u00e0 prix"}</>) : undefined} estimationInitiale={bien.estimation_details} estimationDateInitiale={bien.estimation_date}
                 extra={isIDR && nbLotsEffectif > 0 ? (
                   <div style={{ marginTop: '4px', textAlign: 'center' }}>
                     <button onClick={() => setShowReventeLots(!showReventeLots)} style={{ background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#2a4a8a', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
@@ -3162,176 +3949,130 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         {!peutCalculer && !isTravauxLourds && !bien.prix_fai && (
           <div className="section"><div className="nc-warning">Le prix est manquant — impossible de calculer.</div></div>
         )}
-        {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && peutCalculer && !isTravauxLourds && bien.loyer && (
-          <div className="section">
-              <h2 className="section-title">{"Cash Flow Avant Imp\u00F4t"}</h2>
-                  <table className="results-table">
-                    <thead>
-                      <tr>
-                        <th></th>
-                        <th>Mensuel</th>
-                        <th>Annuel</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                            <tr>
-                              <td>{"Loyer"} <span style={{ fontSize: '11px', color: '#7a6a60' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></td>
-                              <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                              <td><CellEditable bien={bien} champ="loyer" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                            </tr>
-                            <tr>
-                              <td>{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (incluses CC)" : "Charges r\u00E9cup."}</td>
-                              <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                              <td><CellEditable bien={bien} champ="charges_rec" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                            </tr>
-                            <tr>
-                              <td>{"Charges copro"}</td>
-                              <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                              <td><CellEditable bien={bien} champ="charges_copro" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={12} /></td>
-                            </tr>
-                            <tr>
-                              <td>{"Taxe fonci\u00E8re"}</td>
-                              <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1/12} /></td>
-                              <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix="" userToken={userToken} champsStatut={champsStatut} onUpdate={handleUpdate} setBien={setBien} dirtyChamps={dirtyChamps} setDirtyChamps={setDirtyChamps} originalVals={originalVals} setOriginalVals={setOriginalVals} scale={1} /></td>
-                            </tr>
-                            <tr>
-                              <td>{"Mensualit\u00E9 cr\u00E9dit"}</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit)} {'\u20AC'}</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</td>
-                            </tr>
-                            <tr>
-                              <td>Assurance emprunteur</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss)} {'\u20AC'}</td>
-                              <td style={{ color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</td>
-                            </tr>
-                    </tbody>
-                  </table>
-                  <div style={{ marginTop: '16px', background: cashflowBrut >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
-                    <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Avant Imp\u00F4t"}</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
-                        {cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}/mois
-                      </span>
-                      <span style={{ fontSize: '13px', color: (cashflowBrut * 12) >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
-                        {(cashflowBrut * 12) >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}/an
-                      </span>
-                    </div>
-                  </div>
-          </div>
-        )}
         </div>{/* fin col gauche */}
 
-        <div className="col">
+        <div className="col" style={{ display: (activeNav === 'travaux' || activeNav === 'financement') ? '' : 'none' }}>
         {/* Estimation travaux (toutes strategies) */}
-        <div className="section">
-          <h2 className="section-title">{bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic Travaux' : 'Estimation Travaux'}</h2>
+        <div id="nav-travaux" className="section" style={{ display: activeNav === 'travaux' ? '' : 'none', borderTop: '3px solid var(--warning, #c77f1f)' }}>
+          <h2 className="section-title">
+            {bien.strategie_mdb === 'Travaux lourds' ? 'Diagnostic travaux' : 'Estimation travaux'}
+            <span className="section-meta">Score IA · Analyse photos + description</span>
+          </h2>
+          <p className="section-subtitle">{"Évaluation automatique du budget rénovation selon la grille Mon Petit MDB"}</p>
+
           {isFreeBlocked && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
-              <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>
-                {"D\u00E9bloquez le diagnostic travaux"}
-              </span>
-              <a href="/mon-profil" style={{
-                display: 'inline-block', padding: '7px 18px', borderRadius: 8,
-                background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12,
-                textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
-              }}>
+              <span style={{ fontSize: 13, color: '#1a1210', fontWeight: 600 }}>{"D\u00E9bloquez le diagnostic travaux"}</span>
+              <a href="/mon-profil" style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 8, background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 12, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
                 {"D\u00E9bloquer \u2192"}
               </a>
             </div>
           )}
-          <div style={{ marginBottom: '20px' }}>
-            {bien.score_travaux ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span className="data-label" style={{ margin: 0, minWidth: '110px' }}>Score IA</span>
-                <div style={{ display: 'flex', gap: '4px' }} className={isFreeBlocked ? 'val-blur' : ''}>
-                  {[1, 2, 3, 4, 5].map(i => {
-                    const color = i <= 2 ? '#1a7a40' : i <= 3 ? '#f0a830' : '#c0392b'
-                    return (
-                      <div key={i} style={{
-                        width: '28px', height: '10px', borderRadius: '4px',
-                        background: i <= (bien.score_travaux || 0) ? color : '#e8e2d8'
-                      }} />
-                    )
-                  })}
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>{bien.score_travaux}/5</span>
-                <ScoreLabel score={bien.score_travaux} />
-              </div>
-            ) : (
-              <div style={{ fontSize: '13px', color: '#7a6a60', marginBottom: '8px' }}>Aucun score IA disponible</div>
-            )}
-            {bien.score_commentaire && (
-              <div style={{ background: '#faf8f5', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#555', lineHeight: '1.5', fontStyle: 'italic', marginBottom: '12px' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
-                {bien.score_commentaire}
-              </div>
-            )}
-            {userToken && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                <span className="data-label" style={{ margin: 0, minWidth: '110px' }}>Mon estimation</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {[1, 2, 3, 4, 5].map(i => {
-                    const scoreAffiche = scorePerso || bien.score_travaux || 0
-                    const active = i <= scoreAffiche
-                    const color = i <= 2 ? '#1a7a40' : i <= 3 ? '#f0a830' : '#c0392b'
-                    return (
-                      <div key={i} onClick={() => handleScorePerso(i)} style={{
-                        width: '28px', height: '11px', borderRadius: '4px',
-                        cursor: 'pointer',
-                        background: active ? color : '#e8e2d8',
-                        transition: 'transform 0.15s'
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scaleY(1.3)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = '' }}
-                      />
-                    )
-                  })}
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{(scorePerso || bien.score_travaux) ? `${scorePerso || bien.score_travaux}/5` : 'NC'}</span>
-                <ScoreLabel score={scorePerso || bien.score_travaux} />
-                {scorePerso && scorePerso !== bien.score_travaux && <span style={{ fontSize: '11px', color: '#b0a898', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleScorePerso(scorePerso)}>{"Réinitialiser au score IA"}</span>}
-              </div>
-            )}
-          </div>
+
           {(() => {
             const scoreUtilise = scorePerso || bien.score_travaux
-            if (!scoreUtilise || !bien.surface) return null
-            const budgetM2 = budgetTravauxM2[String(scoreUtilise)] || 0
-            const totalScore = Math.round(budgetM2 * bien.surface)
+            const scoreAffiche = scoreUtilise || 0
+            const isManual = !!scorePerso && scorePerso !== bien.score_travaux
+            const budgetM2 = scoreUtilise ? (budgetTravauxM2[String(scoreUtilise)] || 0) : 0
+            const totalScore = scoreUtilise && bien.surface ? Math.round(budgetM2 * bien.surface) : 0
             const totalAffiche = hasDetail ? budgetDetailTotal : totalScore
+            const scoreData = SCORE_LABELS[scoreAffiche]
+            const tvaRecup = totalAffiche > 0 ? Math.round(totalAffiche * 0.20) : 0
+
             return (
               <>
-                <div style={{ background: '#fff8f0', border: '1.5px solid #f0d090', borderRadius: '12px', padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#a06010', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                        {hasDetail ? "Budget travaux (par poste)" : "Estimation budget travaux"}
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#7a6a60' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
-                        {hasDetail
-                          ? `${Math.round(totalAffiche / bien.surface)} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`
-                          : `${budgetM2} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2 (${scorePerso ? 'mon estimation' : 'score IA'} ${scoreUtilise}/5)`}
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 800, color: '#a06010' }} className={userPlan === 'free' && freeAnalysesLeft <= 0 ? 'val-blur' : ''}>
-                      {totalAffiche.toLocaleString('fr-FR')} {'\u20AC'}
-                    </div>
+                <div className={`travaux-score${isManual ? ' is-manual' : ''}`}>
+                  {/* Cercle score */}
+                  <div className={`score-circle${isFreeBlocked ? ' val-blur' : ''}`}>
+                    <span className="sc-big">{scoreAffiche || '?'}</span>
+                    <span className="sc-small">/ 5</span>
                   </div>
-                </div>
-                {/* Bouton pour detailler */}
-                <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                  <button onClick={() => setShowDetailTravaux(!showDetailTravaux)} style={{
-                    background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px',
-                    padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: '#7a6a60',
-                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-                  }}>
-                    {showDetailTravaux ? 'Masquer le d\u00E9tail' : 'Affiner le budget travaux'}
-                  </button>
-                  {hasDetail && !showDetailTravaux && (
-                    <span onClick={() => { setDetailTravaux({}); }} style={{ marginLeft: '10px', fontSize: '11px', color: '#c0392b', cursor: 'pointer', textDecoration: 'underline' }}>
-                      {"R\u00E9initialiser au score"}
-                    </span>
+
+                  {/* Info */}
+                  <div className="score-info">
+                    <div className="si-label">{isManual ? 'Mon estimation' : 'Score travaux · IA'}</div>
+                    <div className={`si-h4${isFreeBlocked ? ' val-blur' : ''}`}>
+                      {scoreData ? scoreData.label : 'Aucun score disponible'}
+                    </div>
+                    {bien.score_commentaire && (
+                      <p className={`si-p${isFreeBlocked ? ' val-blur' : ''}`}>{bien.score_commentaire}</p>
+                    )}
+                    {userToken && (
+                      <div className="score-stepper">
+                        {[1, 2, 3, 4, 5].map(i => {
+                          const isActive = scoreAffiche === i
+                          const isIa = isActive && bien.score_travaux === i && !isManual
+                          return (
+                            <button
+                              key={i}
+                              className={`ss-step${isActive ? (isIa ? ' is-active is-ia' : ' is-active') : ''}`}
+                              title={SCORE_LABELS[i]?.label}
+                              onClick={() => handleScorePerso(i)}
+                            >
+                              <span>{i}</span>
+                            </button>
+                          )
+                        })}
+                        {isManual && (
+                          <button className="ss-reset" onClick={() => handleScorePerso(scorePerso)}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            IA
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Budget */}
+                  {totalAffiche > 0 && (
+                    <div className="score-budget">
+                      <div className="sb-lbl">{hasDetail ? 'Budget (par poste)' : 'Budget estim\u00E9'}</div>
+                      <div className={`sb-amount${isFreeBlocked ? ' val-blur' : ''}`}>
+                        {totalAffiche.toLocaleString('fr-FR')} {'\u20AC'}
+                      </div>
+                      {bien.surface && (
+                        <div className={`sb-calc${isFreeBlocked ? ' val-blur' : ''}`}>
+                          {hasDetail
+                            ? `${Math.round(totalAffiche / bien.surface)} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`
+                            : `${budgetM2} \u20AC/m\u00B2 \u00D7 ${bien.surface} m\u00B2`}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
+
+                {/* TVA sur marge */}
+                {tvaRecup > 0 && (
+                  <div className="tva-block">
+                    <div className="txt">
+                      <strong>TVA sur marge activable en régime MdB</strong>
+                      {`Sur ce budget travaux, la TVA r\u00E9cup\u00E9rable est d\u2019environ ${tvaRecup.toLocaleString('fr-FR')}\u00A0\u20AC (20\u00A0%). Int\u00E9gr\u00E9 dans l\u2019analyse fiscale.`}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bouton Affiner */}
+                {scoreUtilise && bien.surface && (
+                  <div style={{ textAlign: 'center', marginTop: '14px' }}>
+                    <button onClick={() => setShowDetailTravaux(!showDetailTravaux)} style={{
+                      background: 'none', border: '1px solid #e8e2d8', borderRadius: '8px',
+                      padding: '7px 20px', fontSize: '12px', fontWeight: 600, color: '#7a6a60',
+                      cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                      display: 'inline-flex', alignItems: 'center', gap: '6px', transition: 'all .15s'
+                    }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                      {showDetailTravaux ? 'Masquer le d\u00E9tail' : 'Affiner le budget travaux'}
+                    </button>
+                    {hasDetail && !showDetailTravaux && (
+                      <div style={{ marginTop: '6px' }}>
+                        <span onClick={() => setDetailTravaux({})} style={{ fontSize: '11px', color: '#c0392b', cursor: 'pointer', textDecoration: 'underline' }}>
+                          {"R\u00E9initialiser au score"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Detail par poste — modal */}
                 <ModalPanel open={showDetailTravaux} onClose={() => setShowDetailTravaux(false)} title="Affiner le budget travaux">
                   <div style={{ marginTop: '16px', background: '#faf8f5', borderRadius: '12px', padding: '16px 20px', border: '1px solid #f0ede8' }}>
@@ -3448,168 +4189,389 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           )}
         </div>
 
-        {/* Documents PDF enchères — colonne droite, après travaux */}
-        {isEnchere && bien.documents && (() => {
-          const docs = typeof bien.documents === 'string' ? JSON.parse(bien.documents) : bien.documents
-          if (!docs || docs.length === 0) return null
-          const icons: Record<string, string> = { ccv: '\uD83D\uDCCB', pv: '\uD83D\uDCDD', diag: '\uD83C\uDFE5', affiche: '\uD83D\uDCE2', autre: '\uD83D\uDCC4' }
-          return (
+        {activeNav === 'financement' && (peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
+          <div id="nav-financement" className="fin-grid">
+            {/* Colonne gauche : paramètres */}
             <div className="section">
-              <h2 className="section-title">Documents Juridiques</h2>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {docs.map((doc: any, i: number) => (
-                  <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '5px',
-                    padding: '6px 12px', background: '#faf8f5', borderRadius: '8px',
-                    border: '1px solid #e8e2d8', textDecoration: 'none',
-                    color: '#1a1210', fontSize: '12px', fontWeight: 500,
-                  }}>
-                    <span style={{ fontSize: '14px' }}>{icons[doc.type] || icons.autre}</span>
-                    {doc.label || doc.type}
-                    <span style={{ color: '#7a6a60', marginLeft: '4px' }}>↗</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )
-        })()}
-
-        {(peutCalculer || (isTravauxLourds && bien.prix_fai)) && (
-          <>
-            <div id="nav-financement" className="section">
-              <h2 className="section-title">Simulateur de Financement</h2>
-                <div>
-                  {prixCibleCombine && (
-                    <div className="param-group">
-                      <label className="param-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce (frais d\u2019agence inclus). Utile pour simuler l\u2019achat au prix demand\u00E9.\n\n\u2022 Prix cible : le prix id\u00E9al calcul\u00E9 selon votre objectif de cashflow ou de plus-value. Utile pour pr\u00E9parer une offre."}</span></span></label>
-                      <div className="toggle-row">
-                        <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                        <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
-                      </div>
-                    </div>
-                  )}
-                  <div className="param-group">
-                    <label className="param-label">Montant du projet (frais notaire inclus)</label>
-                    <div className="param-input" style={{ background: '#f0ede8', color: '#1a1210', fontWeight: 700, fontSize: '16px' }}>{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
-                    <span className="param-hint">Base : {fmt(prixBase)} {'\u20AC'} + {fraisNotaire}% notaire{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} \u20AC travaux` : ''}</span>
+              <h2 className="section-title">Simulateur de financement</h2>
+              <p className="section-subtitle">{"Ajustez les param\u00E8tres pour calculer vos mensualit\u00E9s"}</p>
+              {isEnchere ? (
+                <div className="fin-block">
+                  <div className="fin-label">Base de calcul</div>
+                  <div className="fin-chip-group">
+                    <button className={`fin-chip ${enchereFinMode === 'mise_a_prix' ? 'active' : ''}`} onClick={() => setEnchereFinMode('mise_a_prix')}>Mise à prix</button>
+                    <button className={`fin-chip ${enchereFinMode === 'calcule' ? 'active' : ''}`} onClick={() => setEnchereFinMode('calcule')}>{`Enchère max (obj. ${objectifPV || 20}% PV)`}</button>
+                    <button className={`fin-chip ${enchereFinMode === 'libre' ? 'active' : ''}`} onClick={() => setEnchereFinMode('libre')}>Enchère max libre</button>
                   </div>
-                  <div className="param-group">
-                    <label className="param-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</label>
-                    <div className="slider-wrap">
-                      <input type="range" className="slider" min={0} max={100} step={0.5} value={apportPct}
-                        onChange={e => { const pct = Number(e.target.value); setApport(Math.round(montantProjet * pct / 100)) }} />
-                      <div className="slider-labels"><span>0 %</span><span>100 %</span></div>
-                    </div>
-                    <input className="param-input" type="number" value={apport} onChange={e => setApport(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setApport(profil?.apport ?? 0) }} placeholder={"Montant en \u20AC"} />
-                    <span className="param-hint">{"Montant emprunt\u00E9"} : {fmt(montantEmprunte)} {'\u20AC'}</span>
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Type de cr{'\u00E9'}dit <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Choisissez le type de cr\u00E9dit pour votre simulation.\n\n\u2022 Amortissable : vous remboursez le capital + les int\u00E9r\u00EAts chaque mois. Mensualit\u00E9 plus \u00E9lev\u00E9e mais le capital emprunt\u00E9 diminue au fil du temps. Dur\u00E9e : 5 \u00E0 30\u00A0ans.\n\n\u2022 In fine : vous ne payez que les int\u00E9r\u00EAts chaque mois. Le capital est rembours\u00E9 en une seule fois \u00E0 la revente du bien. Mensualit\u00E9 plus faible, utilis\u00E9 par les marchands de biens. Dur\u00E9e : 1 \u00E0 5\u00A0ans."}</span></span></label>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button type="button" onClick={() => setTypeCredit('amortissable')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: typeCredit === 'amortissable' ? '#1a1210' : '#fff', color: typeCredit === 'amortissable' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Amortissable</button>
-                      <button type="button" onClick={() => setTypeCredit('in_fine')} style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e8e2d8', background: typeCredit === 'in_fine' ? '#1a1210' : '#fff', color: typeCredit === 'in_fine' ? '#fff' : '#7a6a60', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>In fine</button>
-                    </div>
-                    {typeCredit === 'in_fine' && <span className="param-hint">{"Int\u00E9r\u00EAts seuls chaque mois, capital rembours\u00E9 \u00E0 la revente"}</span>}
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label">{"Taux cr\u00E9dit (%)"}</label>
-                    <input className="param-input" type="number" step="0.01" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTaux(profil?.taux_credit ?? 3.5) }} />
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label">Taux assurance (%)</label>
-                    <input className="param-input" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTauxAssurance(profil?.taux_assurance ?? 0.3) }} />
-                  </div>
-                  <div className="param-group">
-                    <label className="param-label">{"Dur\u00E9e"} — {duree} an{duree > 1 ? 's' : ''}</label>
-                    <div className="slider-wrap">
-                      {typeCredit === 'in_fine' ? (
-                        <>
-                          <input type="range" className="slider" min={1} max={5} step={1} value={Math.min(duree, 5)} onChange={e => setDuree(Number(e.target.value))} />
-                          <div className="slider-labels"><span>1 an</span><span>5 ans</span></div>
-                        </>
-                      ) : (
-                        <>
-                          <input type="range" className="slider" min={5} max={30} step={1} value={duree} onChange={e => setDuree(Number(e.target.value))} />
-                          <div className="slider-labels"><span>5 ans</span><span>30 ans</span></div>
-                        </>
+                  {enchereFinMode === 'libre' && (
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '8px' }}>
+                      <input
+                        type="number"
+                        placeholder=""
+                        value={enchereManuelMax || ''}
+                        onChange={ev => setEnchereManuelMax(ev.target.value ? Number(ev.target.value) : null)}
+                        className="fin-field"
+                        style={{ flex: 1 }}
+                      />
+                      {enchereManuelMax && (
+                        <button onClick={() => setEnchereManuelMax(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a6a60', fontSize: '18px', padding: '4px', lineHeight: 1 }}>{'×'}</button>
                       )}
                     </div>
+                  )}
+                </div>
+              ) : (
+                <div className="fin-block">
+                  <div className="fin-label">Base de calcul <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"D\u00E9termine le prix utilis\u00E9 pour calculer le montant du projet et l\u2019emprunt.\n\n\u2022 Prix FAI : le prix affich\u00E9 dans l\u2019annonce.\n\n\u2022 Prix cible : le prix calcul\u00E9 selon votre objectif (cashflow ou plus-value).\n\n\u2022 Prix libre : saisissez un prix personnalis\u00E9 pour simuler un sc\u00E9nario sp\u00E9cifique."}</span></span></div>
+                  <div className="fin-chip-group">
+                    <button className={`fin-chip ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
+                    <button className={`fin-chip ${prixCibleCombine ? (baseCalc === 'cible' ? 'active' : '') : ''}`} onClick={() => prixCibleCombine && setBaseCalc('cible')} style={!prixCibleCombine ? { opacity: 0.4, cursor: 'default' } : {}}>Prix cible</button>
+                    <button className={`fin-chip ${baseCalc === 'libre' ? 'active' : ''}`} onClick={() => setBaseCalc('libre')}>Prix libre</button>
                   </div>
                 </div>
-                {/* Mensualités */}
-                <div style={{ background: '#f7f4f0', borderRadius: '10px', padding: '16px 18px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>
-                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>{typeCredit === 'in_fine' ? "Int\u00E9r\u00EAts mensuels (in fine)" : "Mensualit\u00E9 cr\u00E9dit"}</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{fmt(mensualiteCredit)} {'\u20AC'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #e8e2d8' }}>
-                    <span style={{ fontSize: '12px', color: '#7a6a60' }}>Assurance emprunteur</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1210' }}>{fmt(mensualiteAss)} {'\u20AC'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a1210' }}>{"Mensualité totale"}</span>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: '#c0392b' }}>{fmt(mensualiteTotale)} {'\u20AC'}<span style={{ fontSize: '13px', fontWeight: 600, color: '#7a6a60', marginLeft: '4px' }}>/mois</span></span>
-                  </div>
+              )}
+              <div className="fin-block">
+                <div className="fin-label">Montant du projet (frais notaire inclus)</div>
+                <div className="fin-calc-field">{fmt(Math.round(montantProjet))} {'\u20AC'}</div>
+                <div className="fin-hint">{isEnchere ? `Prix enchère : ${fmt(prixBase)} €` : `Base : ${fmt(prixBase)} € + ${fraisNotaire}% notaire`}{budgetTravCalc > 0 ? ` + ${fmt(budgetTravCalc)} € travaux` : ''}</div>
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">Apport — {apportPct} % du projet ({fmt(apportNum)} {'\u20AC'})</div>
+                <input type="range" className="fin-slider" min={0} max={100} step={0.5} value={apportPct}
+                  style={{ '--val': apportPct } as React.CSSProperties}
+                  onChange={e => { const pct = Number(e.target.value); setApport(Math.round(montantProjet * pct / 100)) }} />
+                <div className="fin-slider-labels"><span>0 %</span><span>100 %</span></div>
+                <input className="fin-field" type="number" value={apport} onChange={e => setApport(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setApport(profil?.apport ?? 0) }} placeholder={"Montant en \u20AC"} />
+                <div className="fin-hint">{"Montant emprunt\u00E9"} : <strong style={{ color: '#1f1b16' }}>{fmt(montantEmprunte)} {'\u20AC'}</strong></div>
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">Type de cr{'\u00E9'}dit <span className="pnl-tooltip-wrap" style={{ position: 'relative', cursor: 'help', fontSize: '11px', color: '#b0a898', border: '1px solid #b0a898', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?<span className="pnl-tooltip-text">{"Choisissez le type de cr\u00E9dit pour votre simulation.\n\n\u2022 Amortissable : vous remboursez le capital + les int\u00E9r\u00EAts chaque mois. Mensualit\u00E9 plus \u00E9lev\u00E9e mais le capital emprunt\u00E9 diminue au fil du temps. Dur\u00E9e : 5 \u00E0 30\u00A0ans.\n\n\u2022 In fine : vous ne payez que les int\u00E9r\u00EAts chaque mois. Le capital est rembours\u00E9 en une seule fois \u00E0 la revente du bien. Mensualit\u00E9 plus faible, utilis\u00E9 par les marchands de biens. Dur\u00E9e : 1 \u00E0 5\u00A0ans."}</span></span></div>
+                <div className="fin-chip-group">
+                  <button type="button" className={`fin-chip ${typeCredit === 'amortissable' ? 'active' : ''}`} onClick={() => setTypeCredit('amortissable')}>Amortissable</button>
+                  <button type="button" className={`fin-chip ${typeCredit === 'in_fine' ? 'active' : ''}`} onClick={() => setTypeCredit('in_fine')}>In fine</button>
                 </div>
-                {profil && <div className="profil-bar">{"Paramètres pré-remplis depuis votre profil — modifiables dans Mon profil"}</div>}
+                {typeCredit === 'in_fine' && <div className="fin-hint">{"Int\u00E9r\u00EAts seuls chaque mois, capital rembours\u00E9 \u00E0 la revente"}</div>}
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">{"Taux cr\u00E9dit (%)"}</div>
+                <input className="fin-field" type="number" step="0.01" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTaux(profil?.taux_credit ?? 3.5) }} />
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">Taux assurance (%)</div>
+                <input className="fin-field" type="number" step="0.01" value={tauxAssurance} onChange={e => setTauxAssurance(e.target.value === '' ? '' : Number(e.target.value))} onBlur={e => { if (e.target.value === '') setTauxAssurance(profil?.taux_assurance ?? 0.3) }} />
+              </div>
+              <div className="fin-block">
+                <div className="fin-label">{"Dur\u00E9e"} — {duree} an{duree > 1 ? 's' : ''}</div>
+                {typeCredit === 'in_fine' ? (
+                  <>
+                    <input type="range" className="fin-slider" min={1} max={5} step={1} value={Math.min(duree, 5)}
+                      style={{ '--val': ((Math.min(duree, 5) - 1) / 4) * 100 } as React.CSSProperties}
+                      onChange={e => setDuree(Number(e.target.value))} />
+                    <div className="fin-slider-labels"><span>1 an</span><span>5 ans</span></div>
+                  </>
+                ) : (
+                  <>
+                    <input type="range" className="fin-slider" min={5} max={30} step={1} value={duree}
+                      style={{ '--val': ((duree - 5) / 25) * 100 } as React.CSSProperties}
+                      onChange={e => setDuree(Number(e.target.value))} />
+                    <div className="fin-slider-labels"><span>5 ans</span><span>30 ans</span></div>
+                  </>
+                )}
+              </div>
+              {profil && <div className="profil-bar">{"Param\u00E8tres pr\u00E9-remplis depuis votre profil \u2014 modifiables dans Mon profil"}</div>}
             </div>
-          </>
+
+            {/* Colonne droite */}
+            <div className="fin-right-col">
+              {/* Résultats du crédit */}
+              <div className="section">
+                <h2 className="section-title">{"R\u00E9sultats du cr\u00E9dit"}</h2>
+                <p className="section-subtitle">Calcul en temps r{'\u00E9'}el selon vos param{'\u00E8'}tres</p>
+                <div className="fin-result-stack">
+                  <div className="fin-result-line">
+                    <span>{typeCredit === 'in_fine' ? "Int\u00E9r\u00EAts mensuels (in fine)" : "Mensualit\u00E9 cr\u00E9dit"}</span>
+                    <span className="fin-v">{fmt(mensualiteCredit)} {'\u20AC'}</span>
+                  </div>
+                  <div className="fin-result-line">
+                    <span>Assurance emprunteur</span>
+                    <span className="fin-v">{fmt(mensualiteAss)} {'\u20AC'}</span>
+                  </div>
+                  <div style={{ marginTop: '8px', background: '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+                    <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Mensualit\u00E9 totale"}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {fmt(mensualiteTotale)} {'\u20AC'}<span style={{ fontSize: '13px', fontWeight: 600, color: '#c0392b', opacity: 0.7, marginLeft: '3px' }}>/mois</span>
+                      </span>
+                      <span style={{ fontSize: '13px', color: '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {fmt(mensualiteTotale * 12)} {'\u20AC'}/an
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="fin-sub-stats">
+                  <div className="fin-sub-stat">
+                    <div className="fin-sub-lbl">{"Co\u00FBt total int\u00E9r\u00EAts"}</div>
+                    <div className="fin-sub-val" style={{ color: '#c0392b' }}>{fmt(totalInterets)} {'\u20AC'}</div>
+                  </div>
+                  <div className="fin-sub-stat">
+                    <div className="fin-sub-lbl">{"Co\u00FBt total assurance"}</div>
+                    <div className="fin-sub-val" style={{ color: '#c0392b' }}>{fmt(totalAssurance)} {'\u20AC'}</div>
+                  </div>
+                  <div className="fin-sub-stat">
+                    <div className="fin-sub-lbl">{"Co\u00FBt total cr\u00E9dit"}</div>
+                    <div className="fin-sub-val">{fmt(totalCredit)} {'\u20AC'}</div>
+                  </div>
+                  <div className="fin-sub-stat fin-sub-highlight">
+                    <div className="fin-sub-lbl">Total {'\u00E0'} rembourser</div>
+                    <div className="fin-sub-val">{fmt(totalRembourser)} {'\u20AC'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cash Flow Avant Impôt */}
+              {peutCalculer && !isTravauxLourds && bien.loyer && (
+                <div className="section fin-cashflow-card">
+                  <h2 className="section-title">{"Revenus locatifs \u00B7 Cash flow avant imp\u00F4t"}</h2>
+                  <p className="section-subtitle">{"Votre tr\u00E9sorerie op\u00E9rationnelle, avant optimisation fiscale"}</p>
+                  <div className="cf-grid">
+                    <div className="cf-grid-header">
+                      <span></span>
+                      <span>Mensuel</span>
+                      <span></span>
+                      <span></span>
+                      <span>Annuel</span>
+                      <span></span>
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Loyer"} <span style={{ fontSize: '11px', color: '#a39a8c' }}>{bien.type_loyer === 'CC' ? '(CC)' : '(HC)'}</span></span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="loyer"
+                        dbVal={bien.loyer ?? null}
+                        draftVal={localDrafts["loyer"] ?? null}
+                        statut={champsStatut["loyer"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
+                      <span></span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="loyer"
+                        dbVal={bien.loyer ?? null}
+                        draftVal={localDrafts["loyer"] ?? null}
+                        statut={champsStatut["loyer"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={12}
+                      />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{bien.type_loyer === 'CC' ? "Charges r\u00E9cup. (CC)" : "Charges r\u00E9cup."}</span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_rec"
+                        dbVal={bien.charges_rec ?? null}
+                        draftVal={localDrafts["charges_rec"] ?? null}
+                        statut={champsStatut["charges_rec"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
+                      <span></span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_rec"
+                        dbVal={bien.charges_rec ?? null}
+                        draftVal={localDrafts["charges_rec"] ?? null}
+                        statut={champsStatut["charges_rec"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={12}
+                      />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Charges copro"}</span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_copro"
+                        dbVal={bien.charges_copro ?? null}
+                        draftVal={localDrafts["charges_copro"] ?? null}
+                        statut={champsStatut["charges_copro"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
+                      <span></span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="charges_copro"
+                        dbVal={bien.charges_copro ?? null}
+                        draftVal={localDrafts["charges_copro"] ?? null}
+                        statut={champsStatut["charges_copro"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={12}
+                      />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Taxe fonci\u00E8re"}</span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="taxe_fonc_ann"
+                        dbVal={bien.taxe_fonc_ann ?? null}
+                        draftVal={localDrafts["taxe_fonc_ann"] ?? null}
+                        statut={champsStatut["taxe_fonc_ann"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                        scale={1/12}
+                      />
+                      <span></span>
+                      <CellEditableShared
+                        bienId={id}
+                        champ="taxe_fonc_ann"
+                        dbVal={bien.taxe_fonc_ann ?? null}
+                        draftVal={localDrafts["taxe_fonc_ann"] ?? null}
+                        statut={champsStatut["taxe_fonc_ann"] ?? null}
+                        isSourceData={bien.extraction_statut === 'ok'}
+                        onValueChange={(c, v) => setBien((prev: any) => ({ ...prev, [c]: v }))}
+                        onSubmit={async (c, v) => { await handleUpdate(c, v) }}
+                        userToken={userToken ?? undefined}
+                        suffix=""
+                      />
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">{"Mensualit\u00E9 cr\u00E9dit"}</span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit)} {'\u20AC'}</span>
+                      <span></span>
+                      <span></span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteCredit * 12)} {'\u20AC'}</span>
+                      <span></span>
+                    </div>
+                    <div className="cf-grid-row">
+                      <span className="cf-grid-lbl">Assurance emprunteur</span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteAss)} {'\u20AC'}</span>
+                      <span></span>
+                      <span></span>
+                      <span className={`cf-grid-static${isFreeBlocked ? ' val-blur' : ''}`} style={{ color: '#c0392b' }}>-{fmt(mensualiteAss * 12)} {'\u20AC'}</span>
+                      <span></span>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '16px', background: cashflowBrut >= 0 ? '#d4f5e0' : '#fde8e8', borderRadius: '10px', padding: '12px 16px' }}>
+                    <div style={{ fontSize: '11px', color: '#7a6a60', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Cash Flow Avant Imp\u00F4t"}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 800, color: cashflowBrut >= 0 ? '#1a7a40' : '#c0392b' }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {cashflowBrut >= 0 ? '+' : ''}{fmt(cashflowBrut)} {'\u20AC'}/mois
+                      </span>
+                      <span style={{ fontSize: '13px', color: (cashflowBrut * 12) >= 0 ? '#1a7a40' : '#c0392b', fontWeight: 600 }} className={isFreeBlocked ? 'val-blur' : ''}>
+                        {(cashflowBrut * 12) >= 0 ? '+' : ''}{fmt(cashflowBrut * 12)} {'\u20AC'}/an
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
         </div>{/* fin col droite */}
         </div>{/* fin two-cols nav-estimation */}
+        </div>)}
 
-        {bien.prix_fai && (
+        {activeNav === 'fiscalite' && bien.prix_fai && (<div className="tab-panel">
           <div id="nav-fiscalite">
-          <div className="section">
-            <h2 className="section-title">Analyse Fiscale</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#7a6a60' }}>Comparer avec :</span>
-                {userPlan === 'expert' ? (
-                  <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
-                    {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
-                ) : (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <span className="param-input" style={{ width: 'auto', background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
-                    <a href="/#pricing" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Tous les r\u00E9gimes \u2192 Expert"}</a>
-                  </span>
-                )}
+            {profil !== null && profil.tmi == null && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
+                background: '#fff8e1', border: '1.5px solid #f39c12', borderRadius: 10,
+                padding: '10px 16px', marginBottom: 16,
+              }}>
+                <span style={{ fontSize: 13, color: '#7a4f00', fontWeight: 500 }}>
+                  {'Simulation basée sur TMI 30 % (valeur par défaut)'}
+                </span>
+                <button
+                  onClick={() => { setDrawerTmi(null); setDrawerRegime(profil?.regime || regime); setShowTmiDrawer(true) }}
+                  style={{ padding: '6px 16px', borderRadius: 8, background: '#f39c12', color: '#fff', fontWeight: 600, fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {'Personnaliser en 30 sec →'}
+                </button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"D\u00E9tention :"}</span>
-                {[1, 2, 3, 4, 5, 10, 15, 20].map(d => (
-                  <button key={d} onClick={() => setDureeRevente(d)} style={{
-                    padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                    border: dureeRevente === d ? '2px solid #c0392b' : '1.5px solid #e8e2d8',
-                    background: dureeRevente === d ? '#fde8e8' : '#faf8f5',
-                    color: dureeRevente === d ? '#c0392b' : '#7a6a60',
-                  }}>
-                    {d} an{d > 1 ? 's' : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              {prixCibleCombine && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#7a6a60', whiteSpace: 'nowrap' }}>Base de calcul :</span>
-                  <div className="toggle-row" style={{ minWidth: '220px' }}>
-                    <button className={`toggle-btn ${baseCalc === 'fai' ? 'active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
-                    <button className={`toggle-btn ${baseCalc === 'cible' ? 'active' : ''}`} onClick={() => setBaseCalc('cible')}>Prix cible</button>
+            )}
+            <div className="fiscal-controls">
+              {/* Row 1 : Détention | Base de calcul */}
+              <div className="fiscal-controls-grid">
+                <div className="control-group">
+                  <span className="lbl">{"D\u00E9tention"}</span>
+                  <div className="chip-group">
+                    {[1, 2, 3, 4, 5, 10, 15, 20].map(d => (
+                      <button key={d} className={`chip-btn${dureeRevente === d ? ' active' : ''}`} onClick={() => setDureeRevente(d)}>
+                        {d} an{d > 1 ? 's' : ''}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-              {!isEnchere && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '13px', color: '#7a6a60' }}>{"Frais d\u2019agence \u00E0 l\u2019achat :"}</span>
-                  <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
-                    onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
-                    onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
-                    className="param-input" style={{ width: '60px', textAlign: 'right' }} />
-                  <span style={{ fontSize: '12px', color: '#7a6a60' }}>%</span>
+                {isEnchere ? (
+                <div className="control-group">
+                  <span className="lbl">Base de calcul</span>
+                  <div className="chip-group">
+                    <button className={`chip-btn${enchereFinMode === 'mise_a_prix' ? ' active' : ''}`} onClick={() => setEnchereFinMode('mise_a_prix')}>Mise à prix</button>
+                    <button className={`chip-btn${enchereFinMode === 'calcule' ? ' active' : ''}`} onClick={() => setEnchereFinMode('calcule')}>{`Max (obj. ${objectifPV || 20}% PV)`}</button>
+                    <button className={`chip-btn${enchereFinMode === 'libre' ? ' active' : ''}`} onClick={() => setEnchereFinMode('libre')}>Max libre</button>
+                  </div>
                 </div>
-              )}
+                ) : (
+                <div className="control-group">
+                  <span className="lbl">Base de calcul</span>
+                  <div className="chip-group">
+                    <button className={`chip-btn${baseCalc === 'fai' ? ' active' : ''}`} onClick={() => setBaseCalc('fai')}>Prix FAI</button>
+                    <button className={`chip-btn${prixCibleCombine ? (baseCalc === 'cible' ? ' active' : '') : ''}`} onClick={() => prixCibleCombine && setBaseCalc('cible')} style={!prixCibleCombine ? { opacity: 0.4, cursor: 'default' } : {}}>Prix cible</button>
+                    <button className={`chip-btn${baseCalc === 'libre' ? ' active' : ''}`} onClick={() => setBaseCalc('libre')}>Prix libre</button>
+                  </div>
+                </div>
+                )}
+              </div>
+              {/* Row 2 : Frais agence | Comparer avec */}
+              <div className="fiscal-controls-grid fiscal-row-2">
+                {!isEnchere && (
+                  <div className="control-group">
+                    <span className="lbl">{"Frais agence \u00E0 l\u2019achat"}</span>
+                    <input type="number" step="0.5" min="0" max="10" value={fraisAgenceRevente}
+                      onChange={e => setFraisAgenceRevente(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={e => { if (e.target.value === '') setFraisAgenceRevente(5) }}
+                      className="select-custom select-inline-num" />
+                    <span className="lbl">%</span>
+                  </div>
+                )}
+                <div className="control-group">
+                  <span className="lbl">Comparer avec</span>
+                  {userPlan !== 'free' ? (
+                    <select className="select-custom" value={regime2} onChange={e => setRegime2(e.target.value)}>
+                      {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    </select>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="select-custom" style={{ background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
+                      <a href="/mon-profil" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Comparer les r\u00E9gimes \u2192 Pro"}</a>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
             <div>
               {isFreeBlocked && (
@@ -3626,14 +4588,13 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   </a>
                 </div>
               )}
-              <div className="pnl-grid">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
-                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
+              <div className="fiscal-compare">
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} honorairesAvocat={Number(honorairesAvocat)} />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} honorairesAvocat={Number(honorairesAvocat)} />
               </div>
             </div>
           </div>
-          </div>
-        )}
+        </div>)}
 
         {/* Modal Source annonce */}
         <ModalPanel open={showSourceModal} onClose={() => setShowSourceModal(false)} title="Annonce source">
@@ -3711,15 +4672,42 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 {bien.avocat_tel}
               </a>
             )}
-            {bien.avocat_email && (
-              <a href={`mailto:${bien.avocat_email}`} style={{
+            {(bien.avocat_email || avocatEmailSaved) ? (
+              <a href={`mailto:${avocatEmailSaved || bien.avocat_email}`} style={{
                 display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px',
                 background: '#faf8f5', borderRadius: '10px', border: '1.5px solid #e8e2d8',
                 textDecoration: 'none', color: '#1a1210', fontSize: '15px', fontWeight: 600,
               }}>
                 <span style={{ fontSize: '20px' }}>{'\u2709'}</span>
-                {bien.avocat_email}
+                {avocatEmailSaved || bien.avocat_email}
               </a>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="email"
+                  placeholder="Email de l'avocat"
+                  value={avocatEmailInput}
+                  onChange={e => setAvocatEmailInput(e.target.value)}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #e8e2d8', fontSize: '14px', outline: 'none' }}
+                />
+                <button
+                  disabled={!avocatEmailInput || avocatEmailSaving}
+                  onClick={async () => {
+                    if (!avocatEmailInput) return
+                    setAvocatEmailSaving(true)
+                    const res = await fetch(`/api/encheres/${bien.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ avocat_email: avocatEmailInput }),
+                    })
+                    if (res.ok) setAvocatEmailSaved(avocatEmailInput)
+                    setAvocatEmailSaving(false)
+                  }}
+                  style={{ padding: '10px 16px', borderRadius: '8px', background: '#2a4a8a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', opacity: avocatEmailInput ? 1 : 0.5 }}
+                >
+                  {avocatEmailSaving ? '...' : 'Enregistrer'}
+                </button>
+              </div>
             )}
             {bien.tribunal && (
               <div style={{ fontSize: '13px', color: '#7a6a60', padding: '8px 0', borderTop: '1px solid #f0ede8' }}>
@@ -3794,6 +4782,272 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         })()}
 
       </div>
+
+      {/* Modal — Compléter les données du bien */}
+      <ModalPanel open={showCompleterModal} onClose={() => setShowCompleterModal(false)} title="Compléter les données du bien">
+        <div style={{ fontSize: '13px', color: 'var(--ink-soft, #6b6358)', marginBottom: '20px' }}>
+          Saisissez les infos que vous avez récupérées — chaque donnée partagée améliore la précision de l{"'"}analyse.
+        </div>
+
+        <div className="modal-section-title" style={{ marginBottom: '10px' }}>
+          <span>Caractéristiques du bien</span>
+          {completableManquants.length > 0 && <span className="modal-section-count">{completableManquants.length} à compléter</span>}
+        </div>
+
+        {/* Adresse */}
+        <div style={{ marginBottom: '16px', padding: '12px 14px', background: 'var(--paper, #f5ede2)', borderRadius: '10px', border: '1px solid var(--line, #e6dccb)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11px', color: 'var(--ink-mute, #a39a8c)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Adresse du bien</div>
+            {modalFieldVals['adresse'] !== undefined ? (
+              <input type="text" autoFocus value={modalFieldVals['adresse']} onChange={e => setModalFieldVals(p => ({ ...p, adresse: e.target.value }))} placeholder="Ex : 12 rue de Rivoli, 75001 Paris" style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '13px', fontFamily: 'inherit', color: 'var(--ink, #1f1b16)', outline: 'none' }} onKeyDown={e => e.key === 'Enter' && saveModalField('adresse')} />
+            ) : (
+              <div style={{ fontSize: '13px', color: bien.adresse ? 'var(--ink, #1f1b16)' : 'var(--ink-mute, #a39a8c)', cursor: 'pointer' }} onClick={() => setModalFieldVals(p => ({ ...p, adresse: bien.adresse || '' }))}>{bien.adresse || "Renseigner l'adresse"}</div>
+            )}
+          </div>
+          {modalFieldVals['adresse'] !== undefined ? (
+            <button className="mf-validate" onClick={() => saveModalField('adresse')}>✓</button>
+          ) : (
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-mute, #a39a8c)', padding: '4px' }} onClick={() => setModalFieldVals(p => ({ ...p, adresse: bien.adresse || '' }))}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+          )}
+        </div>
+
+        <div className="modal-fields" style={{ marginBottom: '20px' }}>
+          {/* Année de construction — toutes stratégies */}
+          <div className="modal-field">
+            <span className="mf-label">{"Ann\u00E9e de construction"}</span>
+            <span className="mf-control"><input type="number" min={1800} max={2030} placeholder="NC" className={getModalFieldClass('annee_construction')} value={getModalVal('annee_construction')} onChange={e => setModalDraft('annee_construction', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('annee_construction')} /></span>
+            <button className={`mf-validate${getModalFieldClass('annee_construction') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('annee_construction') !== 'mf-draft'} onClick={() => saveModalField('annee_construction')}>✓</button>
+          </div>
+          {/* Surface terrain — maison uniquement */}
+          {(bien.type_bien || '').toLowerCase().includes('maison') && (
+            <div className="modal-field">
+              <span className="mf-label">Surface terrain <span className="mf-unit">(m²)</span></span>
+              <span className="mf-control"><input type="number" min={0} placeholder="NC" className={getModalFieldClass('surface_terrain')} value={getModalVal('surface_terrain')} onChange={e => setModalDraft('surface_terrain', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('surface_terrain')} /></span>
+              <button className={`mf-validate${getModalFieldClass('surface_terrain') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('surface_terrain') !== 'mf-draft'} onClick={() => saveModalField('surface_terrain')}>✓</button>
+            </div>
+          )}
+          {/* Salles de bain — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Salles de bain</span>
+              <span className="mf-control"><input type="number" min={0} max={20} placeholder="NC" className={getModalFieldClass('nb_sdb')} value={getModalVal('nb_sdb')} onChange={e => setModalDraft('nb_sdb', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('nb_sdb')} /></span>
+              <button className={`mf-validate${getModalFieldClass('nb_sdb') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('nb_sdb') !== 'mf-draft'} onClick={() => saveModalField('nb_sdb')}>✓</button>
+            </div>
+          )}
+          {/* GES — toutes stratégies */}
+          <div className="modal-field">
+            <span className="mf-label">GES</span>
+            <span className="mf-control"><select className={getModalFieldClass('ges')} value={getModalVal('ges')} onChange={e => setModalDraft('ges', e.target.value)}><option value="">NC</option>{['A','B','C','D','E','F','G'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+            <button className={`mf-validate${getModalFieldClass('ges') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('ges') !== 'mf-draft'} onClick={() => saveModalField('ges')}>✓</button>
+          </div>
+          {/* Type de chauffage — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Type de chauffage</span>
+              <span className="mf-control"><select className={getModalFieldClass('type_chauffage')} value={getModalVal('type_chauffage')} onChange={e => setModalDraft('type_chauffage', e.target.value)}><option value="">NC</option>{['Gaz','Fioul','\u00C9lectrique','Pompe \u00E0 chaleur','Bois / pellets','Collectif'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('type_chauffage') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('type_chauffage') !== 'mf-draft'} onClick={() => saveModalField('type_chauffage')}>✓</button>
+            </div>
+          )}
+          {/* Exposition — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Exposition</span>
+              <span className="mf-control"><select className={getModalFieldClass('exposition')} value={getModalVal('exposition')} onChange={e => setModalDraft('exposition', e.target.value)}><option value="">NC</option>{['N','S','E','O','NE','NO','SE','SO'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('exposition') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('exposition') !== 'mf-draft'} onClick={() => saveModalField('exposition')}>✓</button>
+            </div>
+          )}
+          {/* Balcon / Terrasse — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Balcon / Terrasse</span>
+              <span className="mf-control"><select className={getModalFieldClass('acces_exterieur')} value={getModalVal('acces_exterieur')} onChange={e => setModalDraft('acces_exterieur', e.target.value)}><option value="">NC</option>{['aucun','balcon','terrasse','loggia','jardin'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('acces_exterieur') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('acces_exterieur') !== 'mf-draft'} onClick={() => saveModalField('acces_exterieur')}>✓</button>
+            </div>
+          )}
+          {/* Parking / Garage — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Parking / Garage</span>
+              <span className="mf-control"><select className={getModalFieldClass('parking_type')} value={getModalVal('parking_type')} onChange={e => setModalDraft('parking_type', e.target.value)}><option value="">NC</option>{['aucun','inclus','en option','box'].map(o => <option key={o} value={o}>{o}</option>)}</select></span>
+              <button className={`mf-validate${getModalFieldClass('parking_type') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('parking_type') !== 'mf-draft'} onClick={() => saveModalField('parking_type')}>✓</button>
+            </div>
+          )}
+          {/* Ascenseur — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Ascenseur</span>
+              <span className="mf-control"><select className={modalFieldVals['ascenseur'] !== undefined ? 'mf-draft' : bien.ascenseur != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['ascenseur'] !== undefined ? (modalFieldVals['ascenseur'] === true ? 'oui' : modalFieldVals['ascenseur'] === false ? 'non' : '') : (bien.ascenseur === true ? 'oui' : bien.ascenseur === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, ascenseur: v })); setBien((prev: any) => ({ ...prev, ascenseur: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+              <button className={`mf-validate${modalFieldVals['ascenseur'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['ascenseur'] === undefined} onClick={() => { handleUpdate('ascenseur', modalFieldVals['ascenseur']); setModalFieldVals(p => { const n = { ...p }; delete n['ascenseur']; return n }) }}>✓</button>
+            </div>
+          )}
+          {/* Cave — pas pour IDR */}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Cave</span>
+              <span className="mf-control"><select className={modalFieldVals['has_cave'] !== undefined ? 'mf-draft' : bien.has_cave != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['has_cave'] !== undefined ? (modalFieldVals['has_cave'] === true ? 'oui' : modalFieldVals['has_cave'] === false ? 'non' : '') : (bien.has_cave === true ? 'oui' : bien.has_cave === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, has_cave: v })); setBien((prev: any) => ({ ...prev, has_cave: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+              <button className={`mf-validate${modalFieldVals['has_cave'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['has_cave'] === undefined} onClick={() => { handleUpdate('has_cave', modalFieldVals['has_cave']); setModalFieldVals(p => { const n = { ...p }; delete n['has_cave']; return n }) }}>✓</button>
+            </div>
+          )}
+          {/* Copropriété — toutes stratégies */}
+          <div className="modal-field">
+            <span className="mf-label">{"Copropri\u00E9t\u00E9"}</span>
+            <span className="mf-control"><select className={modalFieldVals['en_copropriete'] !== undefined ? 'mf-draft' : (bien as any).en_copropriete != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['en_copropriete'] !== undefined ? (modalFieldVals['en_copropriete'] === true ? 'oui' : modalFieldVals['en_copropriete'] === false ? 'non' : '') : ((bien as any).en_copropriete === true ? 'oui' : (bien as any).en_copropriete === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, en_copropriete: v })); setBien((prev: any) => ({ ...prev, en_copropriete: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+            <button className={`mf-validate${modalFieldVals['en_copropriete'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['en_copropriete'] === undefined} onClick={() => { handleUpdate('en_copropriete', modalFieldVals['en_copropriete']); setModalFieldVals(p => { const n = { ...p }; delete n['en_copropriete']; return n }) }}>✓</button>
+          </div>
+        </div>
+
+        {/* IDR — champs immeuble */}
+        {isIDR && (
+          <>
+            <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
+              <span>Immeuble</span>
+              <span className="modal-section-count">IDR</span>
+            </div>
+            <div className="modal-fields" style={{ marginBottom: '20px' }}>
+              <div className="modal-field">
+                <span className="mf-label">Nombre de lots</span>
+                <span className="mf-control"><input type="number" min={1} max={100} placeholder="NC" className={getModalFieldClass('nb_lots')} value={getModalVal('nb_lots')} onChange={e => setModalDraft('nb_lots', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('nb_lots')} /></span>
+                <button className={`mf-validate${getModalFieldClass('nb_lots') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('nb_lots') !== 'mf-draft'} onClick={() => saveModalField('nb_lots')}>✓</button>
+              </div>
+              <div className="modal-field">
+                <span className="mf-label">{"Monopropri\u00E9t\u00E9"}</span>
+                <span className="mf-control"><select className={modalFieldVals['monopropriete'] !== undefined ? 'mf-draft' : bien.monopropriete != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['monopropriete'] !== undefined ? (modalFieldVals['monopropriete'] === true ? 'oui' : modalFieldVals['monopropriete'] === false ? 'non' : '') : (bien.monopropriete === true ? 'oui' : bien.monopropriete === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, monopropriete: v })); setBien((prev: any) => ({ ...prev, monopropriete: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+                <button className={`mf-validate${modalFieldVals['monopropriete'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['monopropriete'] === undefined} onClick={() => { handleUpdate('monopropriete', modalFieldVals['monopropriete']); setModalFieldVals(p => { const n = { ...p }; delete n['monopropriete']; return n }) }}>✓</button>
+              </div>
+              <div className="modal-field">
+                <span className="mf-label">Compteurs individuels</span>
+                <span className="mf-control"><select className={modalFieldVals['compteurs_individuels'] !== undefined ? 'mf-draft' : bien.compteurs_individuels != null ? 'mf-filled' : 'mf-nc'} value={modalFieldVals['compteurs_individuels'] !== undefined ? (modalFieldVals['compteurs_individuels'] === true ? 'oui' : modalFieldVals['compteurs_individuels'] === false ? 'non' : '') : (bien.compteurs_individuels === true ? 'oui' : bien.compteurs_individuels === false ? 'non' : '')} onChange={e => { const v = e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null; setModalFieldVals(p => ({ ...p, compteurs_individuels: v })); setBien((prev: any) => ({ ...prev, compteurs_individuels: v })) }}><option value="">NC</option><option value="oui">Oui</option><option value="non">Non</option></select></span>
+                <button className={`mf-validate${modalFieldVals['compteurs_individuels'] !== undefined ? ' mf-validate-draft' : ''}`} disabled={modalFieldVals['compteurs_individuels'] === undefined} onClick={() => { handleUpdate('compteurs_individuels', modalFieldVals['compteurs_individuels']); setModalFieldVals(p => { const n = { ...p }; delete n['compteurs_individuels']; return n }) }}>✓</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Lots de la vente — enchères */}
+        {isEnchere && (
+          <>
+            <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
+              <span>Lots de la vente</span>
+              <span className="modal-section-count">{"Spécifique enchères"}</span>
+            </div>
+            <div className="modal-fields" style={{ marginBottom: '20px' }}>
+              {(() => { const cls = getModalFieldClass('nb_lots'); const isDraft = cls === 'mf-draft'; return (
+                <div className="modal-field">
+                  <span className="mf-label">Nombre de lots</span>
+                  <span className="mf-control">
+                    <input type="number" min={1} max={50} placeholder="NC" className={cls} value={getModalVal('nb_lots')} onChange={e => setModalDraft('nb_lots', e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField('nb_lots')} />
+                  </span>
+                  <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField('nb_lots')}>✓</button>
+                </div>
+              )})()}
+            </div>
+          </>
+        )}
+
+        <div className="modal-section-title" style={{ marginTop: '8px', marginBottom: '10px' }}>
+          <span>{"Donn\u00E9es locatives"}</span>
+        </div>
+        <div className="modal-fields" style={{ marginBottom: '20px' }}>
+          {([
+            { champ: 'loyer', label: 'Loyer mensuel', unit: '(\u20AC)', min: 0 },
+            { champ: 'charges_copro', label: 'Charges copropriété', unit: '(\u20AC/mois)', min: 0 },
+            { champ: 'taxe_fonc_ann', label: 'Taxe foncière', unit: '(\u20AC/an)', min: 0 },
+          ] as { champ: string; label: string; unit: string; min: number }[]).map(({ champ, label, unit, min }) => {
+            const cls = getModalFieldClass(champ); const isDraft = cls === 'mf-draft'
+            return (
+              <div key={champ} className="modal-field">
+                <span className="mf-label">{label} <span className="mf-unit">{unit}</span></span>
+                <span className="mf-control">
+                  <input type="number" min={min} placeholder="NC" className={cls} value={getModalVal(champ)} onChange={e => setModalDraft(champ, e.target.value === '' ? '' : Number(e.target.value))} onKeyDown={e => e.key === 'Enter' && saveModalField(champ)} />
+                </span>
+                <button className={`mf-validate${isDraft ? ' mf-validate-draft' : ''}`} disabled={!isDraft} onClick={() => saveModalField(champ)}>✓</button>
+              </div>
+            )
+          })}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Fin de bail</span>
+              <span className="mf-control">
+                <input type="date" className={getModalFieldClass('fin_bail')} value={getModalVal('fin_bail')} onChange={e => setModalDraft('fin_bail', e.target.value)} onKeyDown={e => e.key === 'Enter' && saveModalField('fin_bail')} />
+              </span>
+              <button className={`mf-validate${getModalFieldClass('fin_bail') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('fin_bail') !== 'mf-draft'} onClick={() => saveModalField('fin_bail')}>✓</button>
+            </div>
+          )}
+          {!isIDR && (
+            <div className="modal-field">
+              <span className="mf-label">Profil locataire</span>
+              <span className="mf-control">
+                <select className={getModalFieldClass('profil_locataire')} value={getModalVal('profil_locataire')} onChange={e => setModalDraft('profil_locataire', e.target.value)}>
+                  <option value="">NC</option>
+                  {['Actif CDI', 'Actif CDD / intérim', 'Indépendant', 'Retraité', 'Étudiant', 'Inconnu'].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </span>
+              <button className={`mf-validate${getModalFieldClass('profil_locataire') === 'mf-draft' ? ' mf-validate-draft' : ''}`} disabled={getModalFieldClass('profil_locataire') !== 'mf-draft'} onClick={() => saveModalField('profil_locataire')}>✓</button>
+            </div>
+          )}
+          <div className="modal-field" style={{ background: 'var(--paper, #f5ede2)' }}>
+            <span className="mf-label" style={{ color: 'var(--ink-soft, #6b6358)' }}>Rendement brut</span>
+            <span style={{ fontSize: '12px', color: 'var(--ink-mute, #a39a8c)', fontStyle: 'italic', gridColumn: '2 / span 2', textAlign: 'right' }}>{"Calcul auto dès que le loyer est saisi"}</span>
+          </div>
+        </div>
+
+        <div className="modal-footer-note">
+          <strong>Statut après soumission :</strong> 1<sup>re</sup> saisie → <span style={{ color: '#b8891a', fontWeight: 600 }}>Soumis par 1 utilisateur</span> · 2<sup>e</sup> confirmation concordante → <span style={{ color: 'var(--success, #2e7c5d)', fontWeight: 600 }}>Validé 2+ utilisateurs</span>
+        </div>
+      </ModalPanel>
+
+      <Modal open={showTmiDrawer} onClose={() => setShowTmiDrawer(false)} title="Votre profil fiscal" variant="drawer" width="400px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1a1210', marginBottom: 10 }}>
+              {"Tranche marginale d'imposition (TMI)"}
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[0, 11, 30, 41, 45].map(t => (
+                <button key={t} onClick={() => setDrawerTmi(t)} style={{
+                  padding: '9px 18px', borderRadius: 8,
+                  border: `1.5px solid ${drawerTmi === t ? '#c0392b' : '#e8e0d8'}`,
+                  background: drawerTmi === t ? '#c0392b' : '#fff',
+                  color: drawerTmi === t ? '#fff' : '#1a1210',
+                  fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                }}>
+                  {t} %
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1a1210', marginBottom: 8 }}>
+              {'Régime fiscal principal'}
+            </label>
+            <select value={drawerRegime} onChange={e => setDrawerRegime(e.target.value)} style={{
+              width: '100%', padding: '10px 12px', borderRadius: 8,
+              border: '1.5px solid #e8e0d8', fontSize: 14,
+              fontFamily: "'DM Sans', sans-serif", color: '#1a1210', background: '#fff',
+            }}>
+              {REGIMES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+          <p style={{ fontSize: 12, color: '#9a8a82', margin: 0 }}>
+            {'Ces paramètres sont sauvegardés dans votre profil et s\'appliquent à toutes vos analyses.'}
+          </p>
+          <button onClick={saveTmiDrawer} disabled={drawerTmi === null || tmiDrawerSaving} style={{
+            padding: '13px', borderRadius: 10,
+            background: drawerTmi === null ? '#e8e0d8' : '#c0392b',
+            color: drawerTmi === null ? '#9a8a82' : '#fff',
+            fontWeight: 700, fontSize: 14, border: 'none',
+            cursor: drawerTmi === null ? 'not-allowed' : 'pointer',
+            fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s',
+          }}>
+            {tmiDrawerSaving ? 'Enregistrement...' : 'Enregistrer et personnaliser'}
+          </button>
+        </div>
+      </Modal>
+
     </Layout>
   )
 }

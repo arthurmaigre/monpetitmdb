@@ -39,14 +39,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
   }
 
-  // Vérifier si l'utilisateur a fait l'onboarding
   const { data: profile } = await supabase
     .from('profiles')
-    .select('strategie_mdb')
+    .select('strategie_mdb, prenom')
     .eq('id', data.session.user.id)
     .single()
 
-  if (!profile?.strategie_mdb) {
+  // Première visite : jamais complété l'étape 1 (pas de prénom)
+  if (!profile?.prenom) {
     return NextResponse.redirect(`${origin}/onboarding`)
   }
 

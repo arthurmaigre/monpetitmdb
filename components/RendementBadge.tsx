@@ -12,12 +12,12 @@ export default function RendementBadge({ rendement, size = 'md' }: Props) {
   if (!rendement) return (
     <span style={{
       display: 'inline-block',
-      fontSize: size === 'sm' ? theme.fontSizes.xs : theme.fontSizes.sm,
+      fontSize: size === 'sm' ? '11px' : theme.fontSizes.sm,
       fontWeight: 600,
       color: theme.colors.textTertiary,
       background: theme.colors.bgHover,
       padding: `${padY} ${padX}`,
-      borderRadius: theme.radii.sm,
+      borderRadius: size === 'sm' ? '6px' : theme.radii.sm,
       whiteSpace: 'nowrap',
     }}>NC</span>
   )
@@ -32,12 +32,12 @@ export default function RendementBadge({ rendement, size = 'md' }: Props) {
   return (
     <span style={{
       display: 'inline-block',
-      fontSize: size === 'sm' ? theme.fontSizes.xs : theme.fontSizes.sm,
+      fontSize: size === 'sm' ? '11px' : theme.fontSizes.sm,
       fontWeight: 600,
       color: colors.color,
       background: colors.bg,
       padding: `${padY} ${padX}`,
-      borderRadius: theme.radii.sm,
+      borderRadius: size === 'sm' ? '6px' : theme.radii.sm,
       whiteSpace: 'nowrap',
     }}>
       {pct.toFixed(2)} %

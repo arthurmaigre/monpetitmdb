@@ -166,24 +166,34 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
-// DELETE — archiver un bien (soft delete)
+// DELETE — archiver un bien (soft delete) ou supprimer définitivement (permanent: true)
 export async function DELETE(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 })
 
   const body = await req.json()
-  const { bien_id, source_table } = body
+  const { bien_id, source_table, permanent } = body
   if (!bien_id) return NextResponse.json({ error: 'bien_id requis' }, { status: 400 })
 
   const table = source_table === 'encheres' ? 'encheres' : 'biens'
 
-  const { error } = await supabaseAdmin
-    .from('watchlist')
-    .update({ suivi: 'archive' })
-    .eq('user_id', user.id)
-    .eq('bien_id', bien_id)
-    .eq('source_table', table)
+  if (permanent) {
+    const { error } = await supabaseAdmin
+      .from('watchlist')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('bien_id', bien_id)
+      .eq('source_table', table)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else {
+    const { error } = await supabaseAdmin
+      .from('watchlist')
+      .update({ suivi: 'archive' })
+      .eq('user_id', user.id)
+      .eq('bien_id', bien_id)
+      .eq('source_table', table)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
