@@ -1004,11 +1004,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             </>
                           ) : (
                             <>
-                              <th>Loyer<span>/mois</span></th>
-                              <th className="col-optional">Type loyer<span></span></th>
-                              <th className="col-optional">{"Charges r\u00E9cup."}<span>/mois</span></th>
-                              <th>Charges copro<span>/mois</span></th>
-                              <th>Taxe foncière<span>/an</span></th>
+                              <th style={{ minWidth: "110px" }}>Loyer<span>/mois</span></th>
+                              <th className="col-optional" style={{ minWidth: "80px" }}>Type loyer<span></span></th>
+                              <th className="col-optional" style={{ minWidth: "110px" }}>{"Charges r\u00E9cup."}<span>/mois</span></th>
+                              <th style={{ minWidth: "110px" }}>Charges copro<span>/mois</span></th>
+                              <th style={{ minWidth: "110px" }}>Taxe foncière<span>/an</span></th>
                               <th>Rendement brut<span></span></th>
                               <th>+/- Value<span></span></th>
                               <th>Cashflow brut<span>/mois</span></th>
