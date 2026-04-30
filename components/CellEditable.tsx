@@ -77,8 +77,6 @@ export function CellEditable({
 
   const vStyle: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'right', fontSize: '13px', fontWeight: 600 }
   const bStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }
-  /** Style de boîte uniforme pour tous les états read-only — même gabarit que l'input */
-  const boxBase: React.CSSProperties = { padding: '4px 8px', borderRadius: '6px', border: '1.5px solid transparent', boxSizing: 'border-box' }
 
   function startEditDirect() {
     setOriginalVal(dbVal)
@@ -138,15 +136,15 @@ export function CellEditable({
 
   // --- Non connecté ---
   if (!userToken) {
-    if (displayVal == null) return <><span style={{ ...vStyle, ...boxBase, border: '1.5px solid #e8e2d8', background: '#faf8f5', color: '#c0b0a0', fontStyle: 'italic', fontWeight: 400 }}>NC</span><span /></>
-    return <><span style={{ ...vStyle, ...boxBase, border: '1.5px solid #e8e2d8', background: '#faf8f5', color: '#7a6a60' }}>{readText}</span><span /></>
+    if (displayVal == null) return <><span style={{ ...vStyle, color: '#c0b0a0', fontStyle: 'italic', fontWeight: 400 }}>NC</span><span /></>
+    return <><span style={{ ...vStyle, color: '#7a6a60' }}>{readText}</span><span /></>
   }
 
   // --- Brouillon localStorage (bleu statique, non dirty) ---
   if (hasDraft) {
     return (
       <>
-        <span style={{ ...vStyle, ...boxBase, border: '1.5px solid #2a4a8a', background: '#f0f4ff', color: '#2a4a8a' }}>{readText}</span>
+        <span style={{ ...vStyle, color: '#2a4a8a' }}>{readText}</span>
         <div style={bStyle}>
           <ValidateBtn />
           <PencilBtn title="Modifier le brouillon" />
@@ -160,7 +158,7 @@ export function CellEditable({
   if (hasSourceData && !dirty) {
     return (
       <>
-        <span style={{ ...vStyle, ...boxBase, border: '1.5px solid #e8e2d8', background: '#faf8f5', color: '#1a1210' }}>{readText}</span>
+        <span style={{ ...vStyle, color: '#1a1210' }}>{readText}</span>
         <div style={bStyle}><PencilBtn title="Modifier (donnée extraite de l'annonce)" /></div>
         {showSourceModal && (
           <AlertModal
@@ -187,7 +185,7 @@ export function CellEditable({
   if (isVert && !dirty) {
     return (
       <>
-        <span style={{ ...vStyle, ...boxBase, border: '1.5px solid #c3e6cb', background: '#f0faf4', color: '#1a7a40' }}>{readText}</span>
+        <span style={{ ...vStyle, color: '#1a7a40' }}>{readText}</span>
         <div style={bStyle}>
           <span title="Validé par la communauté" style={{ fontSize: '10px', color: '#1a7a40' }}>{'✓'}</span>
           <PencilBtn title="Modifier (donnée validée)" />
@@ -209,7 +207,7 @@ export function CellEditable({
   if (isJaune && !dirty) {
     return (
       <>
-        <span style={{ ...vStyle, ...boxBase, border: '1.5px solid #f0c040', background: '#fffbf0', color: '#a06010' }}>{readText}</span>
+        <span style={{ ...vStyle, color: '#a06010' }}>{readText}</span>
         <div style={bStyle}>
           <ValidateBtn />
           <PencilBtn />

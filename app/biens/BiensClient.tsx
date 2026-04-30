@@ -1204,64 +1204,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               </>
                             ) : (
                               <>
-                                 <td><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared
-                                   bienId={String(bien.id)}
-                                   champ="loyer"
-                                   dbVal={bien.loyer ?? null}
-                                   draftVal={allDrafts[String(bien.id)]?.["loyer"] ?? null}
-                                   statut={allStatuts[String(bien.id)]?.["loyer"] ?? null}
-                                   isSourceData={bien.loyer !== null}
-                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
-                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
-                                   userToken={userToken ?? undefined}
-                                   suffix={` €`}
-                                 /></div></td>
-                                 <td className="col-optional"><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellTypeLoyerShared
-                                   bienId={String(bien.id)}
-                                   champ="type_loyer"
-                                   dbVal={bien.type_loyer ?? null}
-                                   statut={allStatuts[String(bien.id)]?.["type_loyer"] ?? null}
-                                   isSourceData={bien.type_loyer !== null}
-                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
-                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
-                                   userToken={userToken ?? undefined}
-                                 /></div></td>
-                                 <td className="col-optional"><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared
-                                   bienId={String(bien.id)}
-                                   champ="charges_rec"
-                                   dbVal={bien.charges_rec ?? null}
-                                   draftVal={allDrafts[String(bien.id)]?.["charges_rec"] ?? null}
-                                   statut={allStatuts[String(bien.id)]?.["charges_rec"] ?? null}
-                                   isSourceData={bien.charges_rec !== null}
-                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
-                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
-                                   userToken={userToken ?? undefined}
-                                   suffix={` €`}
-                                 /></div></td>
-                                 <td><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared
-                                   bienId={String(bien.id)}
-                                   champ="charges_copro"
-                                   dbVal={bien.charges_copro ?? null}
-                                   draftVal={allDrafts[String(bien.id)]?.["charges_copro"] ?? null}
-                                   statut={allStatuts[String(bien.id)]?.["charges_copro"] ?? null}
-                                   isSourceData={bien.charges_copro !== null}
-                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
-                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
-                                   userToken={userToken ?? undefined}
-                                   suffix={` €`}
-                                 /></div></td>
-                                 <td><div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared
-                                   bienId={String(bien.id)}
-                                   champ="taxe_fonc_ann"
-                                   dbVal={bien.taxe_fonc_ann ?? null}
-                                   draftVal={allDrafts[String(bien.id)]?.["taxe_fonc_ann"] ?? null}
-                                   statut={allStatuts[String(bien.id)]?.["taxe_fonc_ann"] ?? null}
-                                   isSourceData={bien.taxe_fonc_ann !== null}
-                                   onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
-                                   onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
-                                   userToken={userToken ?? undefined}
-                                   suffix={` €`}
-                                 /></div></td>
+                                 <td style={{ textAlign: 'right', minWidth: '110px' }}>{(() => { const bId = String(bien.id); const dL = allDrafts[bId]?.['loyer'] ?? null; if (bien.loyer != null && dL == null) return <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.loyer).toLocaleString('fr-FR')}{' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="loyer" dbVal={bien.loyer ?? null} draftVal={dL} statut={allStatuts[bId]?.['loyer'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
+                                 <td className="col-optional" style={{ textAlign: 'center', minWidth: '80px' }}>{bien.type_loyer ? <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{bien.type_loyer}</span> : <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellTypeLoyerShared bienId={String(bien.id)} champ="type_loyer" dbVal={bien.type_loyer ?? null} statut={allStatuts[String(bien.id)]?.['type_loyer'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined}/></div>}</td>
+                                 <td className="col-optional" style={{ textAlign: 'right', minWidth: '110px' }}>{(() => { const bId = String(bien.id); const dR = allDrafts[bId]?.['charges_rec'] ?? null; if (bien.charges_rec != null && dR == null) return <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.charges_rec).toLocaleString('fr-FR')}{' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="charges_rec" dbVal={bien.charges_rec ?? null} draftVal={dR} statut={allStatuts[bId]?.['charges_rec'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
+                                 <td style={{ textAlign: 'right', minWidth: '110px' }}>{(() => { const bId = String(bien.id); const dC = allDrafts[bId]?.['charges_copro'] ?? null; if (bien.charges_copro != null && dC == null) return <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.charges_copro).toLocaleString('fr-FR')}{' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="charges_copro" dbVal={bien.charges_copro ?? null} draftVal={dC} statut={allStatuts[bId]?.['charges_copro'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
+                                 <td style={{ textAlign: 'right', minWidth: '110px' }}>{(() => { const bId = String(bien.id); const dT = allDrafts[bId]?.['taxe_fonc_ann'] ?? null; if (bien.taxe_fonc_ann != null && dT == null) return <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.taxe_fonc_ann).toLocaleString('fr-FR')}{' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="taxe_fonc_ann" dbVal={bien.taxe_fonc_ann ?? null} draftVal={dT} statut={allStatuts[bId]?.['taxe_fonc_ann'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
