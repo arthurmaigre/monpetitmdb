@@ -351,6 +351,8 @@ def main():
     if not args.from_expired_at:
         hier = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         args.from_expired_at = hier
+        if not args.to_expired_at:
+            args.to_expired_at = hier
         log.info(f"--from-expired-at non fourni, défaut: hier ({hier})")
 
     strategies = [args.strategie] if args.strategie else list(STRATEGIES.keys())
