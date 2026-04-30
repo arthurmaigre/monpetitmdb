@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { setDraft, clearDraft } from '@/lib/drafts'
 
 export interface ChampStatut {
@@ -54,6 +54,56 @@ const PencilSVG = () => (
   </svg>
 )
 
+/** Menu contextuel clic droit — enregistrer en base ou garder en local */
+function CtxSaveMenu({ x, y, onSave, onKeepLocal, onClose }: {
+  x: number; y: number
+  onSave: () => void
+  onKeepLocal: () => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const close = (e: MouseEvent) => { onClose() }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [onClose])
+
+  return (
+    <div onMouseDown={e => e.stopPropagation()} style={{
+      position: 'fixed', left: x, top: y, zIndex: 9999,
+      background: '#fff', borderRadius: '10px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+      border: '1px solid #e8e2d8', padding: '4px', minWidth: '290px',
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+      <button onClick={onSave} style={{
+        display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%',
+        padding: '9px 12px', border: 'none', background: 'none', cursor: 'pointer',
+        borderRadius: '7px', textAlign: 'left',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#f0f8f4')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+        <span style={{ color: '#1a7a40', fontSize: '15px', fontWeight: 700, lineHeight: '1.2', flexShrink: 0 }}>{'✓'}</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210', lineHeight: '1.3' }}>Enregistrer la donnée en base</div>
+          <div style={{ fontSize: '11px', color: '#7a6a60', marginTop: '2px' }}>Information vérifiée auprès du vendeur</div>
+        </div>
+      </button>
+      <button onClick={onKeepLocal} style={{
+        display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%',
+        padding: '9px 12px', border: 'none', background: 'none', cursor: 'pointer',
+        borderRadius: '7px', textAlign: 'left',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#fdf0ef')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+        <span style={{ color: '#c0392b', fontSize: '15px', fontWeight: 700, lineHeight: '1.2', flexShrink: 0 }}>{'✕'}</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1210', lineHeight: '1.3' }}>Ne pas enregistrer en base</div>
+          <div style={{ fontSize: '11px', color: '#7a6a60', marginTop: '2px' }}>Données utilisées à des fins de simulation personnelles</div>
+        </div>
+      </button>
+    </div>
+  )
+}
+
 export function CellEditable({
   bienId, champ, dbVal, draftVal = null, statut = null, isSourceData = false,
   onValueChange, onSubmit, userToken, suffix = '', scale = 1,
@@ -63,11 +113,12 @@ export function CellEditable({
   const [submitting, setSubmitting] = useState(false)
   const [showSourceModal, setShowSourceModal] = useState(false)
   const [showValidatedModal, setShowValidatedModal] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
 
   const displayVal = dbVal != null ? Math.round(dbVal * scale) : null
   const localVal = displayVal != null ? String(displayVal) : ''
   const readText = displayVal != null
-    ? (suffix ? `${displayVal.toLocaleString('fr-FR')}${suffix.replace(/ /g, ' ')}` : `${displayVal.toLocaleString('fr-FR')} €`)
+    ? (suffix ? `${displayVal.toLocaleString('fr-FR')}${suffix.replace(/ /g, ' ')}` : `${displayVal.toLocaleString('fr-FR')} €`)
     : null
 
   const hasDraft = draftVal !== null && !dirty
@@ -102,12 +153,25 @@ export function CellEditable({
     clearDraft(bienId, champ)
     setDirty(false)
     setSubmitting(false)
+    setCtxMenu(null)
   }
 
   function handleCancel() {
     setDirty(false)
     onValueChange?.(champ, originalVal)
     clearDraft(bienId, champ)
+    setCtxMenu(null)
+  }
+
+  function openCtxFromEvent(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtxMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  function openCtxFromInput(e: React.KeyboardEvent<HTMLInputElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setCtxMenu({ x: rect.left, y: rect.bottom + 6 })
   }
 
   const PencilBtn = ({ title: t = 'Modifier' }: { title?: string }) => (
@@ -119,20 +183,14 @@ export function CellEditable({
     </button>
   )
 
-  const ValidateBtn = () => (
-    <button onClick={handleSubmit} disabled={submitting || !localVal}
-      title="Soumettre à la communauté"
-      style={{
-        width: '22px', height: '22px', borderRadius: '6px', border: 'none',
-        background: '#1a7a40', color: '#fff', fontSize: '12px', fontWeight: 700,
-        cursor: localVal ? 'pointer' : 'default',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        visibility: localVal ? 'visible' : 'hidden',
-        pointerEvents: localVal ? 'auto' : 'none',
-      }}>
-      {'✓'}
-    </button>
-  )
+  const ctxMenuEl = ctxMenu ? (
+    <CtxSaveMenu
+      x={ctxMenu.x} y={ctxMenu.y}
+      onSave={handleSubmit}
+      onKeepLocal={() => { setCtxMenu(null); if (dirty) { setDirty(false); setOriginalVal(null) } }}
+      onClose={() => setCtxMenu(null)}
+    />
+  ) : null
 
   // --- Non connecté ---
   if (!userToken) {
@@ -140,16 +198,18 @@ export function CellEditable({
     return <><span style={{ ...vStyle, color: '#7a6a60' }}>{readText}</span><span /></>
   }
 
-  // --- Brouillon localStorage (bleu statique, non dirty) ---
+  // --- Brouillon localStorage (bleu, clic droit pour choisir) ---
   if (hasDraft) {
     return (
       <>
-        <span style={{ ...vStyle, color: '#2a4a8a' }}>{readText}</span>
+        <span
+          onContextMenu={openCtxFromEvent}
+          title="Clic droit pour enregistrer ou garder en local"
+          style={{ ...vStyle, color: '#2a4a8a', cursor: 'context-menu' }}>{readText}</span>
         <div style={bStyle}>
-          <ValidateBtn />
           <PencilBtn title="Modifier le brouillon" />
         </div>
-        {/* Pas de modal ici — le brouillon est toujours librement éditable */}
+        {ctxMenuEl}
       </>
     )
   }
@@ -203,15 +263,18 @@ export function CellEditable({
     )
   }
 
-  // --- Proposé par 1 user (jaune) ---
+  // --- Proposé par 1 user (jaune, clic droit pour valider ou garder local) ---
   if (isJaune && !dirty) {
     return (
       <>
-        <span style={{ ...vStyle, color: '#a06010' }}>{readText}</span>
+        <span
+          onContextMenu={openCtxFromEvent}
+          title="Clic droit pour enregistrer ou garder en local"
+          style={{ ...vStyle, color: '#a06010', cursor: 'context-menu' }}>{readText}</span>
         <div style={bStyle}>
-          <ValidateBtn />
           <PencilBtn />
         </div>
+        {ctxMenuEl}
       </>
     )
   }
@@ -235,20 +298,10 @@ export function CellEditable({
           outline: 'none', color: isEmpty ? '#c0392b' : '#1a1210',
         }}
         onChange={e => handleChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
+        onContextMenu={e => { if (localVal) openCtxFromEvent(e) }}
+        onKeyDown={e => { if (e.key === 'Enter' && localVal) openCtxFromInput(e) }}
       />
       <div style={bStyle}>
-        <button onClick={handleSubmit} disabled={submitting || !localVal}
-          title="Soumettre à la communauté"
-          style={{
-            width: '22px', height: '22px', borderRadius: '6px', border: 'none',
-            background: '#1a7a40', color: '#fff', fontSize: '12px', fontWeight: 700,
-            cursor: dirty && localVal ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            visibility: dirty && localVal ? 'visible' : 'hidden',
-            pointerEvents: dirty && localVal ? 'auto' : 'none',
-          }}
-        >{'✓'}</button>
         <button onClick={handleCancel} title="Annuler"
           style={{
             background: 'none', border: 'none', cursor: dirty ? 'pointer' : 'default',
@@ -258,6 +311,7 @@ export function CellEditable({
           }}
         >{'×'}</button>
       </div>
+      {ctxMenuEl}
     </>
   )
 }
