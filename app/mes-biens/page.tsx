@@ -10,6 +10,8 @@ import MetroBadge from '@/components/MetroBadge'
 import RendementBadge from '@/components/RendementBadge'
 import PlusValueBadge from '@/components/PlusValueBadge'
 import { calculerCashflow, calculerFraisEnchere } from '@/lib/calculs'
+import { getDrafts } from '@/lib/drafts'
+import { CellEditable as CellEditableShared, CellTypeLoyer as CellTypeLoyerShared, ChampStatut } from '@/components/CellEditable'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import TypeBienIllustration from '@/components/TypeBienIllustration'
 
@@ -143,6 +145,8 @@ export default function MesBiensPage() {
   const [suiviMap, setSuiviMap] = useState<Record<string, string>>({})
   const [commentaireMap, setCommentaireMap] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string | null>(null)
+  const [allDrafts, setAllDrafts] = useState<Record<string, Record<string, number>>>({})
+  const [allStatuts, setAllStatuts] = useState<Record<string, Record<string, ChampStatut>>>({})
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [showAddModal, setShowAddModal] = useState(false)
   const [addLoading, setAddLoading] = useState(false)
@@ -248,7 +252,25 @@ export default function MesBiensPage() {
         const allBiens = [...allBiensItems, ...allEncheresItems]
         setBiens(allBiens)
 
-        // Pas de présélection d'onglet — on affiche tout par défaut
+        // Drafts localStorage
+        const drafts: Record<string, Record<string, number>> = {}
+        for (const b of allBiens) {
+          const bd = getDrafts(String(b.id))
+          if (Object.keys(bd).length > 0) drafts[String(b.id)] = bd
+        }
+        setAllDrafts(drafts)
+
+        // Statuts communautaires — biens classiques uniquement
+        const biensClassiques = allBiens.filter((b: any) => b.strategie_mdb !== 'Enchères' && !b._fromSnapshot)
+        if (biensClassiques.length > 0) {
+          const ids = biensClassiques.map((b: any) => b.id).join(',')
+          fetch('/api/biens/edits-bulk?ids=' + ids, { headers: { Authorization: 'Bearer ' + session.access_token } })
+            .then(r => r.json()).then(s => setAllStatuts(s)).catch(() => {})
+        }
+
+        const ALL_STRATS = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport', 'Enchères']
+        const firstTab = ALL_STRATS.find(s => allBiens.some((b: any) => b.strategie_mdb === s && suiviInit[String(b.id)] !== 'archive'))
+        if (firstTab) setActiveTab(firstTab)
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement')
       } finally {
@@ -263,6 +285,11 @@ export default function MesBiensPage() {
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
+  }, [])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('mes-biens-view')
+    if (saved === 'list' || saved === 'grid') setView(saved)
   }, [])
 
   useEffect(() => {
@@ -284,7 +311,7 @@ export default function MesBiensPage() {
   const isAtLimit = activeBiens.length >= watchlistLimit
   const isExpert = plan === 'expert'
   const ALL_STRATEGIES = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport', 'Enchères']
-  const filteredBiens = activeTab && !showArchived ? displayBiens.filter(b => b.strategie_mdb === activeTab) : displayBiens
+  const filteredBiens = activeTab ? displayBiens.filter(b => b.strategie_mdb === activeTab) : []
 
   function getSourceTable(bienId: string) {
     const b = biens.find(x => String(x.id) === String(bienId))
@@ -347,47 +374,21 @@ export default function MesBiensPage() {
     })
   }
 
-  async function updateBien(bien: any, champ: string, valeur: any) {
+  async function handleUpdate(bienId: string, champ: string, val: number | string) {
     if (!userToken) return
-    if (bien[champ] !== null && bien[champ] !== undefined) return
-    setSaving(bien.id + champ)
-    const res = await fetch('/api/biens/' + bien.id, {
+    const res = await fetch('/api/biens/' + bienId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-      body: JSON.stringify({ [champ]: valeur })
+      body: JSON.stringify({ [champ]: val }),
     })
     if (res.ok) {
       const data = await res.json()
-      setBiens(prev => prev.map(b => b.id === bien.id ? { ...b, ...data.bien } : b))
+      setBiens(prev => prev.map(b => String(b.id) === String(bienId) ? { ...b, ...data.bien } : b))
+      fetch('/api/biens/' + bienId + '/edits', { headers: { Authorization: `Bearer ${userToken}` } })
+        .then(r => r.json())
+        .then(d => setAllStatuts(prev => ({ ...prev, [String(bienId)]: d.champs || {} })))
+        .catch(() => {})
     }
-    setSaving(null)
-  }
-
-  function CellEditable({ bien, champ, suffix = '' }: { bien: any, champ: string, suffix?: string }) {
-    const valeur = bien[champ]
-    const estSaving = saving === bien.id + champ
-    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}{suffix}</span>
-    if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
-    return (
-      <input type="number" defaultValue="" placeholder="NC" disabled={!!estSaving}
-        style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: estSaving ? '#f0ede8' : '#faf8f5', outline: 'none' }}
-        onBlur={e => { if (e.target.value) updateBien(bien, champ, Number(e.target.value)) }}
-        onFocus={e => e.target.style.borderColor = '#c0392b'} />
-    )
-  }
-
-  function CellTypeLoyer({ bien }: { bien: any }) {
-    const valeur = bien.type_loyer
-    if (valeur !== null && valeur !== undefined) return <span style={{ color: '#555' }}>{valeur}</span>
-    if (!userId) return <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>
-    return (
-      <select defaultValue="" onChange={e => { if (e.target.value) updateBien(bien, 'type_loyer', e.target.value) }}
-        style={{ padding: '4px 8px', borderRadius: '6px', border: '1.5px solid #e8e2d8', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', background: '#faf8f5', outline: 'none' }}>
-        <option value="">NC</option>
-        <option value="HC">HC</option>
-        <option value="CC">CC</option>
-      </select>
-    )
   }
 
   function SuiviSelect({ bienId, strategie }: { bienId: string, strategie?: string }) {
@@ -802,6 +803,7 @@ export default function MesBiensPage() {
         .td-bien-title { font-weight: 600; color: #1a1210; display: block; margin-bottom: 2px; }
         .td-bien-quartier { font-size: 12px; color: #b0a898; display: block; }
         .td-prix { font-weight: 500; font-size: 14px; letter-spacing: -0.01em; white-space: nowrap; }
+        .col-right { text-align: right !important; }
         .td-btn { display: inline-block; padding: 8px 16px; background: #1a1210; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 150ms ease; }
         .td-btn:hover { opacity: 0.75; }
         .td-btn-contact { display: inline-block; padding: 8px 12px; background: #c0392b; color: #fff; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; transition: opacity 150ms ease; }
@@ -809,7 +811,7 @@ export default function MesBiensPage() {
         .td-heart { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: transform 150ms ease; color: #c0392b; }
         .td-heart:hover { transform: scale(1.2); }
         .edit-hint { font-size: 12px; color: #7a6a60; margin-bottom: 12px; font-style: italic; }
-        .suivi-select { font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid #e8e2d8; cursor: pointer; outline: none; min-width: 155px; }
+        .suivi-select { font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid #e8e2d8; cursor: pointer; outline: none; min-width: 110px; }
         .suivi-select:focus { border-color: #c0392b; box-shadow: 0 0 0 2px rgba(192,57,43,0.1); }
         .commentaire-area { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #7a6a60; background: transparent; resize: vertical; outline: none; line-height: 1.4; }
         .commentaire-area:focus { border-color: #c0392b; background: #faf8f5; }
@@ -885,8 +887,8 @@ export default function MesBiensPage() {
               </button>
             )}
             <div className="view-toggle" role="group" aria-label="Mode d'affichage">
-              <button className={`view-btn ${effectiveView === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Grille</button>
-              <button className={`view-btn view-btn-list ${effectiveView === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Liste</button>
+              <button className={`view-btn ${effectiveView === 'grid' ? 'active' : ''}`} onClick={() => { setView('grid'); localStorage.setItem('mes-biens-view', 'grid') }}>Grille</button>
+              <button className={`view-btn view-btn-list ${effectiveView === 'list' ? 'active' : ''}`} onClick={() => { setView('list'); localStorage.setItem('mes-biens-view', 'list') }}>Liste</button>
             </div>
           </div>
         </div>
@@ -908,7 +910,7 @@ export default function MesBiensPage() {
               {ALL_STRATEGIES.map(strat => {
                 const count = displayBiens.filter(b => b.strategie_mdb === strat).length
                 return (
-                  <button key={strat} role="tab" aria-selected={activeTab === strat} className={`tab ${activeTab === strat ? 'active' : ''}`} onClick={() => setActiveTab(prev => prev === strat ? '' : strat)}>
+                  <button key={strat} role="tab" aria-selected={activeTab === strat} className={`tab ${activeTab === strat ? 'active' : ''}`} onClick={() => setActiveTab(strat)}>
                     {strat}
                     <span className="tab-count">{count}</span>
                   </button>
@@ -996,10 +998,10 @@ export default function MesBiensPage() {
                   <thead>
                     <tr>
                       <th className="sticky-col-head" style={{ left: 0, width: '40px', minWidth: '40px' }}><span></span></th>
-                      <th className="sticky-col-head" style={{ left: '40px', width: '130px', minWidth: '130px' }}>Suivi<span></span></th>
-                      <th className="sticky-col-head" style={{ left: '170px', minWidth: '220px', borderRight: '2px solid #ede8e0' }}>Bien<span></span></th>
+                      <th className="sticky-col-head" style={{ left: '40px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Suivi<span></span></th>
+                      <th className="sticky-col-head" style={{ left: '150px', minWidth: '220px', borderRight: '2px solid #ede8e0', textAlign: 'center' }}>Bien<span></span></th>
                       <th>Commune<span></span></th>
-                      {activeTab === 'Enchères' ? (
+                      {(activeTab === 'Enchères' || (filteredBiens.length > 0 && filteredBiens.every(b => b.strategie_mdb === 'Enchères'))) ? (
                         <>
                           <th>Sources<span></span></th>
                           <th>Tribunal<span></span></th>
@@ -1031,11 +1033,11 @@ export default function MesBiensPage() {
                             </>
                           ) : (
                             <>
-                              <th>Loyer<span>/mois</span></th>
+                              <th style={{ minWidth: '130px' }}>Loyer<span>/mois</span></th>
                               <th className="col-optional">Type loyer<span></span></th>
-                              <th className="col-optional">{"Charges r\u00E9cup."}<span>/mois</span></th>
-                              <th>Charges copro<span>/mois</span></th>
-                              <th>{"Taxe fonci\u00E8re"}<span>/an</span></th>
+                              <th className="col-optional" style={{ minWidth: '110px' }}>{"Charges r\u00E9cup."}<span>/mois</span></th>
+                              <th style={{ minWidth: '130px' }}>Charges copro<span>/mois</span></th>
+                              <th style={{ minWidth: '130px' }}>{"Taxe fonci\u00E8re"}<span>/an</span></th>
                               <th>Rendement brut<span></span></th>
                               <th>+/- Value<span></span></th>
                               <th>Cashflow brut<span>/mois</span></th>
@@ -1061,17 +1063,20 @@ export default function MesBiensPage() {
                             <button className="td-heart" onClick={() => handleArchive(bien.id)}>{'\u2665'}</button>
                           )}
                         </td>
-                        <td className="sticky-col" style={{ left: '40px', width: '130px', minWidth: '130px' }}>
+                        <td className="sticky-col" style={{ left: '40px', width: '110px', minWidth: '110px' }}>
                           <SuiviSelect bienId={bien.id} strategie={bien.strategie_mdb} />
                         </td>
-                        <td className="sticky-col" style={{ left: '170px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
+                        <td className="sticky-col" style={{ left: '150px', minWidth: '220px', borderRight: '2px solid #f0ede8' }}>
                           <span className="td-bien-title">
                             {bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${bien.surface} m\u00B2` : ''}
                           </span>
                           {bien._fromSnapshot && <span className="expired-badge" style={{ marginTop: '2px' }}>Annonce expir{'\u00E9'}e</span>}
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
-                        <td style={{ fontWeight: 500, minWidth: '180px' }}>{bien.ville}{bien.code_postal ? ` - ${bien.code_postal}` : ''}</td>
+                        <td style={{ minWidth: '140px', maxWidth: '200px', overflow: 'hidden' }}>
+                          <span style={{ fontWeight: 500, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={bien.ville || ''}>{bien.ville}</span>
+                          {bien.code_postal && <span style={{ fontSize: '12px', color: '#7a6a60' }}>{bien.code_postal}</span>}
+                        </td>
                         {bien.strategie_mdb === 'Enchères' ? (() => {
                           const e = bien as any
                           const miseAPrixW = e.mise_a_prix || 0
@@ -1092,14 +1097,31 @@ export default function MesBiensPage() {
                           const occ = occupationLabels[e.occupation] || { label: e.occupation || '-', color: '#7a6a60' }
                           const dateAudience = e.date_audience ? new Date(e.date_audience).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
                           const dateVisite = e.date_visite ? new Date(e.date_visite).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
-                          const sourceLabels: Record<string, string> = { licitor: 'Licitor', avoventes: 'Avoventes', vench: 'Vench' }
-                          const sourceBgColors: Record<string, string> = { licitor: '#e8f0fd', avoventes: '#fdf0e8', vench: '#f0fde8' }
-                          const sourceTextColors: Record<string, string> = { licitor: '#1a4a9a', avoventes: '#9a4a1a', vench: '#1a7a40' }
-                          const srcLabel = sourceLabels[e.source] || e.source || '-'
-                          const srcBg = sourceBgColors[e.source] || '#f0ede8'
-                          const srcColor = sourceTextColors[e.source] || '#7a6a60'
+                          const LOGOS: Record<string, { name: string; color: string; abbrev: string }> = {
+                            licitor: { name: 'Licitor', color: '#1565C0', abbrev: 'LIC' },
+                            avoventes: { name: 'Avoventes', color: '#6A1B9A', abbrev: 'AVO' },
+                            vench: { name: 'Vench', color: '#2E7D32', abbrev: 'VEN' },
+                          }
                           return <>
-                            <td><span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', borderRadius: '5px', background: srcBg, color: srcColor, whiteSpace: 'nowrap' }}>{srcLabel}</span></td>
+                            <td>{(() => {
+                              let srcs = e.sources || []
+                              if (typeof srcs === 'string') try { srcs = JSON.parse(srcs) } catch { srcs = [] }
+                              if (!Array.isArray(srcs) || srcs.length === 0) {
+                                const p = LOGOS[e.source]
+                                return p ? <a href={e.url} target="_blank" rel="noopener noreferrer" title={p.name} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '4px', background: p.color, color: '#fff', fontSize: '8px', fontWeight: 700, textDecoration: 'none' }}>{p.abbrev}</a> : <span style={{ color: '#c0b0a0' }}>-</span>
+                              }
+                              const unique = new Map<string, { source: string; url: string }>()
+                              for (const s of srcs) { if (s.url && s.source) unique.set(s.source, s) }
+                              const SOURCE_ORDER = ['licitor', 'avoventes', 'vench']
+                              const sorted = SOURCE_ORDER.map(k => unique.get(k)).filter(Boolean) as { source: string; url: string }[]
+                              return <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                {sorted.map((s, i) => {
+                                  const p = LOGOS[s.source]
+                                  if (!p) return null
+                                  return <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" title={p.name} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '4px', background: p.color, color: '#fff', fontSize: '8px', fontWeight: 700, textDecoration: 'none' }}>{p.abbrev}</a>
+                                })}
+                              </div>
+                            })()}</td>
                             <td style={{ fontSize: '12px', color: '#7a6a60', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tribunal || '-'}</td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: e.date_visite ? undefined : '#c0b0a0' }}>{dateVisite}</td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>{dateAudience}</td>
@@ -1181,21 +1203,26 @@ export default function MesBiensPage() {
                                 <td style={{ color: '#7a6a60' }}>{bien.annee_construction || <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>NC</span>}</td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
                               </>
-                            ) : (
-                              <>
-                                <td><CellEditable bien={bien} champ="loyer" suffix={` \u20AC`} /></td>
-                                <td className="col-optional"><CellTypeLoyer bien={bien} /></td>
-                                <td className="col-optional"><CellEditable bien={bien} champ="charges_rec" suffix={` \u20AC`} /></td>
-                                <td><CellEditable bien={bien} champ="charges_copro" suffix={` \u20AC`} /></td>
-                                <td><CellEditable bien={bien} champ="taxe_fonc_ann" suffix={` \u20AC`} /></td>
-                                <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
-                                <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
-                                <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
-                                  {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
-                                </td>
-                                <td style={{ color: '#7a6a60', fontSize: '12px' }}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : '-'}</td>
-                              </>
-                            )}
+                            ) : (() => {
+                                const bId = String(bien.id)
+                                const isSource = bien.extraction_statut === 'ok'
+                                const handleSave = async (champ: string, val: number) => { await handleUpdate(bId, champ, val) }
+                                const handleChange = (champ: string, val: number | null) =>
+                                  setBiens(prev => prev.map(b => String(b.id) === bId ? { ...b, [champ]: val } : b))
+                                return <>
+                                  <td className="col-right td-prix"><CellEditableShared bienId={bId} champ="loyer" dbVal={bien.loyer ?? null} draftVal={allDrafts[bId]?.loyer ?? null} statut={allStatuts[bId]?.loyer ?? null} isSourceData={isSource} onValueChange={handleChange} onSubmit={handleSave} userToken={userToken ?? undefined} suffix={" \u20AC"} /></td>
+                                  <td className="col-optional"><CellTypeLoyerShared bienId={bId} champ="type_loyer" dbVal={bien.type_loyer ?? null} statut={allStatuts[bId]?.type_loyer ?? null} isSourceData={isSource} onValueChange={handleChange} onSubmit={async (c, v) => { await handleUpdate(bId, c, v) }} userToken={userToken ?? undefined} /></td>
+                                  <td className="col-optional col-right td-prix"><CellEditableShared bienId={bId} champ="charges_rec" dbVal={bien.charges_rec ?? null} draftVal={allDrafts[bId]?.charges_rec ?? null} statut={allStatuts[bId]?.charges_rec ?? null} isSourceData={isSource} onValueChange={handleChange} onSubmit={handleSave} userToken={userToken ?? undefined} suffix={" \u20AC"} /></td>
+                                  <td className="col-right td-prix"><CellEditableShared bienId={bId} champ="charges_copro" dbVal={bien.charges_copro ?? null} draftVal={allDrafts[bId]?.charges_copro ?? null} statut={allStatuts[bId]?.charges_copro ?? null} isSourceData={isSource} onValueChange={handleChange} onSubmit={handleSave} userToken={userToken ?? undefined} suffix={" \u20AC"} /></td>
+                                  <td className="col-right td-prix"><CellEditableShared bienId={bId} champ="taxe_fonc_ann" dbVal={bien.taxe_fonc_ann ?? null} draftVal={allDrafts[bId]?.taxe_fonc_ann ?? null} statut={allStatuts[bId]?.taxe_fonc_ann ?? null} isSourceData={isSource} onValueChange={handleChange} onSubmit={handleSave} userToken={userToken ?? undefined} suffix={" \u20AC"} /></td>
+                                  <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
+                                  <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={bien.estimation_prix_total} scoreTravaux={bien.score_travaux} surface={bien.surface} size="sm" /></td>
+                                  <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
+                                    {resultat ? `${resultat.cashflow_brut >= 0 ? '+' : ''}${Math.round(resultat.cashflow_brut).toLocaleString('fr-FR')} \u20AC` : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}
+                                  </td>
+                                  <td style={{ color: '#7a6a60', fontSize: '12px' }}>{bien.profil_locataire && bien.profil_locataire !== 'NC' ? bien.profil_locataire : '-'}</td>
+                                </>
+                              })()}
                           </>
                         })()}
                         </>

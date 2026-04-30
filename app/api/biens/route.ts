@@ -186,6 +186,7 @@ export async function GET(request: NextRequest) {
   photo_storage_path, photo_url,
   estimation_prix_total, lots_data, nb_lots, monopropriete, compteurs_individuels,
   moteurimmo_data, latitude, longitude,
+  extraction_statut,
   created_at, updated_at
 `)
       .in('id', idList)
