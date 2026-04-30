@@ -364,6 +364,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [hoverPhoto, setHoverPhoto] = useState<{ urls: string[], x: number, y: number, idx: number } | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
+  const [stratUpgrade, setStratUpgrade] = useState<{ strategie: string; requiredPlan: 'pro' | 'expert' } | null>(null)
   const [budgetTravauxM2, setBudgetTravauxM2] = useState<Record<string, number>>({ '1': 200, '2': 500, '3': 800, '4': 1200, '5': 1800 })
   const [userPlan, setUserPlan] = useState<string>('free')
   const [userRegime, setUserRegime] = useState<string>('')
@@ -710,9 +711,12 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  // Pro : 2 strategies (choisies a l'abonnement, stockees dans profil) + IDR en aperçu. Expert/Free : toutes.
-  const proStrategies = [...new Set([userStrategie || STRATEGIES_VISIBLES[0], userStrategie2, 'Immeuble de rapport'].filter(Boolean))] as string[]
-  const strategies = userPlan === 'pro' ? proStrategies : STRATEGIES_VISIBLES
+  function getStratAccess(s: string): 'active' | 'locked-pro' | 'locked-expert' {
+    if (userPlan === 'expert') return 'active'
+    if (s === 'Enchères') return 'locked-expert'
+    if (s === 'Immeuble de rapport' && userPlan === 'free') return 'locked-pro'
+    return 'active'
+  }
 
   // Filtres cote client (les autres sont cote serveur)
   let filtered = allBiens.filter(b => {
@@ -758,6 +762,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         .filter-bar select.required { border-color: #c0392b; background: #fff8f7; }
         .filter-bar input { width: 140px; }
         .filter-sep { width: 1px; height: 44px; background: #e8e2d8; align-self: flex-end; margin: 0 4px; }
+        .strat-tab-bar { display: flex; gap: 6px; flex-wrap: wrap; flex: 0 0 100%; width: 100%; padding-bottom: 14px; border-bottom: 1px solid #ede8e0; margin-bottom: 4px; }
+        .strat-tab { padding: 7px 16px; border-radius: 20px; border: 1.5px solid #e8e2d8; background: #f7f4f0; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; color: #5a4a40; transition: all 150ms ease; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .strat-tab.active { background: #1a1210; color: #fff; border-color: #1a1210; }
+        .strat-tab:not(.locked):not(.active):hover { border-color: #1a1210; color: #1a1210; }
+        .strat-tab.locked { opacity: 0.4; cursor: not-allowed; }
         .view-toggle { margin-left: auto; display: flex; gap: 4px; align-self: flex-end; }
         .view-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e8e2d8; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease; background: transparent; color: #888; }
         .view-btn.active { background: #1a1210; color: #fff; border-color: #1a1210; }
@@ -828,6 +837,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
           .filter-toggle { display: flex; align-items: center; justify-content: space-between; }
           .main { padding: 16px; }
           .filter-bar { flex-direction: column; gap: 12px; padding: 12px 16px; border-radius: 12px; }
+          .strat-tab-bar { gap: 4px; padding-bottom: 10px; }
+          .strat-tab { font-size: 12px; padding: 6px 12px; }
           .filter-bar.collapsed { display: none; }
           .filter-sep { display: none; }
           .view-toggle { margin-left: 0; justify-content: stretch; width: 100%; }
@@ -870,14 +881,25 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
           <span style={{ fontSize: '18px', transition: 'transform 150ms ease', transform: filtersOpen ? 'rotate(180deg)' : 'rotate(0)' }}>{'\u25B2'}</span>
         </button>
         <div className={`filter-bar ${!filtersOpen ? 'collapsed' : ''}`}>
-          <div className="filter-group">
-            <label className="filter-label">Strategie MDB</label>
-            <select value={strategie} onChange={e => setStrategie(e.target.value)} className={!strategie ? 'required' : ''}>
-              <option value="">-- Choisir une strategie --</option>
-              {strategies.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+          <div className="strat-tab-bar">
+            {STRATEGIES_VISIBLES.map(s => {
+              const access = getStratAccess(s)
+              const isLocked = access !== 'active'
+              return (
+                <button
+                  key={s}
+                  className={`strat-tab${strategie === s ? ' active' : ''}${isLocked ? ' locked' : ''}`}
+                  onClick={() => isLocked
+                    ? setStratUpgrade({ strategie: s, requiredPlan: access === 'locked-pro' ? 'pro' : 'expert' })
+                    : setStrategie(s)
+                  }
+                >
+                  {s}
+                  {isLocked && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+                </button>
+              )
+            })}
           </div>
-          <div className="filter-sep" />
           <div className="filter-group" style={{ flex: 1 }}>
             <label className="filter-label">Localisation</label>
             <div className="commune-wrap">
@@ -1031,7 +1053,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
             <label className="filter-label">{"Recherche par mots-cl\u00E9s"}</label>
             <input
               type="text"
-              placeholder={"Terrasse, garage, vue mer..."}
+              placeholder={isEncheres ? "Tribunal, Avocat poursuivant, Adresse..." : "Terrasse, garage, vue mer..."}
               value={keyword}
               onChange={e => {
                 setKeyword(e.target.value)
@@ -1272,8 +1294,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                           <span className="td-bien-title">{bien.type_bien || 'Bien'} {bien.nb_pieces}{bien.surface ? ` - ${Math.round(bien.surface)} m\u00B2` : ''}</span>
                           {bien.quartier && <span className="td-bien-quartier">{bien.quartier}</span>}
                         </td>
-                        <td style={{ minWidth: '140px', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontWeight: 500, display: 'block' }}>{bien.ville}</span>
+                        <td style={{ minWidth: '140px', maxWidth: '200px', overflow: 'hidden' }}>
+                          <span style={{ fontWeight: 500, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={bien.ville}>{bien.ville}</span>
                           {(bien as any).code_postal && <span style={{ fontSize: '12px', color: '#7a6a60' }}>{(bien as any).code_postal}</span>}
                         </td>
                         {isEncheres ? (() => {
@@ -1340,7 +1362,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             <td><span style={{ fontSize: '12px', fontWeight: 500, color: occ.color }}>{occ.label}</span></td>
                             <td className="td-prix">{e.prix_adjuge ? formatPrix(e.prix_adjuge) : <span style={{ color: '#c0b0a0', fontStyle: 'italic' }}>-</span>}</td>
                             <td className="td-prix"><InlineNumEdit value={e.frais_preemption ?? null} enchereId={String(e.id)} champ="frais_preemption" userToken={userToken} onSave={v => setAllBiens(prev => prev.map(b => String(b.id) === String(e.id) ? { ...b, frais_preemption: v } as any : b))} /></td>
-                            <td className="td-prix"><InlineNumEdit value={e.honoraires_avocat ?? null} enchereId={String(e.id)} champ="honoraires_avocat" userToken={userToken} onSave={v => setAllBiens(prev => prev.map(b => String(b.id) === String(e.id) ? { ...b, honoraires_avocat: v } as any : b))} /></td>
+                            <td className="td-prix"><InlineNumEdit value={e.honoraires_avocat ?? 1500} enchereId={String(e.id)} champ="honoraires_avocat" userToken={userToken} onSave={v => setAllBiens(prev => prev.map(b => String(b.id) === String(e.id) ? { ...b, honoraires_avocat: v } as any : b))} /></td>
                             <td className="td-prix"><FraisMutationPopover frais={frais} /></td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {e.avocat_nom ? (
@@ -1574,6 +1596,31 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               fontSize: '13px', fontWeight: 600, color: '#7a6a60', cursor: 'pointer',
               fontFamily: "'DM Sans', sans-serif",
             }}>Fermer</button>
+          </div>
+        </div>
+      )}
+
+      {stratUpgrade && (
+        <div onClick={() => setStratUpgrade(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,18,16,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, padding: '40px 32px', maxWidth: 380, width: '90%', textAlign: 'center', boxShadow: '0 16px 48px rgba(0,0,0,0.18)', fontFamily: "'DM Sans', sans-serif" }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(192,57,43,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 700, marginBottom: 10, color: '#1a1210' }}>
+              {stratUpgrade.strategie}
+            </h3>
+            <p style={{ fontSize: 14, color: '#7a6a60', lineHeight: 1.6, marginBottom: 28 }}>
+              {stratUpgrade.requiredPlan === 'pro'
+                ? <>{"Cette stratégie est disponible à partir du plan "}<strong style={{ color: '#1a1210' }}>Pro</strong>.</>
+                : <>{"Les enchères judiciaires sont réservées au plan "}<strong style={{ color: '#1a1210' }}>Expert</strong>.</>
+              }
+            </p>
+            <a href="/#pricing" style={{ display: 'block', padding: '14px 24px', borderRadius: 10, background: '#c0392b', color: '#fff', textDecoration: 'none', fontSize: 15, fontWeight: 600, marginBottom: 12, transition: 'opacity 150ms' }}>
+              {stratUpgrade.requiredPlan === 'pro' ? 'Passer Pro →' : 'Passer Expert →'}
+            </a>
+            <button onClick={() => setStratUpgrade(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#7a6a60', fontFamily: "'DM Sans', sans-serif", padding: '8px 16px' }}>
+              Plus tard
+            </button>
           </div>
         </div>
       )}

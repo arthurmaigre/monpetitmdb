@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
@@ -93,38 +93,42 @@ function PhotoCarousel({ bien, overlay }: { bien: any, overlay?: React.ReactNode
 }
 
 const PLATFORM_LOGOS: Record<string, { name: string, color: string, abbrev: string }> = {
-  licitor: { name: 'Licitor', color: '#1565C0', abbrev: 'LIC' },
-  avoventes: { name: 'Avoventes', color: '#6A1B9A', abbrev: 'AVO' },
-  vench: { name: 'Vench', color: '#2E7D32', abbrev: 'VEN' },
-  leboncoin: { name: 'Leboncoin', color: '#F56B2A', abbrev: 'LBC' },
-  seloger: { name: 'SeLoger', color: '#E5002B', abbrev: 'SL' },
-  bienici: { name: 'Bien\'ici', color: '#00B8D4', abbrev: 'BI' },
-  pap: { name: 'PAP', color: '#004A8F', abbrev: 'PAP' },
-  orpi: { name: 'Orpi', color: '#003D6B', abbrev: 'OR' },
-  century21: { name: 'Century 21', color: '#B8860B', abbrev: 'C21' },
-  laforet: { name: 'Laforet', color: '#006633', abbrev: 'LF' },
-  figaro: { name: 'Le Figaro', color: '#1A1A1A', abbrev: 'FIG' },
-  ouestfrance: { name: 'Ouest-France', color: '#D4213D', abbrev: 'OF' },
-  paruvendu: { name: 'ParuVendu', color: '#FF6600', abbrev: 'PV' },
-  safti: { name: 'Safti', color: '#00A3E0', abbrev: 'SF' },
-  iad: { name: 'IAD', color: '#E30613', abbrev: 'IAD' },
-  capifrance: { name: 'Capifrance', color: '#003366', abbrev: 'CF' },
-  foncia: { name: 'Foncia', color: '#003D6B', abbrev: 'FO' },
-  guyhoquet: { name: 'Guy Hoquet', color: '#E30613', abbrev: 'GH' },
-  efficity: { name: 'Efficity', color: '#FF4500', abbrev: 'EF' },
-  notaires: { name: 'Notaires', color: '#1A1A1A', abbrev: 'NOT' },
-  immonot: { name: 'Immonot', color: '#003366', abbrev: 'IM' },
-  properstar: { name: 'Properstar', color: '#FF6600', abbrev: 'PS' },
-  lesiteimmo: { name: 'LeSiteImmo', color: '#0066CC', abbrev: 'LSI' },
-  immoregion: { name: 'ImmoRegion', color: '#336699', abbrev: 'IR' },
-  greenacres: { name: 'Green-Acres', color: '#4CAF50', abbrev: 'GA' },
-  megagence: { name: 'Megagence', color: '#E91E63', abbrev: 'MG' },
-  nestenn: { name: 'Nestenn', color: '#FF5722', abbrev: 'NE' },
-  era: { name: 'ERA', color: '#C62828', abbrev: 'ERA' },
-  arthurimmo: { name: 'Arthur Immo', color: '#1565C0', abbrev: 'AI' },
-  optimhome: { name: 'OptimHome', color: '#FF9800', abbrev: 'OH' },
-  cessionpme: { name: 'CessionPME', color: '#555', abbrev: 'CP' },
-  gensdeconfiance: { name: 'Gens de Confiance', color: '#2E7D32', abbrev: 'GC' },
+  // Enchères
+  licitor:         { name: 'Licitor',          color: '#1a3c6b', abbrev: 'LIC' },
+  avoventes:       { name: 'Avoventes',         color: '#5b2a8a', abbrev: 'AVO' },
+  vench:           { name: 'Vench',             color: '#1b6b3a', abbrev: 'VEN' },
+  // Portails grands publics
+  leboncoin:       { name: 'Leboncoin',         color: '#ec5a13', abbrev: 'LBC' }, // orange officiel
+  seloger:         { name: 'SeLoger',           color: '#e2001a', abbrev: 'SL'  }, // rouge officiel
+  bienici:         { name: "Bien'ici",          color: '#1a5490', abbrev: 'Bi'  }, // bleu foncé officiel
+  logicimmo:       { name: 'Logic-Immo',        color: '#ffcc00', abbrev: 'Lo'  }, // jaune officiel
+  paruvendu:       { name: 'ParuVendu',         color: '#00a76f', abbrev: 'PV'  }, // vert officiel
+  pap:             { name: 'PAP',               color: '#0057a8', abbrev: 'PAP' }, // bleu PAP
+  figaro:          { name: 'Le Figaro Immo',    color: '#c8102e', abbrev: 'FIG' }, // rouge Figaro
+  ouestfrance:     { name: 'Ouest-France',      color: '#c8102e', abbrev: 'OF'  },
+  greenacres:      { name: 'Green-Acres',       color: '#3a8c3f', abbrev: 'GA'  },
+  lesiteimmo:      { name: 'LeSiteImmo',        color: '#005bab', abbrev: 'LSI' },
+  immoregion:      { name: 'ImmoRegion',        color: '#336699', abbrev: 'IR'  },
+  properstar:      { name: 'Properstar',        color: '#0050c8', abbrev: 'PS'  },
+  notaires:        { name: 'Notaires.immo',     color: '#1a3670', abbrev: 'NOT' }, // bleu marine notaires
+  immonot:         { name: 'Immonot',           color: '#1a3670', abbrev: 'IMN' },
+  // Réseaux d'agences
+  orpi:            { name: 'Orpi',              color: '#f47920', abbrev: 'OR'  }, // orange officiel Orpi
+  century21:       { name: 'Century 21',        color: '#b8972a', abbrev: 'C21' }, // or Century 21
+  laforet:         { name: 'Laforêt',           color: '#006633', abbrev: 'LF'  }, // vert Laforêt
+  safti:           { name: 'Safti',             color: '#c8101e', abbrev: 'SF'  }, // rouge Safti
+  iad:             { name: 'IAD',               color: '#e30613', abbrev: 'IAD' }, // rouge IAD
+  capifrance:      { name: 'Capifrance',        color: '#e05a00', abbrev: 'CF'  }, // orange Capifrance
+  foncia:          { name: 'Foncia',            color: '#0076be', abbrev: 'FO'  }, // bleu Foncia
+  guyhoquet:       { name: 'Guy Hoquet',        color: '#f05a28', abbrev: 'GH'  }, // orange Guy Hoquet
+  era:             { name: 'ERA Immobilier',    color: '#003087', abbrev: 'ERA' }, // bleu marine ERA
+  arthurimmo:      { name: 'Arthur Immo',       color: '#003d7a', abbrev: 'AI'  },
+  optimhome:       { name: 'OptimHome',         color: '#f0a500', abbrev: 'OH'  }, // jaune-orange OptimHome
+  nestenn:         { name: 'Nestenn',           color: '#003f8a', abbrev: 'NE'  }, // bleu Nestenn
+  efficity:        { name: 'Efficity',          color: '#e8400a', abbrev: 'EF'  },
+  megagence:       { name: 'Megagence',         color: '#d4006a', abbrev: 'MG'  },
+  cessionpme:      { name: 'CessionPME',        color: '#555555', abbrev: 'CP'  },
+  gensdeconfiance: { name: 'Gens de Confiance', color: '#1b6b3a', abbrev: 'GC'  },
 }
 
 function ModalPanel({ open, onClose, title, children, size }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; size?: 'large' }) {
@@ -319,7 +323,7 @@ function ExpandableCharges({ label, total, isReel, isFree, details }: { label: s
   )
 }
 
-function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false, fraisPrealables = 0 }: any) {
+function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', highlight = false, dureeRevente, estimation, budgetTravauxM2, scorePerso, fraisNotaire, fraisNotaireBase = 7.5, apport, fraisAgenceRevente = 5, chargesUtilisateur, isFree = false, isEnchere = false, fraisPrealables = 0, honorairesAvocat = 0 }: any) {
   const { prix_fai, loyer, type_loyer, charges_rec, charges_copro, taxe_fonc_ann } = bien
   const { tauxCredit, tauxAssurance, dureeAns, typeCredit: typeCreditSimu } = financement
   const isTravauxLourds = bien.strategie_mdb === 'Travaux lourds'
@@ -464,7 +468,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
   const fraisNotairePct = colFraisNotairePct
   const fraisNotaireMontant = Math.round(colFraisNotaireMontant)
   // Montant total des frais d'acquisition : frais enchere si enchère, frais notaire sinon
-  const fraisAcquisitionTotal = isEnchere ? (fraisEnchere?.total || 0) : fraisNotaireMontant
+  const fraisAcquisitionTotal = isEnchere ? ((fraisEnchere?.total || 0) + honorairesAvocat) : fraisNotaireMontant
 
   // PV brute = revente net vendeur - frais agence vendeur - achat FAI - notaire achat - travaux
   // L'estimation DVF est deja le prix net vendeur (pas de frais agence a deduire sauf si charge vendeur)
@@ -794,7 +798,7 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
               : regime === 'sci_is'
                 ? "Prix de revente estim\u00E9 via les donn\u00E9es DVF. En SCI IS, la plus-value se calcule sur la VNC (valeur nette comptable = prix + frais + travaux - amortissements cumul\u00E9s), pas sur le prix d\u2019achat."
                 : "Prix de revente estim\u00E9 via les donn\u00E9es DVF (transactions notariales r\u00E9elles). C\u2019est le prix net vendeur dans l\u2019acte. Les frais d\u2019agence sont g\u00E9n\u00E9ralement \u00E0 la charge de l\u2019acqu\u00E9reur."} />
-          <Row label="Prix d'achat (net vendeur)" value={`-${fmt(prixNetVendeurAchat)} \u20AC`} rouge
+          <Row label={isEnchere ? "Prix d'achat (sans frais d'ench\u00E8re)" : "Prix d'achat (net vendeur)"} value={`-${fmt(prixNetVendeurAchat)} \u20AC`} rouge
             info={isEnchere
               ? "Mise à prix fixée par le tribunal, ou prix adjugé si le bien a déjà été vendu aux enchères. C'est le montant de référence avant les frais d'adjudication."
               : "Prix payé au vendeur du bien (hors frais d'agence). C'est le prix inscrit dans l'acte notarié d'achat."} />
@@ -812,8 +816,8 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
             <>
               <Row label={"Frais préalables"} value={fraisEnchere && fraisEnchere.frais_prealables > 0 ? `-${fmt(fraisEnchere.frais_prealables)} ${'\u20AC'}` : `0 ${'\u20AC'}`} rouge={fraisEnchere ? fraisEnchere.frais_prealables > 0 : false}
                 info={"Frais préalables engagés par l'avocat poursuivant avant l'audience (diagnostics, huissier, publication…). À demander à l'avocat et saisir dans la fiche une fois obtenus."} />
-              <Row label={`Frais de mutation (${fraisEnchere?.pct_sans_prealables ?? 0}\u00A0%)`} value={`-${fmt(fraisEnchere?.total_sans_prealables || 0)} ${'\u20AC'}`} rouge
-                info={`Émoluments avocat TTC : ${fmt(fraisEnchere?.emoluments_ttc || 0)}\u00A0${'\u20AC'}\nDroits de mutation (${fraisEnchere?.droits_enregistrement_pct ?? 5.8}\u00A0%) : ${fmt(fraisEnchere?.droits_enregistrement || 0)}\u00A0${'\u20AC'}\nCSI (0,1\u00A0%) : ${fmt(fraisEnchere?.csi || 0)}\u00A0${'\u20AC'}\n\nTotal hors frais préalables : ${fmt(fraisEnchere?.total_sans_prealables || 0)}\u00A0${'\u20AC'}`} />
+              <Row label={`Frais de mutation + honoraires avocat`} value={`-${fmt((fraisEnchere?.total_sans_prealables || 0) + honorairesAvocat)} ${'\u20AC'}`} rouge
+                info={`Frais de mutation (${fraisEnchere?.pct_sans_prealables ?? 0} %) : ${fmt(fraisEnchere?.total_sans_prealables || 0)} ${'€'}\n  • Émoluments avocat TTC : ${fmt(fraisEnchere?.emoluments_ttc || 0)} ${'€'}\n  • Droits de mutation (${fraisEnchere?.droits_enregistrement_pct ?? 5.8} %) : ${fmt(fraisEnchere?.droits_enregistrement || 0)} ${'€'}\n  • CSI (0,1 %) : ${fmt(fraisEnchere?.csi || 0)} ${'€'}\nHonoraires avocat (libres) : ${fmt(honorairesAvocat)} ${'€'}`} />
             </>
           ) : (
             <Row label={`Frais de notaire (${fraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge
@@ -1833,6 +1837,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [honorairesAvocat, setHonorairesAvocat] = useState<number | ''>(bien.honoraires_avocat ?? 1500)
   const [adresseRowEditing, setAdresseRowEditing] = useState(false)
   const [adresseRowDraft, setAdresseRowDraft] = useState('')
+  // Projection de division
+  const [divProjection, setDivProjection] = useState<{ nbLots: number; typeLots: string; loyerParLot: number; cloisons: number; compteurs: number; autres: number } | null>(null)
+  const [showDivModal, setShowDivModal] = useState(false)
+  const [divDraft, setDivDraft] = useState<{ nbLots: string; typeLots: string; loyerParLot: string; cloisons: string; compteurs: string; autres: string }>({ nbLots: '', typeLots: 'Studios', loyerParLot: '', cloisons: '', compteurs: '', autres: '' })
   // Charger les brouillons localStorage au montage
   useEffect(() => {
     if (!isEnchere) {
@@ -1841,6 +1849,11 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         setBien((prev: any) => ({ ...prev, ...drafts }))
       }
     }
+    // Charger projection division
+    try {
+      const raw = localStorage.getItem(`mdb_div_proj_${id}`)
+      if (raw) setDivProjection(JSON.parse(raw))
+    } catch {}
   }, [id, isEnchere])
 
 
@@ -2967,6 +2980,13 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </div>
         )}
 
+        {/* Bandeau upgrade Pro — affiché sous tous les onglets */}
+        {userPlan === 'free' && freeAnalysesLeft > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fdf4f3', border: '1.5px solid #c0392b', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#7a6a60', fontWeight: 500 }}>
+            <span>{'✨ Analyse complète offerte (' + freeAnalysesUsed + '/5 utilisées) — passez Pro pour des analyses illimitées et toutes les stratégies.'}</span>
+            <a href="/mon-profil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#c0392b', color: '#fff', borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>{'Passer Pro →'}</a>
+          </div>
+        )}
         {activeNav === 'apercu' && (<div className="tab-panel">
         <div id="nav-apercu" className="section">
           <h2 className="section-title">
@@ -3446,7 +3466,226 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </div>
         )}
 
-        {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli (enchères incluses) */}
+        {/* Projection de division */}
+        {bien.strategie_mdb === 'Division' && (() => {
+          const currentType = bien.type_bien || (bien.nb_pieces ? `T${bien.nb_pieces}` : null)
+          const currentLoyer = bien.loyer
+          const loyerTotal = divProjection ? divProjection.nbLots * divProjection.loyerParLot : null
+          const budgetTotal = divProjection ? divProjection.cloisons + divProjection.compteurs + divProjection.autres : null
+          const rendementBrut = loyerTotal && bien.prix_fai ? (loyerTotal * 12) / bien.prix_fai * 100 : null
+          const gainMensuel = loyerTotal !== null && currentLoyer ? loyerTotal - currentLoyer : null
+
+          const draftNbLots = parseInt(divDraft.nbLots) || 0
+          const draftLoyerParLot = parseInt(divDraft.loyerParLot) || 0
+          const draftCloisons = parseInt(divDraft.cloisons) || 0
+          const draftCompteurs = parseInt(divDraft.compteurs) || 0
+          const draftAutres = parseInt(divDraft.autres) || 0
+          const draftLoyerTotal = draftNbLots * draftLoyerParLot
+          const draftBudgetTotal = draftCloisons + draftCompteurs + draftAutres
+          const draftRendement = draftLoyerTotal && bien.prix_fai ? (draftLoyerTotal * 12) / bien.prix_fai * 100 : null
+
+          const fieldStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '6px 10px', border: '1px solid #c0392b', background: '#f9eded', borderRadius: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#c0392b', textAlign: 'right', outline: 'none' }
+          const fieldRowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 170px 32px', alignItems: 'center', columnGap: 10, padding: '12px 4px', borderBottom: '1px solid #f0ebe3' }
+
+          return (
+            <div className="section">
+              {/* Modal projection — fidèle à la maquette v4 */}
+              {showDivModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(31,27,22,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowDivModal(false)}>
+                  <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
+                    {/* Header */}
+                    <div style={{ padding: '24px 28px 18px', borderBottom: '1px solid #e8e2d8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexShrink: 0 }}>
+                      <div>
+                        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', color: '#1a1210', marginBottom: 4 }}>{"Définir votre projection de division"}</div>
+                        <div style={{ fontSize: 13, color: '#6b6358' }}>{"Renseignez le nombre de lots cibles et le budget travaux associé. L'analyse fiscale se mettra à jour automatiquement."}</div>
+                      </div>
+                      <button onClick={() => setShowDivModal(false)} style={{ background: '#f2ece4', border: 'none', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b6358', fontSize: 18, flexShrink: 0 }}>{'\u00d7'}</button>
+                    </div>
+
+                    {/* Body */}
+                    <div style={{ padding: '24px 28px', overflowY: 'auto', flex: '1 1 auto' }}>
+                      {/* Section Projection */}
+                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 500, color: '#1a1210', letterSpacing: '-0.01em', paddingBottom: 10, borderBottom: '1px solid #e8e2d8', marginBottom: 0 }}>{"Projection de division"}</div>
+                      <div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Nombre de lots projetés"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" min={2} max={10} value={divDraft.nbLots} onChange={e => setDivDraft(p => ({ ...p, nbLots: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"lots"}</span>
+                        </div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Type de lots"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <select value={divDraft.typeLots} onChange={e => setDivDraft(p => ({ ...p, typeLots: e.target.value }))} style={{ ...fieldStyle, paddingRight: 28, appearance: 'none', backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23c0392b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/></svg>\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', cursor: 'pointer' }}>
+                              <option>Studios</option>
+                              <option>T1</option>
+                              <option>T2</option>
+                              <option>Mixte</option>
+                            </select>
+                          </span>
+                          <span />
+                        </div>
+                        <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Loyer moyen projeté par lot"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.loyerParLot} onChange={e => setDivDraft(p => ({ ...p, loyerParLot: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4, whiteSpace: 'nowrap' }}>{"€/mois"}</span>
+                        </div>
+                      </div>
+
+                      {/* Section Budget */}
+                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 500, color: '#1a1210', letterSpacing: '-0.01em', paddingBottom: 10, borderBottom: '1px solid #e8e2d8', marginTop: 24, marginBottom: 0 }}>{"Budget travaux division"}</div>
+                      <div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Cloisonnement & entrées"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.cloisons} onChange={e => setDivDraft(p => ({ ...p, cloisons: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"€"}</span>
+                        </div>
+                        <div style={{ ...fieldRowStyle }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Compteurs séparés"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.compteurs} onChange={e => setDivDraft(p => ({ ...p, compteurs: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"€"}</span>
+                        </div>
+                        <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+                          <span style={{ fontSize: 13, color: '#6b6358', fontWeight: 500 }}>{"Autres (plomberie, élec, frais admin)"}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <input type="number" value={divDraft.autres} onChange={e => setDivDraft(p => ({ ...p, autres: e.target.value }))} style={fieldStyle} />
+                          </span>
+                          <span style={{ fontSize: 12, color: '#a39a8c', marginLeft: 4 }}>{"€"}</span>
+                        </div>
+                      </div>
+
+                      {/* Preview temps réel */}
+                      <div style={{ marginTop: 20, padding: '16px 20px', background: '#d4ebde', borderRadius: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13 }}>
+                          <span style={{ color: '#6b6358' }}>{"Total budget travaux"}</span>
+                          <span style={{ color: '#1a1210', fontWeight: 600 }}>{draftBudgetTotal ? `${draftBudgetTotal.toLocaleString('fr-FR')} €` : '—'}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13 }}>
+                          <span style={{ color: '#6b6358' }}>{"Loyer total projeté"}</span>
+                          <span style={{ color: '#1a1210', fontWeight: 600 }}>{draftLoyerTotal ? `${draftLoyerTotal.toLocaleString('fr-FR')} €/mois` : '—'}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 6px', marginTop: 6, borderTop: '1px solid rgba(47,125,91,0.2)', fontSize: 13 }}>
+                          <span style={{ color: '#2e7c5d', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 11 }}>{"Rendement brut projeté"}</span>
+                          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: '#2e7c5d', fontWeight: 600 }}>{draftRendement ? `${draftRendement.toFixed(1).replace('.', ',')} %` : '—'}</span>
+                        </div>
+                      </div>
+
+                      {/* Footer note */}
+                      <div style={{ marginTop: 24, padding: '12px 16px', background: '#f2ece4', borderRadius: 10, fontSize: 11, color: '#6b6358', lineHeight: 1.6 }}>
+                        <strong style={{ color: '#1a1210', display: 'block', marginBottom: 2, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{"Points à vérifier avant d'acheter :"}</strong>
+                        {"PLU / zonage, accord AG de copropriété, déclaration préalable ou permis de construire, création d'entrées indépendantes."}
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{ padding: '18px 28px 24px', borderTop: '1px solid #e8e2d8', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+                      <button onClick={() => setShowDivModal(false)} style={{ padding: '12px 18px', borderRadius: 12, border: '1px solid #e8e2d8', background: 'transparent', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1a1210' }}>{"Annuler"}</button>
+                      <button onClick={() => {
+                        const proj = {
+                          nbLots: parseInt(divDraft.nbLots) || 1,
+                          typeLots: divDraft.typeLots || 'Studios',
+                          loyerParLot: parseInt(divDraft.loyerParLot) || 0,
+                          cloisons: parseInt(divDraft.cloisons) || 0,
+                          compteurs: parseInt(divDraft.compteurs) || 0,
+                          autres: parseInt(divDraft.autres) || 0,
+                        }
+                        try { localStorage.setItem(`mdb_div_proj_${id}`, JSON.stringify(proj)) } catch {}
+                        setDivProjection(proj)
+                        setShowDivModal(false)
+                      }} style={{ padding: '12px 18px', borderRadius: 12, border: 'none', background: '#1a1210', color: '#f2ece4', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{"Appliquer ma projection"}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Card principale */}
+              <div style={{ background: '#fff', borderRadius: 12, padding: '24px 26px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', marginTop: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600, color: '#1a1210' }}>{"Projection de division"}</span>
+                  <button
+                    onClick={() => {
+                      setDivDraft({
+                        nbLots: divProjection?.nbLots?.toString() || '',
+                        typeLots: divProjection?.typeLots || 'Studios',
+                        loyerParLot: divProjection?.loyerParLot?.toString() || '',
+                        cloisons: divProjection?.cloisons?.toString() || '',
+                        compteurs: divProjection?.compteurs?.toString() || '',
+                        autres: divProjection?.autres?.toString() || '',
+                      })
+                      setShowDivModal(true)
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: '#c0392b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    {"Définir ma projection"}
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: '#6b6358', marginBottom: 16 }}>{"Scénario projeté de transformation — éditable selon votre stratégie"}</div>
+
+                {/* État actuel → Après division */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 24, alignItems: 'center', padding: 22, background: '#f2ece4', borderRadius: 8 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 8 }}>{"\u00c9TAT ACTUEL"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: '#1a1210', marginBottom: 2 }}>{"1 × "}{currentType || '—'}</div>
+                    <div style={{ fontSize: 13, color: '#6b6358' }}>{currentLoyer ? `${currentLoyer.toLocaleString('fr-FR')} €/mois` : 'Loyer NC'}</div>
+                  </div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, color: '#c0392b' }}>{'→'}</div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 8 }}>{"APRÈS DIVISION"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: divProjection ? '#2e7c5d' : '#a39a8c', marginBottom: 2 }}>
+                      {divProjection ? `${divProjection.nbLots} × ${divProjection.typeLots}` : '— × —'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#6b6358' }}>
+                      {loyerTotal ? `${loyerTotal.toLocaleString('fr-FR')} €/mois` : 'Non défini'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Métriques */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
+                  <div style={{ padding: '14px 16px', background: '#f2ece4', borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 6 }}>{"Budget travaux division"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: '#c77f1f' }}>
+                      {budgetTotal ? `${budgetTotal.toLocaleString('fr-FR')} €` : '—'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b6358', marginTop: 2 }}>{"Saisi manuellement · cloisons, compteurs, entrées"}</div>
+                  </div>
+                  <div style={{ padding: '14px 16px', background: '#f2ece4', borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a39a8c', fontWeight: 600, marginBottom: 6 }}>{"Gain locatif annuel"}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: gainMensuel !== null && gainMensuel > 0 ? '#2e7c5d' : '#a39a8c' }}>
+                      {gainMensuel !== null ? `${gainMensuel >= 0 ? '+' : ''}${(gainMensuel * 12).toLocaleString('fr-FR')} €` : '—'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b6358', marginTop: 2 }}>
+                      {gainMensuel !== null ? `${gainMensuel >= 0 ? '+' : ''}${gainMensuel.toLocaleString('fr-FR')} €/mois supplémentaires` : "Définir une projection d'abord"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Checklist */}
+                <div style={{ marginTop: 16, padding: '16px 20px', background: '#fef6e8', borderRadius: 8 }}>
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c77f1f', fontWeight: 700, marginBottom: 8 }}>{"POINTS À VÉRIFIER AVANT L'ACQUISITION"}</div>
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, fontSize: 12, color: '#6b6358', lineHeight: 1.7 }}>
+                    {['PLU : zone, COS, règles de division parcellaire', "Accord de l'assemblée générale si copropriété", 'Déclaration préalable ou permis de construire', "Possibilité de créer des entrées indépendantes et compteurs séparés"].map((item, i) => (
+                      <li key={i} style={{ paddingLeft: 20, position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 0, color: '#c77f1f', fontWeight: 700 }}>{'\u2610'}</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+                {/* Données Locatives — LEP et IDR toujours, autres stratégies si loyer rempli (enchères incluses) */}
         {(bien.strategie_mdb === 'Locataire en place' || isIDR || bien.loyer != null) && (
           <div className="section">
             <h2 className="section-title">
@@ -3628,15 +3867,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           const isFreeBlocked = userPlan === 'free' && freeAnalysesLeft <= 0
           return (
             <div style={isFreeBlocked ? { position: 'relative' } : {}}>
-              {userPlan === 'free' && freeAnalysesLeft > 0 && (
-                <div style={{
-                  background: 'rgba(26,122,64,0.06)', border: '1px solid rgba(26,122,64,0.15)',
-                  borderRadius: 10, padding: '10px 16px', marginBottom: 16,
-                  fontSize: 13, color: '#1a7a40', fontWeight: 500
-                }}>
-                  {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/5 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
-                </div>
-              )}
+
               <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined} labelPrix={isEnchere ? (bien.prix_adjuge > 0 ? <>{"Prix adjug\u00e9"}</> : <>{"Mise \u00e0 prix"}</>) : undefined} estimationInitiale={bien.estimation_details} estimationDateInitiale={bien.estimation_date}
                 extra={isIDR && nbLotsEffectif > 0 ? (
                   <div style={{ marginTop: '4px', textAlign: 'center' }}>
@@ -4358,8 +4589,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 </div>
               )}
               <div className="fiscal-compare">
-                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
-                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} />
+                <PnlColonne titre={`${[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime)?.label || regime} (votre r\u00E9gime)`} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime} otherRegime={regime2} highlight dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} honorairesAvocat={Number(honorairesAvocat)} />
+                <PnlColonne titre={[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2} bien={{ ...bien, prix_fai: prixBase }} financement={financement} tmi={tmi} regime={regime2} otherRegime={regime} dureeRevente={dureeRevente} estimation={estimationData} budgetTravauxM2={budgetTravauxM2} scorePerso={scorePerso} fraisNotaire={fraisNotaire} fraisNotaireBase={fraisNotaireBase} apport={apportNum} fraisAgenceRevente={fraisAgenceNum} chargesUtilisateur={chargesUtilisateur} isFree={isFreeBlocked} isEnchere={isEnchere} fraisPrealables={bien.frais_preemption || 0} honorairesAvocat={Number(honorairesAvocat)} />
               </div>
             </div>
           </div>
