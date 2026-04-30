@@ -18,6 +18,61 @@ import { calculerCashflow, calculerFraisEnchere } from '@/lib/calculs'
 // CellEditable removed from list view — read-only cells
 
 
+
+// Input inline pour cellules null en vue liste — display:inline-block aligne sur text-align:right du td
+function ListCellInput({ bienId, champ, suffix = ' €', userToken, onSaved }: { bienId: string, champ: string, suffix?: string, userToken: string, onSaved: (v: any) => void }) {
+  const [val, setVal] = useState('')
+  const [saving, setSaving] = useState(false)
+  async function save() {
+    if (!val || saving) return
+    setSaving(true)
+    const num = Math.round(Number(val))
+    const res = await fetch('/api/biens/' + bienId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + userToken },
+      body: JSON.stringify({ [champ]: num }),
+    })
+    if (res.ok) { const d = await res.json(); onSaved(d.bien || { [champ]: num }) }
+    setSaving(false)
+    setVal('')
+  }
+  const hasVal = val.trim() !== ''
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+      <input type="number" value={val} placeholder="—"
+        onChange={e => setVal(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') save() }}
+        style={{ width: '68px', textAlign: 'right', fontSize: '12px', padding: '2px 5px',
+          border: '1.5px solid ' + (hasVal ? '#2a4a8a' : '#e8e2d8'), borderRadius: '4px',
+          fontFamily: "'DM Sans', sans-serif", outline: 'none',
+          background: hasVal ? '#f0f4ff' : '#faf8f5', color: hasVal ? '#2a4a8a' : '#aaa' }} />
+      {hasVal && <button onClick={save} disabled={saving}
+        style={{ width: '18px', height: '18px', borderRadius: '4px', border: 'none', background: '#1a7a40', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>}
+    </span>
+  )
+}
+
+function ListCellSelect({ bienId, userToken, onSaved }: { bienId: string, userToken: string, onSaved: (v: any) => void }) {
+  async function save(v: string) {
+    if (!v) return
+    const res = await fetch('/api/biens/' + bienId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + userToken },
+      body: JSON.stringify({ type_loyer: v }),
+    })
+    if (res.ok) { const d = await res.json(); onSaved(d.bien || { type_loyer: v }) }
+  }
+  return (
+    <select defaultValue="" onChange={e => { if (e.target.value) save(e.target.value) }}
+      style={{ fontSize: '12px', padding: '2px 4px', border: '1.5px solid #e8e2d8', borderRadius: '4px',
+        fontFamily: "'DM Sans', sans-serif", background: '#faf8f5', color: '#aaa', outline: 'none', cursor: 'pointer' }}>
+      <option value="">—</option>
+      <option value="HC">HC</option>
+      <option value="CC">CC</option>
+    </select>
+  )
+}
+
 function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
 }
@@ -472,6 +527,20 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     setCommuneSearch('')
     setCommuneSuggestions([])
   }
+
+  async function updateBien(bienId: string, champ: string, valeur: any) {
+    if (!userToken) return
+    const res = await fetch('/api/biens/' + bienId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + userToken },
+      body: JSON.stringify({ [champ]: valeur }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setAllBiens(prev => prev.map(b => b.id === bienId ? { ...b, ...(data.bien || { [champ]: valeur }) } : b))
+    }
+  }
+
 
 
 
@@ -1205,11 +1274,21 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               </>
                             ) : (
                               <>
-                                 <td className="col-right">{bien.loyer != null ? Math.round(bien.loyer).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
-                                 <td className="col-optional" style={{ textAlign: 'center' }}>{bien.type_loyer ? <span style={{ fontWeight: 500, color: '#1a1210' }}>{bien.type_loyer}</span> : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
-                                 <td className="col-optional col-right">{bien.charges_rec != null ? Math.round(bien.charges_rec).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
-                                 <td className="col-right">{bien.charges_copro != null ? Math.round(bien.charges_copro).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
-                                 <td className="col-right">{bien.taxe_fonc_ann != null ? Math.round(bien.taxe_fonc_ann).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
+                                 <td className="col-right">{bien.loyer != null
+                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.loyer).toLocaleString('fr-FR') + ' €'}</span>
+                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="loyer" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
+                                 <td className="col-optional" style={{ textAlign: 'center' }}>{bien.type_loyer
+                                   ? <span style={{ fontWeight: 500, color: '#1a1210' }}>{bien.type_loyer}</span>
+                                   : userToken ? <ListCellSelect bienId={String(bien.id)} userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
+                                 <td className="col-optional col-right">{bien.charges_rec != null
+                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.charges_rec).toLocaleString('fr-FR') + ' €'}</span>
+                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="charges_rec" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
+                                 <td className="col-right">{bien.charges_copro != null
+                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.charges_copro).toLocaleString('fr-FR') + ' €'}</span>
+                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="charges_copro" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
+                                 <td className="col-right">{bien.taxe_fonc_ann != null
+                                   ? <span style={{ fontWeight: 500, color: '#1a1210', fontSize: '12px' }}>{Math.round(bien.taxe_fonc_ann).toLocaleString('fr-FR') + ' €'}</span>
+                                   : userToken ? <ListCellInput bienId={String(bien.id)} champ="taxe_fonc_ann" suffix=" €" userToken={userToken} onSaved={v => setAllBiens(prev => prev.map(b => b.id === bien.id ? {...b, ...v} as any : b))} /> : <span style={{ color: '#c0b0a0' }}>{'—'}</span>}</td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
