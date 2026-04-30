@@ -9,6 +9,7 @@ import { isVenteDelocalisee } from '@/lib/utils-encheres'
 import TypeBienIllustration from '@/components/TypeBienIllustration'
 import { CellEditable as CellEditableShared, CellTypeLoyer as CellTypeLoyerShared } from '@/components/CellEditable'
 import { getDrafts } from '@/lib/drafts'
+import Modal from '@/components/ui/Modal'
 
 function getPhotos(bien: any): string[] {
   const photos: string[] = []
@@ -1814,6 +1815,10 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
   const [fraisNotaireBase, setFraisNotaireBase] = useState(7.5) // valeur profil hors MdB
   const [tmi, setTmi] = useState(30)
   const [regime, setRegime] = useState('nu_micro_foncier')
+  const [showTmiDrawer, setShowTmiDrawer] = useState(false)
+  const [drawerTmi, setDrawerTmi] = useState<number | null>(null)
+  const [drawerRegime, setDrawerRegime] = useState('')
+  const [tmiDrawerSaving, setTmiDrawerSaving] = useState(false)
   const [objectifCashflow, setObjectifCashflow] = useState(0)
   const [objectifPV, setObjectifPV] = useState(20)
   const [enchereManuelMax, setEnchereManuelMax] = useState<number | null>(null)
@@ -1856,22 +1861,21 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         if (profilData.profile) {
           const p = profilData.profile
           setProfil(p)
-          if (p.plan) {
-            setUserPlan(p.plan)
-            // 2 analyses completes offertes aux Free
-            if (p.plan === 'free') {
-              const KEY = 'mdb_free_analyses'
-              const MAX = 2
-              try {
-                const viewed: string[] = JSON.parse(localStorage.getItem(KEY) || '[]')
-                if (!viewed.includes(id) && viewed.length < MAX) {
-                  viewed.push(id)
-                  localStorage.setItem(KEY, JSON.stringify(viewed))
-                }
-                setFreeAnalysesLeft(viewed.includes(id) ? 1 : 0)
-                setFreeAnalysesUsed(viewed.length)
-              } catch { setFreeAnalysesLeft(0); setFreeAnalysesUsed(0) }
-            }
+          const plan = p.plan || 'free'
+          setUserPlan(plan)
+          // 5 analyses completes offertes aux Free (plan null = Free)
+          if (plan === 'free') {
+            const KEY = `mdb_free_analyses_${session.user.id}`
+            const MAX = 5
+            try {
+              const viewed: string[] = JSON.parse(localStorage.getItem(KEY) || '[]')
+              if (!viewed.includes(id) && viewed.length < MAX) {
+                viewed.push(id)
+                localStorage.setItem(KEY, JSON.stringify(viewed))
+              }
+              setFreeAnalysesLeft(viewed.includes(id) ? 1 : 0)
+              setFreeAnalysesUsed(viewed.length)
+            } catch { setFreeAnalysesLeft(0); setFreeAnalysesUsed(0) }
           }
           if (p.apport != null) setApport(p.apport)
           if (p.taux_credit != null) setTaux(p.taux_credit)
@@ -1968,6 +1972,26 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         body: JSON.stringify({ bien_id: id, source_table: sourceTable })
       })
       if (res.ok || res.status === 409) setInWatchlist(true)
+    }
+  }
+
+  async function saveTmiDrawer() {
+    if (!userToken || drawerTmi === null) return
+    setTmiDrawerSaving(true)
+    try {
+      const body: Record<string, any> = { tmi: drawerTmi }
+      if (drawerRegime) body.regime = drawerRegime
+      await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify(body),
+      })
+      setProfil((prev: any) => ({ ...prev, tmi: drawerTmi, ...(drawerRegime ? { regime: drawerRegime } : {}) }))
+      setTmi(drawerTmi)
+      if (drawerRegime) setRegime(drawerRegime)
+      setShowTmiDrawer(false)
+    } finally {
+      setTmiDrawerSaving(false)
     }
   }
 
@@ -2195,6 +2219,8 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
         .pnl-tooltip-wrap .pnl-tooltip-text { display: none; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1a1210; color: #fff; font-size: 11px; font-weight: 400; padding: 8px 12px; border-radius: 8px; white-space: pre-line; width: max-content; max-width: 280px; z-index: 10; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,.15); pointer-events: none; text-transform: none; letter-spacing: normal; }
         .pnl-tooltip-wrap .pnl-tooltip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1a1210; }
         .pnl-tooltip-wrap:hover .pnl-tooltip-text { display: block; }
+        input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
+        input[type=number] { -moz-appearance: textfield !important; appearance: textfield !important; }
         .fiche-wrap { max-width: 1400px; margin: 0 auto; padding: 24px 32px 80px; }
         .back-link { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #7a6a60; text-decoration: none; }
         .back-link:hover { color: #1a1210; }
@@ -2916,6 +2942,31 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           </nav>
         </div>
 
+        {/* Bandeau IDR aper\u00E7u Pro */}
+        {isIDR && userPlan === 'pro' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
+            background: '#fff8e1', border: '1.5px solid #f39c12', borderRadius: 10,
+            padding: '12px 18px', marginBottom: 16,
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1210', marginBottom: 2 }}>
+                {'Immeuble de rapport \u2014 aper\u00E7u Pro'}
+              </div>
+              <div style={{ fontSize: 13, color: '#7a4f00' }}>
+                {"M\u00E9triques basiques disponibles. L'analyse fiscale compl\u00E8te (SCI IS, LMP, simulation de division) est r\u00E9serv\u00E9e au plan Expert."}
+              </div>
+            </div>
+            <a href="/mon-profil" style={{
+              display: 'inline-block', padding: '8px 20px', borderRadius: 8,
+              background: '#c0392b', color: '#fff', fontWeight: 600, fontSize: 13,
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}>
+              {'Passer Expert \u2014 49 \u20AC/mois \u2192'}
+            </a>
+          </div>
+        )}
+
         {activeNav === 'apercu' && (<div className="tab-panel">
         <div id="nav-apercu" className="section">
           <h2 className="section-title">
@@ -3583,7 +3634,7 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                   borderRadius: 10, padding: '10px 16px', marginBottom: 16,
                   fontSize: 13, color: '#1a7a40', fontWeight: 500
                 }}>
-                  {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/2 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
+                  {`\u2728 Analyse compl\u00E8te offerte (${freeAnalysesUsed}/5 utilis\u00E9es) \u2014 d\u00E9couvrez ce que le plan Pro vous r\u00E9serve !`}
                 </div>
               )}
               <EstimationSection bienId={id} prixFai={bien.prix_fai} surface={bien.surface} adresseInitiale={bien.adresse} villeInitiale={bien.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked} estimationApiBase={isEnchere ? '/api/estimation/encheres' : undefined} labelPrix={isEnchere ? (bien.prix_adjuge > 0 ? <>{"Prix adjug\u00e9"}</> : <>{"Mise \u00e0 prix"}</>) : undefined} estimationInitiale={bien.estimation_details} estimationDateInitiale={bien.estimation_date}
@@ -4214,6 +4265,23 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
 
         {activeNav === 'fiscalite' && bien.prix_fai && (<div className="tab-panel">
           <div id="nav-fiscalite">
+            {profil !== null && profil.tmi == null && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
+                background: '#fff8e1', border: '1.5px solid #f39c12', borderRadius: 10,
+                padding: '10px 16px', marginBottom: 16,
+              }}>
+                <span style={{ fontSize: 13, color: '#7a4f00', fontWeight: 500 }}>
+                  {'Simulation basée sur TMI 30 % (valeur par défaut)'}
+                </span>
+                <button
+                  onClick={() => { setDrawerTmi(null); setDrawerRegime(profil?.regime || regime); setShowTmiDrawer(true) }}
+                  style={{ padding: '6px 16px', borderRadius: 8, background: '#f39c12', color: '#fff', fontWeight: 600, fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {'Personnaliser en 30 sec →'}
+                </button>
+              </div>
+            )}
             <div className="fiscal-controls">
               {/* Row 1 : Détention | Base de calcul */}
               <div className="fiscal-controls-grid">
@@ -4261,14 +4329,14 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
                 )}
                 <div className="control-group">
                   <span className="lbl">Comparer avec</span>
-                  {userPlan === 'expert' ? (
+                  {userPlan !== 'free' ? (
                     <select className="select-custom" value={regime2} onChange={e => setRegime2(e.target.value)}>
                       {(isIDR ? REGIMES_IDR : REGIMES).filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                     </select>
                   ) : (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       <span className="select-custom" style={{ background: '#f0ede8' }}>{[...REGIMES, ...REGIMES_IDR].find(r => r.value === regime2)?.label || regime2}</span>
-                      <a href="/#pricing" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Tous les r\u00E9gimes \u2192 Expert"}</a>
+                      <a href="/mon-profil" style={{ fontSize: '11px', color: '#c0392b', textDecoration: 'underline', whiteSpace: 'nowrap' }}>{"Comparer les r\u00E9gimes \u2192 Pro"}</a>
                     </span>
                   )}
                 </div>
@@ -4699,6 +4767,55 @@ export default function BienFicheClient({ initialBien, id, isEnchere }: { initia
           <strong>Statut après soumission :</strong> 1<sup>re</sup> saisie → <span style={{ color: '#b8891a', fontWeight: 600 }}>Soumis par 1 utilisateur</span> · 2<sup>e</sup> confirmation concordante → <span style={{ color: 'var(--success, #2e7c5d)', fontWeight: 600 }}>Validé 2+ utilisateurs</span>
         </div>
       </ModalPanel>
+
+      <Modal open={showTmiDrawer} onClose={() => setShowTmiDrawer(false)} title="Votre profil fiscal" variant="drawer" width="400px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1a1210', marginBottom: 10 }}>
+              {"Tranche marginale d'imposition (TMI)"}
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[0, 11, 30, 41, 45].map(t => (
+                <button key={t} onClick={() => setDrawerTmi(t)} style={{
+                  padding: '9px 18px', borderRadius: 8,
+                  border: `1.5px solid ${drawerTmi === t ? '#c0392b' : '#e8e0d8'}`,
+                  background: drawerTmi === t ? '#c0392b' : '#fff',
+                  color: drawerTmi === t ? '#fff' : '#1a1210',
+                  fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                }}>
+                  {t} %
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1a1210', marginBottom: 8 }}>
+              {'Régime fiscal principal'}
+            </label>
+            <select value={drawerRegime} onChange={e => setDrawerRegime(e.target.value)} style={{
+              width: '100%', padding: '10px 12px', borderRadius: 8,
+              border: '1.5px solid #e8e0d8', fontSize: 14,
+              fontFamily: "'DM Sans', sans-serif", color: '#1a1210', background: '#fff',
+            }}>
+              {REGIMES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+          <p style={{ fontSize: 12, color: '#9a8a82', margin: 0 }}>
+            {'Ces paramètres sont sauvegardés dans votre profil et s\'appliquent à toutes vos analyses.'}
+          </p>
+          <button onClick={saveTmiDrawer} disabled={drawerTmi === null || tmiDrawerSaving} style={{
+            padding: '13px', borderRadius: 10,
+            background: drawerTmi === null ? '#e8e0d8' : '#c0392b',
+            color: drawerTmi === null ? '#9a8a82' : '#fff',
+            fontWeight: 700, fontSize: 14, border: 'none',
+            cursor: drawerTmi === null ? 'not-allowed' : 'pointer',
+            fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s',
+          }}>
+            {tmiDrawerSaving ? 'Enregistrement...' : 'Enregistrer et personnaliser'}
+          </button>
+        </div>
+      </Modal>
 
     </Layout>
   )

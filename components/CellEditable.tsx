@@ -180,11 +180,11 @@ export function CellEditable({
     setCtxMenu({ x: rect.left, y: rect.bottom + 6 })
   }
 
-  const PencilBtn = ({ title: t = 'Modifier' }: { title?: string }) => (
+  const PencilBtn = ({ title: t = 'Modifier', alwaysVisible = false }: { title?: string, alwaysVisible?: boolean }) => (
     <button onClick={handlePencilClick} title={t}
-      style={{ background: 'none', border: 'none', outline: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0, transition: 'opacity 0.15s' }}
+      style={{ background: 'none', border: 'none', outline: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: alwaysVisible ? 0.5 : 0, transition: 'opacity 0.15s' }}
       onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-      onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
+      onMouseLeave={e => e.currentTarget.style.opacity = alwaysVisible ? '0.5' : '0'}>
       <PencilSVG />
     </button>
   )
@@ -245,7 +245,7 @@ export function CellEditable({
     return (
       <>
         <span style={{ ...vStyle, color: '#1a1210' }}>{readText}</span>
-        <div style={bStyle}><PencilBtn title="Modifier (donnée extraite de l'annonce)" /></div>
+        <div style={bStyle}><PencilBtn title="Modifier (donnée extraite de l'annonce)" alwaysVisible={true} /></div>
         {showSourceModal && (
           <AlertModal
             title="Modification d'une donnée source"
@@ -329,7 +329,7 @@ export function CellEditable({
         onKeyDown={e => { if (e.key === 'Enter' && localVal) openCtxFromInput(e) }}
       />
       <div style={bStyle}>
-        {localVal && !isSourceData && <MenuBtn color="#2a4a8a" />}
+        {dirty && localVal && !isSourceData && <MenuBtn color="#2a4a8a" />}
         <button onClick={handleCancel} title="Annuler"
           style={{
             background: 'none', border: 'none', cursor: dirty ? 'pointer' : 'default',
