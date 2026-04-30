@@ -192,7 +192,7 @@ export default function StrategiesPage() {
         <div className="strat-nav-inner">
           <button className={`strat-nav-btn ${activeSection === 's1' ? 'active' : ''}`} onClick={() => scrollToSection('s1')}>Locataire en place</button>
           <button className={`strat-nav-btn ${activeSection === 's2' ? 'active' : ''}`} onClick={() => scrollToSection('s2')}>Travaux lourds</button>
-          {/* Division masquee */}
+          <button className={`strat-nav-btn ${activeSection === 's3' ? 'active' : ''}`} onClick={() => scrollToSection('s3')}>Division</button>
           <button className={`strat-nav-btn ${activeSection === 's4' ? 'active' : ''}`} onClick={() => scrollToSection('s4')}>Immeuble de rapport</button>
         </div>
       </div>
@@ -391,8 +391,8 @@ export default function StrategiesPage() {
           <a href="/biens" className="strat-cta">{"Voir les biens Travaux lourds \u2192"}</a>
         </div>
 
-        {/* STRATÉGIE 3 — DIVISION (masquee) */}
-        <div className="strategy-block" id="s3" style={{ display: 'none' }}>
+        {/* STRATÉGIE 3 — DIVISION */}
+        <div className="strategy-block" id="s3">
           <div className="strategy-header">
             <div>
               <div className="strategy-title">Division</div>

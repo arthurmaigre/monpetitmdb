@@ -49,8 +49,7 @@ export const STRATEGIE_LABELS: Record<string, string> = {
   'Viager':             'Viager',
 }
 
-// Strategies visibles pour les utilisateurs (masquer Division tant qu'elle n'est pas prete)
-export const STRATEGIES_VISIBLES = ['Locataire en place', 'Travaux lourds', 'Immeuble de rapport', 'Enchères']
+export const STRATEGIES_VISIBLES = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport', 'Enchères']
 
 // Toutes les strategies (y compris masquees) pour l'admin
 export const STRATEGIES_TOUTES = ['Locataire en place', 'Travaux lourds', 'Division', 'Immeuble de rapport', 'Enchères']

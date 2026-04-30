@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Layout from '@/components/Layout'
+import EarlyAdopterBadge from '@/components/EarlyAdopterBadge'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -132,9 +133,7 @@ export default function RegisterPage() {
             <li style={{ fontSize: '14px', color: '#1a7a40', fontWeight: 500 }}>✓ Early Bird : -30% à vie avec le code EARLYBIRD</li>
           </ul>
 
-          <div style={{ background: '#fff8e1', border: '1.5px solid #f39c12', borderRadius: '10px', padding: '10px 14px', marginBottom: '24px', fontSize: '13px', color: '#7a4f00', fontWeight: 600, textAlign: 'center' }}>
-            🎯 Offre Early Bird — Code <span style={{ letterSpacing: '0.08em' }}>EARLYBIRD</span> — -30% à vie pour les 100 premiers
-          </div>
+          <EarlyAdopterBadge />
 
           {success ? (
             <div className="auth-success" style={{ textAlign: 'left', padding: '24px' }}>

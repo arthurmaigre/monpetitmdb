@@ -49,7 +49,6 @@ ssh openclaw@178.104.58.122   # VPS enchères (voir /vps skill)
 | Pro | 19€/mois | 50 | 2 (hors IDR) |
 | Expert | 49€/mois | illimité | toutes |
 
-Stratégie **Division** masquée sur landing et filtres UI.
 IDR (Immeuble de rapport) = Expert only.
 
 ## Règles critiques

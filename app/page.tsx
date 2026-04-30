@@ -351,7 +351,7 @@ export default function Home() {
         {/* STRATEGIES */}
         <section className="strats fade-in" id="strats">
           <div className="strats-in">
-            <div className="eyebrow-w">{"4 strat\u00E9gies disponibles"}</div>
+            <div className="eyebrow-w">{"5 strat\u00E9gies disponibles"}</div>
             <h2>{"Choisissez votre strat\u00E9gie"}</h2>
             <p className="strats-desc">{"Mon Petit MDB filtre et analyse les annonces selon votre strat\u00E9gie. Chaque bien est \u00E9valu\u00E9 selon ses propres crit\u00E8res."}</p>
             <div style={{ background: 'rgba(232,80,58,0.08)', border: '1px solid rgba(232,80,58,0.2)', borderRadius: '8px', padding: '10px 16px', marginBottom: '24px', fontSize: '13px', color: '#c0a090', textAlign: 'center' }}>
@@ -375,6 +375,15 @@ export default function Home() {
                 <p className="strat-desc">{"Identifiez les biens \u00E0 fort potentiel de valorisation. Score travaux IA de 1 \u00E0 5, estimation march\u00E9 = prix apr\u00E8s r\u00E9novation."}</p>
                 <span className="strat-tag">Plus-value travaux</span>
                 <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus \u2192"}</a>
+              </div>
+              <div className="strat-card">
+                <div className="strat-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8503a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                </div>
+                <div className="strat-name">Division</div>
+                <p className="strat-desc">{"Divisez un grand bien en plusieurs lots indépendants. Multipliez le loyer par 2 à 3, optimisez le rendement locatif."}</p>
+                <span className="strat-tag">{"Rendement démultiplié"}</span>
+                <a href="/strategies" style={{ fontSize: '12px', color: 'var(--red-light)', textDecoration: 'none', marginTop: '8px', display: 'inline-block' }}>{"En savoir plus →"}</a>
               </div>
               <div className="strat-card">
                 <div className="strat-icon">
