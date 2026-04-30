@@ -582,8 +582,8 @@ export default function AdminSourcingPage() {
           const se = ps.poll_se
           const seRes = se?.result || {}
           const seByStrat = seRes.by_strategie || {}
-          const STRAT_LABELS: Record<string, string> = { lep: 'LEP', travaux: 'Travaux', division: 'Division', idr: 'IDR' }
-          const STRAT_ORDER = ['lep', 'travaux', 'division', 'idr']
+          const STRAT_LABELS: Record<string, string> = { locataire: 'LEP', travaux: 'Travaux', division: 'Division', idr: 'IDR' }
+          const STRAT_ORDER = ['locataire', 'travaux', 'division', 'idr']
           const seTotal = { inserted: seRes.new || 0, fp: seRes.fp || 0, credits: seRes.credits || 0 }
           const seFpRate = seTotal.credits > 0 ? Math.round((seTotal.fp / seTotal.credits) * 100) : 0
 
