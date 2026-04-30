@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
@@ -647,15 +647,12 @@ function PnlColonne({ titre, bien, financement, tmi, regime, otherRegime = '', h
         <>
           <SectionLabel label={`Scénario revente (${dur} an${dur > 1 ? 's' : ''})`} />
           <Row label="Prix de revente (DVF)" value={`${fmt(prixReventeNetVendeur)} \u20AC`} />
-          <Row label="Prix d'achat (mise à prix)" value={`-${fmt(prix_fai)} \u20AC`} rouge />
+          <Row label="Prix d'achat (sans frais d'enchère)" value={`-${fmt(prix_fai)} ${'€'}`} rouge />
           {isEnchere && fraisEnchere ? (
-            <>
-              <Row label="Émoluments avocat TTC" value={`-${fmt(fraisEnchere.emoluments_ttc)} \u20AC`} rouge info="Barème Didiercam : poursuivant 3/4 + adjudicataire 1/4" />
-              <Row label={`Droits de mutation (${isMarchand ? '0,715%' : '5,8%'})`} value={`-${fmt(fraisEnchere.droits_enregistrement)} \u20AC`} rouge />
-              <Row label="CSI (0,10%)" value={`-${fmt(fraisEnchere.csi)} \u20AC`} rouge />
-            </>
+            <Row label="Frais de mutation + honoraires avocat" value={`-${fmt(fraisEnchere.total + honorairesAvocat)} ${'€'}`} rouge
+              info={`Frais de mutation (${fraisEnchere.pct} %) : ${fmt(fraisEnchere.total)} ${'€'}\n  • Émoluments avocat TTC : ${fmt(fraisEnchere.emoluments_ttc)} ${'€'}\n  • Droits de mutation (${isMarchand ? '0,715' : '5,8'} %) : ${fmt(fraisEnchere.droits_enregistrement)} ${'€'}\n  • CSI (0,1 %) : ${fmt(fraisEnchere.csi)} ${'€'}\nHonoraires avocat (libres) : ${fmt(honorairesAvocat)} ${'€'}`} />
           ) : (
-            <Row label={`Frais de notaire (${colFraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} \u20AC`} rouge />
+            <Row label={`Frais de notaire (${colFraisNotairePct}%)`} value={`-${fmt(fraisNotaireMontant)} ${'€'}`} rouge />
           )}
           <Row
             label={budgetTravaux > 0 ? `Travaux (score ${scoreUtilise})${isMarchand && optionTVA ? ' HT' : ''}` : 'Travaux'}
@@ -1274,22 +1271,21 @@ export default function FicheEncherePage() {
           if (profilData.profile) {
             const p = profilData.profile
             setProfil(p)
-            if (p.plan) {
-              setUserPlan(p.plan)
-              if (p.plan === 'free') {
-                const KEY = 'mdb_free_analyses'
-                const MAX = 2
-                try {
-                  const viewed: string[] = JSON.parse(localStorage.getItem(KEY) || '[]')
-                  const enchereKey = `enc_${id}`
-                  if (!viewed.includes(enchereKey) && viewed.length < MAX) {
-                    viewed.push(enchereKey)
-                    localStorage.setItem(KEY, JSON.stringify(viewed))
-                  }
-                  setFreeAnalysesLeft(viewed.includes(enchereKey) ? 1 : 0)
-                  setFreeAnalysesUsed(viewed.length)
-                } catch { setFreeAnalysesLeft(0); setFreeAnalysesUsed(0) }
-              }
+            const plan = p.plan || 'free'
+            setUserPlan(plan)
+            if (plan === 'free') {
+              const KEY = `mdb_free_analyses_${session.user.id}`
+              const MAX = 5
+              try {
+                const viewed: string[] = JSON.parse(localStorage.getItem(KEY) || '[]')
+                const enchereKey = `enc_${id}`
+                if (!viewed.includes(enchereKey) && viewed.length < MAX) {
+                  viewed.push(enchereKey)
+                  localStorage.setItem(KEY, JSON.stringify(viewed))
+                }
+                setFreeAnalysesLeft(viewed.includes(enchereKey) ? 1 : 0)
+                setFreeAnalysesUsed(viewed.length)
+              } catch { setFreeAnalysesLeft(0); setFreeAnalysesUsed(0) }
             }
             if (p.apport != null) setApport(p.apport)
             if (p.taux_credit != null) setTaux(p.taux_credit)
@@ -1949,7 +1945,7 @@ export default function FicheEncherePage() {
                   borderRadius: 10, padding: '10px 16px', marginBottom: 16,
                   fontSize: 13, color: '#1a7a40', fontWeight: 500
                 }}>
-                  {`\u2728 Analyse complète offerte (${freeAnalysesUsed}/2 utilisées) — découvrez ce que le plan Pro vous réserve !`}
+                  {`\u2728 Analyse complète offerte (${freeAnalysesUsed}/5 utilisées) — découvrez ce que le plan Pro vous réserve !`}
                 </div>
               )}
               <EstimationSection enchereId={id} prixFai={enchere.mise_a_prix} surface={enchere.surface} adresseInitiale={enchere.adresse} villeInitiale={enchere.ville} userToken={userToken} onEstimationLoaded={setEstimationData} isFree={isFreeBlocked}
@@ -2249,7 +2245,7 @@ export default function FicheEncherePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#7a6a60' }}>Comparer avec :</span>
-                {userPlan === 'expert' ? (
+                {userPlan !== 'free' ? (
                   <select className="param-input" style={{ width: 'auto' }} value={regime2} onChange={e => setRegime2(e.target.value)}>
                     {regimesDisponibles.filter(r => r.value !== regime).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>

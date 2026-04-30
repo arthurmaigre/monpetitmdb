@@ -227,7 +227,7 @@ export default function EncheresPage() {
     )
   }
 
-  if (userPlan !== 'expert') {
+  if (userPlan === 'free') {
     return (
       <Layout>
         <div style={{ maxWidth: 640, margin: '80px auto', padding: `0 ${theme.spacing[4]}`, textAlign: 'center' }}>
@@ -239,10 +239,10 @@ export default function EncheresPage() {
             {"Seule plateforme à agréger les enchères judiciaires en France."}
           </p>
           <p style={{ color: theme.colors.muted, fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}>
-            {"Repérez des biens en dessous du marché, analysez la mise à prix et estimez la valeur réelle — réservé au plan Expert."}
+            {"Repérez des biens en dessous du marché, analysez la mise à prix et estimez la valeur réelle — disponible à partir du plan Pro."}
           </p>
           <a
-            href="/#pricing"
+            href="/mon-profil"
             style={{
               display: 'inline-block', padding: '14px 32px',
               background: '#e8503a', color: '#fff', borderRadius: '8px',
@@ -250,10 +250,10 @@ export default function EncheresPage() {
               textDecoration: 'none',
             }}
           >
-            {"Passer au plan Expert →"}
+            {"Voir les offres Pro et Expert →"}
           </a>
           <p style={{ marginTop: '16px', fontSize: '13px', color: theme.colors.muted }}>
-            {"49 €/mois — sans engagement"}
+            {"À partir de 19 €/mois — sans engagement"}
           </p>
         </div>
       </Layout>
@@ -263,6 +263,30 @@ export default function EncheresPage() {
   return (
     <Layout>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: `${theme.spacing[6]} ${theme.spacing[4]}` }}>
+        {/* Bandeau Pro — aperçu lecture seule */}
+        {userPlan === 'pro' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
+            background: '#fff8e1', border: '1.5px solid #f39c12', borderRadius: 10,
+            padding: '12px 18px', marginBottom: 20,
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1210', marginBottom: 2 }}>
+                {'Enchères judiciaires — aperçu Pro'}
+              </div>
+              <div style={{ fontSize: 13, color: '#7a4f00' }}>
+                {"Vous voyez les annonces. L'analyse complète (frais, simulation fiscale) est réservée au plan Expert."}
+              </div>
+            </div>
+            <a href="/mon-profil" style={{
+              display: 'inline-block', padding: '8px 20px', borderRadius: 8,
+              background: '#e8503a', color: '#fff', fontWeight: 600, fontSize: 13,
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}>
+              {'Passer Expert — 49 €/mois →'}
+            </a>
+          </div>
+        )}
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing[5], flexWrap: 'wrap', gap: theme.spacing[3] }}>
           <div>
@@ -430,7 +454,7 @@ export default function EncheresPage() {
                 <label style={labelStyle}>Recherche</label>
                 <input
                   style={inputStyle}
-                  placeholder="Mot-clé..."
+                  placeholder="ex : tribunal, avocat poursuivant, adresse..."
                   value={keyword}
                   onChange={e => setKeyword(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') setKeywordSearch(keyword) }}
@@ -588,7 +612,7 @@ export default function EncheresPage() {
                         ) : <span style={{ color: '#c0b0a0', fontSize: '12px' }}>-</span>}
                       </td>
                       <td style={{ padding: '10px 8px' }}>
-                        <a href={`/encheres/${e.id}`} style={{
+                        <a href={`/biens/${e.id}?source=encheres`} style={{
                           padding: '6px 12px', borderRadius: theme.radii.sm,
                           background: theme.colors.sandLight, border: `1px solid ${theme.colors.sand}`,
                           color: theme.colors.ink, textDecoration: 'none', fontSize: '12px', fontWeight: 600,
