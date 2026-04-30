@@ -112,9 +112,9 @@ export function CellEditable({
 
   const PencilBtn = ({ title: t = 'Modifier' }: { title?: string }) => (
     <button onClick={handlePencilClick} title={t}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0.4, transition: 'opacity 0.15s' }}
+      style={{ background: 'none', border: 'none', outline: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', opacity: 0, transition: 'opacity 0.15s' }}
       onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-      onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}>
+      onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
       <PencilSVG />
     </button>
   )
