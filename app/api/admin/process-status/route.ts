@@ -30,11 +30,13 @@ export async function GET(req: NextRequest) {
   const isAdmin = await checkAdmin(req)
   if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const [cronRes, lepQ, idrQ, travQ, enchQ] = await Promise.all([
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+
+  const [cronRes, lepQ, idrQ, travQ, enchQ, estimQ] = await Promise.all([
     supabaseAdmin
       .from('cron_config')
       .select('id,last_run,last_result')
-      .in('id', ['poll_se', 'encheres_pipeline', 'extraction_nuit', 'sync_expired_se']),
+      .in('id', ['poll_se', 'encheres_pipeline', 'extraction_nuit', 'sync_expired_se', 'estimation']),
 
     // File d'attente LEP (valides sans extraction ou en échec)
     supabaseAdmin.from('biens').select('id', { count: 'exact', head: true })
@@ -60,6 +62,11 @@ export async function GET(req: NextRequest) {
     // Totaux enchères
     supabaseAdmin.from('encheres').select('statut', { count: 'exact' })
       .eq('statut', 'a_venir'),
+
+    // File d'attente estimation (jamais estimé ou > 30 jours)
+    supabaseAdmin.from('biens').select('id', { count: 'exact', head: true })
+      .eq('statut', 'Toujours disponible')
+      .or(`estimation_date.is.null,estimation_date.lt.${thirtyDaysAgo}`),
   ])
 
   const crons = Object.fromEntries(
@@ -70,6 +77,7 @@ export async function GET(req: NextRequest) {
   const encheres = crons['encheres_pipeline'] ?? null
   const extraction = crons['extraction_nuit'] ?? null
   const syncExpired = crons['sync_expired_se'] ?? null
+  const estimation = crons['estimation'] ?? null
 
   return NextResponse.json({
     poll_se: {
@@ -97,6 +105,12 @@ export async function GET(req: NextRequest) {
       status: computeStatus(encheres?.last_run ?? null, encheres?.last_result as Record<string, unknown> | null),
       result: encheres?.last_result ?? null,
       a_venir: enchQ.count ?? 0,
+    },
+    estimation: {
+      last_run: estimation?.last_run ?? null,
+      status: computeStatus(estimation?.last_run ?? null, estimation?.last_result as Record<string, unknown> | null),
+      result: estimation?.last_result ?? null,
+      queue: estimQ.count ?? 0,
     },
   })
 }
