@@ -1204,7 +1204,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               </>
                             ) : (
                               <>
-                                 <td><CellEditableShared
+                                 <td><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="loyer"
                                    dbVal={bien.loyer ?? null}
@@ -1215,8 +1215,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
                                    suffix={` €`}
-                                 /></td>
-                                 <td className="col-optional"><CellTypeLoyerShared
+                                 /></div></td>
+                                 <td className="col-optional"><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellTypeLoyerShared
                                    bienId={String(bien.id)}
                                    champ="type_loyer"
                                    dbVal={bien.type_loyer ?? null}
@@ -1225,8 +1225,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))}
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
-                                 /></td>
-                                 <td className="col-optional"><CellEditableShared
+                                 /></div></td>
+                                 <td className="col-optional"><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="charges_rec"
                                    dbVal={bien.charges_rec ?? null}
@@ -1237,8 +1237,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
                                    suffix={` €`}
-                                 /></td>
-                                 <td><CellEditableShared
+                                 /></div></td>
+                                 <td><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="charges_copro"
                                    dbVal={bien.charges_copro ?? null}
@@ -1249,8 +1249,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
                                    suffix={` €`}
-                                 /></td>
-                                 <td><CellEditableShared
+                                 /></div></td>
+                                 <td><div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}><CellEditableShared
                                    bienId={String(bien.id)}
                                    champ="taxe_fonc_ann"
                                    dbVal={bien.taxe_fonc_ann ?? null}
@@ -1261,7 +1261,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                                    onSubmit={async (c, v) => { await updateBien(bien, c, v) }}
                                    userToken={userToken ?? undefined}
                                    suffix={` €`}
-                                 /></td>
+                                 /></div></td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
