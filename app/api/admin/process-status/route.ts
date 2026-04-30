@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     supabaseAdmin
       .from('cron_config')
       .select('id,last_run,last_result')
-      .in('id', ['poll_se', 'encheres_pipeline', 'extraction_nuit']),
+      .in('id', ['poll_se', 'encheres_pipeline', 'extraction_nuit', 'sync_expired_se']),
 
     // File d'attente LEP (valides sans extraction ou en échec)
     supabaseAdmin.from('biens').select('id', { count: 'exact', head: true })
@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
   const se = crons['poll_se'] ?? null
   const encheres = crons['encheres_pipeline'] ?? null
   const extraction = crons['extraction_nuit'] ?? null
+  const syncExpired = crons['sync_expired_se'] ?? null
 
   return NextResponse.json({
     poll_se: {
@@ -85,6 +86,11 @@ export async function GET(req: NextRequest) {
         idr: idrQ.count ?? 0,
         travaux: travQ.count ?? 0,
       },
+    },
+    sync_expired_se: {
+      last_run: syncExpired?.last_run ?? null,
+      status: computeStatus(syncExpired?.last_run ?? null, syncExpired?.last_result as Record<string, unknown> | null),
+      result: syncExpired?.last_result ?? null,
     },
     encheres_pipeline: {
       last_run: encheres?.last_run ?? null,
