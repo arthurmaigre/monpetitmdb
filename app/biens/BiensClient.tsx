@@ -15,8 +15,8 @@ import PlusValueBadge from '@/components/PlusValueBadge'
 import { Bien, Enchere } from '@/lib/types'
 import { TYPES_BIEN, TRIS, TRIS_TRAVAUX, TRIS_ENCHERES, STRATEGIES_VISIBLES } from '@/lib/constants'
 import { calculerCashflow, calculerFraisEnchere } from '@/lib/calculs'
-import { CellEditable as CellEditableShared, CellTypeLoyer as CellTypeLoyerShared } from '@/components/CellEditable'
-import { getDrafts } from '@/lib/drafts'
+// CellEditable removed from list view — read-only cells
+
 
 function formatPrix(n: number) {
   return n ? n.toLocaleString('fr-FR') + ' \u20AC' : '-'
@@ -171,8 +171,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
   const [userId, setUserId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
-  const [allDrafts, setAllDrafts] = useState<Record<string, Record<string, number>>>({})
-  const [allStatuts, setAllStatuts] = useState<Record<string, Record<string, any>>>({})
+
+
   const [hoverPhoto, setHoverPhoto] = useState<{ urls: string[], x: number, y: number, idx: number } | null>(null)
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set())
   const [upgradeMsg, setUpgradeMsg] = useState<{ limit: number; plan: string } | null>(null)
@@ -337,20 +337,20 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         setHasMore(d.hasMore || false)
         setLoading(false)
         // Charger les brouillons localStorage
-        const drafts: Record<string, Record<string, number>> = {}
-        for (const b of biens) {
-          const bd = getDrafts(String(b.id))
-          if (Object.keys(bd).length > 0) drafts[String(b.id)] = bd
-        }
-        setAllDrafts(drafts)
-        // Charger les statuts communautaires
-        if (userToken && biens.length > 0 && !biens[0].source) {
-          const ids = biens.map((b: any) => b.id).join(',')
-          fetch('/api/biens/edits-bulk?ids=' + ids, { headers: { Authorization: 'Bearer ' + userToken } })
-            .then(r => r.json()).then(s => setAllStatuts(s)).catch(() => {})
-        }
+
+
+
+
+
+
+
+
+
+
+
+
       })
-      .catch(() => { setError('Impossible de charger les biens. Veuillez réessayer.'); setLoading(false) })
+
   }, [strategie, selectedCommune, typesBien, prixMin, prixMax, surfaceMin, surfaceMax, rendMin, scoreTravauxMin, keywordSearch, view, enchereStatut, enchereOccupation, enchereSources, enchereDelocalise, tri, authChecked])
 
   // Charger plus de biens
@@ -473,30 +473,30 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
     setCommuneSuggestions([])
   }
 
-  async function updateBien(bien: any, champ: string, valeur: any) {
-    if (!userToken) return
-    const res = await fetch('/api/biens/' + bien.id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-      body: JSON.stringify({ [champ]: valeur })
-    })
-    if (res.ok) {
-      const data = await res.json()
-      setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, ...data.bien } : b))
-      // Rafraichir les statuts communautaires pour ce bien
-      try {
-        const editsRes = await fetch('/api/biens/' + bien.id + '/edits', { headers: { Authorization: 'Bearer ' + userToken } })
-        const editsData = await editsRes.json()
-        setAllStatuts(prev => ({ ...prev, [String(bien.id)]: editsData.champs || {} }))
-      } catch {}
-    }
-  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   const villes = metropole === 'Toutes' ? [] :
     [...new Set(allBiens.filter(b => b.metropole === metropole).map(b => b.ville))].sort()
 
-  // Pro : 2 strategies (choisies a l'abonnement, stockees dans profil). Expert/Free : toutes.
-  const proStrategies = [userStrategie || STRATEGIES_VISIBLES[0], userStrategie2].filter(Boolean)
+  // Pro : 2 strategies (choisies a l'abonnement, stockees dans profil) + IDR en aperçu. Expert/Free : toutes.
+  const proStrategies = [...new Set([userStrategie || STRATEGIES_VISIBLES[0], userStrategie2, 'Immeuble de rapport'].filter(Boolean))] as string[]
   const strategies = userPlan === 'pro' ? proStrategies : STRATEGIES_VISIBLES
 
   // Filtres cote client (les autres sont cote serveur)
@@ -564,6 +564,7 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
         .list-table tbody tr { transition: background 150ms ease; }
         .list-table tbody tr:hover { background: #faf8f5; }
         .list-table td { padding: 6px 8px; font-size: 13px; vertical-align: middle; border-bottom: 1px solid #f0ede8; text-align: center; }
+        .col-right { text-align: right !important; }
         .sticky-col { position: sticky; z-index: 2; background: #fff; text-align: left; }
         .sticky-col-head { position: sticky; z-index: 3; background: #f7f4f0; text-align: left !important; }
         .list-table tbody tr:hover .sticky-col { background: #faf8f5; }
@@ -963,8 +964,8 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
               </div>
             ) : (
               <>
-                {userId && <p className="edit-hint">Les champs NC sont editables — vos modifications enrichissent la base de donnees.</p>}
-                {!userId && <p className="edit-hint">Connectez-vous pour enrichir les donnees manquantes.</p>}
+
+
                 <div className="list-wrap" ref={tableWrapRef} onScroll={() => syncScroll('table')}><table className="list-table">
                   <thead>
                     <tr>
@@ -1004,11 +1005,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                             </>
                           ) : (
                             <>
-                              <th style={{ minWidth: "130px", textAlign: 'right' }}>Loyer<span>/mois</span></th>
+                              <th className="col-right" style={{ minWidth: "130px" }}>Loyer<span>/mois</span></th>
                               <th className="col-optional" style={{ minWidth: "80px" }}>Type loyer<span></span></th>
-                              <th className="col-optional" style={{ minWidth: "110px", textAlign: 'right' }}>{"Charges r\u00E9cup."}<span>/mois</span></th>
-                              <th style={{ minWidth: "130px", textAlign: 'right' }}>Charges copro<span>/mois</span></th>
-                              <th style={{ minWidth: "130px", textAlign: 'right' }}>Taxe foncière<span>/an</span></th>
+                              <th className="col-optional col-right" style={{ minWidth: "110px" }}>{"Charges r\u00E9cup."}<span>/mois</span></th>
+                              <th className="col-right" style={{ minWidth: "130px" }}>Charges copro<span>/mois</span></th>
+                              <th className="col-right" style={{ minWidth: "130px" }}>Taxe foncière<span>/an</span></th>
                               <th>Rendement brut<span></span></th>
                               <th>+/- Value<span></span></th>
                               <th>Cashflow brut<span>/mois</span></th>
@@ -1204,11 +1205,11 @@ export default function BiensPage({ initialBiens, initialTotal, initialStrategie
                               </>
                             ) : (
                               <>
-                                 <td style={{ textAlign: 'right' }}>{(() => { const bId = String(bien.id); const dL = allDrafts[bId]?.['loyer'] ?? null; if (bien.loyer != null && dL == null) return <span style={{ display: 'block', textAlign: 'right', fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.loyer).toLocaleString('fr-FR') + ' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="loyer" dbVal={bien.loyer ?? null} draftVal={dL} statut={allStatuts[bId]?.['loyer'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
-                                 <td className="col-optional" style={{ textAlign: 'center' }}>{bien.type_loyer ? <span style={{ fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{bien.type_loyer}</span> : userToken ? <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellTypeLoyerShared bienId={String(bien.id)} champ="type_loyer" dbVal={null} statut={null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined}/></div> : <span style={{ fontSize: '12px', color: '#c0b0a0' }}>NC</span>}</td>
-                                 <td className="col-optional" style={{ textAlign: 'right' }}>{(() => { const bId = String(bien.id); const dR = allDrafts[bId]?.['charges_rec'] ?? null; if (bien.charges_rec != null && dR == null) return <span style={{ display: 'block', textAlign: 'right', fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.charges_rec).toLocaleString('fr-FR') + ' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="charges_rec" dbVal={bien.charges_rec ?? null} draftVal={dR} statut={allStatuts[bId]?.['charges_rec'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
-                                 <td style={{ textAlign: 'right' }}>{(() => { const bId = String(bien.id); const dC = allDrafts[bId]?.['charges_copro'] ?? null; if (bien.charges_copro != null && dC == null) return <span style={{ display: 'block', textAlign: 'right', fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.charges_copro).toLocaleString('fr-FR') + ' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="charges_copro" dbVal={bien.charges_copro ?? null} draftVal={dC} statut={allStatuts[bId]?.['charges_copro'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
-                                 <td style={{ textAlign: 'right' }}>{(() => { const bId = String(bien.id); const dT = allDrafts[bId]?.['taxe_fonc_ann'] ?? null; if (bien.taxe_fonc_ann != null && dT == null) return <span style={{ display: 'block', textAlign: 'right', fontSize: '12px', fontWeight: 500, color: '#1a1210' }}>{Math.round(bien.taxe_fonc_ann).toLocaleString('fr-FR') + ' €'}</span>; return <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '2px', minWidth: '0' }}><CellEditableShared bienId={bId} champ="taxe_fonc_ann" dbVal={bien.taxe_fonc_ann ?? null} draftVal={dT} statut={allStatuts[bId]?.['taxe_fonc_ann'] ?? null} isSourceData={false} onValueChange={(c, v) => setAllBiens(prev => prev.map(b => b.id === bien.id ? { ...b, [c]: v } as any : b))} onSubmit={async (c, v) => { await updateBien(bien, c, v) }} userToken={userToken ?? undefined} suffix={` €`}/></div>; })()}</td>
+                                 <td className="col-right">{bien.loyer != null ? Math.round(bien.loyer).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
+                                 <td className="col-optional" style={{ textAlign: 'center' }}>{bien.type_loyer ? <span style={{ fontWeight: 500, color: '#1a1210' }}>{bien.type_loyer}</span> : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
+                                 <td className="col-optional col-right">{bien.charges_rec != null ? Math.round(bien.charges_rec).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
+                                 <td className="col-right">{bien.charges_copro != null ? Math.round(bien.charges_copro).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
+                                 <td className="col-right">{bien.taxe_fonc_ann != null ? Math.round(bien.taxe_fonc_ann).toLocaleString('fr-FR') + ' €' : <span style={{ color: '#c0b0a0' }}>—</span>}</td>
                                 <td><RendementBadge rendement={bien.rendement_brut} size="sm" /></td>
                                 <td><PlusValueBadge prixFai={bien.prix_fai} estimationPrix={(bien as any).estimation_prix_total} scoreTravaux={(bien as any).score_travaux} surface={bien.surface} size="sm" /></td>
                                 <td style={{ fontWeight: 600, fontSize: '13px', color: resultat && resultat.cashflow_brut >= 0 ? '#1a7a40' : '#c0392b' }}>
