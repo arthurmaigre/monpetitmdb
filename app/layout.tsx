@@ -52,7 +52,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }
         `}} />
       </head>
-      <body>
+      <body> 
+      <noscript>
+    <iframe
+      src="https://www.googletagmanager.com/ns.html?id=GTM-P2NK7FXK"
+      height="0"
+      width="0"
+      style={{ display: "none", visibility: "hidden" }}
+    />
+  </noscript>
         <style>{`
           body { font-size: 14px; line-height: 1.5; }
           @media (min-width: 768px) { body { font-size: 16px; } }
