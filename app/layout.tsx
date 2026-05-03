@@ -12,12 +12,12 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   title: {
-    default: 'Mon Petit MDB — Sourcing immobilier pour investisseurs',
+    default: 'Mon Petit MDB — Sourcing immobilier pour marchands de biens',
     template: '%s | Mon Petit MDB',
   },
   description: 'Sourcez, analysez et comparez les biens immobiliers avec la m\u00E9thodologie marchand de biens. 90 000+ biens, 60+ plateformes, 7 r\u00E9gimes fiscaux.',
   openGraph: {
-    title: 'Mon Petit MDB — Sourcing immobilier pour investisseurs',
+    title: 'Mon Petit MDB — Sourcing immobilier pour marchands de biens',
     description: 'La m\u00E9thodologie marchand de biens accessible \u00E0 tous. Estimation DVF, simulation fiscale, 4 strat\u00E9gies d\u2019investissement.',
     siteName: 'Mon Petit MDB',
     locale: 'fr_FR',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Mon Petit MDB',
-    description: 'Sourcing immobilier intelligent pour investisseurs particuliers.',
+    description: 'Sourcing immobilier intelligent pour marchands de biens.',
   },
   other: {
     'facebook-domain-verification': '18tkxn3dzwx80c8cqhlv8j0sli0hst',
@@ -52,7 +52,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }
         `}} />
       </head>
-      <body>
+      <body> 
+      <noscript>
+    <iframe
+      src="https://www.googletagmanager.com/ns.html?id=GTM-P2NK7FXK"
+      height="0"
+      width="0"
+      style={{ display: "none", visibility: "hidden" }}
+    />
+  </noscript>
         <style>{`
           body { font-size: 14px; line-height: 1.5; }
           @media (min-width: 768px) { body { font-size: 16px; } }
