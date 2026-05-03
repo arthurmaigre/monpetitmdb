@@ -9,11 +9,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com https://www.google-analytics.com https://connect.facebook.net",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com https://www.google-analytics.com https://connect.facebook.net https://capi-automation.s3.us-east-2.amazonaws.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://*.supabase.co https://api.stripe.com https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://connect.facebook.net",
+      "connect-src 'self' https://*.supabase.co https://api.stripe.com https://*.google-analytics.com https://analytics.google.com https://www.facebook.com https://connect.facebook.net",
       "frame-src https://js.stripe.com https://hooks.stripe.com",
       "object-src 'none'",
       "base-uri 'self'",
